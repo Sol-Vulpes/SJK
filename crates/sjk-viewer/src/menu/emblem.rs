@@ -1,22 +1,24 @@
-//! SJK's emblem on the main menus: the gold starburst with the JK blade.
+//! SJK's emblem on the main menus: the steel monogram before a burning sun
+//! (Sol's emblem, 16/11/2026).
 //!
 //! The classic main page shows it in the ring, where retail played its
 //! `video/ja01` logo, and the SJK UI's main page in its holo ring. It is bundled
-//! (`assets/branding`, made by `scripts/sjk_branding.py`), so it shows with
-//! or without the player's retail artwork.
+//! (`assets/branding`, made by `scripts/sjk_emblem.py` from the emblem's
+//! geometry), so it shows with or without the player's retail artwork.
 //!
-//! The emblem is three pictures drawn over each other at the same place
-//! ([`EmblemLayer`]): the still emblem, then two additive glow layers, the
-//! orange core and ring and the cyan blade lights, whose strengths follow the
-//! menu clock ([`motion::emblem_core_glow`], [`motion::emblem_lights_glow`]).
-//! The renderer blends the glow layers additively, as light, so the core
-//! brightens towards yellow instead of only covering what is under it. The
-//! pictures are in display values, like all 2D art (the UI colour model in
+//! The emblem is pictures drawn over each other round the same centre
+//! ([`EmblemLayer`]), so the sun can move while the steel stands still: the
+//! rays, two drifting ember layers, two flame layers, the plasma disc, all
+//! added as light, then the steel over them. The disc turns and breathes, the
+//! flame layers turn against each other and cross-fade so the tongues lick, the
+//! rays shimmer and the embers fly out ([`motion::sun_flicker`] and its
+//! neighbours). Each picture spans its own share of the design
+//! ([`EmblemLayer::span`], the generator's `LAYERS`). The pictures are in
+//! display values, like all 2D art (the UI colour model in
 //! `docs/rendering.md`).
 //!
 //! They are decoded once per process on a worker thread ([`request`]), with
-//! their mip chains, so the emblem stays smooth at 1080p, where the 1024
-//! picture is drawn at under half size, and sharp at 4K.
+//! their mip chains, so the emblem stays smooth at 1080p and sharp at 4K.
 //!
 //! Two more layers are light without a picture behind them, drawn by the
 //! worker instead of decoded: a sunburst for behind the emblem and a fan of
@@ -44,15 +46,21 @@ const TEXTURE_BASE: u32 = 0x5000_0000;
 /// every aspect ratio and resolution.
 pub(crate) const CLASSIC_RING: [f32; 4] = [232.5, 185.0, 176.0, 176.0];
 
-/// One picture of the emblem, in draw order.
+/// One picture of the emblem.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum EmblemLayer {
-    /// The emblem itself, alpha blended.
+    /// The steel emblem, alpha blended over its sun.
     Base,
-    /// The orange core and ring, added as light.
-    Core,
-    /// The cyan lights on the blade, added as light.
-    Lights,
+    /// The sun's plasma disc and its rim, added as light; it turns.
+    Disc,
+    /// The flame tongues and the corona, added as light: two versions that
+    /// turn against each other and cross-fade.
+    FlamesA,
+    FlamesB,
+    /// The sun's god rays and pointed spikes, added as light.
+    Rays,
+    /// Sparks round the sun, added as light; two copies drift out in turn.
+    Embers,
     /// Sixteen soft rays, long and short in turn, round a glowing core
     /// ([`sunburst`]), added as light.
     Sunburst,
@@ -65,16 +73,17 @@ pub(crate) enum EmblemLayer {
 
 impl EmblemLayer {
     /// Every layer.
-    pub(crate) const ALL: [Self; 6] = [
+    pub(crate) const ALL: [Self; 9] = [
         Self::Base,
-        Self::Core,
-        Self::Lights,
+        Self::Disc,
+        Self::FlamesA,
+        Self::FlamesB,
+        Self::Rays,
+        Self::Embers,
         Self::Sunburst,
         Self::Godrays,
         Self::Ring,
     ];
-    /// The layers of the emblem itself, in draw order.
-    pub(crate) const EMBLEM: [Self; 3] = [Self::Base, Self::Core, Self::Lights];
 
     /// The `TexturedQuad` texture that draws this layer.
     pub(crate) fn texture(self) -> TextureId {
@@ -101,39 +110,121 @@ impl EmblemLayer {
     /// The bundled PNG; none for the drawn layers.
     fn png(self) -> Option<&'static [u8]> {
         match self {
-            Self::Base => Some(include_bytes!("../../../../assets/branding/sjk-logo.png")),
-            Self::Core => Some(include_bytes!(
-                "../../../../assets/branding/emblem-core.png"
+            Self::Base => Some(include_bytes!(
+                "../../../../assets/branding/emblem-steel.png"
             )),
-            Self::Lights => Some(include_bytes!(
-                "../../../../assets/branding/emblem-lights.png"
+            Self::Disc => Some(include_bytes!(
+                "../../../../assets/branding/emblem-disc.png"
+            )),
+            Self::FlamesA => Some(include_bytes!(
+                "../../../../assets/branding/emblem-flames-a.png"
+            )),
+            Self::FlamesB => Some(include_bytes!(
+                "../../../../assets/branding/emblem-flames-b.png"
+            )),
+            Self::Rays => Some(include_bytes!(
+                "../../../../assets/branding/emblem-rays.png"
+            )),
+            Self::Embers => Some(include_bytes!(
+                "../../../../assets/branding/emblem-embers.png"
             )),
             Self::Sunburst | Self::Godrays | Self::Ring => None,
         }
     }
 
-    /// The layer's strength at menu time `seconds`: the emblem is steady,
-    /// the glows move.
-    pub(crate) fn strength(self, seconds: f64) -> f32 {
+    /// How wide the layer's picture is beside the steel's, which fills the
+    /// emblem's square: the generator's `LAYERS` spans over its `ICON_SPAN`.
+    pub(crate) fn span(self) -> f32 {
+        const STEEL: f32 = 1_640.0;
         match self {
-            Self::Core => motion::emblem_core_glow(seconds),
-            Self::Lights => motion::emblem_lights_glow(seconds),
-            Self::Base | Self::Sunburst | Self::Godrays | Self::Ring => 1.0,
+            Self::Disc => 960.0 / STEEL,
+            Self::Rays => 3_200.0 / STEEL,
+            Self::Embers => 2_400.0 / STEEL,
+            _ => 1.0,
         }
     }
 }
 
-/// Draw the emblem over window rectangle `rect` as it looks at menu time
-/// `seconds`. Nothing shows until the renderer has the pictures.
+/// How far the emblem's light may reach past its square.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Reach {
+    /// The rays and embers fly out past the square, as on the SJK UI's page.
+    Wide,
+    /// Everything stays in the square, as in the classic page's window.
+    Contained,
+}
+
+/// Draw the emblem over window square `rect` as it looks at menu time
+/// `seconds`, its light reaching past the square. Nothing shows until the
+/// renderer has the pictures.
 pub(crate) fn draw(canvas: &mut MenuCanvas, rect: Rect, seconds: f64) {
-    let draw = canvas.draw_list_mut();
-    for layer in EmblemLayer::EMBLEM {
-        let _ = draw.push(DrawCommand::TexturedQuad {
-            rect,
-            texture: layer.texture(),
-            color: Color::new(1.0, 1.0, 1.0, layer.strength(seconds)),
-        });
+    draw_reaching(canvas, rect, seconds, Reach::Wide);
+}
+
+/// [`draw`] with the light kept to `reach`.
+pub(crate) fn draw_reaching(canvas: &mut MenuCanvas, rect: Rect, seconds: f64, reach: Reach) {
+    let centre = [rect.x + rect.width * 0.5, rect.y + rect.height * 0.5];
+    let half = rect.width.min(rect.height) * 0.5;
+    let room = |layer: EmblemLayer| match reach {
+        Reach::Wide => layer.span(),
+        Reach::Contained => layer.span().min(1.0),
+    };
+    let light = |strength: f32| Color::new(1.0, 1.0, 1.0, strength.clamp(0.0, 1.0));
+    let turn = |period: f64| (std::f64::consts::TAU * seconds / period) as f32;
+    rays(
+        canvas,
+        EmblemLayer::Rays,
+        centre,
+        half * room(EmblemLayer::Rays),
+        0.0,
+        light(motion::sun_shimmer(seconds)),
+    );
+    for index in 0..2 {
+        let (scale, strength) = motion::ember_drift(seconds, index);
+        let scale = match reach {
+            Reach::Wide => scale,
+            Reach::Contained => scale.min(1.0) * 0.7,
+        };
+        rays(
+            canvas,
+            EmblemLayer::Embers,
+            centre,
+            half * room(EmblemLayer::Embers) * scale,
+            index as f32 * 2.1 + turn(900.0),
+            light(strength),
+        );
     }
+    let share = motion::sun_flicker(seconds);
+    let [turn_a, turn_b] = motion::SUN_FLAMES_TURN;
+    rays(
+        canvas,
+        EmblemLayer::FlamesA,
+        centre,
+        half,
+        turn(turn_a),
+        light(1.0 - share),
+    );
+    rays(
+        canvas,
+        EmblemLayer::FlamesB,
+        centre,
+        half,
+        turn(turn_b),
+        light(share),
+    );
+    rays(
+        canvas,
+        EmblemLayer::Disc,
+        centre,
+        half * EmblemLayer::Disc.span(),
+        turn(motion::SUN_DISC_TURN),
+        light(motion::sun_breath(seconds)),
+    );
+    let _ = canvas.draw_list_mut().push(DrawCommand::TexturedQuad {
+        rect: Rect::new(centre[0] - half, centre[1] - half, half * 2.0, half * 2.0),
+        texture: EmblemLayer::Base.texture(),
+        color: Color::new(1.0, 1.0, 1.0, 1.0),
+    });
 }
 
 /// Add the light of `layer` (a sunburst or god rays) as a disc of `radius`
@@ -430,20 +521,21 @@ mod tests {
         for piece in ArtPiece::ALL {
             assert_eq!(EmblemLayer::from_texture(piece.texture()), None);
         }
-        for id in [0, 1, u32::MAX, u32::MAX - 1, TEXTURE_BASE + 6] {
+        for id in [0, 1, u32::MAX, u32::MAX - 1, TEXTURE_BASE + 9] {
             assert_eq!(EmblemLayer::from_texture(TextureId(id)), None);
         }
         assert!(!EmblemLayer::Base.additive());
-        assert!(EmblemLayer::Core.additive() && EmblemLayer::Lights.additive());
+        for layer in &EmblemLayer::ALL[1..] {
+            assert!(layer.additive(), "{layer:?}");
+        }
     }
 
     #[test]
     fn bundled_layers_decode_with_full_mip_chains() {
         let decoded = decode_all();
-        for (layer, size) in EmblemLayer::ALL
-            .into_iter()
-            .zip([1_024, 512, 512, RAYS_SIZE, RAYS_SIZE, RING_SIZE])
-        {
+        for (layer, size) in EmblemLayer::ALL.into_iter().zip([
+            1_024, 512, 768, 768, 1_024, 512, RAYS_SIZE, RAYS_SIZE, RING_SIZE,
+        ]) {
             let chain = decoded.layer(layer).expect("bundled layer decodes");
             assert_eq!(chain.size, size, "{layer:?}");
             assert_eq!(chain.levels.len() as u32, size.ilog2() + 1, "{layer:?}");
@@ -460,9 +552,17 @@ mod tests {
         let base = decoded.layer(EmblemLayer::Base).expect("emblem");
         let texel = |x: usize, y: usize| &base.levels[0][(y * 1_024 + x) * 4..][..4];
         assert_eq!(texel(0, 0)[3], 0);
-        assert_eq!(texel(512, 512)[3], 255);
-        // The glows add light: black outside the emblem, bright somewhere.
-        for layer in [EmblemLayer::Core, EmblemLayer::Lights] {
+        // The right pillar, beside the slot at the centre.
+        assert_eq!(texel(543, 512)[3], 255);
+        assert_eq!(texel(512, 512)[3], 0);
+        // The sun's layers add light: black in their corners, bright somewhere.
+        for layer in [
+            EmblemLayer::Disc,
+            EmblemLayer::FlamesA,
+            EmblemLayer::FlamesB,
+            EmblemLayer::Rays,
+            EmblemLayer::Embers,
+        ] {
             let pixels = &decoded.layer(layer).expect("glow").levels[0];
             assert_eq!(&pixels[..3], &[0, 0, 0], "{layer:?}");
             assert!(
@@ -562,34 +662,65 @@ mod tests {
     }
 
     #[test]
-    fn glow_strengths_follow_the_menu_clock() {
-        for seconds in [0.0, 0.7, 2.1, 100.3] {
-            assert_eq!(EmblemLayer::Base.strength(seconds), 1.0);
-            assert_eq!(
-                EmblemLayer::Core.strength(seconds),
-                motion::emblem_core_glow(seconds)
+    fn the_sun_moves_behind_the_steel() {
+        let quads = |seconds: f64, reach: Reach| {
+            let mut canvas = MenuCanvas::new();
+            canvas.begin_transparent([1920.0, 1080.0]);
+            draw_reaching(
+                &mut canvas,
+                Rect::new(10.0, 20.0, 300.0, 300.0),
+                seconds,
+                reach,
             );
-            assert_eq!(
-                EmblemLayer::Lights.strength(seconds),
-                motion::emblem_lights_glow(seconds)
-            );
+            canvas
+                .draw_list()
+                .commands()
+                .iter()
+                .map(|command| match command {
+                    DrawCommand::TexturedQuad {
+                        rect,
+                        texture,
+                        color,
+                    } => (*texture, *rect, color.a, None),
+                    DrawCommand::TexturedQuadUv {
+                        rect,
+                        texture,
+                        color,
+                        uv,
+                    } => (*texture, *rect, color.a, Some(*uv)),
+                    other => panic!("{other:?}"),
+                })
+                .collect::<Vec<_>>()
+        };
+        let early = quads(1.0, Reach::Wide);
+        let order: Vec<TextureId> = early.iter().map(|quad| quad.0).collect();
+        assert_eq!(
+            order,
+            [
+                EmblemLayer::Rays,
+                EmblemLayer::Embers,
+                EmblemLayer::Embers,
+                EmblemLayer::FlamesA,
+                EmblemLayer::FlamesB,
+                EmblemLayer::Disc,
+                EmblemLayer::Base,
+            ]
+            .map(EmblemLayer::texture)
+        );
+        // The steel fills the square, last and whole.
+        let steel = early.last().expect("steel");
+        assert_eq!(steel.1, Rect::new(10.0, 20.0, 300.0, 300.0));
+        assert_eq!(steel.2, 1.0);
+        // The rays reach past it; contained, nothing does.
+        assert!(early[0].1.width > 300.0);
+        for quad in quads(1.0, Reach::Contained) {
+            assert!(quad.1.width <= 300.0 + 1e-3, "{quad:?}");
         }
-        let mut canvas = MenuCanvas::new();
-        canvas.begin_transparent([1920.0, 1080.0]);
-        draw(&mut canvas, Rect::new(10.0, 20.0, 300.0, 300.0), 1.0);
-        let quads: Vec<(TextureId, f32)> = canvas
-            .draw_list()
-            .commands()
-            .iter()
-            .filter_map(|command| match command {
-                DrawCommand::TexturedQuad { texture, color, .. } => Some((*texture, color.a)),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(quads.len(), 3);
-        assert_eq!(quads[0], (EmblemLayer::Base.texture(), 1.0));
-        assert_eq!(quads[1].0, EmblemLayer::Core.texture());
-        assert_eq!(quads[2].0, EmblemLayer::Lights.texture());
+        // The flames share the light; the disc turns with the clock.
+        assert!((early[3].2 + early[4].2 - 1.0).abs() < 1e-5);
+        let later = quads(30.0, Reach::Wide);
+        assert_ne!(early[5].3, later[5].3);
+        assert_eq!(early[5].1, later[5].1);
     }
 
     #[test]

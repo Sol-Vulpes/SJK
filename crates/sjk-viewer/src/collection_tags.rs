@@ -313,6 +313,15 @@ impl Panel {
         ))
     }
 
+    /// Whether something of `entry` is New: a dropped tag in a finish, or a card.
+    fn tag_new(&self, entry: &Entry) -> bool {
+        match entry {
+            Entry::Tag(tag) => self.is_new(crate::collection_seen::Kind::Tag, tag.id),
+            Entry::Card(id) => self.is_new(crate::collection_seen::Kind::Card, id),
+            Entry::Gif(_) => false,
+        }
+    }
+
     /// The finish the card shows for the chosen entry: the one chosen on it, when held.
     fn tag_finish_shown(&self, held: Held) -> &'static crate::cards::Finish {
         crate::cards::FINISHES
@@ -556,7 +565,14 @@ impl Panel {
             format!("{tags} tags")
         };
         self.lead(frame, &heading, &line);
+        self.kind_new_count(frame, &heading, crate::collection_seen::Kind::Tag);
         self.tag = self.tag.min(total - 1);
+        let watched = match &self.tag_entries[self.tag] {
+            Entry::Tag(tag) => Some((crate::collection_seen::Kind::Tag, tag.id.to_owned())),
+            Entry::Card(id) => Some((crate::collection_seen::Kind::Card, id.clone())),
+            Entry::Gif(_) => None,
+        };
+        self.watch_new(watched.as_ref().map(|(kind, id)| (*kind, id.as_str())));
         let in_use = picked(inputs).to_owned();
         let in_use_finish = self
             .tag_entries
@@ -679,22 +695,22 @@ impl Panel {
         let gif = self.tag_gif.clone();
         let why = gif.why_not(blanks);
         let (words, colour) = match (&why, &gif.said, &gif.link) {
-            (Some(why), _, _) => ((*why).to_owned(), color::QUIET),
+            (Some(why), _, _) => ((*why).to_owned(), color::quiet()),
             (None, _, Some(_)) if gif.confirm => (
                 "Press Make again: one blank tag becomes this GIF tag, for good.".to_owned(),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            (None, Some((said, true)), None) => (said.clone(), color::TEXT),
-            (None, Some((said, false)), _) => (said.clone(), color::alpha(color::GOLD, 0.9)),
+            (None, Some((said, true)), None) => (said.clone(), color::text()),
+            (None, Some((said, false)), _) => (said.clone(), color::alpha(color::gold(), 0.9)),
             (None, _, Some(_)) => (
                 "That GIF, as it will play on walls. Make spends one blank tag.".to_owned(),
-                color::TEXT,
+                color::text(),
             ),
             (None, _, None) => (
                 gif.paste_said
                     .unwrap_or("Copy a GIPHY link (giphy.com), then Paste link.")
                     .to_owned(),
-                color::MUTED,
+                color::muted(),
             ),
         };
         text(
@@ -782,21 +798,21 @@ impl Panel {
                     crate::tag_copies::copy_name(&copies[0]),
                     crate::tag_copies::copy_name(&copies[1])
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
             (Some(Tool::Break), _, _) => (
                 "One copy goes; you keep at least one of every tag.".to_owned(),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            (_, _, Some((said, true))) => (said.clone(), color::TEXT),
-            (_, _, Some((said, false))) => (said.clone(), color::alpha(color::GOLD, 0.9)),
+            (_, _, Some((said, true))) => (said.clone(), color::text()),
+            (_, _, Some((said, false))) => (said.clone(), color::alpha(color::gold(), 0.9)),
             _ => match tools.craft_why {
-                Some(why) => (why.to_owned(), color::QUIET),
+                Some(why) => (why.to_owned(), color::quiet()),
                 None if tools.shatter.is_none() => (
                     "Duplicates break down into kyber shards or craft into a new tag.".to_owned(),
-                    color::QUIET,
+                    color::quiet(),
                 ),
-                None => (String::new(), color::QUIET),
+                None => (String::new(), color::quiet()),
             },
         };
         if !words.is_empty() {
@@ -822,14 +838,14 @@ impl Panel {
             format_args!("{words}"),
             frame.rect(LEFT_X, y + 6.0, 260.0, 26.0),
             20.0 * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(LEFT_X + 260.0, y + 19.0, width - 260.0, 1.0),
             radius: 0.5 * frame.s,
-            color: color::alpha(color::HOLO, 0.18),
+            color: color::alpha(color::holo(), 0.18),
         });
     }
 
@@ -851,12 +867,12 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, WALL_Y, 4.0, track),
             radius: 2.0 * frame.s,
-            color: color::alpha(color::HOLO, 0.1),
+            color: color::alpha(color::holo(), 0.1),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top.min(WALL_BOTTOM - size), 4.0, size),
             radius: 2.0 * frame.s,
-            color: color::alpha(color::HOLO, 0.45),
+            color: color::alpha(color::holo(), 0.45),
         });
     }
 
@@ -879,35 +895,43 @@ impl Panel {
         let chosen = index == self.tag;
         let count = held.copies;
         let (name, tone_name, tone) = entry_words(entry);
-        let area = frame.rect(x, y, TILE_WIDTH, TILE_HEIGHT);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 12.0 * s,
-            color: if chosen {
-                color::alpha(color::GOLD, 0.09)
-            } else {
-                color::alpha(color::SPACE, if hovered { 0.78 } else { 0.6 })
+        let flash = match entry {
+            Entry::Tag(tag) => self.first_look(crate::collection_seen::Kind::Tag, tag.id),
+            Entry::Card(id) => self.first_look(crate::collection_seen::Kind::Card, id),
+            Entry::Gif(_) => 0.0,
+        };
+        // The tier's frame, one look everywhere (15/11/2026), gold round the one chosen.
+        crate::menu::sjk::kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x, y, TILE_WIDTH, TILE_HEIGHT],
+            entry_tier(entry),
+            crate::menu::sjk::kit::TierSize::Tile,
+            crate::menu::sjk::kit::TierLook {
+                acrylic: true,
+                chosen,
+                hovered: hovered || chosen,
+                dim: count == 0,
+                flash,
+                ..crate::menu::sjk::kit::TierLook::at(crate::menu::art::motion::seconds() as f32)
             },
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 16.0, y, TILE_WIDTH - 32.0, 3.0),
-            radius: 1.5 * s,
-            color: Color::new(tone.r, tone.g, tone.b, if count > 0 { 1.0 } else { 0.4 }),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect: area,
-            radius: 12.0 * s,
-            width: if chosen { 1.6 } else { 1.0 } * s,
-            color: if chosen {
-                color::GOLD_BRIGHT
-            } else {
-                color::alpha(color::HOLO, if hovered { 0.35 } else { 0.16 })
-            },
-        });
+        );
+        if chosen {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: frame.rect(x - 3.0, y - 3.0, TILE_WIDTH + 6.0, TILE_HEIGHT + 6.0),
+                radius: 15.0 * s,
+                width: 1.8 * s,
+                color: color::gold_bright(),
+            });
+        }
         let art = 120.0;
         let art_rect = [x + (TILE_WIDTH - art) * 0.5, y + 16.0, art, art];
         let alpha = if count > 0 { 1.0 } else { 0.32 };
         self.tag_picture(frame, entry, art_rect, alpha, 15.0);
+        // New: a sticker at the top left (`crate::collection_seen`).
+        if self.tag_new(entry) {
+            let _ = super::marks_view::new_sticker(&mut self.ui, frame, [x + 8.0, y + 10.0], 18.0);
+        }
         // The finished copies held: a badge for each finish, top right.
         let mut badge_y = y + 10.0;
         for (copies, finish) in [(held.holo, 1), (held.solar, 2)] {
@@ -925,11 +949,11 @@ impl Panel {
             frame.rect(x + 8.0, y + 142.0, TILE_WIDTH - 16.0, 24.0),
             17.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else if count > 0 {
-                color::TEXT
+                color::text()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -951,7 +975,7 @@ impl Panel {
             frame.rect(x + 8.0, y + 168.0, TILE_WIDTH - 16.0, 20.0),
             14.0 * s,
             if in_use.is_some() {
-                color::HOLO
+                color::holo()
             } else {
                 Color::new(tone.r, tone.g, tone.b, if count > 0 { 0.9 } else { 0.5 })
             },
@@ -1054,10 +1078,10 @@ impl Panel {
         let finish = self.tag_finish_shown(held);
         let height = CARD_BOTTOM - CARD_TOP;
         let area = frame.rect(CARD_X, CARD_TOP, CARD_WIDTH, height);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: 16.0 * s,
-            color: color::alpha(color::SPACE, 0.88),
+            tint: color::alpha(color::glass(), color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(CARD_X + 24.0, CARD_TOP, CARD_WIDTH - 48.0, 3.0),
@@ -1068,7 +1092,7 @@ impl Panel {
             rect: area,
             radius: 16.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, 0.3),
+            color: color::alpha(color::holo(), 0.3),
         });
         let x = CARD_X + CARD_PAD;
         let width = CARD_WIDTH - CARD_PAD * 2.0;
@@ -1099,7 +1123,7 @@ impl Panel {
             } else {
                 38.0
             } * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1193,9 +1217,9 @@ impl Panel {
             PROPOSE
         };
         for (words, colour) in [
-            (how, color::TEXT),
-            (held_line, color::MUTED),
-            (foot.to_owned(), color::QUIET),
+            (how, color::text()),
+            (held_line, color::muted()),
+            (foot.to_owned(), color::quiet()),
         ] {
             text(
                 &mut self.ui,
@@ -1241,7 +1265,7 @@ impl Panel {
             format_args!("toy_tag sticks it where you look"),
             frame.rect(bx + bw + 18.0, by + 12.0, width - bw - 18.0, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1270,7 +1294,7 @@ impl Panel {
                 rect,
                 radius: height * 0.5 * s,
                 color: color::alpha(
-                    if active { color::GOLD } else { color::HOLO },
+                    if active { color::gold() } else { color::holo() },
                     if active {
                         0.16
                     } else if hovered {
@@ -1300,9 +1324,9 @@ impl Panel {
                 radius: height * 0.5 * s,
                 width: if active { 1.6 } else { 1.0 } * s,
                 color: if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, if has { 0.35 } else { 0.12 })
+                    color::alpha(color::holo(), if has { 0.35 } else { 0.12 })
                 },
             });
             let copies = match finish.index {
@@ -1322,11 +1346,11 @@ impl Panel {
                 frame.rect(left, y + (height - 22.0) * 0.5, chip, 22.0),
                 16.0 * s,
                 if active {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else if has {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::QUIET
+                    color::quiet()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -1339,7 +1363,7 @@ impl Panel {
 }
 
 /// A small badge naming a finish at `[x, y]` (a tile's Holo or Solar copies).
-fn finish_badge(
+pub(super) fn finish_badge(
     canvas: &mut crate::menu_widgets::MenuCanvas,
     frame: &Frame,
     [x, y]: [f32; 2],
@@ -1356,7 +1380,7 @@ fn finish_badge(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect,
         radius: 10.0 * s,
-        color: color::alpha(color::SPACE, 0.85),
+        color: color::alpha(color::space(), 0.85),
     });
     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
         rect,
@@ -1392,6 +1416,20 @@ fn wall_parts(cards: usize, gifs: usize) -> Vec<(&'static str, usize)> {
         .collect()
 }
 
+/// The tier an entry's frame shows: a tag's, a card's rarity, a GIF tag's none (Common's
+/// plain glass).
+fn entry_tier(entry: &Entry) -> crate::unlockables::Rarity {
+    match entry {
+        Entry::Tag(tag) => tag.tier,
+        Entry::Card(id) => crate::cards::faces::current()
+            .find(id)
+            .map_or(crate::unlockables::Rarity::Common, |(_, face)| {
+                crate::menu::sjk::kit::card_tier(face.rarity.index)
+            }),
+        Entry::Gif(_) => crate::unlockables::Rarity::Common,
+    }
+}
+
 /// What an entry reads as: its name ("Gonk", a card's title), its tier's or kind's name
 /// ("Rare", "Credits") and colour (a card's rank's or rarity's).
 fn entry_words(entry: &Entry) -> (String, String, Color) {
@@ -1407,7 +1445,7 @@ fn entry_words(entry: &Entry) -> (String, String, Color) {
                 face.kind.name().to_owned(),
                 face.tone().colour,
             ),
-            None => (id.clone(), "Card".to_owned(), color::QUIET),
+            None => (id.clone(), "Card".to_owned(), color::quiet()),
         },
         Entry::Gif(_) => (
             "GIF".to_owned(),

@@ -110,10 +110,6 @@ impl GpuState {
                 crate::toy_sight::ILLUMINATE,
                 crate::looks::Unseen::ILLUMINATE,
             ),
-            (
-                crate::toy_sight::CARDBOARD_BOX,
-                crate::looks::Unseen::CARDBOARD_BOX,
-            ),
             (crate::toy_sight::BOOMBOX, crate::looks::Unseen::BOOMBOX),
         ] {
             if !seen(cvar) {

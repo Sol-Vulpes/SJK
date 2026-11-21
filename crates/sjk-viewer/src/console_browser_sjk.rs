@@ -61,7 +61,9 @@ const _: () = assert!(DETAIL_BOTTOM < BUTTONS_Y && BUTTONS_Y + 44.0 < KEYS_Y - 2
 const FILTERS: [&str; TABS.len()] = ["All", "Commands", "Cvars", "Changed"];
 
 /// Selected text: gold, translucent so the text stays readable.
-const HIGHLIGHT: Color = color::alpha(color::GOLD, 0.34);
+fn highlight() -> Color {
+    color::alpha(color::gold(), 0.34)
+}
 
 /// Measures text as the families draw it in the player's menu text style.
 #[derive(Clone, Copy)]
@@ -165,9 +167,9 @@ impl Browser {
                 frame.rect(RAIL_X + 28.0, top + 2.0, RAIL_WIDTH - 28.0, 32.0),
                 26.0 * s,
                 match (current, hovered) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, true) => color::TEXT,
-                    (false, false) => color::MUTED,
+                    (true, _) => color::gold_bright(),
+                    (false, true) => color::text(),
+                    (false, false) => color::muted(),
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -189,7 +191,7 @@ impl Browser {
                 ),
                 frame.rect(RAIL_X + 28.0, top + 34.0, RAIL_WIDTH - 28.0, 22.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -219,9 +221,9 @@ impl Browser {
                 frame.rect(ROWS_X + 22.0, top + 4.0, name_room, 26.0),
                 19.0 * s,
                 if chosen {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -237,7 +239,7 @@ impl Browser {
                 format_args!("{description}"),
                 frame.rect(ROWS_X + 22.0, top + 30.0, ROWS_WIDTH - 88.0, 20.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -264,9 +266,9 @@ impl Browser {
                             frame.rect(value[0], value[1], value[2], value[3]),
                             22.0 * s,
                             if changed {
-                                color::GOLD_BRIGHT
+                                color::gold_bright()
                             } else {
-                                color::TEXT
+                                color::text()
                             },
                             FontWeight::Regular,
                             TextAlign::End,
@@ -288,7 +290,7 @@ impl Browser {
                         format_args!("{}", command_kind(*source)),
                         frame.rect(value[0], value[1], value[2], value[3]),
                         15.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -304,12 +306,12 @@ impl Browser {
                 format_args!("No command or cvar matches the search."),
                 frame.rect(ROWS_X + 22.0, ROWS_TOP + 8.0, ROWS_WIDTH - 44.0, 28.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
         } else if self.visible.len() > self.rows {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 SCROLLBAR_TOKEN,
                 frame.rect(
                     ROWS_X + ROWS_WIDTH + 6.0,
@@ -357,7 +359,7 @@ impl Browser {
                 value,
                 measure.advance(family, size * s, FontWeight::Regular),
                 joiner,
-                HIGHLIGHT,
+                highlight(),
             );
             text(
                 ui,
@@ -376,7 +378,7 @@ impl Browser {
             format_args!("{}", kind_label(entry)),
             frame.rect(DETAIL_X, DETAIL_TOP, DETAIL_WIDTH, 22.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -386,12 +388,12 @@ impl Browser {
             [DETAIL_X, DETAIL_TOP + 26.0, DETAIL_WIDTH, 44.0],
             TextFamily::Display,
             34.0,
-            color::TEXT,
+            color::text(),
             Joiner::Newline,
         );
         let _ = ui.draw_list_mut().push(sjk_ui::DrawCommand::SolidRect {
             rect: frame.rect(DETAIL_X, DETAIL_TOP + 80.0, DETAIL_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         });
         let mut y = DETAIL_TOP + 98.0;
         if let Kind::Cvar { value, default, .. } = &entry.kind {
@@ -402,7 +404,7 @@ impl Browser {
                     format_args!("{label}"),
                     frame.rect(DETAIL_X, y, 120.0, 30.0),
                     16.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -425,9 +427,9 @@ impl Browser {
                     TextFamily::Display,
                     24.0,
                     if entry.changed() {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                     Joiner::Newline,
                 );
@@ -440,7 +442,7 @@ impl Browser {
                 [DETAIL_X + 110.0, y, DETAIL_WIDTH - 110.0, 30.0],
                 TextFamily::Display,
                 24.0,
-                color::MUTED,
+                color::muted(),
                 Joiner::Newline,
             );
             y += 52.0;
@@ -460,7 +462,7 @@ impl Browser {
                 [DETAIL_X, y, DETAIL_WIDTH, 28.0],
                 TextFamily::Body,
                 18.0,
-                color::TEXT,
+                color::text(),
                 Joiner::Space,
             );
             y += 28.0;
@@ -554,7 +556,7 @@ impl Browser {
                 if self.status_error {
                     Color::new(1.0, 0.56, 0.5, 1.0)
                 } else {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,

@@ -68,7 +68,7 @@ fn who(inputs: &Inputs<'_>) -> Who {
         headline: headline.to_owned(),
         lines: lines
             .iter()
-            .map(|line| ((*line).to_owned(), color::MUTED))
+            .map(|line| ((*line).to_owned(), color::muted()))
             .collect(),
         key_id: String::new(),
         avatar: String::new(),
@@ -98,8 +98,8 @@ fn who(inputs: &Inputs<'_>) -> Who {
         Status::Failed(error) => Who {
             headline: "Cannot reach the hub".to_owned(),
             lines: vec![
-                (error.clone(), color::MUTED),
-                ("Retrying automatically.".to_owned(), color::QUIET),
+                (error.clone(), color::muted()),
+                ("Retrying automatically.".to_owned(), color::quiet()),
             ],
             key_id: snapshot.key_id.clone(),
             avatar: snapshot
@@ -119,10 +119,10 @@ fn who(inputs: &Inputs<'_>) -> Who {
             let since = crate::medals::date_text(me.created);
             use sjk_identity::Trust;
             let badge = match (me.verified, me.trust) {
-                (true, _) => ("Verified by the SJK team".to_owned(), color::GOLD_BRIGHT),
+                (true, _) => ("Verified by the SJK team".to_owned(), color::gold_bright()),
                 (false, Some(Trust::New)) => (
                     "New: green after 30 days and 10 hours of play".to_owned(),
-                    color::QUIET,
+                    color::quiet(),
                 ),
                 (false, Some(Trust::Trusted)) => (
                     "Trusted: the SJK team may verify you".to_owned(),
@@ -130,13 +130,13 @@ fn who(inputs: &Inputs<'_>) -> Who {
                 ),
                 (false, Some(Trust::Banned)) => (
                     "Banned from the SJK chat: your 30 days start again".to_owned(),
-                    color::EMBER,
+                    color::ember(),
                 ),
-                (false, _) => ("Not verified yet".to_owned(), color::QUIET),
+                (false, _) => ("Not verified yet".to_owned(), color::quiet()),
             };
             lines.push(badge);
             if !since.is_empty() {
-                lines.push((format!("Member since {since}"), color::MUTED));
+                lines.push((format!("Member since {since}"), color::muted()));
             }
             let earlier: Vec<&str> = me
                 .names
@@ -150,7 +150,7 @@ fn who(inputs: &Inputs<'_>) -> Who {
             if !earlier.is_empty() {
                 lines.push((
                     format!("Also known as {}", earlier.join("^7, ")),
-                    color::MUTED,
+                    color::muted(),
                 ));
             }
             Who {
@@ -302,9 +302,9 @@ impl Panel {
             ),
             14.0 * s,
             if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             },
             FontWeight::Regular,
             TextAlign::Center,
@@ -334,7 +334,7 @@ impl Panel {
             ),
             frame.rect(WHO_X, TOP, WHO_WIDTH, 50.0),
             38.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -428,7 +428,7 @@ impl Panel {
                 format_args!("{value}"),
                 frame.rect(x, row_y, 250.0, 40.0),
                 34.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -438,7 +438,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(x, row_y + 40.0, 250.0, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -473,7 +473,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(standing.kind.name)),
                 frame.rect(LEFT_X, y, LEFT_WIDTH - 140.0, 28.0),
                 21.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -486,7 +486,7 @@ impl Panel {
                 ),
                 frame.rect(LEFT_X + LEFT_WIDTH - 140.0, y, 140.0, 28.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -518,9 +518,9 @@ impl Panel {
             .show(caret_line, most, [top.x, top.y], row(1).y - top.y);
         let (first, shown) = self.bio_layout.visible();
         let ink = if self.writable {
-            color::TEXT
+            color::text()
         } else {
-            color::MUTED
+            color::muted()
         };
         let selection = self.bio_edit.selection(&self.bio);
         for (index, range) in shown.iter().enumerate() {
@@ -533,7 +533,7 @@ impl Panel {
                     let x1 = self.bio_layout.locate(&self.bio, end).1;
                     let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                         rect: sjk_ui::Rect::new(rect.x + x0, rect.y, x1 - x0, rect.height),
-                        color: color::alpha(color::HOLO, 0.35),
+                        color: color::alpha(color::holo(), 0.35),
                     });
                 }
             }
@@ -558,7 +558,7 @@ impl Panel {
                     2.0 * s,
                     height,
                 ),
-                color: color::TEXT,
+                color: color::text(),
             });
         }
     }
@@ -580,7 +580,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 16.0 * s,
-            color: color::alpha(color::SPACE, 0.6),
+            color: color::alpha(color::space(), 0.6),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
@@ -589,7 +589,7 @@ impl Panel {
             color: if focused {
                 Color::new(1.0, 1.0, 1.0, 0.7)
             } else {
-                color::alpha(color::HOLO, 0.4)
+                color::alpha(color::holo(), 0.4)
             },
         });
         self.ui.hit_region(BIO_TOKEN, rect);
@@ -615,7 +615,7 @@ impl Panel {
                         BIO_LINE,
                     ),
                     BIO_SIZE * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -638,7 +638,7 @@ impl Panel {
             ),
             frame.rect(MIDDLE_X, below, 330.0, 26.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -671,9 +671,9 @@ impl Panel {
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 26.0),
                 17.0 * s,
                 if self.message == "Saved" {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::EMBER
+                    color::ember()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -690,7 +690,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -744,7 +744,7 @@ impl Panel {
             format_args!("{headline}"),
             frame.rect(side_x, BIO_TOP + 8.0, side_width, 36.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -764,7 +764,7 @@ impl Panel {
             format_args!("{detail}"),
             frame.rect(side_x, y, side_width, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -786,9 +786,9 @@ impl Panel {
                     frame.rect(side_x, y, side_width, 24.0),
                     16.0 * s,
                     if good {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::EMBER
+                        color::ember()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -830,7 +830,7 @@ impl Panel {
                     22.0,
                 ),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -847,7 +847,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
                     16.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -919,7 +919,7 @@ impl Panel {
             format_args!("{shown}"),
             frame.rect(MIDDLE_X, BIO_TOP - 4.0, MIDDLE_WIDTH, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -931,7 +931,7 @@ impl Panel {
             ),
             frame.rect(MIDDLE_X, BIO_TOP + 40.0, MIDDLE_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -967,9 +967,9 @@ impl Panel {
                     radius: 10.0 * s,
                     width: 1.5 * s,
                     color: if worn {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::TEXT
+                        color::text()
                     },
                 });
             }
@@ -993,7 +993,7 @@ impl Panel {
             format_args!("Another emoji? Type or paste it here (Win+. opens the emoji panel)."),
             frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1014,9 +1014,9 @@ impl Panel {
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
                 if good {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::EMBER
+                    color::ember()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -1082,7 +1082,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1105,9 +1105,9 @@ impl Panel {
                 frame.rect(MIDDLE_X, y, MIDDLE_WIDTH, 24.0),
                 16.0 * s,
                 if good {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::EMBER
+                    color::ember()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -1175,7 +1175,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(RIGHT_X, y, RIGHT_WIDTH, 24.0),
                     16.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1200,7 +1200,7 @@ impl Panel {
                 format_args!("{}", award.label()),
                 frame.rect(RIGHT_X + 98.0, y + 8.0, RIGHT_WIDTH - 98.0, 30.0),
                 23.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1210,7 +1210,7 @@ impl Panel {
                 format_args!("{}", award.rank_and_given()),
                 frame.rect(RIGHT_X + 98.0, y + 40.0, RIGHT_WIDTH - 98.0, 24.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1223,7 +1223,7 @@ impl Panel {
                 format_args!("and {} more", medals.len() - MEDALS_SHOWN),
                 frame.rect(RIGHT_X, y, RIGHT_WIDTH, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1243,7 +1243,7 @@ impl Panel {
             format_args!("{unlocked} of {total} unlocked"),
             frame.rect(RIGHT_X, y + 26.0, RIGHT_WIDTH, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1256,7 +1256,7 @@ impl Panel {
             } else {
                 unlocked as f32 / total as f32
             },
-            color::GOLD,
+            color::gold(),
         );
         kit::button(
             &mut self.ui,
@@ -1281,18 +1281,18 @@ impl Panel {
                 .iter()
                 .filter(|unlockable| holdings.unlock(unlockable.id).is_some())
                 .count();
-            // Out of the shaders the player sees: an unheld Unique one is not counted.
+            // Out of the shaders the player sees: an unheld Secret one is not counted.
             (
-                format!("{owned} of {} shaders owned", holdings.listed_count()),
+                format!("{owned} of {} kybers owned", holdings.listed_count()),
                 30.0,
-                color::TEXT,
+                color::text(),
             )
         } else {
             (
-                crate::terms::say("Medals, shaders, toys and more, kept on the SJK hub")
+                crate::terms::say("Medals, kybers, toys and more, kept on the SJK hub")
                     .into_owned(),
                 17.0,
-                color::MUTED,
+                color::muted(),
             )
         };
         text(
@@ -1346,17 +1346,17 @@ impl Panel {
             Some(1) => (
                 crate::terms::say("1 holocron").into_owned(),
                 30.0,
-                color::TEXT,
+                color::text(),
             ),
             Some(total) => (
                 crate::terms::say_owned(format!("{total} holocrons")),
                 30.0,
-                color::TEXT,
+                color::text(),
             ),
             None => (
                 "Found by playing, kept on the SJK hub".to_owned(),
                 17.0,
-                color::MUTED,
+                color::muted(),
             ),
         };
         text(
@@ -1437,7 +1437,7 @@ fn bar(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, y, width, height),
         radius: height * 0.5 * s,
-        color: color::alpha(color::HOLO, 0.12),
+        color: color::alpha(color::holo(), 0.12),
     });
     let fraction = fraction.clamp(0.0, 1.0);
     if fraction > 0.0 {
@@ -1490,6 +1490,7 @@ mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_759_708_800,

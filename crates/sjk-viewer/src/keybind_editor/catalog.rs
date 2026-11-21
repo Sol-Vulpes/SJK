@@ -138,28 +138,10 @@ const FIXED: &[BindableAction] = &[
     action(Interaction, "Toy: Illuminate", "toy_illuminate", ""),
     action(
         Interaction,
-        "Toy: Cardboard box",
-        crate::cardboard_box::COMMAND,
-        "",
-    ),
-    action(Interaction, "Toy: Fishing", crate::fishing::COMMAND, ""),
-    action(
-        Interaction,
         "Toy: WHEEL OF DOOM",
         crate::wheel_of_doom::COMMAND,
         "",
     ),
-    action(Interaction, "Toy: Mining", crate::mining::COMMAND, ""),
-    // Order 66: the toy's switch, then the order every player with it on obeys.
-    action(Interaction, "Toy: Order 66", crate::order66::COMMAND, ""),
-    action(
-        Interaction,
-        "Execute Order 66",
-        crate::order66::EXECUTE_COMMAND,
-        "",
-    ),
-    // The Hax: the toy's switch; the hack itself is +use held on a player.
-    action(Interaction, "Toy: Hax", crate::hax::COMMAND, ""),
     // The Ragdoll: go limp, press again to get up.
     action(Interaction, "Toy: Ragdoll", crate::ragdoll::COMMAND, ""),
     // The Drone: the switch that lets players peek (freecam and peek fly the drone).
@@ -173,25 +155,18 @@ const FIXED: &[BindableAction] = &[
         crate::boombox::PLACE_COMMAND,
         "",
     ),
-    // The Monitor: the switch (throw, and be hit), and the throw (held, it charges).
-    action(Interaction, "Toy: Monitor", crate::monitor::COMMAND, ""),
+    // Force Throw (the Monitor before 21/11/2026, its commands kept): the switch (throw,
+    // and be hit), and the throw (held, it charges).
+    action(Interaction, "Toy: Force Throw", crate::monitor::COMMAND, ""),
     action(
         Interaction,
-        "Throw monitor",
+        "Force throw",
         crate::monitor::CHARGE_COMMAND,
         "",
     ),
     // Box hunt: the switch, the consent to hunt and be the mark.
     action(Interaction, "Toy: Box hunt", crate::box_hunt::COMMAND, ""),
     action(Interaction, "Toy: Quests", crate::quests::COMMAND, ""),
-    // The Banana peel: the switch, the right to drop peels and the consent to slip.
-    action(Interaction, "Toy: Banana peel", crate::banana::COMMAND, ""),
-    action(
-        Interaction,
-        "Drop banana peel",
-        crate::banana::DROP_COMMAND,
-        "",
-    ),
     // The Tag: sticks the chosen tag where the player looks.
     action(Interaction, "Toy: Tag", crate::tags::COMMAND, ""),
     action(Interaction, "Item: Bacta", "use_bacta", ""),

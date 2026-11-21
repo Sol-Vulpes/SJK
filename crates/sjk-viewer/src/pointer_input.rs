@@ -458,10 +458,6 @@ impl GpuState {
             self.medal_popup.handle_pointer(event);
             return true;
         }
-        if self.holocron_popup.is_open() {
-            self.holocron_popup.handle_pointer(event);
-            return true;
-        }
         if self.graphics_reload.card.is_open() {
             let choice = self.graphics_reload.card.handle_pointer(event);
             self.reload_card_choice(choice);
@@ -516,7 +512,7 @@ impl GpuState {
             self.log_request_card_choice(choice);
             return true;
         }
-        // The update card, over the menus: a click on it installs the update.
+        // The update banner, over the menus: a click on it installs the update.
         if self.update_card_pointer(event) {
             return true;
         }

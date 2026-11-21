@@ -125,7 +125,7 @@ pub(crate) fn paint(
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 6.0 * s,
-                color: faded(color::HOLO, 0.07),
+                color: faded(color::holo(), 0.07),
             });
             text(
                 canvas,
@@ -133,7 +133,7 @@ pub(crate) fn paint(
                 format_args!("Loading GIF"),
                 rect,
                 look.text_size * s,
-                faded(color::QUIET, 1.0),
+                faded(color::quiet(), 1.0),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -144,7 +144,7 @@ pub(crate) fn paint(
             format_args!("GIF unavailable"),
             Rect::new(x, y, width, (look.note - 2.0) * s),
             look.text_size * s,
-            faded(color::QUIET, 1.0),
+            faded(color::quiet(), 1.0),
             FontWeight::Regular,
             TextAlign::Start,
         ),

@@ -22,7 +22,7 @@ impl PlayerMenu {
             292.0,
             width,
             "Force templates",
-            color::GOLD,
+            color::gold(),
         );
         for (row, label, range, top) in [
             (FORCE_RETAIL_TEMPLATE_ROW, "Jedi Academy", 0..retail, 326.0),
@@ -33,7 +33,15 @@ impl PlayerMenu {
                 430.0,
             ),
         ] {
-            kit::heading_in(&mut self.canvas, frame, x, top, width, label, color::MUTED);
+            kit::heading_in(
+                &mut self.canvas,
+                frame,
+                x,
+                top,
+                width,
+                label,
+                color::muted(),
+            );
             let name = chosen
                 .filter(|index| range.contains(index))
                 .map(|index| templates[index].name.as_str())

@@ -21,16 +21,16 @@ general contributor rules.
 - A client mod's commands and settings start with its id and a dot
   (`japlus.guntele`, `jof.commands`), and its switch is `mod_<id>`
   ([mods.md](mods.md)).
-- Every toy is a `toy_<name>` command (`toy_help` lists them all; `toy_illuminate`, `toy_box`,
-  `toy_order66`, `toy_hax`, `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
-  `toy_boxhunt`, `toy_banana`, `toy_wheelofdoom`, `toy_quests`); a
+- Every toy is a `toy_<name>` command (`toy_help` lists them all; `toy_illuminate`,
+  `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
+  `toy_boxhunt`, `toy_wheelofdoom`, `toy_quests`); a
   toy has no Force wheel entry, and one with a setting names it `cg_toy<Name>...`.
-  Illuminate, the cardboard box and Order 66 have none: they are always available and
+  Illuminate has none: it is always available and
   on only for the client's run. A toy others see has an id in the look's `toys`
-  (`cardboard_box`, `order66`). A toy may have a command of its own besides
-  (`order66`, which gives the order; `monitor_throw`, which throws a monitor, and
-  `+monitor_throw`, its held bind, which charges the throw; `banana_drop`, which drops a
-  banana peel; `boombox_place`, which stands the boombox on the floor).
+  (`drone`, `boombox`). A toy may have a command of its own besides
+  (`monitor_throw`, which throws a monitor, and
+  `+monitor_throw`, its held bind, which charges the throw; `boombox_place`, which stands
+  the boombox on the floor).
 - The crates are SJK's too: `crates/sjk-*`, packages `sjk-*` (`cargo build -p
   sjk-viewer -p sjk-dedicated`) and Rust paths `sjk_*`. Environment variables for
   diagnostics are `SJK_*`; the game-data and server paths keep the neutral
@@ -63,6 +63,7 @@ migrated, except where the table says so. Where each is documented:
 | Setting | Default | See |
 | --- | --- | --- |
 | `ui_menuStyle` | `sjk` (the SJK UI), saved `classic` moved to `sjk` once, saved `modern` reset | [Menu style](client.md#menu-style) |
+| `ui_theme` | `warm` (the sun's colours, Sol, 17/11/2026); `cold` and `custom` (`ui_themeHue` 22, `ui_themeSaturation` 100) by choice | [Theme](sjk-ui.md#theme) |
 | `ui_gameFont` | on | [UI ownership](rendering.md#ui-ownership) |
 | `cg_scoreboardStyle` | `auto` (SJK UI's with its menus, else `classic`), saved `modern` reset | [Scoreboard styles](client.md#scoreboard-styles) |
 | `cg_compactScoreboard` | on (SJK UI's scoreboard in one column, as wide as its names, centred) | [SJK UI scoreboard](sjk-ui.md#scoreboard) |
@@ -77,7 +78,7 @@ migrated, except where the table says so. Where each is documented:
 | `cg_statusBalloons` | 1, SJK animations (Sol, 09/11/2026, release 2026.1109.2); choices: stock, SJK, clan static or clan animated | [Status balloons](client.md#status-balloons) |
 | `cg_hitMarker` | off (red damage-direction indicator) | [Client](client.md#launch) |
 | `cg_shieldBrightness` | 2 passes, old defaults 1 and 4 moved to 2 once | [Client](client.md#launch) |
-| `cg_duelGhost` | on: duellists as JoF EJK's blue figures (off: dark under the bubble) | [Rendering](rendering.md#entity-render-effects) |
+| `cg_duelGhost` | 1: duellists as JoF EJK's blue figures (0: dark under the bubble, as stock; 2: hidden while you are in no duel) | [Rendering](rendering.md#entity-render-effects) |
 | `cg_duelHideOthers` | 1, Auto: in a private duel, players outside it hidden on JA+ (unless `cp_pluginDisable` bit 1) and jaPRO, as JoF EJK | [Client](client.md#nameplates) |
 | `cg_nameplateStyle` | 0, Holo (the holo frame; 1 the capsule, 2 the classic plate) | [Nameplates](client.md#nameplates) |
 | `cg_dismember` | 2 | [Dismemberment](client.md#dismemberment-and-disintegration) |
@@ -95,6 +96,7 @@ migrated, except where the table says so. Where each is documented:
 | `mod_japlus`, `mod_jof` | on (each mod loads on its servers only), saved 0 moved to 1 once | [Client mods](mods.md) |
 | `con_drawNotify` | off (no console feed at the top left; chat keeps its box) | [Classic console](client.md#classic-console) |
 | `cg_drawClock` | off (no local time clock on the HUD) | [Local time clock](client.md#local-time-clock) |
+| `cg_statusBar`, `cg_statusBarTop` | on (Sol, 16/11/2026): a bar docked to the screen's bottom and one to its top, the HUD inside them; their parts' switches on; each offered again in the News panel | [Status bars](client.md#status-bars) |
 | `con_chatOnly` | off (the open console shows every line) | [Classic console](client.md#classic-console) |
 | `cl_chatTranslate` | on: a click on a chat line (feed or console), `/tr`, `tr` and the SJK chat page's Translate put a chosen line into English through the hub; nothing is translated unasked | [Chat translation](client.md#chat-translation) |
 | `cl_experimentalShowcase` | off (the experimental `ghost` and `mimic` commands, staff keys only) | [Ghost replay](client.md#ghost-replay) |
@@ -442,9 +444,9 @@ history and no extra commit appears in it; `--check` says whether the file is
 current. A new contributor goes into the script's `PEOPLE` (their git name and
 GitHub login) along with their card; the tests reject a person in the history
 without a card. The script's `QUIET` names the topics it leaves out, with every
-commit their merge brought: since 25/10/2026, Sol's hand-given Unique blades
+commit their merge brought: since 25/10/2026, Sol's hand-given Secret blades
 (`personal/thousand-cranes`, `personal/hearth`, `personal/hearth-full`), which show
-only to their holders ([unlockables.md](unlockables.md#unique-shaders)).
+only to their holders ([unlockables.md](unlockables.md#secret-kybers)).
 
 ## Debug panel
 

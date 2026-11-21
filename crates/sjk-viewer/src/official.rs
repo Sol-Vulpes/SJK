@@ -19,9 +19,9 @@
 //!
 //! A reward round's line opens the round list (or `rewards`). A reward waiting for the
 //! player opens the claim window as the medal pop-up does: on the main menu, or when the
-//! game menu opens in a match, never over play; a match gets an unlock card once per
-//! reward. Claim asks the hub; the gift holocrons it gives then arrive through the
-//! holocron pop-up, and the window shows the next reward or closes. Later puts it away
+//! game menu opens in a match, never over play; a match gets a notification banner once
+//! per reward. Claim asks the hub; the gift holocrons it gives then arrive with their
+//! banner, and the window shows the next reward or closes. Later puts it away
 //! until the next menu.
 //!
 //! The creator writes announcements with `announce` (the hub refuses anyone else).

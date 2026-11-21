@@ -22,7 +22,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 
 /// 1: the player ticked "Don't show this again".
 pub(crate) const CVAR: &str = "ui_playstyleCard";
-/// The nameplates' switch (see and share, `hud::nameplate::see_and_share`).
+/// The nameplates' switch (see and share, `hud::nameplate::State::sharing`).
 const NAMEPLATES_CVAR: &str = "cg_nameplate";
 
 const SAVE_TOKEN: u16 = 1;
@@ -250,7 +250,7 @@ impl Card {
             format_args!("New: playstyle badges"),
             frame.rect(TEXT_X, top + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -260,7 +260,7 @@ impl Card {
             format_args!("How do you like to play?"),
             frame.rect(TEXT_X, top + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -271,7 +271,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, top + line_y, TEXT_WIDTH, LINE),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -289,7 +289,7 @@ impl Card {
             let _ = list.push(DrawCommand::RoundedRect {
                 rect: badge,
                 radius: badge.height * 0.5,
-                color: Color::new(0.04, 0.05, 0.07, 0.85),
+                color: color::alpha(color::space(), 0.85),
             });
             let _ = list.push(DrawCommand::Border {
                 rect: badge,
@@ -306,9 +306,9 @@ impl Card {
                 frame.rect(name_x, middle - 14.0, MEANING_X - (name_x - TEXT_X), 28.0),
                 20.0 * s,
                 if ticked {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Semibold,
                 TextAlign::Start,
@@ -324,7 +324,7 @@ impl Card {
                     26.0,
                 ),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -348,7 +348,11 @@ impl Card {
                         LINE,
                     ),
                     18.0 * s,
-                    if *ticked { color::TEXT } else { color::MUTED },
+                    if *ticked {
+                        color::text()
+                    } else {
+                        color::muted()
+                    },
                     FontWeight::Regular,
                     TextAlign::Start,
                 );

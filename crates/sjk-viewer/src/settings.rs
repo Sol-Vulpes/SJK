@@ -1458,13 +1458,12 @@ mod tests {
             console.bool_cvar(crate::sjk_chat_frame::SOUND_CVAR),
             Some(true)
         );
-        // Holocron cards default to outside private duels; the ESC-menu pop-up is
-        // independent in every mode.
-        let holocron_notifications = crate::holocron_popup::NOTIFICATIONS_CVAR;
+        // Holocron banners default to outside private duels.
+        let holocron_notifications = crate::holocron_banners::NOTIFICATIONS_CVAR;
         assert_eq!(network.get(hub + 4), Some(&holocron_notifications));
         assert_eq!(console.integer_cvar(holocron_notifications), Some(1));
         assert!(rows().any(|setting| setting.cvar == holocron_notifications));
-        // Its GIFs under the holocron cards, on by default.
+        // Its GIFs under the holocron banners, on by default.
         assert_eq!(network.get(hub + 5), Some(&crate::chat_gifs::CVAR));
         assert_eq!(console.bool_cvar(crate::chat_gifs::CVAR), Some(true));
         // Video clips under the GIFs, off by default (Sol's condition), and only

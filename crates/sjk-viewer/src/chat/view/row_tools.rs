@@ -154,7 +154,7 @@ impl ChatOverlay {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: panel,
             radius: 6.0 * g.scale,
-            color: Color::new(0.03, 0.035, 0.05, 0.86),
+            color: crate::menu::sjk::color::alpha(crate::menu::sjk::color::space(), 0.86),
         });
         let pointer = self.pointer_at;
         for (index, (item, (words, state))) in items.iter().zip(&words).enumerate() {

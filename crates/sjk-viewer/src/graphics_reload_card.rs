@@ -215,7 +215,7 @@ impl Card {
             format_args!("Graphics"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -225,7 +225,7 @@ impl Card {
             format_args!("{headline}"),
             frame.rect(TEXT_X, CARD_TOP + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -236,7 +236,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, BODY_TOP + index as f32 * LINE, TEXT_WIDTH, LINE),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

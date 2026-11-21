@@ -42,9 +42,9 @@ pub(super) fn new_sticker_lit(
         rect,
         radius: height * 0.5 * s,
         color: if lit {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::alpha(color::HOLO, 0.16)
+            color::alpha(color::holo(), 0.16)
         },
     });
     text(
@@ -53,7 +53,7 @@ pub(super) fn new_sticker_lit(
         format_args!("New"),
         frame.rect(x, y + (height - size * 1.25) * 0.5, width, size * 1.25),
         size * s,
-        if lit { INK } else { color::MUTED },
+        if lit { INK } else { color::muted() },
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -95,13 +95,13 @@ pub(super) fn glyph_pill(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect,
         radius: height * 0.5 * s,
-        color: color::alpha(color::SPACE, 0.82),
+        color: color::alpha(color::space(), 0.82),
     });
     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
         rect,
         radius: height * 0.5 * s,
         width: 1.0 * s,
-        color: color::alpha(color::GOLD, 0.6),
+        color: color::alpha(color::gold(), 0.6),
     });
     text(
         canvas,
@@ -109,7 +109,7 @@ pub(super) fn glyph_pill(
         format_args!("{words}"),
         frame.rect(x, y + (height - size * 1.3) * 0.5, width, size * 1.3),
         size * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Center,
     );
@@ -136,9 +136,9 @@ pub(super) fn toggle(
         rect,
         radius: 12.0 * s,
         color: if on {
-            color::alpha(color::GOLD, if hovered { 0.34 } else { 0.24 })
+            color::alpha(color::gold(), if hovered { 0.34 } else { 0.24 })
         } else {
-            color::alpha(color::HOLO, if hovered { 0.14 } else { 0.05 })
+            color::alpha(color::holo(), if hovered { 0.14 } else { 0.05 })
         },
     });
     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
@@ -146,9 +146,9 @@ pub(super) fn toggle(
         radius: 12.0 * s,
         width: if on { 1.6 } else { 1.2 } * s,
         color: match (on, enabled) {
-            (true, _) => color::GOLD,
-            (false, true) => color::alpha(color::HOLO, if hovered { 0.7 } else { 0.4 }),
-            (false, false) => color::alpha(color::HOLO, 0.16),
+            (true, _) => color::gold(),
+            (false, true) => color::alpha(color::holo(), if hovered { 0.7 } else { 0.4 }),
+            (false, false) => color::alpha(color::holo(), 0.16),
         },
     });
     text(
@@ -158,9 +158,9 @@ pub(super) fn toggle(
         frame.rect(x, y + 9.0, TOGGLE, 26.0),
         21.0 * s,
         match (on, enabled) {
-            (true, _) => color::GOLD_BRIGHT,
-            (false, true) => color::TEXT,
-            (false, false) => color::alpha(color::QUIET, 0.6),
+            (true, _) => color::gold_bright(),
+            (false, true) => color::text(),
+            (false, false) => color::alpha(color::quiet(), 0.6),
         },
         FontWeight::Semibold,
         TextAlign::Center,

@@ -12,12 +12,14 @@
 mod cosmetics;
 mod force_fx;
 mod force_motion;
+mod hall_turn;
 mod hilt_guard;
 mod lab;
 mod load;
 mod lone;
 pub(crate) mod preview;
 mod prop;
+mod reveal;
 mod sabers;
 mod shell;
 mod showcase;
@@ -107,8 +109,12 @@ pub(crate) struct MenuStage {
     lab_ease: lab::Ease,
     /// The game's draw or put-away as the Saber Lab lights or puts out the blade.
     flourish: lab::Flourish,
+    /// The Collection's first look at a New kyber: its blade held out, then lit.
+    reveal: reveal::Reveal,
     /// The Collection's Toys tab: the Illuminate holocron floats by the model.
     holocron_wanted: bool,
+    /// The Collection's hall: the camera turned to put the model in its column.
+    hall_turn: hall_turn::HallTurn,
     /// The Force shell the preview's model wears (the Force page's power).
     shell: Option<shell::StageShell>,
     /// The beam, puffs, spray or trail the preview's model gives off (the same power).
@@ -203,7 +209,7 @@ impl GpuState {
         if let Some(menu) = &mut self.client_menu {
             menu.set_preview_ready(ready);
         }
-        // The Collection's Shaders, Toys and Nameplates want the player's model.
+        // The Collection's Shaders and Toys want the player's model.
         let wish = self
             .console
             .as_ref()
@@ -241,7 +247,10 @@ impl GpuState {
         }
         self.menu_stage.lone = lone;
         self.menu_stage.lab = wish.and_then(|wish| wish.lab);
+        self.menu_stage.reveal.follow(wish.as_ref());
         self.menu_stage.ease_lab_view(now);
+        self.menu_stage
+            .ease_hall_turn(wish.is_some_and(|wish| wish.hall), now);
         if let Some(menu) = &mut self.client_menu {
             menu.set_collection_saber(self.menu_stage.lone.is_some());
         }
@@ -270,9 +279,7 @@ impl GpuState {
             (None, _, _) | (Some(_), false, None) => {
                 crate::console::collection_panel::Backstage::None
             }
-            (Some(_), true, _) => crate::console::collection_panel::Backstage::World {
-                head: self.stage_head(),
-            },
+            (Some(_), true, _) => crate::console::collection_panel::Backstage::World,
             (Some(_), false, Some(_)) => {
                 crate::console::collection_panel::Backstage::Preview { ready }
             }
@@ -568,20 +575,6 @@ impl GpuState {
             self.menu_stage.actor = None;
         }
         self.place_stage_cosmetics();
-    }
-
-    /// Where the top of the stage model's head is in the window this frame, from the
-    /// last frame's view: the Collection's Nameplates stand the plate there.
-    fn stage_head(&self) -> Option<[f32; 2]> {
-        let actor = self.menu_stage.actor.as_ref()?;
-        if self.menu_stage.preview_only {
-            return None;
-        }
-        // The top of the head in the stage's stance (a saber stance, knees bent): about
-        // 36 units over the origin, under the standing box's top (40), as measured on a
-        // world shot.
-        let head = actor.origin + Vec3::Z * 36.0;
-        self.frame_view?.project(head)
     }
 
     /// The eye and yaw (radians) of the model on the stage, while the Collection wants

@@ -109,6 +109,33 @@ pub(crate) fn has_ammo(inventory: &LegacyWeaponInventory, weapon: u8) -> bool {
     })
 }
 
+/// The weapons held in the wheel's order (`1` to `LAST_USEABLE_WEAPON`, Concussion
+/// between Flechette and Rocket), thermal detonators and trip mines left out when none
+/// are left, as the selection row would walk them: for the status bar's row
+/// (`status_bar.rs`). Returns them and how many.
+pub(crate) fn held_in_order(
+    inventory: &LegacyWeaponInventory,
+) -> ([u8; WHEEL_MAX as usize], usize) {
+    let mut held = [0; WHEEL_MAX as usize];
+    let mut count = 0;
+    let mut push = |weapon: u8| {
+        if owned(inventory, weapon) && !hidden_when_empty(inventory, weapon) {
+            held[count] = weapon;
+            count += 1;
+        }
+    };
+    for weapon in 1..=WHEEL_MAX {
+        if weapon == WP_CONCUSSION {
+            continue;
+        }
+        push(weapon);
+        if weapon == WP_FLECHETTE {
+            push(WP_CONCUSSION);
+        }
+    }
+    (held, count)
+}
+
 /// The icons beside `selected`, walked as `CG_DrawWeaponSelect` walks them: backwards
 /// on the left and forwards on the right, Concussion between Flechette and Rocket, and
 /// thermal detonators and trip mines skipped when empty. `None` when nothing is owned.
@@ -393,6 +420,8 @@ impl GpuState {
             &self.ui_font,
         );
         let (x, baseline, line) = name_placement(viewport, shown.scale);
+        // Over the bottom status bar while it shows, as the row's icons (`hud.rs`).
+        let baseline = baseline - self.status_bar.reserved().bottom;
         let scale = crate::ui_scale::glyph_scale(font, line, 1.0);
         let name = self.hud.weapon_select.name(shown.selected);
         let width = crate::text::visible_text_width(font, name, scale);

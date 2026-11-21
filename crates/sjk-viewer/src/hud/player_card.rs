@@ -911,6 +911,9 @@ pub(crate) struct State {
     area: [f32; 4],
     /// Shapes and text ids; texts resolve through [`Card::texts`].
     pub(crate) list: DrawList,
+    /// The room the status bars keep at the screen's edges: the card stays inside it
+    /// (`status_bar.rs`; the room of the frame before, as the card is laid out first).
+    pub(crate) edges: crate::status_bar::Reserved,
 }
 
 impl Default for State {
@@ -930,6 +933,7 @@ impl Default for State {
             last_frame: 0,
             area: [0.0; 4],
             list: DrawList::new(LIST_CAPACITY),
+            edges: crate::status_bar::Reserved::NONE,
         }
     }
 }
@@ -1250,7 +1254,14 @@ impl State {
         let medals = card.hub.as_ref().map(|hub| hub.medals).unwrap_or_default();
         // Keep clear of the body: the world gap projected, never less than a fixed one.
         let offset = side.max(14.0 * unit) + 12.0 * unit;
-        let placed = place(anchor, [width, height], offset, viewport);
+        let mut placed = place(anchor, [width, height], offset, viewport);
+        // Inside the status bars.
+        let margin = offset * 0.25;
+        placed.card.y = placed
+            .card
+            .y
+            .min(viewport[1] - self.edges.bottom - height - margin)
+            .max(self.edges.top + margin);
         let rect = placed.card;
         let white = |alpha: f32| Color::new(1.0, 1.0, 1.0, alpha * a);
         let muted = Color::new(0.74, 0.78, 0.86, a);
@@ -1286,7 +1297,7 @@ impl State {
         let _ = self.list.push(DrawCommand::RoundedRect {
             rect,
             radius: 8.0 * unit,
-            color: Color::new(0.03, 0.04, 0.07, 0.82 * a),
+            color: crate::menu::sjk::color::alpha(crate::menu::sjk::color::space(), 0.82 * a),
         });
         let _ = self.list.push(DrawCommand::Border {
             rect,
@@ -1329,7 +1340,10 @@ impl State {
                     let _ = self.list.push(DrawCommand::RoundedRect {
                         rect: corner,
                         radius: row(4.0),
-                        color: Color::new(0.03, 0.04, 0.07, 0.9 * a),
+                        color: crate::menu::sjk::color::alpha(
+                            crate::menu::sjk::color::space(),
+                            0.9 * a,
+                        ),
                     });
                     let _ = self.list.push(DrawCommand::TexturedQuad {
                         rect: corner,
@@ -2166,6 +2180,7 @@ mod tests {
             staff: true,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_791_000_000,
@@ -2262,8 +2277,8 @@ mod tests {
     #[test]
     fn a_retired_achievement_counts_only_for_its_holders() {
         let mut profile = full_profile();
-        let total = crate::achievements::ALL.len();
-        assert_eq!(ProfileFacts::of(&profile).total, total - 1);
+        let total = crate::achievements::OBTAINABLE;
+        assert_eq!(ProfileFacts::of(&profile).total, total);
         for id in ["surveyor", "mythical_find"] {
             profile.achievements.push(sjk_identity::Achievement {
                 id: id.to_owned(),
@@ -2277,7 +2292,7 @@ mod tests {
             });
         }
         let facts = ProfileFacts::of(&profile);
-        assert_eq!((facts.unlocked, facts.total), (6, total));
+        assert_eq!((facts.unlocked, facts.total), (6, total + 1));
         // Surveyor's unfinished progress, not unlocked, counts nothing.
         let mut unfinished = full_profile();
         unfinished.achievements.push(sjk_identity::Achievement {
@@ -2291,7 +2306,7 @@ mod tests {
             group: None,
         });
         let facts = ProfileFacts::of(&unfinished);
-        assert_eq!((facts.unlocked, facts.total), (4, total - 1));
+        assert_eq!((facts.unlocked, facts.total), (4, total));
     }
 
     #[test]
@@ -2307,8 +2322,11 @@ mod tests {
         let card = full_card(None);
         assert_eq!(card.texts[T_STAFF], "SJK TEAM");
         assert_eq!(card.texts[T_HOLOCRON], "Legendary Holocron");
-        // Out of the obtainable ones: they do not hold the retired Surveyor.
-        assert_eq!(card.texts[T_ACHIEVEMENTS], "Achievements  4 / 79");
+        // Out of the obtainable ones: they hold none of the retired ones.
+        assert_eq!(
+            card.texts[T_ACHIEVEMENTS],
+            format!("Achievements  4 / {}", crate::achievements::OBTAINABLE)
+        );
         assert_eq!(card.texts[T_BIO], "Fox of the JoF, maker of SJK.");
         assert!(card.texts[T_SINCE].starts_with("In SJK since "));
         assert_eq!(card.texts[T_GOAL], "1K");

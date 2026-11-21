@@ -10,99 +10,21 @@
 //!   locked shader, and the client greys those buttons with the reason. Only shown on a hub
 //!   whose economy says `marks` ([`sjk_identity::MARKS_ABILITY`]).
 //! - **New:** a shader the player holds and has not looked at since they got it. Local, on
-//!   this PC: the seen-list [`FILE`] beside `config.cfg`, one shader id a line. With no file
-//!   yet, everything already held the first time the hub says what the player holds counts
-//!   as seen, so a player never finds every shader marked New. A shader chosen on the
+//!   this PC: the Collection's seen-list (`crate::collection_seen`, which took over
+//!   `shader-seen.txt` on 15/11/2026), its `kyber:` lines. With no list yet, everything
+//!   already held the first time the hub says what the player holds counts as seen, so a
+//!   player never finds every shader marked New. A shader chosen on the
 //!   Shaders tab or in the Forge (by the pointer or the keys) is seen once it has stayed
 //!   chosen for [`LOOK_MS`] ([`Look`]): sweeping the pointer across the wall sees nothing
 //!   (Sol's decision, 29/10/2026); "Mark all seen" sees every one. One the player no longer
 //!   holds leaves the list, so it is New again when it comes back.
 
-use std::collections::{BTreeSet, HashSet};
-use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::collections::HashSet;
 
-/// The seen-list's file, beside `config.cfg`.
-pub(crate) const FILE: &str = "shader-seen.txt";
+pub(crate) use crate::collection_seen::Seen;
+
 /// How long a New shader must stay chosen to count as seen, in milliseconds.
-pub(crate) const LOOK_MS: u64 = 1_000;
-/// The file's largest size read: far past every shader's id a line.
-const MAX_FILE_BYTES: u64 = 256 * 1024;
-
-/// The shaders seen, by id.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub(crate) struct Seen {
-    ids: BTreeSet<String>,
-}
-
-impl Seen {
-    /// Whether shader `id` was seen.
-    pub(crate) fn contains(&self, id: &str) -> bool {
-        self.ids.contains(id)
-    }
-
-    /// See `id`; whether it was not seen before.
-    pub(crate) fn insert(&mut self, id: &str) -> bool {
-        !self.ids.contains(id) && self.ids.insert(id.to_owned())
-    }
-
-    /// The list a file holds: one id a line; blank lines and lines that cannot be an
-    /// unlock's id (spaces, odd characters, too long) are left out.
-    pub(crate) fn parse(text: &str) -> Self {
-        let ids = text
-            .lines()
-            .map(str::trim)
-            .filter(|line| {
-                !line.is_empty()
-                    && line.len() <= 64
-                    && line
-                        .bytes()
-                        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
-            })
-            .map(str::to_owned)
-            .collect();
-        Self { ids }
-    }
-
-    /// The file's text.
-    pub(crate) fn to_text(&self) -> String {
-        let mut text = String::with_capacity(self.ids.len() * 20);
-        for id in &self.ids {
-            text.push_str(id);
-            text.push('\n');
-        }
-        text
-    }
-}
-
-/// The seen-list and whether it came from a file: without one, the first holdings the hub
-/// tells are taken as seen ([`Tracker::follow`]).
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub(crate) struct Tracker {
-    pub(crate) seen: Seen,
-    /// No file was read: the next holdings are seen whole.
-    pub(crate) fresh: bool,
-}
-
-impl Tracker {
-    /// The shaders the player holds now (`owned`, the hub's own list, never the debug
-    /// collectibles'): the first time with no file, every one is seen; after, the ones no
-    /// longer held leave the list, so one that comes back is New again. Whether the list
-    /// changed.
-    pub(crate) fn follow<'a>(&mut self, owned: impl Iterator<Item = &'a str> + Clone) -> bool {
-        if std::mem::take(&mut self.fresh) {
-            for id in owned {
-                self.seen.insert(id);
-            }
-            return true;
-        }
-        let before = self.seen.ids.len();
-        self.seen
-            .ids
-            .retain(|id| owned.clone().any(|held| held == id));
-        self.seen.ids.len() != before
-    }
-}
+pub(crate) const LOOK_MS: u64 = crate::collection_seen::LOOK_MS;
 
 /// The New shader the choice rests on, and since when: it is seen once it has stayed
 /// chosen [`LOOK_MS`]. A choice that only passes over it, as a pointer swept across the
@@ -146,149 +68,34 @@ impl Look {
     }
 }
 
-/// Read the list from `path`: `None` when there is no file yet.
-pub(crate) fn load_file(path: &Path) -> std::io::Result<Option<Seen>> {
-    use std::io::Read;
-    match std::fs::File::open(path) {
-        Ok(file) => {
-            let mut bytes = Vec::new();
-            file.take(MAX_FILE_BYTES).read_to_end(&mut bytes)?;
-            Ok(Some(Seen::parse(&String::from_utf8_lossy(&bytes))))
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(error),
-    }
-}
-
-/// Write the list to `path` through a temporary file, so a failed write leaves the last
-/// list whole.
-pub(crate) fn save_file(path: &Path, seen: &Seen) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let pending = path.with_extension("txt.pending");
-    std::fs::write(&pending, seen.to_text())?;
-    std::fs::rename(&pending, path).inspect_err(|_| {
-        let _ = std::fs::remove_file(&pending);
-    })
-}
-
-struct State {
-    tracker: Tracker,
-    /// Where the list is kept, once read.
-    path: Option<PathBuf>,
-    /// The own profile's revision the holdings were last followed at.
-    followed: Option<u64>,
-    /// Counts changes, so the pages know to read the list again.
-    revision: u64,
-}
-
-static STATE: Mutex<State> = Mutex::new(State {
-    tracker: Tracker {
-        seen: Seen {
-            ids: BTreeSet::new(),
-        },
-        // Until a file says otherwise, the first holdings are seen whole.
-        fresh: true,
-    },
-    path: None,
-    followed: None,
-    revision: 0,
-});
-
-fn lock() -> MutexGuard<'static, State> {
-    STATE
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-/// Keep the list when `state` changed it.
-fn changed(state: &mut State) {
-    state.revision += 1;
-    if let Some(path) = &state.path
-        && let Err(error) = save_file(path, &state.tracker.seen)
-    {
-        crate::log::progress(format_args!("Shaders seen: could not save: {error}"));
-    }
-}
-
-/// Read the list from `directory` (the settings folder), once.
-pub(crate) fn load(directory: &Path) {
-    let mut state = lock();
-    if state.path.is_some() {
-        return;
-    }
-    let path = directory.join(FILE);
-    match load_file(&path) {
-        Ok(Some(seen)) => {
-            state.tracker = Tracker { seen, fresh: false };
-            state.revision += 1;
-        }
-        Ok(None) => {}
-        Err(error) => crate::log::progress(format_args!("Shaders seen: {error}")),
-    }
-    state.path = Some(path);
-}
-
-/// Follow the own profile in `snapshot` when it changed: the first holdings seen whole
-/// without a file, the shaders no longer held let go ([`Tracker::follow`]). Only once the
-/// list was read ([`load`]), and never on the debug collectibles' holdings.
-pub(crate) fn follow(snapshot: &sjk_identity::Snapshot) {
-    let Some(me) = snapshot.me.as_ref() else {
-        return;
-    };
-    let mut state = lock();
-    if state.path.is_none() || state.followed == Some(snapshot.me_revision) {
-        return;
-    }
-    state.followed = Some(snapshot.me_revision);
-    if me.unlocks.iter().any(crate::debug_collectibles::added) {
-        return;
-    }
-    let owned = me
-        .unlocks
-        .iter()
-        .filter(|unlock| crate::unlockables::blade_skin(&unlock.id).is_some())
-        .map(|unlock| unlock.id.as_str());
-    if state.tracker.follow(owned) {
-        changed(&mut state);
-    }
-}
-
-/// See shader `id`: it is New no more.
+/// See shader `id`: it is New no more (`crate::collection_seen`).
 pub(crate) fn see(id: &str) {
-    let mut state = lock();
-    if state.tracker.fresh || !state.tracker.seen.insert(id) {
-        return;
-    }
-    changed(&mut state);
+    crate::collection_seen::see(kyber(id));
 }
 
 /// See every one of `ids` ("Mark all seen").
 pub(crate) fn see_all<'a>(ids: impl Iterator<Item = &'a str>) {
-    let mut state = lock();
-    if state.tracker.fresh {
-        return;
-    }
-    let mut any = false;
-    for id in ids {
-        any |= state.tracker.seen.insert(id);
-    }
-    if any {
-        changed(&mut state);
-    }
+    crate::collection_seen::see_all(ids.map(kyber));
 }
 
-/// Counts changes to the list.
+fn kyber(id: &str) -> crate::collection_seen::Thing {
+    crate::collection_seen::Thing::new(crate::collection_seen::Kind::Kyber, id, 0)
+}
+
+/// Counts changes to the seen-list.
 pub(crate) fn revision() -> u64 {
-    lock().revision
+    crate::collection_seen::revision()
 }
 
 /// Read the list in place (keep `read` short); `None` while the first holdings are still
-/// to be seen whole, when nothing is New.
+/// to be seen whole, when no shader is New.
 pub(crate) fn with_seen<R>(read: impl FnOnce(Option<&Seen>) -> R) -> R {
-    let state = lock();
-    read((!state.tracker.fresh).then_some(&state.tracker.seen))
+    crate::collection_seen::with_seen(|seen| {
+        read(
+            seen.known(crate::collection_seen::Kind::Kyber)
+                .then_some(seen),
+        )
+    })
 }
 
 /// What the pages show on each shader: worn, favourite, locked, New.
@@ -330,7 +137,7 @@ impl Marks {
             Some(seen) => owned
                 .iter()
                 .filter_map(|unlock| crate::unlockables::blade_skin(&unlock.id))
-                .filter(|skin| !seen.contains(skin.id))
+                .filter(|skin| !seen.has_kyber(skin.id))
                 .map(|skin| skin.id)
                 .collect(),
             None => HashSet::new(),
@@ -462,59 +269,13 @@ mod tests {
         }
     }
 
-    /// The seen-list's file: one id a line, odd lines left out, saved and read back; no
-    /// file reads as none.
-    #[test]
-    fn the_seen_list_round_trips_and_bad_lines_are_left_out() {
-        let read = Seen::parse("saber_storm\r\n\nnot an id\nsaber_void \nsaber_storm\n../x\n");
-        assert!(read.contains("saber_storm") && read.contains("saber_void"));
-        assert_eq!(read.ids.len(), 2);
-        assert_eq!(Seen::parse(&read.to_text()), read);
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join(FILE);
-        assert_eq!(load_file(&path).unwrap(), None, "no file yet");
-        save_file(&path, &read).unwrap();
-        assert_eq!(load_file(&path).unwrap(), Some(read));
-    }
-
-    /// With no file, the first holdings are seen whole: nothing is New. After, a shader
-    /// gained is New until seen, and one let go leaves the list (New when it comes back).
-    #[test]
-    fn the_first_holdings_are_seen_and_later_gains_are_new() {
-        let mut tracker = Tracker {
-            seen: Seen::default(),
-            fresh: true,
-        };
-        let owned = ["saber_storm", "saber_void"];
-        assert!(tracker.follow(owned.iter().copied()));
-        assert!(!tracker.fresh);
-        assert!(owned.iter().all(|id| tracker.seen.contains(id)));
-        assert!(!tracker.follow(owned.iter().copied()), "nothing changed");
-        // A gain is not seen yet; seeing it once is enough.
-        let gained = ["saber_storm", "saber_void", "saber_frost"];
-        assert!(!tracker.follow(gained.iter().copied()));
-        assert!(!tracker.seen.contains("saber_frost"));
-        assert!(tracker.seen.insert("saber_frost"));
-        assert!(!tracker.seen.insert("saber_frost"));
-        // Let go: off the list.
-        assert!(tracker.follow(["saber_frost"].into_iter()));
-        assert!(!tracker.seen.contains("saber_storm"));
-        // A file read: its list stands, the first holdings are not seen whole.
-        let mut read = Tracker {
-            seen: Seen::parse("saber_storm\n"),
-            fresh: false,
-        };
-        read.follow(gained.iter().copied());
-        assert!(!read.seen.contains("saber_void"));
-    }
-
     /// New is what is held and not seen; nothing is New while the first holdings wait or
     /// the debug collectibles show. The hub's favourites and locks show only while it keeps
     /// them; worn is either saber's own choice among those held.
     #[test]
     fn marks_read_the_hub_the_seen_list_and_the_worn_blades() {
         let owned = [unlock("saber_storm"), unlock("saber_void")];
-        let seen = Seen::parse("saber_storm\n");
+        let seen = Seen::parse("kyber:saber_storm\n");
         let hub = sjk_identity::UnlockMarks {
             favourite: vec!["saber_void".to_owned(), "saber_nothing".to_owned()],
             locked: vec!["saber_storm".to_owned()],

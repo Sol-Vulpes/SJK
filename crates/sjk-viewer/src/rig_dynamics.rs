@@ -59,6 +59,9 @@ const MAX_TURN: f32 = 12.0;
 const MOTION_RATE: f32 = 10.0;
 /// Movement faster than this, game units per second, is a teleport or a respawn.
 const TELEPORT_SPEED: f32 = 3000.0;
+/// How far above the ground a colliding chain's points stay at the least, game units, so
+/// a strand lying on the floor does not flicker through it.
+pub(super) const GROUND_GAP: f32 = 0.5;
 
 /// One `dynamic` line's chain: how it hangs, swings and wags, and whether the body
 /// pushes it away.
@@ -567,6 +570,12 @@ impl Chains {
         self.joints.is_empty()
     }
 
+    /// Whether a chain is kept out of the body, and so off the ground, so the ground under
+    /// the actor is worth finding.
+    pub(super) fn wants_ground(&self) -> bool {
+        self.settings.iter().any(|settings| settings.collide)
+    }
+
     /// Whether a chain feels the air, so the actor's movement needs following at all.
     pub(super) fn wants_drag(&self) -> bool {
         self.drag
@@ -663,6 +672,9 @@ pub(crate) struct State {
     time: f32,
     /// How the player moves through the world, for the air on the chains.
     pub(super) motion: Motion,
+    /// The ground under the player in the model's space, a point on it and its upward
+    /// normal: colliding chains stay above it.
+    pub(super) ground: Option<(Vec3A, Vec3A)>,
     /// The animated pose before the chain moved it (scratch).
     animated: Vec<Affine3A>,
     aimed: Vec<bool>,
@@ -789,6 +801,22 @@ pub(super) fn simulate(
                 }
             }
         }
+        if chains.settings[slot].collide
+            && let Some((ground, up)) = state.ground
+        {
+            let gap = chains.settings[slot].clearance.max(GROUND_GAP);
+            if (point - ground).dot(up) < gap
+                && let Some(onto) =
+                    on_the_ground(origin, length, point, animated, ground + up * gap, up)
+            {
+                point = onto;
+                let velocity = &mut state.velocities[slot];
+                let into = velocity.dot(up);
+                if into < 0.0 {
+                    *velocity -= up * into;
+                }
+            }
+        }
         if limited {
             // At once on a restart; otherwise eased in, so a short bone does not jump.
             let share = if restart {
@@ -828,6 +856,33 @@ pub(super) fn simulate(
             state.points[slot] = pose[index].translation;
         }
     }
+}
+
+/// Where a point under the plane through `level` facing `up` stands on it, `length` from
+/// `origin` (its bone's start): turned up about `origin` on the side it already leans to
+/// across the plane (`point`'s, else the bone's `animated` one, else the model's back, +Y).
+/// Pushing it straight up would leave a bone hanging straight down where it was, at its
+/// length again. `None` when the plane is out of the bone's reach above `origin`.
+fn on_the_ground(
+    origin: Vec3A,
+    length: f32,
+    point: Vec3A,
+    animated: Vec3A,
+    level: Vec3A,
+    up: Vec3A,
+) -> Option<Vec3A> {
+    // How far the bone's start is above the plane.
+    let height = (origin - level).dot(up);
+    if height < -length {
+        return None;
+    }
+    let across = |v: Vec3A| (v - up * v.dot(up)).try_normalize();
+    let side = across(point - origin)
+        .or_else(|| across(animated))
+        .or_else(|| across(Vec3A::Y))
+        .unwrap_or(Vec3A::X);
+    let height = height.min(length);
+    Some(origin - up * height + side * (length * length - height * height).max(0.0).sqrt())
 }
 
 /// The bone `animated` tilted towards `lag`, at its length. The tilt grows smoothly with
@@ -1317,6 +1372,98 @@ mod tests {
             simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
         }
         pose[2].translation
+    }
+
+    /// A hanging strand's tip after a second over the ground at `ground` (facing up).
+    fn strand_tip_over(settings: Settings, ground: Option<(Vec3A, Vec3A)>) -> (Vec3A, Vec3A) {
+        let top = Vec3A::new(0.0, 0.0, 40.0);
+        let middle = Vec3A::new(0.0, 0.0, 30.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, top),
+            joint(Some(0), top, middle),
+            joint(Some(1), middle, Vec3A::new(0.0, 0.0, 20.0)),
+        ];
+        let chains = Chains::under(&joints, &[0, 1, 2], &[(0, settings)]);
+        assert_eq!(chains.wants_ground(), settings.collide);
+        let mut state = State {
+            ground,
+            ..State::default()
+        };
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut pose = rest.clone();
+        simulate(&joints, &chains, &mut pose, &mut state, None);
+        for _ in 0..60 {
+            pose.clone_from(&rest);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+        }
+        (pose[1].translation, pose[2].translation)
+    }
+
+    #[test]
+    fn a_strand_hanging_into_the_ground_lies_on_it() {
+        let settings = Settings {
+            wag: 0.0,
+            ..Settings::default()
+        };
+        let floor = Some((Vec3A::new(0.0, 0.0, 25.0), Vec3A::Z));
+        let (middle, tip) = strand_tip_over(settings, floor);
+        // On the ground, its bone's length from the middle, laid out behind the model.
+        assert!((tip.z - 25.0 - GROUND_GAP).abs() < 1e-3, "{tip:?}");
+        assert!(((tip - middle).length() - 10.0).abs() < 1e-3, "{tip:?}");
+        assert!(tip.y > 8.0, "{tip:?}");
+        // A sloping ground: still above it.
+        let slope = Vec3A::new(0.0, -0.3, 1.0).normalize();
+        let (_, tip) = strand_tip_over(settings, Some((Vec3A::new(0.0, 0.0, 25.0), slope)));
+        let above = (tip - Vec3A::new(0.0, 0.0, 25.0)).dot(slope);
+        assert!((above - GROUND_GAP).abs() < 1e-3, "{tip:?}");
+        // A strand that clears it, one that says nocollide, or no ground: hanging straight.
+        let low = Some((Vec3A::new(0.0, 0.0, 10.0), Vec3A::Z));
+        for (settings, ground) in [
+            (settings, low),
+            (
+                Settings {
+                    collide: false,
+                    ..settings
+                },
+                floor,
+            ),
+            (settings, None),
+        ] {
+            let (_, tip) = strand_tip_over(settings, ground);
+            assert!(tip.z < 20.0 + 1e-3 && tip.y.abs() < 1e-3, "{tip:?}");
+        }
+    }
+
+    #[test]
+    fn a_bone_reaching_the_ground_keeps_its_lean() {
+        let origin = Vec3A::new(0.0, 0.0, 5.0);
+        let level = Vec3A::ZERO;
+        // Leaning to +X, 10 long, its start 5 above: on the plane at 8.66 out.
+        let onto = on_the_ground(
+            origin,
+            10.0,
+            Vec3A::new(3.0, 0.0, -4.0),
+            Vec3A::NEG_Z,
+            level,
+            Vec3A::Z,
+        )
+        .expect("in reach");
+        assert!(
+            (onto - Vec3A::new(75f32.sqrt(), 0.0, 0.0)).length() < 1e-4,
+            "{onto:?}"
+        );
+        // A bone whose start is under the plane by more than its length: left alone.
+        assert!(
+            on_the_ground(
+                Vec3A::new(0.0, 0.0, -11.0),
+                10.0,
+                Vec3A::ZERO,
+                Vec3A::NEG_Z,
+                level,
+                Vec3A::Z
+            )
+            .is_none()
+        );
     }
 
     fn in_air(drag: f32) -> Settings {

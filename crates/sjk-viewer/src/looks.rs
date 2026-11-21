@@ -62,25 +62,15 @@ fn blade_skin(id: &str) -> Option<&'static str> {
 /// The toys a look can have out that this client draws, by id (`PROTOCOL.md`, "Looks"):
 /// a toy's bit in [`Worn::toys`] is its place here. A look naming another id (a newer
 /// client's toy) draws nothing more.
-pub(crate) const TOYS: [&str; 18] = [
-    crate::cardboard_box::TOY,
-    crate::order66::TOY,
-    crate::hax::TOY,
-    crate::hax::AWAY_TOY,
+pub(crate) const TOYS: [&str; 11] = [
     crate::drone::TOY,
     crate::boombox::TOY,
     // The Monitor's switch: others foresee its monitors striking this player.
     crate::monitor::TOY,
     // Box hunt's switch: the hub picks the mark among the players whose look has it.
     crate::box_hunt::TOY,
-    // The Banana peel's switch (since 30/10/2026: hubs before took 8 toy ids at most).
-    crate::banana::TOY,
-    // The fishing rod out: others draw the rod, the bucket and the float.
-    crate::fishing::TOY,
     // The wearer's model in toon shading, their choice (`cg_toonModel`).
     crate::toon_choice::TOY,
-    // The pickaxe in hand: others draw it.
-    crate::mining::TOY,
     // Quests' switch: the hub gives quests among the players whose look has it.
     crate::quests::TOY,
     // The wearer's playstyles, their badges over the nameplate (`playstyle.rs`).
@@ -660,13 +650,11 @@ pub(crate) struct Unseen;
 
 impl Unseen {
     pub(crate) const ILLUMINATE: u8 = 1;
-    pub(crate) const CARDBOARD_BOX: u8 = 1 << 1;
     pub(crate) const BOOMBOX: u8 = 1 << 2;
 
     /// The bit of toy `id`, none for a toy that is not hidden so.
     fn of(id: &str) -> u8 {
         match id {
-            crate::cardboard_box::TOY => Self::CARDBOARD_BOX,
             crate::boombox::TOY => Self::BOOMBOX,
             _ => 0,
         }
@@ -695,29 +683,28 @@ mod tests {
 
     #[test]
     fn toys_go_both_ways_and_unknown_ones_draw_nothing() {
-        let boxed = Look {
-            toys: vec!["a_hat_from_later".to_owned(), "cardboard_box".to_owned()],
+        let worn_box = Look {
+            toys: vec!["a_hat_from_later".to_owned(), "boombox".to_owned()],
             ..Look::default()
         };
-        let worn = Worn::of(&boxed);
-        assert!(worn.has_toy("cardboard_box") && !worn.has_toy("a_hat_from_later"));
-        assert_eq!(worn.to_look("").toys, ["cardboard_box"]);
-        let off = worn.with_toy("cardboard_box", false);
+        let worn = Worn::of(&worn_box);
+        assert!(worn.has_toy("boombox") && !worn.has_toy("a_hat_from_later"));
+        assert_eq!(worn.to_look("").toys, ["boombox"]);
+        let off = worn.with_toy("boombox", false);
         assert!(off.to_look("").toys.is_empty());
         let mut looks = Looks::default();
-        looks.replace_roster([(3, "^2Sol", Some(&boxed))]);
+        looks.replace_roster([(3, "^2Sol", Some(&worn_box))]);
         looks.rebuild(shown);
-        assert!(looks.toy(3, "cardboard_box") && !looks.toy(5, "cardboard_box"));
+        assert!(looks.toy(3, "boombox") && !looks.toy(5, "boombox"));
         looks.set_muted(1 << 3);
-        assert!(!looks.toy(3, "cardboard_box"), "muted here: nothing drawn");
+        assert!(!looks.toy(3, "boombox"), "muted here: nothing drawn");
     }
 
     /// Every toy this client knows goes out in the look and comes back from it, all of
-    /// them at once too: ten since the Banana peel and Fishing, more than the 8 hubs took
-    /// before 30/10/2026.
+    /// them at once too: more than the 8 hubs took before 30/10/2026.
     #[test]
     fn every_toy_goes_both_ways_all_at_once() {
-        assert!(TOYS.contains(&crate::banana::TOY) && TOYS.contains(&crate::fishing::TOY));
+        assert!(TOYS.len() > 8 && TOYS.contains(&crate::box_hunt::TOY));
         let all = TOYS
             .iter()
             .fold(Worn::default(), |worn, toy| worn.with_toy(toy, true));
@@ -725,39 +712,35 @@ mod tests {
         assert_eq!(look.toys, TOYS);
         let back = Worn::of(&look);
         assert!(TOYS.iter().all(|toy| back.has_toy(toy)));
-        let peel_away = back.with_toy(crate::banana::TOY, false);
-        assert!(!peel_away.has_toy(crate::banana::TOY) && peel_away.has_toy(crate::box_hunt::TOY));
+        let drone_away = back.with_toy(crate::drone::TOY, false);
+        assert!(!drone_away.has_toy(crate::drone::TOY) && drone_away.has_toy(crate::box_hunt::TOY));
         let rest: Vec<&str> = TOYS
             .iter()
             .copied()
-            .filter(|toy| *toy != crate::banana::TOY)
+            .filter(|toy| *toy != crate::drone::TOY)
             .collect();
-        assert_eq!(peel_away.to_look("").toys, rest);
+        assert_eq!(drone_away.to_look("").toys, rest);
     }
 
-    /// Other players' boxes, boomboxes and holocrons hidden on this PC are not drawn on
+    /// Other players' boomboxes and holocrons hidden on this PC are not drawn on
     /// them; the player's own still are, and other toys are not touched.
     #[test]
     fn toys_hidden_here_are_not_drawn_on_others() {
         let worn = Look {
-            toys: vec![
-                "cardboard_box".to_owned(),
-                "boombox".to_owned(),
-                "hax".to_owned(),
-            ],
+            toys: vec!["boombox".to_owned(), "drone".to_owned()],
             illuminate: true,
             ..Look::default()
         };
         let mut looks = Looks::default();
         looks.replace_roster([(3, "^2Sol", Some(&worn))]);
         looks.rebuild(shown);
-        looks.set_unseen(Unseen::CARDBOARD_BOX | Unseen::BOOMBOX | Unseen::ILLUMINATE);
-        assert!(!looks.toy(3, "cardboard_box") && !looks.toy(3, "boombox"));
+        looks.set_unseen(Unseen::BOOMBOX | Unseen::ILLUMINATE);
+        assert!(!looks.toy(3, "boombox"));
         assert!(!looks.illuminated(3));
-        assert!(looks.toy(3, "hax"), "only the toys hidden");
+        assert!(looks.toy(3, "drone"), "only the toys hidden");
         // The player's own slot keeps them.
         looks.set_own(Some(3), Worn::of(&worn));
-        assert!(looks.toy(3, "cardboard_box") && looks.illuminated(3));
+        assert!(looks.toy(3, "boombox") && looks.illuminated(3));
         looks.set_own(None, Worn::default());
         looks.rebuild(shown);
         looks.set_unseen(0);

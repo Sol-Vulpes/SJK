@@ -81,7 +81,7 @@ impl SettingsMenu {
             format_args!("First setup"),
             frame.rect(TEXT_X, CARD[1] + 30.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -91,7 +91,7 @@ impl SettingsMenu {
             format_args!("The few settings worth choosing first. Settings has them all, any time."),
             frame.rect(TEXT_X, CARD[1] + 88.0, TEXT_WIDTH, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -103,7 +103,7 @@ impl SettingsMenu {
             ),
             frame.rect(TEXT_X, CARD[1] + 116.0, TEXT_WIDTH, 24.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -132,7 +132,7 @@ impl SettingsMenu {
                     24.0,
                 ),
                 16.0 * s,
-                color::alpha(color::TEXT, 0.72),
+                color::alpha(color::text(), 0.72),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -146,7 +146,7 @@ impl SettingsMenu {
         let s = frame.s;
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(CARD[0] + 24.0, FOOT_RULE, CARD[2] - 48.0, 1.0),
-            color: color::alpha(color::HOLO, 0.2),
+            color: color::alpha(color::holo(), 0.2),
         });
         let pinned = self.classic.as_ref().and_then(|classic| classic.pinned);
         if let Some(row) = pinned {
@@ -170,9 +170,9 @@ impl SettingsMenu {
                 frame.rect(after + 14.0, FOOT_MIDDLE - 14.0, 330.0, 28.0),
                 19.0 * s,
                 if focused || ticked {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.88)
+                    color::alpha(color::text(), 0.88)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,

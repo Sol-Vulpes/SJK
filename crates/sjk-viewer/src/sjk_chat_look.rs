@@ -146,7 +146,7 @@ pub(crate) fn official_mark(
     let side = tick_side(size) * 1.15;
     let rect = Rect::new(x + size * 0.15, middle - side * 0.5, side, side);
     if look.gift() {
-        let gold = crate::menu::sjk::color::GOLD;
+        let gold = crate::menu::sjk::color::gold();
         glyph(
             crate::symbols::GIFT,
             Rect::new(rect.x, middle - size * 0.62, side * 1.3, size * 1.3),
@@ -167,7 +167,9 @@ pub(crate) fn official_mark(
 const PICTURE_GROWTH: f32 = 1.3;
 
 /// The SJK UI's accent gold, the SJK team's sender's colour.
-pub(crate) const ACCENT: Color = crate::menu::sjk::color::GOLD;
+pub(crate) fn accent() -> Color {
+    crate::menu::sjk::color::gold()
+}
 
 /// Draw a holocron drop's mark (in place of the verified tick) after a name drawn at
 /// `size` that ends at `x`, centred on the height `middle`, at `alpha`: the holocron's
@@ -369,7 +371,7 @@ mod tests {
             }
         }
         // Nor the SJK UI's accent gold, which its tag and the menus' marks use.
-        let accent = crate::menu::sjk::color::GOLD;
+        let accent = crate::menu::sjk::color::gold();
         assert!(distance([accent.r, accent.g, accent.b, 1.0]) > 0.05);
     }
 

@@ -186,6 +186,8 @@ impl ViewerConsole {
             crate::duel_visibility::HIDE_OTHERS_CVAR,
             1,
         )?;
+        let duel_ghost =
+            console_cvars::IntegerSetting::bind(&mut cvars, crate::duel_ghost::CVAR, 1)?;
         let plugin_disable = console_cvars::IntegerSetting::bind(
             &mut cvars,
             "cp_pluginDisable",
@@ -667,12 +669,6 @@ impl ViewerConsole {
             holocrons_last: false,
             illuminate_lit: false,
             pending_illuminate: None,
-            cardboard_box_on: false,
-            pending_cardboard_box: None,
-            order66_on: false,
-            pending_order66: None,
-            hax_on: false,
-            pending_hax: None,
             ragdoll_on: false,
             pending_ragdoll: None,
             drone_on: false,
@@ -681,24 +677,15 @@ impl ViewerConsole {
             pending_boombox: None,
             quests_on: false,
             pending_quests: None,
-            fishing_on: false,
-            pending_fishing: None,
-            mining_on: false,
-            pending_mining: None,
-            fishing_card: Default::default(),
-            pending_fishing_sell: false,
-            pending_catch_sell: None,
             wheel_of_doom_on: false,
             pending_wheel_of_doom: false,
-            mining_card: Default::default(),
-            pending_mining_sell: false,
+            log_books: Default::default(),
+            pending_servers: false,
             pending_brag: None,
             monitor_on: false,
             pending_monitor: None,
             box_hunt_on: false,
             pending_box_hunt: None,
-            banana_on: false,
-            pending_banana: None,
             pending_settings_search: None,
             sjk_chat_panel: super::sjk_chat_panel::Panel::new(),
             config_import: super::config_import_panel::Panel::new(),
@@ -710,6 +697,7 @@ impl ViewerConsole {
             hide_corpses_in_duel,
             hide_pickups_in_duel,
             duel_hide_others,
+            duel_ghost,
             plugin_disable,
             draw_fog,
             remaps,
@@ -1194,6 +1182,32 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "ui_shaderView",
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
+        // The Fishing and Mining toys' sounds and bite cue, removed on 20/11/2026 (their
+        // logs stay: the Collection's Log book reads them).
+        "s_toyFishingSound",
+        "s_toyMiningSound",
+        "cg_fishingBiteCue",
+        // The Prop gun toy's switch, gun, sounds and sight, removed on 20/11/2026.
+        "cl_toyPropGun",
+        "cl_propGun",
+        "s_toyPropGunSound",
+        "cg_toyPropGunShow",
+        // Order 66's and the Hax's switches, sounds and trap, removed on 20/11/2026.
+        "cl_toyOrder66",
+        "s_toyOrder66Sound",
+        "cl_toyHax",
+        "s_toyHaxSound",
+        "cl_haxTrap",
+        "cl_haxAway",
+        // The cardboard box toy's sounds and sight, removed on 20/11/2026.
+        "s_toyBoxSound",
+        "cg_toyBoxShow",
+        // The top status bar's switch, gone on 21/11/2026 (Sol: one bar, at the bottom).
+        crate::status_bar::RETIRED_TOP_CVAR,
+        // The Banana peel toy's switch, sounds and sight, removed on 20/11/2026.
+        "cl_toyBanana",
+        "s_toyBananaSound",
+        "cg_toyBananaShow",
     ] {
         let _ = cvars.unset(retired);
     }
@@ -1565,11 +1579,22 @@ mod tests {
         let seen = run(&mut console, 4_000, 1_000);
         assert_eq!(
             seen.iter().filter(|c| c.starts_with("+attack")).count(),
-            21,
-            "the press and 20 repeats: {seen:?}"
+            17,
+            "the press and, after the delay, 16 repeats: {seen:?}"
         );
         console.clear_force_repeat();
         assert!(run(&mut console, 5_000, 1_000).is_empty(), "window lost");
+        // Hub report #317: a click runs its bind once; the repeats start only once the
+        // button is held past the delay.
+        console.execute_console_line("bind mouse4 amtele", None);
+        for held in [60, 120, 200] {
+            console.shell.set_command_clock_millis(10_000);
+            console.queue_bound_script("MOUSE4", true);
+            let seen = run(&mut console, 10_000, held);
+            console.queue_bound_script("MOUSE4", false);
+            let seen = [seen, run(&mut console, 10_000 + held, 1_000)].concat();
+            assert_eq!(count(&seen, "amtele"), 1, "a {held} ms click: {seen:?}");
+        }
     }
 
     #[test]

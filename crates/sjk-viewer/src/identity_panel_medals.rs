@@ -115,7 +115,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(SJK_X, y, SJK_WIDTH, 26.0),
                     17.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -148,7 +148,7 @@ impl Panel {
                 format_args!("{}", medal.award.label()),
                 frame.rect(text_x, line_y, text_width, SJK_NAME_LINE),
                 24.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -156,8 +156,8 @@ impl Panel {
             let lines = medal
                 .description
                 .iter()
-                .map(|part| (part.as_str(), color::MUTED))
-                .chain((!medal.given.is_empty()).then_some((medal.given.as_str(), color::QUIET)));
+                .map(|part| (part.as_str(), color::muted()))
+                .chain((!medal.given.is_empty()).then_some((medal.given.as_str(), color::quiet())));
             for (part, colour) in lines {
                 text(
                     &mut self.ui,
@@ -183,7 +183,7 @@ impl Panel {
                     ),
                     frame.rect(text_x, line_y, text_width, SJK_LINE),
                     16.0 * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
