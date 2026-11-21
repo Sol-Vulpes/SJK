@@ -1129,6 +1129,51 @@ that mode for the visit and leaves the player's choice as it was.
     Key bindings' rows place theirs the same way.
   - A list opens under its field (over it near the bottom), its choice in use
     marked with a gold dot; the controls under it are left out while it is open.
+  - Smarter controls (since 21/11/2026, Sol's request, shaped by the hub's
+    [settings usage](client.md#settings-usage): 2,206 runs, 13,951 changes, 2,438
+    searches). The cvars and saved values keep their numbers; only the rows differ, in
+    both menu styles, each from a table with one entry per setting:
+    - **Named stops** ([stops.rs](../crates/sjk-viewer/src/settings/stops.rs)): a number
+      players set to a handful of known values is a list, not a slider: FPS cap (Auto,
+      60 to 1000 FPS, Unlimited), Menu FPS cap, Away after (as minutes), Prediction error
+      smoothing, Rate, Snapshots per second. The list ends with "Custom...", which opens
+      the typed entry on any value of the range; a digit typed on the row opens it at
+      once; Left and Right step along the stops, a typed value joining the list at its
+      place. A value that is no stop reads with its unit ("275 FPS").
+    - **Named choices** for small numbers that were sliders: Crosshair (Off, Crosshair 1
+      to 9, White dot), Overhead names, Nameplate bars, Empower glow.
+    - **Units** ([present.rs](../crates/sjk-viewer/src/settings/present.rs)): a slider's
+      number reads in its unit (85%, 100 degrees, 1.5 s, 19:30 for the time of day), a
+      value that means something else by its name (Off, World, Flat, Native), and the
+      detail's Default and Range the same way; a number typed is the one shown (65 for
+      65%). Labels no longer carry "(%)", "(ms)" or "(0 off)".
+    - **Loudness**: the five volumes show the square root of the gain as a percentage and
+      their track follows it, so 100% is the cvar's 1, 50% its 0.25 and 22% the 0.05 most
+      players set; Left and Right step 5% of loudness, a drag lands on whole percents.
+    - **Curved tracks**: Mouse sensitivity (0.1 to 20, in steps of 0.1 where 0.25 from
+      0.1 gave 1.35 and 2.1), World brightness and Sunlight brightness give their low
+      values most of the track.
+    - **Default mark**: a short tick on each slider's track where its default lies
+      (`kit::slider_mark`); a knob dragged within three pixels of it takes the default.
+    - **Dependent rows** ([requires.rs](../crates/sjk-viewer/src/settings/requires.rs),
+      its rules in `requires_rules.rs`, each checked against the code that reads the
+      cvars): a row whose setting does nothing right now is drawn at 40% and the detail
+      says in gold what it needs ("Does nothing right now: it needs See & share
+      nameplates."); classic+ adds "needs ..." to its facts. The row still works. Covered:
+      the nameplates' options, the plain names, crosshair size, lagometer scale, card
+      delay, Detect refresh rate (FPS cap on Auto), the chat sounds, auto exposure's
+      limits, glow style and halo, light shaft clarity and dust, parallax depth, emission
+      strength, the sun shadows' tuning, the time of day and real-time lighting's rows,
+      and the weather's looks.
+    - **Search** ([search.rs](../crates/sjk-viewer/src/settings/search.rs)): other words
+      for a setting (`SYNONYMS`: afk, pov, msaa, vsync, dnd...), a slip of the fingers
+      when nothing matches (one letter for a word of four or five, two from six: caht,
+      crosshar, namepalte), a search typed on a Russian keyboard layout read as its keys,
+      and, when more than eight settings match, the ones whose own name carries the word
+      first under "Best matches". An empty result says where the keys are set, and how
+      many key bindings match.
+    - Simple gained Emote volume (Sound), Prediction and Server remaps (Gameplay), the
+      settings players changed and searched for most without finding them there.
 - **Detail:** on the right (x 1360, 464 wide), the focused setting: its
   category's icon (a search result's own group's) and its name, what it does,
   then its default, range or choices, when a change applies (gold), where a

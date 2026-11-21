@@ -8,7 +8,7 @@
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]).
 
 use super::classic_view::{
-    CLASSIC_SCROLL_TOKEN, CLASSIC_SCROLLBAR_TOKEN, DROPDOWN_BASE, MAX_SEGMENTS, Number, RowControl,
+    CLASSIC_SCROLL_TOKEN, CLASSIC_SCROLLBAR_TOKEN, DROPDOWN_BASE, MAX_SEGMENTS, RowControl,
     choice_label, group_icon, segment_choices, switch_text_on,
 };
 use super::help;
@@ -68,8 +68,9 @@ const RESET_X: f32 = ROWS_X + ROWS_WIDTH - 22.0;
 const FIELD_WIDTH: f32 = 230.0;
 /// A chat kind's preview button (`chat_sounds.rs`): under half a field, a word wide.
 const PREVIEW_WIDTH: f32 = 120.0;
-const TRACK_WIDTH: f32 = 230.0;
-const NUMBER_WIDTH: f32 = 46.0;
+const TRACK_WIDTH: f32 = 212.0;
+/// Room for a number and its unit ("100%", "19:30", "-180\u{b0}", "25 ms").
+const NUMBER_WIDTH: f32 = 64.0;
 const TRACK_X: f32 = CONTROL_RIGHT - NUMBER_WIDTH - 18.0 - TRACK_WIDTH;
 /// A colour row's swatch, centred left of its slider's track.
 const SWATCH_X: f32 = TRACK_X - 28.0;
@@ -85,6 +86,8 @@ pub(crate) const KEYS_Y: f32 = 992.0;
 
 /// A row's name: its size, and the room between its last letter and the
 /// changed dot.
+/// How much of a control shows while its setting has no effect ([`super::requires`]).
+const IDLE_OPACITY: f32 = 0.4;
 const NAME_SIZE: f32 = 19.0;
 const DOT_GAP: f32 = 8.0;
 
@@ -245,6 +248,27 @@ impl SettingsMenu {
                 FontWeight::Regular,
                 TextAlign::Start,
             );
+            // Players look for keys here ("bind", an action's name): say where
+            // they are, and how many match when some do.
+            let keys = match self.elsewhere {
+                0 => "Looking for a key? Keys are set in Key bindings, on the left.".to_owned(),
+                1 => "1 key binding matches: see Key bindings, on the left.".to_owned(),
+                count => format!("{count} key bindings match: see Key bindings, on the left."),
+            };
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{keys}"),
+                frame.rect(LABEL_X, ROWS_TOP + 50.0, ROWS_WIDTH - 44.0, 28.0),
+                17.0 * s,
+                if self.elsewhere > 0 {
+                    color::gold_bright()
+                } else {
+                    color::alpha(color::muted(), 0.8)
+                },
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
         }
         // An open list hides the controls of the rows under it: text draws
         // over every shape, so the list could not.
@@ -336,7 +360,15 @@ impl SettingsMenu {
         self.ui
             .hit_region(row as u16, frame.rect(ROWS_X, top, ROWS_WIDTH, LINE));
         if !under_list {
+            // A setting with no effect right now is dimmed; it still works.
+            let idle = self.idle.get(row).is_some_and(Option::is_some);
+            if idle {
+                self.ui.push_opacity(IDLE_OPACITY);
+            }
             self.sjk_control(frame, row, setting, middle, focused);
+            if idle {
+                self.ui.pop_opacity();
+            }
         }
         if focused && changed {
             kit::reset(
@@ -376,27 +408,39 @@ impl SettingsMenu {
                     focused,
                 );
             }
-            ValueKind::Integer { min, max, .. } => {
-                let ratio = value
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|_| max > min)
-                    .map_or(0.0, |value| {
-                        ((value - min as f64) / (max - min) as f64) as f32
-                    });
-                self.sjk_slider(frame, row, middle, ratio, &value, focused);
+            ValueKind::Integer { .. } | ValueKind::Float { .. } => {
+                // The track as the setting lays its range out, the default marked
+                // on it, and the number in the setting's unit ([`super::present`]).
+                let ratio = super::present::track(&setting, &value);
+                let default = self
+                    .defaults
+                    .get(row)
+                    .and_then(|default| default.text.as_deref())
+                    .filter(|default| default.trim().parse::<f64>().is_ok())
+                    .map(|default| super::present::track(&setting, default));
+                let shown = super::present::number(setting.cvar, &value);
+                self.sjk_slider(frame, row, middle, ratio, default, &shown, focused);
                 // A row whose value is a colour shows it by its slider.
                 if let Some(colour) = crate::menu::sjk::theme::row_swatch(setting.cvar, &value) {
                     kit::swatch(&mut self.ui, frame, SWATCH_X, middle, colour);
                 }
             }
-            ValueKind::Float { min, max, .. } => {
-                let ratio = value
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|_| max > min)
-                    .map_or(0.0, |value| ((value - min) / (max - min)) as f32);
-                self.sjk_slider(frame, row, middle, ratio, &value, focused);
+            // A number with named stops: a field that opens their list, or the
+            // number being typed ("Custom...", or a digit typed on the row).
+            ValueKind::Stops { .. } => {
+                if self.numeric.as_ref().is_some_and(|edit| edit.row == row) {
+                    self.sjk_typed_number(frame, row, middle, "", focused);
+                } else {
+                    let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
+                    kit::field(
+                        &mut self.ui,
+                        frame,
+                        field,
+                        format_args!("{}", super::present::value(&setting, &value)),
+                        focused || open,
+                        true,
+                    );
+                }
             }
             kind if segment_choices(kind).is_some() => {
                 let values = segment_choices(kind).unwrap_or_default();
@@ -504,17 +548,22 @@ impl SettingsMenu {
         }
     }
 
-    /// A slider's track, knob and number (or the number being typed).
+    /// A slider's track, the mark of its default at `default` along it, its knob
+    /// and its number as shown, `value` (or the number being typed).
+    #[allow(clippy::too_many_arguments)]
     fn sjk_slider(
         &mut self,
         frame: &Frame,
         row: usize,
         middle: f32,
         ratio: f32,
+        default: Option<f32>,
         value: &str,
         focused: bool,
     ) {
-        let s = frame.s;
+        if let Some(default) = default {
+            kit::slider_mark(&mut self.ui, frame, TRACK_X, middle, TRACK_WIDTH, default);
+        }
         kit::slider(
             &mut self.ui,
             frame,
@@ -524,6 +573,20 @@ impl SettingsMenu {
             ratio,
             focused,
         );
+        self.sjk_typed_number(frame, row, middle, value, focused);
+    }
+
+    /// A number row's number at the right of its control, `value` as shown, or the
+    /// number being typed in its place; a click on it opens the entry.
+    fn sjk_typed_number(
+        &mut self,
+        frame: &Frame,
+        row: usize,
+        middle: f32,
+        value: &str,
+        focused: bool,
+    ) {
+        let s = frame.s;
         let number = frame.rect(
             CONTROL_RIGHT - NUMBER_WIDTH - 6.0,
             middle - 15.0,
@@ -730,6 +793,27 @@ impl SettingsMenu {
             }
             y += 18.0;
         }
+        // What the setting needs before it does anything, in gold as a warning is.
+        if let Some(rule) = self.idle.get(self.selected).copied().flatten() {
+            let needs = format!(
+                "Does nothing right now: it needs {}.",
+                super::requires::wants(rule)
+            );
+            for line in wrap(&needs, 44).take(4) {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("{line}"),
+                    frame.rect(DETAIL_X, y, DETAIL_WIDTH, 28.0),
+                    17.0 * s,
+                    color::gold_bright(),
+                    FontWeight::Regular,
+                    TextAlign::Start,
+                );
+                y += 28.0;
+            }
+            y += 18.0;
+        }
         if self.alpha && renderer_setting(setting.cvar) {
             for line in wrap(help::ALPHA_WARNING, 44).take(5) {
                 text(
@@ -757,41 +841,25 @@ impl SettingsMenu {
                 "Default",
                 format_args!(
                     "{}",
-                    crate::menu::classic::view::Sentence(&shown_value(choice_label(
-                        setting.cvar,
-                        &default
+                    crate::menu::classic::view::Sentence(&shown_value(&super::present::value(
+                        &setting,
+                        choice_label(setting.cvar, &default)
                     )))
                 ),
                 color::text(),
             );
         }
         match setting.kind() {
-            ValueKind::Integer { min, max, .. } if min < 0 => {
-                self.fact(
-                    frame,
-                    &mut y,
-                    "Range",
-                    format_args!("Auto, 0 to {max}"),
-                    color::text(),
-                );
-            }
-            ValueKind::Integer { min, max, .. } => {
-                self.fact(
-                    frame,
-                    &mut y,
-                    "Range",
-                    format_args!("{min} to {max}"),
-                    color::text(),
-                );
-            }
-            ValueKind::Float { min, max, .. } => {
-                self.fact(
-                    frame,
-                    &mut y,
-                    "Range",
-                    format_args!("{} to {}", Number(min), Number(max)),
-                    color::text(),
-                );
+            ValueKind::Integer { .. } | ValueKind::Float { .. } | ValueKind::Stops { .. } => {
+                if let Some(range) = super::present::range(&setting) {
+                    self.fact(
+                        frame,
+                        &mut y,
+                        "Range",
+                        format_args!("{range}"),
+                        color::text(),
+                    );
+                }
             }
             ValueKind::Choice(choices) => {
                 self.fact(
@@ -905,7 +973,10 @@ impl SettingsMenu {
             {
                 keys.push(match setting.kind() {
                     ValueKind::Bool => (&["Enter"][..], "switch"),
-                    ValueKind::Choice(_) | ValueKind::DisplayMode | ValueKind::Quality
+                    ValueKind::Choice(_)
+                    | ValueKind::DisplayMode
+                    | ValueKind::Quality
+                    | ValueKind::Stops { .. }
                         if segment_choices(setting.kind()).is_none() =>
                     {
                         (&["Enter"][..], "choices")

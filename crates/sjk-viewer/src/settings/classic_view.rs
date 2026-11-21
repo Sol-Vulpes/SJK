@@ -355,10 +355,22 @@ impl SettingsMenu {
                     .collect()
             }
             ValueKind::Quality => Level::ALL.into_iter().map(Pick::Quality).collect(),
+            // A number's named stops, then the way to any other value.
+            ValueKind::Stops { stops, .. } => stops
+                .iter()
+                .map(|stop| Pick::Stop(*stop))
+                .chain([Pick::Custom])
+                .collect(),
 
             _ => return false,
         };
         let current = match setting.kind() {
+            // A value that is no stop was typed: "Custom..." is the one in use.
+            ValueKind::Stops { stops, .. } => console
+                .cvar(setting.cvar)
+                .and_then(|value| value.as_text().trim().parse::<f64>().ok())
+                .and_then(|value| super::stops::index(stops, value))
+                .unwrap_or(stops.len()),
             ValueKind::Choice(values) => {
                 let value = super::choice_value(console, setting.cvar);
                 values
@@ -435,6 +447,14 @@ impl SettingsMenu {
             Pick::Value(value) => super::set_choice(console, setting.cvar, value),
             Pick::Mode(mode) => mode.store(console),
             Pick::Quality(level) => level.apply(console),
+            Pick::Stop(stop) => {
+                let integer = matches!(setting.kind(), ValueKind::Stops { integer: true, .. });
+                console.set_cvar(setting.cvar, &super::stops::text(stop.value, integer));
+            }
+            // The list gives way to the typed entry, open on the value in use.
+            Pick::Custom => {
+                self.begin_numeric(console, dropdown.row);
+            }
         }
         self.refresh(console);
     }
@@ -446,6 +466,8 @@ impl SettingsMenu {
             Pick::Value(value) => choice_label(cvar, value),
             Pick::Mode(mode) => mode.label(),
             Pick::Quality(level) => crate::graphics_quality::list_label(level),
+            Pick::Stop(stop) => stop.name,
+            Pick::Custom => super::stops::CUSTOM,
         }
     }
 
@@ -652,7 +674,27 @@ impl SettingsMenu {
                     );
                     match editing {
                         Some(edit) => edit.draw(&mut self.ui, target, place.scale()),
-                        None => place.slider_value(&mut self.ui, slot, value, value_color, focused),
+                        None => place.slider_value(
+                            &mut self.ui,
+                            slot,
+                            &super::present::number(setting.cvar, value),
+                            value_color,
+                            focused,
+                        ),
+                    }
+                }
+                // A number with named stops being typed ("Custom...", or a digit
+                // typed on the row): the entry where a slider's number would be.
+                ValueKind::Stops { .. }
+                    if self.numeric.as_ref().is_some_and(|edit| edit.row == row) =>
+                {
+                    let target = place.slider_value_rect(slot);
+                    self.ui.hit_region(
+                        crate::menu_widgets::numeric::VALUE_BASE + row as u16,
+                        target,
+                    );
+                    if let Some(edit) = &self.numeric {
+                        edit.draw(&mut self.ui, target, place.scale());
                     }
                 }
                 ValueKind::Choice(values) if values.len() <= MAX_SEGMENTS => {
@@ -683,12 +725,14 @@ impl SettingsMenu {
                 | ValueKind::Run
                 | ValueKind::SoundPreview
                 | ValueKind::GameplayFps
+                | ValueKind::Stops { .. }
                 | ValueKind::Quality => {
                     let open = self.dropdown.as_ref().is_some_and(|open| open.row == row);
+                    let value = super::present::value(setting, value);
                     place.choice_field(
                         &mut self.ui,
                         slot,
-                        format_args!("{}", Sentence(choice_label(setting.cvar, value))),
+                        format_args!("{}", Sentence(choice_label(setting.cvar, &value))),
                         focused || open,
                         true,
                     );
@@ -725,20 +769,14 @@ impl SettingsMenu {
             let Some(setting) = self.rows().get(row) else {
                 continue;
             };
-            let value = self
-                .values
-                .get(row)
-                .and_then(|value| value.parse::<f64>().ok());
-            let ratio = match (setting.kind(), value) {
-                (ValueKind::Integer { min, max, .. }, Some(value)) if max > min => {
-                    ((value - min as f64) / (max - min) as f64) as f32
-                }
-                (ValueKind::Float { min, max, .. }, Some(value)) if max > min => {
-                    ((value - min) / (max - min)) as f32
-                }
-                (ValueKind::Integer { .. } | ValueKind::Float { .. }, _) => 0.0,
-                _ => continue,
-            };
+            if !matches!(
+                setting.kind(),
+                ValueKind::Integer { .. } | ValueKind::Float { .. }
+            ) {
+                continue;
+            }
+            let value = self.values.get(row).map_or("", String::as_str);
+            let ratio = super::present::track(setting, value);
             place.draw_slider_thumb(&mut self.ui, slot, ratio, row == self.selected);
         }
         if lines.len() > visible {
@@ -755,7 +793,7 @@ impl SettingsMenu {
         let detail = detail_of(
             self.rows(),
             self.shows(self.selected).then_some(self.selected),
-            &self.values,
+            &self.detail_value,
             &self.detail_facts,
             badge,
         );
@@ -806,7 +844,7 @@ impl SettingsMenu {
         detail_of(
             self.rows(),
             self.shows(self.selected).then_some(self.selected),
-            &self.values,
+            &self.detail_value,
             &self.detail_facts,
             self.badge(),
         )
@@ -817,9 +855,15 @@ impl SettingsMenu {
     fn write_detail_facts(&mut self) {
         let facts = &mut self.detail_facts;
         facts.clear();
+        self.detail_value.clear();
         let Some(setting) = section_settings(self.section, self.tab).get(self.selected) else {
             return;
         };
+        // A number reads in the box as on its row: its stop's name, its unit.
+        if let Some(value) = self.values.get(self.selected) {
+            self.detail_value
+                .push_str(&super::present::value(setting, value));
+        }
         let part = |facts: &mut String, args: std::fmt::Arguments<'_>| {
             if !facts.is_empty() {
                 facts.push_str("   \u{b7}   ");
@@ -831,15 +875,16 @@ impl SettingsMenu {
             .get(self.selected)
             .and_then(|default| default.text.as_deref())
         {
-            part(facts, format_args!("Default {default}"));
+            part(
+                facts,
+                format_args!("Default {}", super::present::value(setting, default)),
+            );
         }
         match setting.kind() {
-            ValueKind::Integer { min, max, .. } if min < 0 => {
-                part(facts, format_args!("AUTO, 0 to {max}"));
-            }
-            ValueKind::Integer { min, max, .. } => part(facts, format_args!("{min} to {max}")),
-            ValueKind::Float { min, max, .. } => {
-                part(facts, format_args!("{} to {}", Number(min), Number(max)));
+            ValueKind::Integer { .. } | ValueKind::Float { .. } | ValueKind::Stops { .. } => {
+                if let Some(range) = super::present::range(setting) {
+                    part(facts, format_args!("{range}"));
+                }
             }
             ValueKind::Choice(choices) => {
                 part(facts, format_args!("{} choices", choices.len()));
@@ -848,6 +893,12 @@ impl SettingsMenu {
         }
         if let Some(note) = help::timing(setting.label).1.note() {
             part(facts, format_args!("{note}"));
+        }
+        if let Some(rule) = self.idle.get(self.selected).copied().flatten() {
+            part(
+                facts,
+                format_args!("needs {}", super::requires::wants(rule)),
+            );
         }
         if self.alpha && super::renderer_setting(setting.cvar) {
             part(facts, format_args!("SJK renderer: alpha"));
@@ -906,6 +957,9 @@ impl SettingsMenu {
             | ValueKind::Live(_)
             | ValueKind::DisplayMode
             | ValueKind::Quality => "ENTER or a click for the choices, LEFT or RIGHT to step",
+            ValueKind::Stops { .. } => {
+                "ENTER or a click for the choices, LEFT or RIGHT to step, or type a number"
+            }
             ValueKind::Integer { .. } | ValueKind::Float { .. } => {
                 "LEFT or RIGHT to change it, or type a number"
             }
@@ -984,14 +1038,13 @@ impl SettingsMenu {
 fn detail_of<'a>(
     rows: &'static [Setting],
     row: Option<usize>,
-    values: &'a [String],
+    value: &'a str,
     facts: &'a str,
     badge: Option<sjk_ui::TextureId>,
 ) -> Detail<'a> {
-    let Some((row, setting)) = row.and_then(|row| Some((row, rows.get(row)?))) else {
+    let Some(setting) = row.and_then(|row| rows.get(row)) else {
         return Detail::default();
     };
-    let value = values.get(row).map_or("", String::as_str);
     Detail {
         title: help::timing(crate::terms::say_static(setting.label)).0,
         value: match setting.kind() {
@@ -1229,7 +1282,7 @@ mod tests {
         menu.selected = row_of(&menu, "r_hdrExposure");
         menu.write_detail_facts();
         assert!(
-            menu.detail_facts.contains("0.25 to 4"),
+            menu.detail_facts.contains("Default 100%") && menu.detail_facts.contains("25% to 400%"),
             "{}",
             menu.detail_facts
         );
@@ -1256,9 +1309,18 @@ mod tests {
         menu.selected = row;
         menu.adjust(&mut console, 1);
         assert!(menu.defaults[row].changed);
-        // AUTO stands for the frame cap's special value.
+        // The frame cap's default is its Auto stop, and the box says so.
         let cap = row_of(&menu, "com_maxfps");
-        assert_eq!(menu.defaults[cap].text.as_deref(), Some("AUTO"));
+        assert_eq!(menu.defaults[cap].text.as_deref(), Some("-1"));
+        menu.selected = cap;
+        menu.write_detail_facts();
+        assert!(
+            menu.detail_facts.starts_with("Default Auto")
+                && menu.detail_facts.contains("Any value, 0 to 2000 FPS"),
+            "{}",
+            menu.detail_facts
+        );
+        assert_eq!(menu.detail().value, "Auto");
         // Resolution and display mode are not one cvar's value.
         let resolution = row_of(&menu, "r_resolution");
         assert_eq!(menu.defaults[resolution], RowDefault::default());
