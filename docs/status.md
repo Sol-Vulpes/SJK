@@ -1,3 +1,20 @@
+## Smarter Settings controls (21/11/2026)
+
+Sol's request (21/11: remake the settings' controls, smarter, from the hub's settings
+usage), branch `personal/smart-settings`. The rows of both menu styles read four tables,
+one entry per setting, and the cvars and saved values keep their numbers: named stops
+with "Custom..." for numbers players set to a handful of values
+(`settings/stops.rs`); units, loudness volumes, curved tracks and named values on the
+sliders, with a mark at the default (`settings/present.rs`, `kit::slider_mark`); rows
+dimmed while their setting does nothing, each rule checked against the code reading the
+cvars (`settings/requires.rs`, `requires_rules.rs`); and a search with synonyms, typo
+tolerance, a Russian keyboard layout and best matches first (`settings/search.rs`).
+Crosshair, Overhead names, Nameplate bars and Empower glow became named choices; Simple
+gained Emote volume, Prediction and Server remaps. Spec:
+[sjk-ui.md](sjk-ui.md#settings). Checked by unit tests and off-screen snapshots
+(`sjk_settings_snapshot`), not yet in the game. Left for later: a crosshair picker with
+pictures.
+
 ## Sun JK (21/11/2026)
 
 Step 6 of the season 2 work (Sol's announcement of 19/11: Sol JK becomes Sun JK; visible

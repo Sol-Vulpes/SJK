@@ -24,6 +24,25 @@
 
 # ---- Console & chat ----
 
+[smart-settings]
+area: Menus & settings
+title: Settings: named stops, units, loudness volumes, dependent rows, smarter search
+change: FPS caps, Away after, error smoothing, Rate, Snapshots: lists of stops plus Custom.
+change: Sliders show units and a default mark; volumes read as loudness (22% = old 0.05).
+change: Rows that do nothing while a parent is off are dimmed; search forgives typos.
+test: Display > FPS cap: open the list, pick 144 FPS; Left/Right step; type 275, Enter.
+test: FPS cap > Custom...: the entry opens on the value; Esc keeps it, Enter sets it.
+test: Sound: drag Effects volume low: whole percents; Left/Right move 5%; 0 reads Off.
+test: Any slider: a tick marks the default; drag near it and the knob catches it.
+test: Controls: sensitivity drags in 0.1 steps, 5 near the middle; type 2.35 works.
+test: HUD: nameplates off dims their rows; the detail says what they need; on undims.
+test: Display: Detect refresh rate is dimmed unless FPS cap is on Auto.
+test: Search crosshar, caht, afk, pov, msaa: each finds its setting; hud leads with best.
+test: Search bind: the empty result points to Key bindings.
+test: Graphics > Time of day reads 19:30 style; HUD scale reads in percent.
+test: Classic menus (ui_menuStyle classic): the same rows work, lists and typed values too.
+note: Saved values are untouched: s_volume 0.05 still is 0.05, it only reads 22%.
+
 [bar-ping]
 area: HUD
 title: Top bar ping matches the scoreboard; the lagometer graphs stock's snapshot ping
