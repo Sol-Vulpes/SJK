@@ -419,6 +419,122 @@ fn duel6_sun_trails() {
     });
 }
 
+/// The Varykino Blossom's trails (20/11/2026, `blade_extras.rs`) on duel6, the Sun's swing
+/// slowing to a stop (so the ink's stroke starts with its drop and ends in a point): its own
+/// pink blur, then with the Ink stroke extra on (the same blur with the white-lilac ink where
+/// the tip passed), each at two moments (sheet `duel6-varykino-trails`).
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_varykino_trails() {
+    use crate::blade_skin_file::extras::option_bit;
+    on_big_stack(|| {
+        mount_test_packs();
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let ahead = |x: f32, y: f32, z: f32| eye + turn * Vec3::new(x, y, z);
+        let base = ahead(80.0, 0.0, -28.0);
+        // 160 to 20 degrees over 15 poses, easing out to a stop.
+        let poses: Vec<Blade> = (0..15)
+            .map(|step| {
+                let eased = (step as f32 / 14.0 * std::f32::consts::FRAC_PI_2).sin();
+                let angle = (160.0 - 140.0 * eased).to_radians();
+                Blade {
+                    base: base.to_array(),
+                    direction: (turn * Vec3::new(0.0, angle.cos(), angle.sin())).to_array(),
+                    length: 40.0,
+                    radius: 3.0,
+                }
+            })
+            .collect();
+        let camera = ahead(22.0, 0.0, -6.0);
+        let (look_yaw, look_pitch) = look(camera.to_array(), ahead(80.0, 0.0, -10.0).to_array());
+        aim(&mut gpu, camera.to_array(), look_yaw, look_pitch);
+        let blossom = |off: crate::saber_skin_options::OptionsOff| {
+            ShotColor::Parts("saber_varykino_blossom", off)
+        };
+        let mut shots = Vec::new();
+        for color in [blossom(0), blossom(option_bit("ink_stroke"))] {
+            gpu.saber_skins.shot_blades = vec![(*poses.last().unwrap(), color, 2)];
+            gpu.saber_skins.shot_swings = vec![(poses.clone(), color)];
+            for seconds in [3.0, 3.4] {
+                gpu.saber_skins.shot_seconds = Some(seconds);
+                shots.push(frame(&mut gpu, 40));
+            }
+        }
+        gpu.saber_skins.shot_swings.clear();
+        println!(
+            "{}",
+            sheet(&shots, 2, 960, "duel6-varykino-trails").display()
+        );
+    });
+}
+
+/// The Varykino Blossom's branch close up (20/11/2026): without, then with the Silk threads
+/// extra (`layer` 5: silk wound round the wood), from in front and from the side; then the whole blade, its
+/// lavender mist thinned (sheet `duel6-varykino-silk`).
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_varykino_silk() {
+    use crate::blade_skin_file::extras::option_bit;
+    on_big_stack(|| {
+        mount_test_packs();
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", [1280, 720], None, &[]) else {
+            return;
+        };
+        let (spawn, yaw) = assets::initial_camera(&gpu.bsp).expect("a spawn point");
+        let turn = glam::Quat::from_rotation_z(yaw);
+        let eye = Vec3::from_array(spawn);
+        let ahead = |x: f32, y: f32, z: f32| eye + turn * Vec3::new(x, y, z);
+        let blossom = |off: crate::saber_skin_options::OptionsOff| {
+            ShotColor::Parts("saber_varykino_blossom", off)
+        };
+        gpu.saber_skins.shot_persona = crate::saber_persona::Persona::of(b"^1Sol^7Vulpes", 0);
+        let mut shots = Vec::new();
+        // The branch from in front and from the side, close up; then the whole blade.
+        let base = ahead(40.0, 0.0, -20.0);
+        let views = [
+            (
+                base + turn * Vec3::new(-10.0, 0.0, 4.0),
+                base + Vec3::Z * 3.5,
+            ),
+            (
+                base + turn * Vec3::new(0.0, -10.0, 4.0),
+                base + Vec3::Z * 3.5,
+            ),
+            (
+                base + turn * Vec3::new(-45.0, 0.0, 16.0),
+                base + Vec3::Z * 18.0,
+            ),
+        ];
+        let blade = Blade {
+            base: base.to_array(),
+            direction: [0.0, 0.0, 1.0],
+            length: 40.0,
+            radius: 3.0,
+        };
+        // Its signature's pipelines build off the render thread: draw until they have.
+        gpu.saber_skins.shot_blades = vec![(blade, blossom(0), 1)];
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs() < 25 {
+            let _ = frame(&mut gpu, 1);
+        }
+        for (camera, look_at) in views {
+            let (look_yaw, look_pitch) = look(camera.to_array(), look_at.to_array());
+            aim(&mut gpu, camera.to_array(), look_yaw, look_pitch);
+            for color in [blossom(0), blossom(option_bit("silk_threads"))] {
+                gpu.saber_skins.shot_blades = vec![(blade, color, 1)];
+                gpu.saber_skins.shot_seconds = Some(2.6);
+                shots.push(frame(&mut gpu, 40));
+            }
+        }
+        println!("{}", sheet(&shots, 2, 960, "duel6-varykino-silk").display());
+    });
+}
+
 /// Every option the Sun, the Spectral and the Void offer, switched off.
 fn all_parts_off(id: &str) -> crate::saber_skin_options::OptionsOff {
     let options = match id {

@@ -3667,8 +3667,10 @@ when it is swung, which its own quad could not hold: they are particles in the w
   through the world rather than settling. One white spark picture (`ember`, drawn by the
   same script) drawn added to what is behind it (`GL_SRC_ALPHA GL_ONE`), the particle's
   colour cooling from white gold to deep red and its size shrinking to a third over its
-  life. An extra's `sheds` is read as a `@petals` line without its part, for a skin that
-  sheds nothing of its own.
+  life. An extra's `sheds` is read as a `@petals` line without its part; switched on, it is
+  shed instead of what the skin sheds of its own, if anything (`saber_skins.rs`, as an
+  extra's trail is drawn instead of the skin's; since 20/11/2026, before which it was read
+  only for a skin that shed nothing).
 - **Paper cranes** (25/10/2026, the Thousand Cranes): `"kind": "crane"` on the line (the
   default is `"blossom"`) and `"rise"`, units a second it climbs (default 0), turn the petals
   into paper cranes that climb away from the swing instead of sinking: `// @petals
@@ -3689,6 +3691,32 @@ when it is swung, which its own quad could not hold: they are particles in the w
   at its heart, its edge still burning red (`doom_cinder.png`, drawn by
   `scripts/petal_assets.py`, blended and not tinted), climbing and tumbling through the
   world as moondust does (`apply_physics` off) until it fades.
+- **Blossom mist** (20/11/2026, the Varykino Blossom's extra, Kushina's): `"kind":
+  "blossom_mist"` sheds the blossoms exactly as `"blossom"` does, and the blade itself
+  breathes out one continuous cloud of faint lavender mist along the way it swings, apart
+  from the blossoms (Kushina: one cloud the blade lets out, not mist tied to each petal). With
+  the blade's Falling blossoms part switched off, the extra breathes out its mist alone
+  (`saber_skins.rs` gives the emitter `PetalKind::MistAlone`, which sheds no blossom; Kushina:
+  the mist works on its own). The emitter (`PetalEmitter::shed`) queues 0.15 wisps for each unit the tip swings
+  (`MIST_PER_UNIT`, at most 5 a frame, `MIST_A_FRAME`), each a `PetalKind::Mist` spawn on the
+  blade's outer seven tenths, spread over the way the tip came that frame so a fast swing
+  leaves no gap, carried on and drifting as the blossoms are; and up to 9 units off the plane
+  the blade sweeps, either side (`MIST_THICK`), billowing on outward at up to 16 units a
+  second (`MIST_BILLOW`), so the cloud is thick and round from every side rather than a sheet
+  seen edge on (Kushina: puffier, it looked flat from some angles). Each wisp is large and faint
+  (`mist.png`, a soft torn cloud drawn by `scripts/petal_mist.py`, shaded as a lit volume,
+  lighter on top and where thick, its colour premultiplied and drawn `GL_ONE
+  GL_ONE_MINUS_SRC_ALPHA`, so it glows softly, `MIST_GLOW`, as well as veiling, and reads as
+  pale light rather than grey smoke on a dark map; 0.09 opacity, `MIST_ALPHA`: see-through, so a fighter's hits are never hidden behind it; Kushina found 0.13 to 0.16 covered too much), 10 to 23 times
+  a petal's size as it spreads and thins (`MIST_GROWTH`, fading over all but its first
+  fifth), so neighbours run together into one cloud. Each starts up to 4 units off the blade
+  every way (`MIST_SPREAD`) and keeps its own share of the blossoms' speed and sinking, 0.6 to
+  0.85 (`MIST_SINK`): the cloud has layers that slide past each other as the view moves and
+  reads as 3D rather than a flat pattern. It stays nearly upright (its light above) and lives
+  0.55 of a blossom's life (`MIST_LIFE`), so it is gone before it reaches the floor, which
+  would cut it where soft particles are off. A 140-unit swing breathes out about 20 wisps; a
+  hard swing held for a second, about 150. Its shader is in `CODE_SHADERS`; the world shot
+  `blossom_mist_drifts_down_with_the_petals` swings a blade across duel6 through the emitter.
 - **Moondust** (26/10/2026, the Moon, Creyon's): `"kind": "moon"` sheds moondust, switched with
   its "Moon glitter" part: `// @petals {"part":1,"kind":"moon",
   "per_unit":0.6,"life":3.4,"size":1.1,"fall":0.0,"drift":20.0,"rise":30.0,"moving":0.8}`.
@@ -3761,6 +3789,34 @@ Built 27/10/2026 for the Moon blade (Creyon, after Sol's Sun trails: the Sun's n
   colour without, a diamond-ring flash where the tip just passed, stardust still drifting.
 - **Starfall** (style 9, the Moon's Starfall trail extra): a faint moonlight ribbon with
   shooting stars in nine lanes across the band, each a bright head and a fading silver tail.
+- **Ink** (style 53, the Varykino Blossom's Ink stroke extra, Kushina's, 20/11/2026): the
+  blade's own pink blur, exactly as style 3 draws it, with a narrow stroke of wet sumi-e ink
+  where the tip passed (`ink_line`): a soft lilac heart, a deeper lilac at its edges where wet
+  ink gathers. It is drawn as a brush lays a stroke
+  (`Trail::ink_edges`, carried on the slice's vertices: how far the stroke had come in `past`,
+  the brush's pressure in the colour's brightness, whose hue the blur alone reads): the brush is
+  set down when the tip passes 120 units a second, leaving a round drop a little fuller than
+  the line, presses harder up to 700 (the line widening; its pressure follows the speed
+  smoothed over about 40 ms, so the line keeps an even width, `INK_SMOOTH`), and is lifted only
+  once the tip has stayed under 60 for 70 ms (`INK_LIFT_AFTER`), so a turn of the swing does
+  not break the stroke; the line thins to a point as the swing slows: a teardrop, round where
+  it starts and pointed where it ends. Its slices are drawn along the arc the blade swept
+  (`Quad::curved`, `curve` in `SegmentPool::append_vertices`): a piece for each 3 degrees the
+  blade turned across a frame (at most 8), the blade turned about its muzzle between its two
+  edges, so a fast swing's stroke is a smooth arc rather than a chain of straight chords; only
+  the ink's slices are, every other trail keeps its straight slices. So that the stroke draws the whole
+  arc, its slices live twelve times the blur's life (`INK_LIFE`, in `saber_trail.rs` and the
+  shader, a test keeps them equal; about 480 ms, Kushina asking for a longer, longer-lasting stroke), full for about half of it and then drying,
+  so the stroke fades from its start on to its end; the blur in them is drawn on the blur's own
+  life (its texture scroll times twelve, and only while a style 3 slice would still live), so
+  switching the extra on changes nothing of the blur. A still trail (`still_trail`) draws the
+  middle of a stroke, fully pressed. It is exempt from what the
+  newer styles (10 and up) do at the tip (the 84 % reach and the soft edge along the tip's
+  path), since the blur it carries is style 3's. World shot `duel6_varykino_trails`
+  (`SJK_TEST_PACKS` naming the hub's packs): the same swing held still with the extra off and
+  on; the brush (its drop, point, smoothed pressure and late lift) by the unit test
+  `the_ink_brush_is_set_down_presses_and_lifts_with_the_tip`, the arc by
+  `a_curved_slice_follows_the_arc_the_tip_swept`.
 
 The plasma, flare, moonlight, eclipse, starfall and a wake live three times as long as the blur (`LONG_LIFE`: 90 to 120 ms
 for most moves): the cooling and the shimmer need that time to be seen. Each slice's age

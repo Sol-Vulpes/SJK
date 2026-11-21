@@ -975,7 +975,9 @@ impl LoadedSkin {
             crate::blade_extras::worn(self.id, off)
         });
         let def = self.shown();
-        let off = def.off_mask(off);
+        // The layers of the extras that are off (`blade_extras::Extra::layer`) are left out as
+        // parts switched off are.
+        let off = def.off_mask(off) | extras.hidden;
         let on = |section: Section| off & section.bit() == 0;
         let flicker = &def.light.flicker;
         let mut waves = [[0.0; 3]; 2];
@@ -1016,14 +1018,31 @@ impl LoadedSkin {
                     fade: ghosts.fade,
                     wearer: crate::blade_signatures::of(self.id).is_some(),
                 }),
-            petals: self
-                .signature_shown()
-                .and_then(|signature| signature.petals())
-                .filter(|petals| {
-                    crate::blade_signatures::part_section(petals.part)
-                        .is_some_and(|section| on(section))
-                })
-                .or(extras.sheds),
+            // An extra's sheds, else its signature's falling blossoms (with their part on), as
+            // the trail: the Varykino Blossom's Blossom mist sheds its blossoms with the mist,
+            // or, with the blossoms' part off, the mist alone.
+            petals: {
+                let blossoms_on = self
+                    .signature_shown()
+                    .and_then(|signature| signature.petals())
+                    .filter(|petals| {
+                        crate::blade_signatures::part_section(petals.part)
+                            .is_some_and(|section| on(section))
+                    });
+                match extras.sheds {
+                    Some(sheds)
+                        if sheds.kind == crate::saber_petals::PetalKind::BlossomMist
+                            && blossoms_on.is_none() =>
+                    {
+                        Some(crate::saber_petals::PetalSpec {
+                            kind: crate::saber_petals::PetalKind::MistAlone,
+                            ..sheds
+                        })
+                    }
+                    Some(sheds) => Some(sheds),
+                    None => blossoms_on,
+                }
+            },
             persona: crate::saber_persona::Persona::default(),
             linger: crate::blade_lab_designs::linger(self.id),
             each_swing: crate::blade_lab_designs::each_swing(self.id),
