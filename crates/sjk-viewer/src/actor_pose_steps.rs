@@ -217,7 +217,7 @@ pub(super) fn prepare(mesh: &mut ActorMesh, frame: &Frame<'_>) -> Result<(), Box
             .preview
             .rig
             .as_ref()
-            .is_some_and(|rig| rig.wants_drag())
+            .is_some_and(|rig| rig.wants_motion())
         {
             let source = (mesh.entity_id.map_or(0, |id| id.get()), presented);
             mesh.preview.rig_pose.observe_motion(

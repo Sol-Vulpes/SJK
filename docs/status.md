@@ -472,6 +472,18 @@ carries the model's head (only the plate used it). The nameplates over players a
 settings are untouched: `cg_nameplate` and `cg_nameplateStyle` stay in Settings > HUD
 under Nameplates ([sjk-ui.md](sjk-ui.md#collection)). Verified: build, clippy (no new
 warning) and `cargo test -p sjk-viewer`. Not tried in a game; the world shots were not run.
+## Rig chains: a gusting breeze (19/11/2026)
+
+19/11/2026, `feat/rig-chain-wind` based on `main` `afd16b609`. A standing rig model's hair and
+cloth only had the steady side-to-side `wag`. A `dynamic` line's new `breeze <units>` blows the
+chain in a breeze whose strength gusts and whose heading drifts, the same through the world
+for every player, its units how far it holds the tip out at the strongest gust
+([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Off unless a line asks; older
+clients reject a manifest using it. Verified: `cargo test -p sjk-viewer --bin sjk rig_` (60
+passed, two new: the breeze's ranges and its repeat, and a strand leaning the same way through
+the world whatever the facing; the manifest test reads the word), `cargo clippy -p sjk-viewer
+--all-targets` (no warning in the changed code). Not tried in a game; the workspace build and
+tests are left to CI.
 
 ## Game chat: client icons and ticks (13/11/2026)
 
