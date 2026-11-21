@@ -265,6 +265,13 @@ pub(crate) fn page_backdrop(
 ) {
     if art_set.has(ArtPiece::Background) {
         backdrop_art(canvas, viewport, place, page, art_set);
+    } else if super::own_look::on() {
+        // The own look: retail's artwork redrawn, to the window's edges.
+        if page == Page::Main {
+            super::own_art::main_page(canvas, viewport, place);
+        } else {
+            super::own_art::sub_page(canvas, viewport, place);
+        }
     } else {
         backdrop(canvas, viewport, place);
     }

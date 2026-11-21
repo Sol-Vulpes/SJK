@@ -3363,6 +3363,23 @@ fn changelog(shots: &Snapshot, art: ArtSet) {
     let mut vertices = Vec::new();
     canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT);
     shots.save("sjk-page", canvas.draw_list(), &vertices, false);
+    // The same two pages on a 16:9 window: the own look's artwork reaches its edges.
+    for (name, page) in [
+        ("main-classic-wide", Page::Main),
+        ("sjk-page-wide", Page::Sjk),
+    ] {
+        let mut canvas = crate::menu_widgets::MenuCanvas::new();
+        let mut menu = crate::menu::classic::ClassicMain::new();
+        if page == Page::Main {
+            menu.select(2);
+        } else {
+            menu.show(page);
+        }
+        crate::menu::classic::view::build(&mut canvas, VIEWPORT_WIDE, &menu, 1.0, art);
+        let mut vertices = Vec::new();
+        canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT_WIDE);
+        shots.save_at(name, canvas.draw_list(), &vertices, false, VIEWPORT_WIDE);
+    }
 }
 
 fn in_game_menu(shots: &Snapshot, art: ArtSet) {
