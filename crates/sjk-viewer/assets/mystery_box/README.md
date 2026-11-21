@@ -20,8 +20,7 @@ optional SJK extras pack.
 | `mystery_box.jpg` | `models/sjk/mystery_box.jpg` | 1024x1024: a long side (temple stone, gold bands, two runes, grooves along it), the lid's top, an end, the dark inside, the gold edge |
 | `mystery_box_glow.jpg` | `models/sjk/mystery_box_glow.jpg` | The same layout, black but for the runes' and grooves' blue glow |
 | `mystery_box_halo.jpg` | `models/sjk/mystery_box_halo.jpg` | 128x256: the halo's light, soft blue rays brightest at the foot, fading to black at the top |
-| `mystery_box.shader` | `shaders/sjk_mystery_box.shader` | `models/sjk/mystery_box`: lit as a player model is, the glow added on top, pulsing; `models/sjk/mystery_box_halo`: added, two-sided, its rays drifting, breathing; `models/sjk/teddy_bear`, lit the same; `models/sjk/box_loot`, lit with a sliding glint, and `models/sjk/box_loot_glow`, added, pulsing |
+| `mystery_box.shader` | `shaders/sjk_mystery_box.shader` | `models/sjk/mystery_box`: lit as a player model is, the glow added on top, pulsing; `models/sjk/mystery_box_halo`: added, two-sided, its rays drifting, breathing; `models/sjk/teddy_bear`, lit the same; `models/sjk/box_loot`, lit with a sliding glint |
 | `toy_boxhunt.png` | `gfx/sjk/toy_boxhunt.png` | The Box hunt toy's icon, 128x128: the chest's front |
 | `box_loot.jpg` | `models/sjk/box_loot.jpg` | 256x256 swatches: the coins' gold and rim (made by [box_loot_model.py](../../../../scripts/box_loot_model.py), 11/11/2026) |
-| `box_loot_glow.jpg` | `models/sjk/box_loot_glow.jpg` | 64x64: the green glow of the Ray Gun's tube and its bolt |
 | `coins_small.md3`, `coins_medium.md3`, `coins_big.md3` | `models/sjk/coins_*.md3` | Heaps of 5, 14 and 30 gold coins, the credits a box pays (50, 200, 500) |

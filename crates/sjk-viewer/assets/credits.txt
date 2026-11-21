@@ -56,12 +56,12 @@ did: SJK team announcements in chat, and contributor reward rounds with Claim
 did: The Drone toy: freecam and peek fly a remote others see; peek needs consent
 did: Toy sound settings: a toy volume and a switch per toy to silence it
 did: The Boombox toy: an 80s stereo playing your own tracks to players close by
-did: The Monitor toy: throw an old CRT that sends opted-in players flying as ragdolls
-did: Charged Monitor throws (hold the key) and a hit marker with a hit sound
+did: Force Throw (the Monitor until 21/11/2026): hurl junk that sends players flying as ragdolls
+did: Charged Force throws (hold the key) and a hit marker with a hit sound
 did: The Tag toy: stick a premade tag on walls and floors, TF2 style
-did: Mystery boxes on maps: open one with Use for credits, and maybe win big
-did: The mystery box's roll and its music box tune
-did: The mystery box's own chest and the words over it
+did: Force boxes on maps (mystery boxes): credits or a DOOM coin roll, and maybe win big
+did: The Force box's roll (a music box tune until 20/11/2026)
+did: The Force box's stone chest and the words over it
 did: The Box hunt toy: kill the mark for a free mystery box roll
 did: The Banana peel toy (29/10 to 20/11/2026): peels opted-in players slip on as ragdolls
 did: The Prop gun toy (01/11 to 20/11/2026): a fake gun from your pk3, its bolts knock down

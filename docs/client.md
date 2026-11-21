@@ -6304,6 +6304,26 @@ game), and mounted below all game data, so a PK3 with the same paths replaces th
 
 ## Monitor
 
+**Since 21/11/2026 Force Throw** (Sol: the Monitor kept and given a Star Wars theme):
+the same throw, charge, flight, hits and immunity, its commands, cvars and look id kept
+(`toy_monitor`, `monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `toy_saved`), only
+what a player sees and hears is new. Each throw hurls one of Jedi Academy's own models by
+path, by its thrower and number so every client draws the same (`monitor::junk_of`): a
+banded crate (`models/map_objects/imperial/crate_banded.md3`), a wrecked R5 or a wrecked
+GONK droid (`r5destroyed`, `gonkdestroyed`), each drawn about 24 units across and centred on
+the flight's eight corners, so it flies and strikes as the monitor did. A crate bursts where
+it comes to rest into eight of JA's crate pieces (`models/chunks/crate/crate1_*.md3`), flung
+out and up, lying 2 seconds and fading (not at a hit: the throw flies on after one, for Two
+for One and Strike!). Its sounds are JA's: a Force push throws (a charged throw too), Force
+jump's build-up charges, `debris1` strikes a body, `smalldebris` knocks on the world,
+`cratebust1` bursts a crate, Force Absorb raises the Screen Saver, now named the **Force
+Barrier**, and `noforce` ends it; the thrower's hit tick and the icon (a banded crate pushed
+by blue rings of the Force) are SJK's, made by `scripts/force_throw_assets.py`. The
+monitor's model, picture, shader and synthesized sounds are gone. Its seven achievements are
+back, ids kept: Rebound (was Payback), Force Surge (Power Surge), Telekinetic (Tech
+Support), Reach of the Force (Long Distance Call), Two for One, Strike! and the Drone's
+Special Delivery. What follows is the Monitor as it was built; its mechanics still hold.
+
 The Monitor (Sol's idea, 26/10/2026, after the old sandbox-game joke of hurling a big CRT
 monitor at someone) is a toy for every SJK player: throw an old square monitor, and one
 that hits a player who has the toy on too knocks them down as a [ragdoll](#ragdoll) and

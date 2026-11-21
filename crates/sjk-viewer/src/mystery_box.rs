@@ -336,7 +336,7 @@ macro_rules! bundled {
 
 /// The bundled files at their game paths (made by `scripts/mystery_box_model.py`,
 /// `teddy_bear_model.py` and `box_loot_model.py`; the shader by hand).
-const FILES: [(&str, &[u8]); 13] = [
+const FILES: [(&str, &[u8]); 12] = [
     (MODEL, bundled!("mystery_box.md3")),
     (LID_MODEL, bundled!("mystery_box_lid.md3")),
     (TEDDY_MODEL, bundled!("teddy_bear.md3")),
@@ -355,10 +355,6 @@ const FILES: [(&str, &[u8]); 13] = [
         bundled!("mystery_box.shader"),
     ),
     ("models/sjk/box_loot.jpg", bundled!("box_loot.jpg")),
-    (
-        "models/sjk/box_loot_glow.jpg",
-        bundled!("box_loot_glow.jpg"),
-    ),
     (COINS_SMALL, bundled!("coins_small.md3")),
     (COINS_MEDIUM, bundled!("coins_medium.md3")),
     (COINS_BIG, bundled!("coins_big.md3")),

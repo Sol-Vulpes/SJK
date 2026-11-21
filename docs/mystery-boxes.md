@@ -1,5 +1,19 @@
 # Mystery boxes
 
+**Since 20/11/2026 the Force box** (Sol: "Star Wars themed, not a wooden box, more like an
+ancient Jedi Force box, with its own sounds from Star Wars"; the code, commands and hub keep
+the name mystery box). Its look is a placeholder until Sol's own model: the same chest,
+repainted in temple stone and old gold, a glowing blue rune of SJK's own on each half of its
+long sides, grooves of blue light along them and a blue halo. Sol's model only has to keep
+the files' contract ([the assets' README](../crates/sjk-viewer/assets/mystery_box/README.md):
+the chest 60 x 26 x 24 at its bottom's middle, front +X, the halo a second surface; the lid
+on its hinge reaching +X; shaders `models/sjk/mystery_box` and `_halo`). Its sounds are Jedi
+Academy's own, by path: Force pull opens it, Force speed's hum runs through the roll (5.14 s,
+the roll 5.2), a Force push shuts it, `protecthit` takes the prize, `interface/secret_area`
+greets the jackpot and `noforce` nothing; the bundled music box tune and the extras pack's
+opening, roll and closing are no longer played (the extras laugh is). It also takes the
+WHEEL OF DOOM's DOOM coin: [The DOOM coin roll](#the-doom-coin-roll).
+
 Boxes SJK's creator places on maps, which any SJK player opens for credits (Sol's idea,
 27/10/2026). The hub keeps where each box stands, takes the price, rolls what is inside
 and pays it; the client draws the boxes on the map file they were placed on, opens the one
@@ -57,7 +71,8 @@ it and roll over it, changing fast, then slower, like a wound-down spring. At 5.
 chime, or a fanfare (the jackpot, the Mystery blade, a dormant kyber). As its lid closes
 (taken, or after 10 seconds) it plays its closing sound.
 
-The opening, the roll and the closing are Sol's sounds of 30/10/2026, in the optional SJK
+Until 20/11/2026 (the Force box's sounds since, above): the opening, the roll and the
+closing were Sol's sounds of 30/10/2026, in the optional SJK
 extras pack (`unofficial_sjk_extras.pk3`, the Sith cloud's `extras`:
 `sound/sjk/mystery_box/extras_open.mp3`, `extras_roll.mp3`, `extras_close.mp3`), not
 bundled. A player without the pack hears a crate sliding open (retail) and a little music
@@ -187,6 +202,29 @@ just waste of time", but the box hunt still does); or the boxes' own kyber, the 
 blade (`saber_mystery`, blade 169, Legendary), which no holocron drops, the shop never
 sells and nobody trades. A player who holds it already gets 60 shards instead, what
 shattering a Legendary kyber gives. The blade fanfares like the jackpot.
+
+## The DOOM coin roll
+
+Since 20/11/2026 (Sol: the WHEEL OF DOOM merged into the box, "you can just spend a special
+coin to have better loot or worse punishment"; then "more loot still"), a player holding a
+DOOM coin may roll it at an idle box instead of credits: a tap of Use opens the box for its
+price as before (on the release), Use held 1 second rolls the coin. Without a coin, Use acts
+on the press as it always did. The Use prompt says both ("Tap: 100 credits · Hold Use: DOOM
+coin roll (2 coins)", then "Keep holding: DOOM coin roll" while held, or "DOOM coin roll
+again in N s").
+
+The hub (`POST /v1/mystery-box/doom`, the open's body; hub branch `force-box`) spends the
+coin and rolls the WHEEL's outcomes at the box's own odds, per mille: Mythical 24, Legendary
+72, Rare 180, Uncommon 324 (a holocron 60 %), the coin back 60, nothing 40, the blast 44,
+the curse 28 and each of the twelve other punishments 19 (30 %). It pays as the WHEEL did (a
+holocron of the tier, kept out of the caps and the trades; the coin back), under the
+WHEEL's switch, one coin roll a box every 6 seconds and one a player every 15. The box
+opens and rolls as for credits and stops on the tier's holocron, a heap of coins for the
+coin back, the teddy bear for the blast (which blows the roller up as a box does) or the
+bolts; the punishment then strikes the roller through the WHEEL's own effects
+(`wheel_of_doom_strike`). Nothing waits to be taken: the outcome stays 3 seconds over the
+box. The other SJK players see the roll from the hub's toy event `doom_<box>_<outcome>`
+(older clients ignore it), their prompt saying "Someone rolls a DOOM coin".
 
 ## Placing one (SJK's creator)
 
