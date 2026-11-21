@@ -4030,6 +4030,19 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[one-status-bar]
+area: HUD
+title: One status bar at the bottom: the top bar's parts merged into it
+change: Left: wallet, kyber, effects, Force, score. Centre: weapons, time left.
+change: Right: toys, joins/leaves, map, players, ping, fps, time; server, mode, date start off.
+change: cg_statusBarTop is gone; nothing kept at the top edge; banners rest at the top again.
+test: New profile, a match: one strip at the bottom only; nothing at the top edge.
+test: The Force icons and 2nd + score after the effects; 12:34 left beside the weapons.
+test: Right side: toys, a join/leave line, duel6, 7/24, ping, fps, 21:07 at the far right.
+test: Settings > HUD > Status bar: Bar: rows for every part; server, game type, date off.
+test: 4:3 window: server/mode/date, toys and effects go first; the clock and time left stay.
+test: An achievement banner slides down to just under the top edge (no gap for a bar).
+
 [status-bars-docked]
 area: HUD
 title: Status bars docked to the bottom and the top, both on, the HUD inside them

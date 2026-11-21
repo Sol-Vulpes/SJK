@@ -528,8 +528,8 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
-- the status bars (15/11/2026, docked to both edges and on by default 16/11/2026): a
-  thin bar along the bottom with the player's credits, kyber shards, dormant kybers and
+- the status bar (15/11/2026, docked to both edges and on by default 16/11/2026, one bar
+  at the bottom holding both since 21/11/2026): a thin bar along the bottom with the player's credits, kyber shards, dormant kybers and
   DOOM coins by their icons, kyber, effects, weapons, toys, the time and the date, and
   one along the top with their Force powers, score, the time left, who joins and leaves,
   the server, map, game type, players, ping and frame rate; the HUD and every overlay at

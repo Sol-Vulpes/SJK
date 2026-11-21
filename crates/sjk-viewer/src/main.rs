@@ -2645,8 +2645,8 @@ impl GpuState {
             self.append_configured_chat(viewport, text_scale, scoreboard_visible);
         }
         self.append_weapon_select_name(viewport);
-        // The status bars over play, as the HUD's elements show (`status_bar.rs`).
-        let [bottom_bar, top_bar] = self.append_status_bars(viewport);
+        // The status bar over play, as the HUD's elements show (`status_bar.rs`).
+        let status_bar = self.append_status_bars(viewport);
         // The ghost editor's path, under its column (or over play while looking about).
         let ghost_overlay =
             !self.console_covers_frame() && !medal_popup && self.append_ghost_overlay(viewport);
@@ -2827,12 +2827,6 @@ impl GpuState {
         let trade_toast = self.append_trade_toast(viewport, console_covers_frame || medal_popup);
         // An achievement unlocked, a holocron, a medal in a match, an update: its banner
         // over play or the menus, never input-taking.
-        // Under the top status bar while it shows.
-        unlock_toast::banner::set_top_inset(if top_bar {
-            self.status_bar.reserved().top
-        } else {
-            0.0
-        });
         let unlock_toast = self.append_unlock_toast(viewport, console_covers_frame || medal_popup);
         self.world_notes.draw_highlight(viewport);
         self.map_edit_gizmo_draw();
@@ -2865,10 +2859,7 @@ impl GpuState {
                 .is_open()
                 .then(|| self.quick_wheel.draw_list()),
             information_visible.then(|| self.hud.draw_list()),
-            bottom_bar
-                .then(|| self.status_bar.draw_lists()[0])
-                .flatten(),
-            top_bar.then(|| self.status_bar.draw_lists()[1]).flatten(),
+            status_bar.then(|| self.status_bar.draw_list()).flatten(),
             (chat_visible && !chat_over_trade).then(|| self.chat.draw_list()),
             self.ghost
                 .editor
