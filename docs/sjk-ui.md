@@ -929,7 +929,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   under the last where sections are hidden.
   The column (x 640, 1120 wide, from y 140 to 960, scrolled by the arrows, Page Up and Down, Space, Home and End, the wheel and a
   thin holo scrollbar at x 1800) holds each section under a sub-heading:
-  - Someone with a history: the name (Rajdhani 84 for Sol JK's section, 62 for
+  - Someone with a history: the name (Rajdhani 84 for Sun JK's section, 62 for
     the rest), the GitHub handle in gold at the right of its line, the role, the
     counts (changes when some are not pull requests, pull requests, commits) as
     gold numbers with their words, the links in gold after a holo dot, and the
@@ -2900,7 +2900,7 @@ same look in every menu style, on the 16:9 frame:
 
 - **Card:** the kit's card over its scrim, 900 wide from x 510, centred, as tall as its
   words.
-- **Words:** "Alpha build" in gold (Rajdhani 22), "Welcome to Sol JK" (Rajdhani 36),
+- **Words:** "Alpha build" in gold (Rajdhani 22), "Welcome to Sun JK" (Rajdhani 36),
   then Exo 2 18 (muted): an alpha of a free and open-source client, expect bugs and
   unfinished parts, some collectibles shown but not unlockable yet (a work in
   progress, no need to ask Sol); report on the SJK Discord or with Report a bug, this icon in the

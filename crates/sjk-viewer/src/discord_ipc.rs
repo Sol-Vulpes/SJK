@@ -402,7 +402,7 @@ mod tests {
             state: "ffa3 · FFA".into(),
             party: Some((3, 32)),
             large_image: "https://sol-vulpes.github.io/SJK/assets/sjk-logo-512.png".into(),
-            large_text: "Sol JK".into(),
+            large_text: "Sun JK".into(),
             start: Some(1_760_000_000),
             buttons: vec![ActivityButton {
                 label: "Get SJK".into(),

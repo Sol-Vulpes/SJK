@@ -1,19 +1,19 @@
 # Credits
 
-Sol JK (SJK) is developed by Sol ([Sol-Vulpes](https://github.com/Sol-Vulpes)):
+Sun JK (SJK) is developed by Sol ([Sol-Vulpes](https://github.com/Sol-Vulpes)):
 it is Sol's vision of Jedi Academy. Contributors send pull requests (see
 [Contributors to SJK](#contributors-to-sjk)). This page records who made what.
 The git history is the authoritative record: every commit carries its author,
 and changes are kept as separate topic branches merged into SJK's `main`.
 
-## Sol JK, by Sol
+## Sun JK, by Sol
 
 Sol develops SJK and sets its direction, and reviews and merges every
 contributor's pull request: the credits page counts them on Sol's card
 ("REVIEWED & MERGED", beside Sol's own pull requests and commits). Sol's work
 includes:
 
-- the Sol JK name, README, credits and website;
+- the Sun JK name (Sol JK until 21/11/2026), README, credits and website;
 - the players' SJK page: sign-in from the game with the SJK key, joining keys,
   video bounties and the Videographer medal (provisional art from Supporter's);
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the

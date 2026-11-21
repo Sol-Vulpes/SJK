@@ -5428,7 +5428,7 @@ The main menu's Credits entry (SJK > Credits in the SJK UI; SJK > CREDITS on the
 [credits_data.rs](../crates/sjk-viewer/src/credits_data.rs)), and everyone's
 work from [credits_history.txt](../crates/sjk-viewer/assets/credits_history.txt),
 which `scripts/credits_history.py` writes from git and GitHub. Each section of
-the file (Sol JK, Contributors, Art, Made with, Origins) is a heading with its people.
+the file (Sun JK, Contributors, Art, Made with, Origins) is a heading with its people.
 
 - Everyone with a history (Sol, Bishop, Creyon, Lumaya) has a panel across the
   column: the name large (the first section's larger still), the role, chips
@@ -5535,7 +5535,7 @@ again every 20 seconds; the log says which apps it reached.
   alone. The elapsed timer counts from entering the menus, a server, a demo or a map.
 - The picture is the SJK logo on the project site, and a "Get SJK" button opens the
   site. There is no join button: SJK has no link scheme (`sjk://`) yet.
-- The game name Discord shows is the "Sol JK" application's in Discord's developer
+- The game name Discord shows is the "Sun JK" application's in Discord's developer
   portal, whose id is `APPLICATION_ID` in `discord_presence.rs`; while it is empty the
   feature stays off. `SJK_DISCORD_APP=<id> cargo test -p sjk-viewer --bins
   discord_app_takes_an_activity -- --ignored` checks the pipe against a running

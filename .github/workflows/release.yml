@@ -25,7 +25,7 @@ concurrency:
 
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
-  # SJK's development stage, shown in the release title ("Sol JK <version> (Alpha)").
+  # SJK's development stage, shown in the release title ("Sun JK <version> (Alpha)").
   STAGE: Alpha
 
 jobs:
@@ -55,9 +55,9 @@ jobs:
             exit 0
           fi
           cat > notes.md <<EOF
-          <p align="center"><img src="https://raw.githubusercontent.com/${{ github.repository }}/refs/tags/$TAG/assets/branding/sjk-logo-512.png" alt="Sol JK emblem" width="200"></p>
+          <p align="center"><img src="https://raw.githubusercontent.com/${{ github.repository }}/refs/tags/$TAG/assets/branding/sjk-logo-512.png" alt="Sun JK emblem" width="200"></p>
 
-          Sol JK $VERSION for Windows 10/11 x64 and Linux x64, plus an experimental,
+          Sun JK $VERSION for Windows 10/11 x64 and Linux x64, plus an experimental,
           unsigned build for Macs with Apple Silicon (its README says how to allow it).
 
           **Install:** extract the whole ZIP for your platform into Jedi Academy's
@@ -69,7 +69,7 @@ jobs:
           \`SHA256SUMS\` files list the checksums.
           EOF
           gh release create "$TAG" --verify-tag --draft \
-            --title "Sol JK $VERSION${STAGE:+ ($STAGE)}" --notes-file notes.md --generate-notes
+            --title "Sun JK $VERSION${STAGE:+ ($STAGE)}" --notes-file notes.md --generate-notes
 
   package:
     name: Package (${{ matrix.platform }})
