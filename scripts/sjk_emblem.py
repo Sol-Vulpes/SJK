@@ -765,7 +765,7 @@ def social_preview(font_dir):
     small = ImageFont.truetype(str(font_dir / "Inter-SemiBold.ttf"), 24)
     left = 64 + 520 + 48
     draw.text((left, 186), "STAR WARS JEDI KNIGHT: JEDI ACADEMY", font=small, fill=(168, 207, 255))
-    draw.text((left - 4, 222), "Sol JK", font=semibold, fill=(255, 217, 122))
+    draw.text((left - 4, 222), "Sun JK", font=semibold, fill=(255, 217, 122))
     lines = ("Native Rust client and server", "for Jedi Academy multiplayer,", "classic at heart.")
     for row, line in enumerate(lines):
         draw.text((left, 372 + row * 46), line, font=regular, fill=(226, 233, 246))

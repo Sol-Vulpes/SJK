@@ -4030,6 +4030,18 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[sun-jk]
+area: Menus & settings
+title: Sol JK is now Sun JK (visible text only)
+change: Home, welcome card, classic title, credits, Discord presence text say Sun JK.
+change: Release titles, README, NOTICE, site and its social card say Sun JK; SJK stays.
+change: A refused DOOM coin roll speaks of the Force box, not the WHEEL OF DOOM.
+test: New profile: the welcome card says Welcome to Sun JK; the SJK UI home names Sun JK.
+test: ui_menuStyle classic: the main menu title reads SUN JK; credits heading SUN JK.
+test: Discord open: hovering the large image says Sun JK (the game name is the portal's).
+test: Hold Use at a box with no coin: No DOOM coin: the teddy bear in a Force box brings one.
+note: Rename the Discord application in its developer portal for the game name to follow.
+
 [one-status-bar]
 area: HUD
 title: One status bar at the bottom: the top bar's parts merged into it

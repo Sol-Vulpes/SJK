@@ -1,5 +1,5 @@
 //! The launcher notice on the SJK UI's main page (`docs/sjk-ui.md`, "SJK Launcher"):
-//! for a player who starts Sol JK without the SJK Launcher, a line top left saying it
+//! for a player who starts Sun JK without the SJK Launcher, a line top left saying it
 //! is out, a link to its release page and × to hide it for good
 //! (`ui_launcherNotice 0`).
 //!

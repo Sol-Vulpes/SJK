@@ -1,3 +1,19 @@
+## Sun JK (21/11/2026)
+
+Step 6 of the season 2 work (Sol's announcement of 19/11: Sol JK becomes Sun JK; visible
+text only, Sol's choice), branch `personal/sun-jk`. Every place a player or a visitor reads
+the name says Sun JK: the SJK UI's home and welcome card, the classic menus' title, the
+credits roll's heading and `credits.txt`, the Discord presence's text, the server's and
+client's startup line (`notice.rs`, `sjk-dedicated`), the release workflow's titles, the
+README, NOTICE, CREDITS.md, the site (`site/`, its social card redrawn by
+`scripts/sjk_emblem.py build`) and the docs that name it. The exe, crates, cvars, paths,
+the repo, the hub and the short name SJK are unchanged; past changelog entries and this
+page's history keep the old name; the Ko-fi address (`ko-fi.com/soljk`) is an account's.
+Outside the repo, for Sol: the Discord application's name in its developer portal (the
+game name Discord shows), the SJK Launcher's own text, the Ko-fi and GitHub pages. The
+Force box's coin roll refusals no longer speak of the WHEEL OF DOOM
+(`wheel_of_doom::box_refusal`).
+
 ## One status bar (21/11/2026)
 
 Step 5 of the season 2 work (the UI upgrade, Sol: "merge the new top bar we did with the

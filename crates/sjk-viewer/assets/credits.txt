@@ -26,12 +26,12 @@
 # card when their first change lands, lines as they keep contributing
 # (docs/sjk.md "Credits").
 
-== Sol JK
+== Sun JK
 
 [Sol]
 github: Sol-Vulpes
-role: Creator and developer of Sol JK
-did: Sol JK itself: its name, emblem, website, releases and self-updates
+role: Creator and developer of Sun JK
+did: Sun JK itself: its name, emblem, website, releases and self-updates
 did: The steel-and-sun emblem, drawn from its geometry, its sun alive in the menus
 did: Your SJK page: sign-in from the game, joining keys, video bounties
 did: The assets folder: PK3s tidied into subfolders of your own, outside base
@@ -41,7 +41,7 @@ did: The sun theme: warm colours and acrylic glass over the game
 did: SJK UI themes: warm, cold or any hue, keeping every colour's lightness
 did: The Collection in acrylic glass, and a finished Kybers page
 did: The classic menus and classic+, the settings and search, the retail-look console
-did: The SJK UI, Sol JK's own menus over the live map
+did: The SJK UI, Sun JK's own menus over the live map
 did: SJK's icon art: the quick wheels' and the settings' icons
 did: The HUD picker, the radial HUD, nameplates with shared bars and player cards
 did: Capsule nameplates: each player's picture, name and weapon, the shared bars on a tray
@@ -790,7 +790,7 @@ link: https://github.com/eternalcodes/EternalJK
 
 [Bishop]
 github: Bishop-R
-role: Creator of JKR, the starting point of Sol JK
+role: Creator of JKR, the starting point of Sun JK
 did: SJK began from JKR's code in October 2026; most of it has since been replaced
 did: JKR's Rust engine, wgpu renderer, client, server and protocol 26 networking
 did: SJK #347 Linux starts after an update again (main-thread stack)

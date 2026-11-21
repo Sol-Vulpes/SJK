@@ -863,7 +863,7 @@ impl Panel {
             TextAlign::Center,
         );
         self.ui.text_aligned(
-            "SOL JK   /   THE PEOPLE WHO MAKE IT",
+            "SUN JK   /   THE PEOPLE WHO MAKE IT",
             Rect::new(0.0, title.bottom() + 6.0 * s, viewport[0], 20.0 * s),
             13.0 * s,
             palette.accent,

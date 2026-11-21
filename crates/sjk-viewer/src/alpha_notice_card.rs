@@ -63,7 +63,7 @@ const KEYS_RIGHT: f32 = 1824.0;
 
 /// What the card says above the report row.
 const PARAGRAPHS: [&str; 2] = [
-    "This is an alpha build of Sol JK, a free and open-source Jedi Academy client. Expect \
+    "This is an alpha build of Sun JK, a free and open-source Jedi Academy client. Expect \
      bugs, and parts that are not finished yet. Some collectibles show in the game but \
      cannot be unlocked yet: they are a work in progress, so there is no need to ask Sol \
      about them.",
@@ -259,7 +259,7 @@ impl Card {
         text(
             ui,
             TextFamily::Display,
-            format_args!("Welcome to Sol JK"),
+            format_args!("Welcome to Sun JK"),
             frame.rect(TEXT_X, top + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
             color::text(),

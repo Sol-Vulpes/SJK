@@ -20,7 +20,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// 0 off, 1 on, 2 on without the server's name.
 pub(crate) const CVAR: &str = "cl_discordPresence";
 
-/// The "Sol JK" application in Discord's developer portal: its name is the game
+/// The "Sun JK" application in Discord's developer portal: its name is the game
 /// name Discord shows. Not a secret; every Rich Presence client carries its id.
 const APPLICATION_ID: &str = "1561491096062922803";
 
@@ -222,7 +222,7 @@ fn timer_key(place: &Place) -> String {
 fn activity(place: &Place, start: Option<u64>) -> Activity {
     let mut activity = Activity {
         large_image: LOGO.into(),
-        large_text: "Sol JK".into(),
+        large_text: "Sun JK".into(),
         start,
         buttons: vec![ActivityButton {
             label: "Get SJK".into(),

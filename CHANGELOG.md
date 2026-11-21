@@ -33,7 +33,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
-A new emblem, a new Collection with kybers and an Inventory, a status bar along the bottom of the screen, banner notifications, feats and the Creyon werewolf.
+A new name, Sun JK, a new emblem, a new Collection with kybers and an Inventory, a status bar along the bottom of the screen, banner notifications, feats and the Creyon werewolf.
 
 > New emblem: SJK wears Sol's new emblem, a steel monogram before a burning sun, as its icon and in the menus, where the sun is alive.
 > Collection hall: The Collection opens on a hall of tiles, one to each kind, with an Inventory of all you own; Enter opens a kind and Esc comes back.
@@ -83,6 +83,7 @@ A new emblem, a new Collection with kybers and an Inventory, a status bar along 
 - The cardboard box toy is removed too (Sol's cleanup before the release): its key, its Collection row, its quick wheel choice and its settings are gone; the Hax's hack still starts on Use as before _(Sol)_
 - Order 66 and the Hax are removed too (Sol's cleanup before the release): their keys, Collection rows, quick wheel choices and settings are gone, the Hax trap with them; the Ragdoll and the Monitor still leave alone a player who is dead, duelling, carrying the flag or away _(Sol)_
 - The Prop gun toy is removed, and with it the mystery box's Ray Gun, which ran on it: a box now gives a holocron a little more often instead (52.5 %, was 45.5 %) _(Sol)_
+- **Sol JK is now Sun JK**: the name on the menus, the welcome card, the credits, Discord, the release titles and the website; the game, its settings, your files and the hub stay as they are (still SJK for short) _(Sol)_
 - The mystery box is now the **Force box**, an ancient Jedi box of temple stone and old gold with glowing blue runes (a placeholder until its final model), heard with Jedi Academy's own Force sounds _(Sol)_
 - The WHEEL OF DOOM joins the Force box: tap Use at a box for the credits roll as before, or hold Use for a second to roll a DOOM coin instead, for better loot: a holocron 60 % of the time (a Mythical 2.4 %), your coin back, nothing, or one of the WHEEL's punishments (30 %). The wheels no longer stand on maps _(Sol)_
 - The Monitor is now **Force Throw**: the same throw, but you hurl a crate, a wrecked R5 or a wrecked GONK droid with the Force, and a crate bursts where it lands; its Screen Saver is now the Force Barrier, and its achievements are back under Force names (Rebound, Force Surge, Telekinetic, Reach of the Force; Two for One, Strike! and Special Delivery as they were), whatever you earned before still counting _(Sol)_

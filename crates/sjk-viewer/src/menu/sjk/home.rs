@@ -1058,7 +1058,7 @@ fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
     let hint = if canvas.token_hovered(HIDE_LAUNCHER_TOKEN) {
         "Hides it for good: Settings > Interface > SJK Launcher notice brings it back"
     } else {
-        "It installs and updates Sol JK for you, and helps when the game won't start"
+        "It installs and updates Sun JK for you, and helps when the game won't start"
     };
     text(
         canvas,

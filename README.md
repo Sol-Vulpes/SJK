@@ -1,6 +1,6 @@
-<p align="center"><img src="assets/branding/sjk-logo-512.png" alt="Sol JK emblem" width="240"></p>
+<p align="center"><img src="assets/branding/sjk-logo-512.png" alt="Sun JK emblem" width="240"></p>
 
-# Sol JK (SJK)
+# Sun JK (SJK)
 
 <p align="center">
   <a href="https://sol-vulpes.github.io/SJK/"><img alt="Website" src="https://img.shields.io/badge/Website-Sol%20JK-D4AF37?style=for-the-badge"></a>
@@ -10,9 +10,9 @@
   <a href="https://ko-fi.com/soljk"><img alt="Support on Ko-fi" src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white"></a>
 </p>
 
-**Sol JK**, or **SJK** for short, is Sol's client for **Star Wars Jedi
-Knight: Jedi Academy** multiplayer: the game as Sol sees it, developed by Sol in
-Rust.
+**Sun JK**, or **SJK** for short (Sol JK until 21/11/2026), is Sol's client for
+**Star Wars Jedi Knight: Jedi Academy** multiplayer: the game as Sol sees it,
+developed by Sol in Rust.
 
 SJK aims to be a true JKA+: everything players expect from today's community
 clients, from the retail look and feel to mod servers such as JA+ and JoF and
@@ -193,7 +193,7 @@ built from the source published here, which is their corresponding source.
 [NOTICE](NOTICE) holds the copyright notice. The license requires every copy and
 modified version to keep it, and, under section 2(c), to keep the copyright and
 no-warranty announcement the client and server print when they start. The
-"Sol JK" and "SJK" names and the SJK emblem are not licensed with the code: a
+"Sun JK" and "SJK" names and the SJK emblem are not licensed with the code: a
 modified version uses its own name and emblem and credits SJK as its origin.
 
 OpenJK and TaystJK are compatibility references for Jedi Academy behavior. The
