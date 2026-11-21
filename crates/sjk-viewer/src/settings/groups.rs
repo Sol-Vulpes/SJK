@@ -901,11 +901,11 @@ impl Group {
             // Its headings are its tabs' names ([`graphics_tabs`]).
             Self::Scoreboard | Self::Graphics | Self::Simple(_) => &[],
             Self::Quick => &[
+                (crate::menu::sjk::theme::CVAR, "Look"),
                 (super::catalog::IMPORT_ROW, "From another client"),
                 (crate::graphics_quality::ROW_NAME, "Graphics"),
-                (crate::menu::style::CVAR, "Styles"),
                 ("r_resolution", "Display"),
-                ("sensitivity", "Aim"),
+                (crate::camera::STYLE_CVAR, "Camera and aim"),
                 ("s_volume", "Sound"),
                 (crate::menu_hud::STYLE_CVAR, "HUD"),
                 ("cg_nameplate", "Nameplates"),

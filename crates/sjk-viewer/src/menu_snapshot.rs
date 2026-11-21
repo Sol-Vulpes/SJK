@@ -2634,6 +2634,7 @@ fn sjk_theme_snapshot() {
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
     let cases = [
         ("sjk-theme-warm", None, None),
+        ("sjk-theme-sith", Some("sith"), None),
         ("sjk-theme-cold", Some("cold"), None),
         ("sjk-theme-custom-150", None, Some("150")),
         ("sjk-theme-custom-275", None, Some("275")),
@@ -2667,6 +2668,75 @@ fn sjk_theme_snapshot() {
         let list = menu.draw_list().expect("the settings screen draws");
         save_sjk_shot(name, VIEWPORT_WIDE, &backdrop, list, &icons, fonts);
     }
+    console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
+    theme::sync(&console);
+}
+
+/// First setup's pop-up over the duel6 levelshot, wearing each theme: the themes'
+/// tiles, the look's rows first.
+#[test]
+#[ignore = "reads the installed game data named by JKA_GAME_DATA"]
+fn sjk_first_setup_snapshot() {
+    use crate::game_font::SjkFonts;
+    use crate::menu::sjk::{TextTarget, theme};
+    let (_, vfs) = art();
+    let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
+    let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
+    let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
+    let mut icons = HashMap::new();
+    for (index, (_, bytes)) in crate::settings_icons::ICONS.iter().enumerate() {
+        let icon = image::load_from_memory(bytes).expect("a settings icon");
+        icons.insert(
+            crate::ui_renderer::settings_icon(index).0,
+            icon.into_rgba8(),
+        );
+    }
+    for (texture, cell) in crate::settings_icons::small_cells() {
+        icons.insert(texture.0, cell);
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let mut console =
+        crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+    for (name, value, hue) in [
+        ("sjk-first-setup-solar", "warm", None),
+        ("sjk-first-setup-sith", "sith", None),
+        ("sjk-first-setup-jedi", "cold", None),
+        ("sjk-first-setup-custom", "custom", Some("150")),
+    ] {
+        if let Some(hue) = hue {
+            console.set_cvar(theme::HUE_CVAR, hue);
+        }
+        console.set_cvar(theme::CVAR, value);
+        theme::sync(&console);
+        let mut settings = crate::settings::SettingsMenu::new();
+        settings.open_first_setup_popup(&console);
+        let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
+        settings.append_sjk_popup(
+            TextTarget::Families(
+                SjkFonts {
+                    display: (&mut display_text, &display.font),
+                    body: (&mut body_text, &body.font),
+                    code: None,
+                },
+                crate::text::TextStyle::NEUTRAL,
+            ),
+            VIEWPORT_WIDE,
+            1.0,
+        );
+        let fonts = SjkShotFonts {
+            display: (&display_text, &display.image),
+            body: (&body_text, &body.image),
+        };
+        save_sjk_shot(
+            name,
+            VIEWPORT_WIDE,
+            &backdrop,
+            settings.draw_list(),
+            &icons,
+            fonts,
+        );
+    }
+    console.set_cvar(theme::HUE_CVAR, "22");
     console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
     theme::sync(&console);
 }

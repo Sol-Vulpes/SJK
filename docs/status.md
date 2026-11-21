@@ -1,3 +1,18 @@
+## Named themes and First setup's look (21/11/2026)
+
+Sol's request (21/11: remake First setup a bit, propose the themes: the current Solar one,
+a red Sith one, a blue Jedi one, and the colour customization), branch
+`personal/first-setup-themes`. `ui_theme` gains `sith` (`theme::SITH`, a hand-tuned
+palette: a first try that only turned the warm palette to red was too close to Solar to
+tell apart, and a purer red line-work failed the contrast test over bright scenes, so the
+lines are rose-red) and the themes are named for players: Solar (`warm`), Sith, Jedi
+(`cold`, unchanged colours) and Custom; `solar` and `jedi` read as `warm` and `cold`, and
+nothing saved is migrated. First setup's pop-up shows the four as tiles in their own
+colours under its title (`sjk_popup.rs`, `theme::preview`), a click wearing one at once,
+and its rows open on Look (theme, hue, saturation, menu style); camera style joins the
+aim rows under "Camera and aim". Spec: [sjk-ui.md](sjk-ui.md#first-setup). Checked by
+unit tests and off-screen snapshots (`sjk_first_setup_snapshot`), not yet in the game.
+
 ## Settings pictures and sections (21/11/2026)
 
 Sol's request (21/11: "regen the pictures yourself for all the settings, so we have

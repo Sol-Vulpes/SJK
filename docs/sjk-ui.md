@@ -108,11 +108,12 @@ in front of a white scene, and over its plain fallback
 The player picks the SJK UI's colours (18/11/2026, Sol's request), in Settings >
 Interface under Theme, or `ui_theme` ([theme.rs](../crates/sjk-viewer/src/menu/sjk/theme.rs)):
 
-| `ui_theme` | Colours |
-| --- | --- |
-| `warm` (the default) | The sun's, in the table above |
-| `cold` | The SJK UI's colours before 17/11/2026: deep space navy `#060A14`, holo-blue line-work `#A8CFFF`, gold `#E8B84A` for the choice, cool white text `#E2E9F6`, ember `#FF7A3D`. Its glass is the navy its panels' literals had (`#0A0F1F`, lit `#121A2B`); its muted text is lifted 4 % (`#B0BCD3`) so it reads on the status bars' acrylic, which that palette never had |
-| `custom` | The warm palette turned to `ui_themeHue` (0 to 360 round the colour wheel, default 22, the warm line-work's own hue) at `ui_themeSaturation` (0 greys to 100 the warm palette's, the default) |
+| `ui_theme` | Name | Colours |
+| --- | --- | --- |
+| `warm` (the default) | Solar | The sun's, in the table above |
+| `sith` (since 21/11/2026) | Sith | A ground near black with a breath of red `#0E0304`, blood-red glass (`#190708`, lit `#330B0E`), rose-red line-work `#FF9CAB` (as red as still reads over a bright scene behind the glass), the sun's gold for the choice, white text leaning to rose `#FDECEA`; leaving and errors are orange `#FF8533` here, so they are not one more red line |
+| `cold` | Jedi | The SJK UI's colours before 17/11/2026: deep space navy `#060A14`, holo-blue line-work `#A8CFFF`, gold `#E8B84A` for the choice, cool white text `#E2E9F6`, ember `#FF7A3D`. Its glass is the navy its panels' literals had (`#0A0F1F`, lit `#121A2B`); its muted text is lifted 4 % (`#B0BCD3`) so it reads on the status bars' acrylic, which that palette never had |
+| `custom` | Custom | The warm palette turned to `ui_themeHue` (0 to 360 round the colour wheel, default 22, the warm line-work's own hue) at `ui_themeSaturation` (0 greys to 100 the warm palette's, the default) |
 
 A custom theme turns every token round the OKLab hue circle by the turn that brings the
 warm line-work's hue to the chosen one, scales its chroma by the saturation and sets it
@@ -122,7 +123,10 @@ is the warm theme's at every hue (`theme::tests::a_custom_hue_keeps_every_tokens
 at the default hue and saturation it is the warm theme. Ember keeps the warm theme's red in
 a custom theme: it means leaving and errors.
 
-Settings shows Theme as three segments (Warm, Cold, Custom), then Theme hue and Theme
+Players read the themes by name (Solar, Sith, Jedi, Custom, since 21/11/2026, Sol's
+request); the cvar keeps `warm` and `cold`, the values saved before, and reads `solar` and
+`jedi` as them. First setup's pop-up shows them as four tiles ([First setup](#first-setup)).
+Settings shows Theme as a list of the four, then Theme hue and Theme
 saturation as sliders, each with a swatch of the line-work it gives left of its track
 (`theme::row_swatch`, `kit::swatch`). Moving the hue or the saturation, in Settings or
 the console, picks `custom` (`ViewerConsole::apply_cvar`). A change applies on the next
@@ -1257,14 +1261,24 @@ Settings screen.
 
 - **Card:** 960 wide and 948 tall, centred, over the map darkened all over
   (78 %), with the browser prompts' glass, shadow and holo edge (`kit::card`).
-- **Top:** "First setup", what it is for, and how to bring another client's
-  .cfg over.
+- **Top:** "First setup", what it is for ("Pick a look, then the few settings worth
+  choosing first"), and how to bring another client's .cfg over.
+- **Themes** (since 21/11/2026, Sol's request): under the top, four tiles across the
+  card (104 tall), Solar, Sith, Jedi and Custom, each drawn in its own colours whatever
+  theme is worn (`theme::preview`): its ground, a band of its lit glass, a stroke of its
+  line-work, a dot of its gold and its name in its text colour. The one worn has a gold
+  edge and "In use". A click wears a theme at once (`SettingsMenu::wear_theme`): the
+  whole pop-up, and everything after it, changes colour on the next frame. Custom shows
+  the hue and saturation in use.
 - **Rows:** First setup's rows as Settings draws them, its column moved into
-  the card, under its sub-headings (Graphics first: the graphics preset, Vanilla,
-  Vanilla Plus or the Solar Renderer's Low to Ultra, each marked green to red for this
-  PC, whose list opens on Enter; see [graphics
-  quality](client.md#graphics-quality); then Styles: menu and camera style).
-  Eleven lines show; the rest scroll inside the card. The focused row's help
+  the card, under its sub-headings. Look comes first: Theme (the tiles' choice, for the
+  keyboard), Theme hue and Theme saturation (moving either picks Custom, so any colour is
+  two sliders away) and Menu style. Then From another client (the import and Gameplay
+  FPS), Graphics (the graphics preset, Vanilla, Vanilla Plus or the Solar Renderer's Low
+  to Ultra, each marked green to red for this PC, whose list opens on Enter; see
+  [graphics quality](client.md#graphics-quality)), Display, Camera and aim (camera
+  style, sensitivity, invert, always run), Sound, HUD, Nameplates, Force shells and SJK.
+  Nine lines show; the rest scroll inside the card. The focused row's help
   sits in two lines under them (left out while a list is open).
 - **Foot,** always in view under a rule: the "Don't show at start" tick box
   (`kit::tick`, gold with a dark tick when ticked) and its name on the left, All
