@@ -32,8 +32,7 @@ const GAP: f32 = 6.0;
 const MARK_GAP: f32 = 4.0;
 /// The verified seal's side.
 const MARK: f32 = 11.0;
-/// The side of another client's icon after the mark (Sol, 08/11/2026: "in small").
-const CLIENT: f32 = 9.0;
+
 /// The right end: the padding before the duel badge, and the badge.
 const END_LEAD: f32 = 2.0;
 const BADGE: f32 = 18.0;
@@ -89,7 +88,8 @@ pub(crate) struct CapsuleSpec {
     pub(crate) picture: bool,
     /// The mark after the name (the verified seal or a trust mark).
     pub(crate) mark: bool,
-    /// Another client's icon after the mark (`chat::client_icons`).
+    /// Another client's icon, in the mark's place with the mark small on its foot
+    /// (`chat::client_icons`, `nameplate_math::corner_mark`).
     pub(crate) client: bool,
     /// The duel badge at the right end. The held weapon's icon stood there until
     /// 28/10/2026.
@@ -150,18 +150,13 @@ impl Capsule {
             BARE_START * k
         };
         let name_width = spec.name_width.clamp(0.0, NAME_MAX * k);
-        let mark_width = if spec.mark {
+        // What follows the name: the mark, or another client's icon in its place with
+        // the mark small on its foot ([`corner_mark`]).
+        let tail_width = if spec.mark || spec.client {
             (MARK_GAP + MARK) * k
         } else {
             0.0
         };
-        // What follows the name: the mark, then a client's icon.
-        let tail_width = mark_width
-            + if spec.client {
-                (MARK_GAP + CLIENT) * k
-            } else {
-                0.0
-            };
         let (end_width, end_pad) = if spec.duel {
             (GAP + END_LEAD + BADGE, DUEL_END_PAD)
         } else {
@@ -215,12 +210,15 @@ impl Capsule {
             .picture
             .then(|| square(pill.x + PICTURE_INSET * k, diameter));
         let name = Rect::new(pill.x + start, pill.y, name_width, height);
-        let mark = spec
-            .mark
-            .then(|| square(name.right() + MARK_GAP * k, MARK * k));
-        let client = spec
-            .client
-            .then(|| square(name.right() + mark_width + MARK_GAP * k, CLIENT * k));
+        let slot = square(name.right() + MARK_GAP * k, MARK * k);
+        let client = spec.client.then_some(slot);
+        let mark = spec.mark.then(|| {
+            if spec.client {
+                crate::hud::nameplate_math::corner_mark(slot)
+            } else {
+                slot
+            }
+        });
         let right = pill.right() - end_pad * k;
         let badge = spec.duel.then(|| square(right - BADGE * k, BADGE * k));
         let tray = tray.then(|| {
@@ -626,24 +624,20 @@ mod tests {
             && inner.bottom() <= outer.bottom() + 1e-3
     }
 
-    /// Another client's icon follows the seal in the pill, smaller and level with it,
-    /// and the pill grows by its room.
+    /// Another client's icon takes the seal's place in the pill, the seal small on its
+    /// bottom right corner, and the pill does not grow.
     #[test]
-    fn a_client_icon_follows_the_seal_in_the_pill() {
+    fn a_client_icon_wears_the_seal_on_its_corner_in_the_pill() {
         let with = Capsule::new(&CapsuleSpec {
             client: true,
             ..spec(Rows::default())
         });
         let without = Capsule::new(&spec(Rows::default()));
         let (mark, client) = (with.mark.unwrap(), with.client.unwrap());
-        assert!(client.x > mark.right() && client.width < mark.width);
+        assert_eq!(Some(client), without.mark, "the seal's place");
+        assert!(mark.width < client.width && mark.x > client.x && mark.y > client.y);
         assert!(inside(client, with.pill));
-        assert!((client.y + client.height * 0.5 - with.middle).abs() < 1e-3);
-        let grown = with.pill.width - without.pill.width;
-        assert!(
-            (grown - (MARK_GAP + CLIENT) * with.k).abs() < 1e-3,
-            "{grown}"
-        );
+        assert!((with.pill.width - without.pill.width).abs() < 1e-3);
         assert!(without.client.is_none());
     }
 

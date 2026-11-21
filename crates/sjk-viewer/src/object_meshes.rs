@@ -73,28 +73,6 @@ pub(super) fn load<'a>(
         variant: String::new(),
     });
     appearances.insert(Appearance {
-        model: crate::cardboard_box::MODEL.to_owned(),
-        variant: String::new(),
-    });
-    appearances.extend(
-        crate::mining::MODELS
-            .into_iter()
-            .chain(crate::mining::ORE_MODELS.map(|ore| ore.model))
-            .map(|model| Appearance {
-                model: model.to_owned(),
-                variant: String::new(),
-            }),
-    );
-    appearances.extend(
-        crate::fishing::MODELS
-            .into_iter()
-            .chain(crate::fishing::FISH_MODELS.map(|fish| fish.model))
-            .map(|model| Appearance {
-                model: model.to_owned(),
-                variant: String::new(),
-            }),
-    );
-    appearances.insert(Appearance {
         model: crate::drone::MODEL.to_owned(),
         variant: String::new(),
     });
@@ -102,14 +80,17 @@ pub(super) fn load<'a>(
         model: crate::boombox::MODEL.to_owned(),
         variant: String::new(),
     });
-    appearances.insert(Appearance {
-        model: crate::monitor::MODEL.to_owned(),
-        variant: String::new(),
-    });
-    appearances.insert(Appearance {
-        model: crate::banana::MODEL.to_owned(),
-        variant: String::new(),
-    });
+    // Force Throw's junk and a crate's pieces (Jedi Academy's own).
+    appearances.extend(
+        crate::monitor::JUNK
+            .iter()
+            .map(|junk| junk.model)
+            .chain(crate::monitor::CHUNKS)
+            .map(|model| Appearance {
+                model: model.to_owned(),
+                variant: String::new(),
+            }),
+    );
     appearances.extend(crate::wheel_of_doom::MODELS.map(|model| Appearance {
         model: model.to_owned(),
         variant: String::new(),
@@ -122,7 +103,6 @@ pub(super) fn load<'a>(
     static_models::extend_appearances(bsp, &mut appearances);
     crate::mover_models::extend_appearances(game_state, &mut appearances);
     first_person_weapon::Catalog::extend_appearances(&mut appearances);
-    crate::propgun_frame::extend_appearances(vfs, &mut appearances);
     appearances.extend(
         (1..=16)
             .filter_map(weapon_view::held_model)

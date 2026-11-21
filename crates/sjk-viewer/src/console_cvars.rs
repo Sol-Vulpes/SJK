@@ -299,6 +299,24 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
         ),
         CvarDefinition::new(
+            crate::menu::sjk::theme::CVAR,
+            crate::menu::sjk::theme::Theme::DEFAULT_NAME,
+            archive,
+            "The SJK UI's colours: warm (the sun's, the default), cold (deep navy and holo blue) or custom (ui_themeHue at ui_themeSaturation)",
+        ),
+        CvarDefinition::new(
+            crate::menu::sjk::theme::HUE_CVAR,
+            crate::menu::sjk::theme::DEFAULT_HUE,
+            archive,
+            "The custom SJK UI theme's hue, 0 to 360 round the colour wheel (0 red, 120 green, 240 blue); setting it picks ui_theme custom",
+        ),
+        CvarDefinition::new(
+            crate::menu::sjk::theme::SATURATION_CVAR,
+            crate::menu::sjk::theme::DEFAULT_SATURATION,
+            archive,
+            "The custom SJK UI theme's saturation, 0 (greys) to 100 (the warm theme's); setting it picks ui_theme custom",
+        ),
+        CvarDefinition::new(
             "r_gamma",
             1.0_f64,
             archive,
@@ -543,7 +561,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::audio::SKIN_SOUNDS_CVAR,
             1_i64,
             archive,
-            "Blade skin sounds: 0 stock saber sounds only, 1 over the stock ones, 2 in their place",
+            "Kyber sounds: 0 stock saber sounds only, 1 over the stock ones, 2 in their place",
         ),
         CvarDefinition::new(
             "cg_jetpackOnSound",
@@ -637,28 +655,28 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Emote sounds are silent while you are in a duel (SJK)",
         ),
         CvarDefinition::new(
+            crate::emote_filters::OTHERS_CVAR,
+            crate::emote_filters::DEFAULT_OTHERS,
+            archive,
+            "Other players' emotes are not shown or heard on your screen; yours still play (SJK)",
+        ),
+        CvarDefinition::new(
+            crate::emote_filters::HIDE_CVAR,
+            "",
+            archive,
+            "Emote ids not shown when other players play them, separated by spaces or commas (emote_hide <id>) (SJK)",
+        ),
+        CvarDefinition::new(
+            crate::emote_filters::MUTE_CVAR,
+            "",
+            archive,
+            "Emote ids played without their sound on your screen, yours too, separated by spaces or commas (emote_mute <id>) (SJK)",
+        ),
+        CvarDefinition::new(
             crate::toy_sounds::VOLUME_CVAR,
             crate::toy_sounds::DEFAULT_VOLUME,
             archive,
             "Loudness of the toys' sounds, times the effects volume (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Box.cvar(),
-            true,
-            archive,
-            "Play cardboard box sounds (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Order66.cvar(),
-            true,
-            archive,
-            "Play Order 66 sounds (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Hax.cvar(),
-            true,
-            archive,
-            "Play Hax sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::Ragdoll.cvar(),
@@ -682,7 +700,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sounds::Toy::Monitor.cvar(),
             true,
             archive,
-            "Play Monitor sounds (SJK)",
+            "Play Force Throw sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::MysteryBox.cvar(),
@@ -691,34 +709,16 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Play mystery box sounds (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::Banana.cvar(),
-            true,
-            archive,
-            "Play Banana peel sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Tag.cvar(),
             true,
             archive,
             "Play the Tag toy's spray sound (SJK)",
         ),
         CvarDefinition::new(
-            crate::toy_sounds::Toy::PropGun.cvar(),
-            true,
-            archive,
-            "Play Prop gun sounds (SJK)",
-        ),
-        CvarDefinition::new(
             crate::toy_sounds::Toy::Master.cvar(),
             true,
             archive,
             "Play the sounds of the Toy Master's hidden toys (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Fishing.cvar(),
-            true,
-            archive,
-            "Play the Fishing toy's sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::WheelOfDoom.cvar(),
@@ -731,18 +731,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Play the chimes as you are given a quest or finish one (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::fishing::CUE_CVAR,
-            crate::fishing::CUE_DEFAULT,
-            archive,
-            "Show a fish's bite on screen: 0 never, 1 when the fishing sounds can't be heard, 2 always (SJK)",
-        ),
-        CvarDefinition::new(
-            crate::toy_sounds::Toy::Mining.cvar(),
-            true,
-            archive,
-            "Play the Mining toy's sounds (SJK)",
         ),
         CvarDefinition::new(
             crate::held_view::LOOK_CVAR,
@@ -840,7 +828,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::unlock_toast::SOUND_CVAR,
             true,
             archive,
-            "Play the secret-area sound with the unlock cards",
+            "Play the secret-area sound with the reward banners (achievements, medals, holocrons)",
         ),
         CvarDefinition::new(
             crate::player_trades::SIZE_CVAR,
@@ -849,10 +837,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Size of the trade window: 0 small, 1 normal (default), 2 large",
         ),
         CvarDefinition::new(
-            crate::holocron_popup::NOTIFICATIONS_CVAR,
-            crate::holocron_popup::NOTIFICATIONS_DEFAULT,
+            crate::holocron_banners::NOTIFICATIONS_CVAR,
+            crate::holocron_banners::NOTIFICATIONS_DEFAULT,
             archive,
-            "Holocron unlock cards during play: 0 off, 1 on, held during a private duel until it ends (default), 2 always, duels included (the game menu still shows the holocron)",
+            "Holocron banners at the top of the screen: 0 off (new holocrons counted as seen without one), 1 on, held during a private duel until it ends (default), 2 always, duels included",
         ),
         // Stock defaults and units: `sensitivity` 5 scaling `m_yaw`/`m_pitch`
         // degrees per mouse count (`cl_main.cpp:2774,2802-2803`, applied in
@@ -1073,31 +1061,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::blade_lab_designs::CVAR,
             true,
             archive,
-            "Draw the blade skins from Creyon's Blade Lab as the lab drew them",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::ORDER66_CVAR,
-            false,
-            archive,
-            "The Order 66 toy is on (toy_order66 switches it; it stays on until turned off)",
-        ),
-        CvarDefinition::new(
-            crate::hax::TRAP_CVAR,
-            false,
-            archive,
-            "Hax trap: a player who hacks you springs it, and you both blow up as in Order 66",
-        ),
-        CvarDefinition::new(
-            crate::hax::AWAY_CVAR,
-            false,
-            archive,
-            "With the Hax trap on, players may hack you while you are away (it shows on your look)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::HAX_CVAR,
-            false,
-            archive,
-            "The Hax toy is on (toy_hax switches it; it stays on until turned off)",
+            "Draw the kybers from Creyon's Blade Lab as the lab drew them",
         ),
         CvarDefinition::new(
             crate::toy_saved::DRONE_CVAR,
@@ -1109,7 +1073,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_saved::MONITOR_CVAR,
             false,
             archive,
-            "The Monitor toy is on: you may throw monitors (monitor_throw, or +monitor_throw held to charge) and be hit by them (toy_monitor switches it)",
+            "The Force Throw toy is on: you may hurl junk (monitor_throw, or +monitor_throw held to charge) and be hit by it (toy_monitor switches it)",
         ),
         CvarDefinition::new(
             crate::toy_saved::BOX_HUNT_CVAR,
@@ -1122,18 +1086,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             false,
             archive,
             "Quests are on: you may be given a quest, such as hugging or kissing two other players within a minute, for an Echo, or be named in one (toy_quests switches it)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::BANANA_CVAR,
-            false,
-            archive,
-            "The Banana peel toy is on: you may drop banana peels (banana_drop) and slip on the ones you walk onto (toy_banana switches it)",
-        ),
-        CvarDefinition::new(
-            crate::toy_saved::PROPGUN_CVAR,
-            false,
-            archive,
-            "The Prop gun toy is on: you hold the chosen prop gun instead of your weapon, attack fires it, and others' bolts knock you down (toy_propgun switches it)",
         ),
         // Other players' toys seen (Collection > Toys).
         CvarDefinition::new(
@@ -1161,34 +1113,10 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sight::CVARS[3].1,
         ),
         CvarDefinition::new(
-            crate::toy_sight::CVARS[4].0,
-            true,
-            archive,
-            crate::toy_sight::CVARS[4].1,
-        ),
-        CvarDefinition::new(
             crate::monitor::SHOW_CVAR,
             true,
             archive,
-            "Monitors are seen (0: no Monitor toy monitor is drawn, nor its sounds in the world heard, on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::SHOW_CVAR,
-            true,
-            archive,
-            "Other players' prop guns are seen (0: their Prop gun toy guns, bolts and sounds are not drawn or heard on this PC; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::propgun::GUN_CVAR,
-            "",
-            archive,
-            "The gun the Prop gun toy holds: the name of a propguns/<name>.gun file (propgun lists them; SJK)",
-        ),
-        CvarDefinition::new(
-            crate::banana::SHOW_CVAR,
-            true,
-            archive,
-            "Banana peels are seen (0: no Banana peel toy peel is drawn, nor its sounds in the world heard, on this PC; SJK)",
+            "Force-thrown junk is seen (0: none is drawn, nor its sounds in the world heard, on this PC; SJK)",
         ),
         CvarDefinition::new(
             crate::tags::CVAR,
@@ -1224,7 +1152,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::duel_blades::CVAR,
             false,
             archive,
-            "Draw every blade stock, in its own colour, in a duel you play or follow and on Duel or Power Duel servers; 0 keeps blade skins",
+            "Draw every blade stock, in its own colour, in a duel you play or follow and on Duel or Power Duel servers; 0 keeps kybers",
         ),
         CvarDefinition::new(
             crate::stock_blades::CVAR,
@@ -1328,13 +1256,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::unlockables::SABER_SKIN_CVAR,
             "",
             archive,
-            "The blade skin your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
+            "The kyber your sabers wear, by unlock id (saber_sun: the Sun blade), shown once your SJK profile holds it; empty for the stock blade",
         ),
         CvarDefinition::new(
             crate::looks::SECOND_CVAR,
             "",
             archive,
-            "The blade skin your second saber wears, by unlock id; empty for the same as the first (cg_saberSkin), stock for the stock blade",
+            "The kyber your second saber wears, by unlock id; empty for the same as the first (cg_saberSkin), stock for the stock blade",
         ),
         CvarDefinition::new(
             crate::finishers::CVAR,
@@ -1346,13 +1274,13 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::saber_sound_choice::CVAR,
             "",
             archive,
-            "The saber sounds you hear and other SJK players hear for your sabers: empty follows your saber shader, stock the stock sounds, or a shader you own by unlock id (saber_sun: the Sun blade's)",
+            "The saber sounds you hear and other SJK players hear for your sabers: empty follows your kyber, stock the stock sounds, or a kyber you own by unlock id (saber_sun: the Sun blade's)",
         ),
         CvarDefinition::new(
             crate::saber_skin_options::CVAR,
             "",
             archive,
-            "The blade skins' parts you switched off, skin.option words (saber_sun.haze: the Sun blade without its heat haze); every SJK player sees your blade so",
+            "The kybers' parts you switched off, skin.option words (saber_sun.haze: the Sun blade without its heat haze); every SJK player sees your blade so",
         ),
         CvarDefinition::new(
             crate::quick_wheel::SOUNDS_CVAR,
@@ -1392,9 +1320,9 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
         ),
         CvarDefinition::new(
             crate::duel_ghost::CVAR,
-            true,
+            1_i64,
             archive,
-            "Players in a duel show as see-through blue figures, as on JoF EJK (1), or dark under the blue bubble (0)",
+            "Players in others' duels: 0 dark under the blue bubble (stock), 1 see-through blue figures as on JoF EJK, 2 hidden",
         ),
         CvarDefinition::new(
             "cg_shieldBrightnessDefaultVersion",
@@ -1744,7 +1672,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::tactical::CVAR,
             0_i64,
             archive,
-            "Tactical mode: 0 off, 1 minimal (no emotes, toys or pop-ups from others), 2              medium (also Vanilla graphics, no weather, fog or blade skins), 3 max (also a              flat world, others plain in cg_tacticalModel with a blue stock saber); your              settings come back when it drops",
+            "Tactical mode: 0 off, 1 minimal (no emotes, toys or pop-ups from others), 2              medium (also Vanilla graphics, no weather, fog or kybers), 3 max (also a              flat world, others plain in cg_tacticalModel with a blue stock saber); your              settings come back when it drops",
         ),
         CvarDefinition::new(
             crate::tactical::DUEL_CVAR,

@@ -79,7 +79,6 @@ pub(crate) fn srgb_to_linear(value: f32) -> f32 {
 }
 
 /// sRGB-encoded (display) value of one linear-light channel.
-#[cfg(test)]
 pub(crate) fn linear_to_srgb(value: f32) -> f32 {
     if value <= 0.003_130_8 {
         value * 12.92

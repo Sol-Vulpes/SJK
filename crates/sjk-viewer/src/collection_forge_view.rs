@@ -104,7 +104,7 @@ impl Panel {
         let reason = match (self.forge.data.closed.clone(), inputs.holdings.reason()) {
             (Closed::IdentityOff, _) => Some((
                 "The Forge needs the SJK identity",
-                "Switch it on in Settings, Network: your shaders and kyber shards are kept on \
+                "Switch it on in Settings, Network: your kybers and kyber shards are kept on \
                  the SJK hub.",
             )),
             (_, Some(_)) | (Closed::Waiting, _) => Some((
@@ -303,27 +303,27 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius,
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             } else {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius,
-                    color: color::alpha(color::HOLO, if hovered { 0.14 } else { 0.05 }),
+                    color: color::alpha(color::holo(), if hovered { 0.14 } else { 0.05 }),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                     rect,
                     radius,
                     width: 1.4 * s,
-                    color: color::alpha(color::HOLO, if hovered { 0.7 } else { 0.35 }),
+                    color: color::alpha(color::holo(), if hovered { 0.7 } else { 0.35 }),
                 });
             }
             let ink = if lit {
                 Color::new(0.078, 0.063, 0.02, 1.0)
             } else if hovered {
-                color::TEXT
+                color::text()
             } else {
-                color::MUTED
+                color::muted()
             };
             text(
                 &mut self.ui,
@@ -342,7 +342,7 @@ impl Panel {
                     rect: frame.rect(bx, SECTION_Y + 13.0, bw, 22.0),
                     radius: 11.0 * s,
                     color: if lit {
-                        color::alpha(color::SPACE, 0.85)
+                        color::alpha(color::space(), 0.85)
                     } else {
                         color::alpha(crate::cards::shard::KYBER, 0.22)
                     },
@@ -380,13 +380,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius,
-            color: color::alpha(color::HOLO, if hovered { 0.14 } else { 0.05 }),
+            color: color::alpha(color::holo(), if hovered { 0.14 } else { 0.05 }),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius,
             width: 1.4 * s,
-            color: color::alpha(color::HOLO, if hovered { 0.7 } else { 0.35 }),
+            color: color::alpha(color::holo(), if hovered { 0.7 } else { 0.35 }),
         });
         text(
             &mut self.ui,
@@ -394,7 +394,11 @@ impl Panel {
             format_args!("i"),
             frame.rect(x, SECTION_Y + 10.0, SECTION_HEIGHT, 28.0),
             24.0 * s,
-            if hovered { color::TEXT } else { color::MUTED },
+            if hovered {
+                color::text()
+            } else {
+                color::muted()
+            },
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -417,7 +421,7 @@ impl Panel {
                 CREDITS_TOKEN,
                 crate::cards::credits_text(credits),
                 "credits",
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 false,
             ),
             (
@@ -458,7 +462,7 @@ impl Panel {
                     self.ui.draw_list_mut(),
                     [mx, my],
                     mark_height * s,
-                    color::GOLD,
+                    color::gold(),
                 );
             }
             text(
@@ -477,7 +481,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(right - 220.0, BALANCE_Y + 50.0, 220.0, 22.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -519,7 +523,7 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(x, middle - 34.0, width, 40.0),
             32.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -531,7 +535,7 @@ impl Panel {
             84,
             3,
             18.0,
-            color::MUTED,
+            color::muted(),
         );
     }
 
@@ -541,9 +545,9 @@ impl Panel {
         let s = frame.s;
         let now = Instant::now();
         self.forge_intro(if crate::economy::shop_in_shards() {
-            "Four saber shaders a day, picked for you from those you lack, for kyber shards."
+            "Four kybers a day, picked for you from those you lack, for kyber shards."
         } else {
-            "Four saber shaders a day, the same for every player, for credits."
+            "Four kybers a day, the same for every player, for credits."
         });
         // The wishlist under the chips, on a hub that keeps one (10/11/2026); the Shop's
         // line stays behind the "i" chip.
@@ -556,7 +560,7 @@ impl Panel {
                 [LEFT_X, WISHLIST_Y, 1_000.0],
                 (110, 2),
                 17.0,
-                color::MUTED,
+                color::muted(),
                 TextAlign::Start,
             );
         }
@@ -581,7 +585,7 @@ impl Panel {
                 format_args!("{countdown}"),
                 frame.rect(RIGHT_X - 640.0, DAY_Y - 13.0, 640.0, 26.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -636,10 +640,10 @@ impl Panel {
         let state = can(&offer, self.forge.purse());
         let held = matches!(state, Can::Owned | Can::Bought);
         let list = self.ui.draw_list_mut();
-        let _ = list.push(DrawCommand::RoundedRect {
+        let _ = list.push(DrawCommand::Backdrop {
             rect,
             radius: RADIUS * s,
-            color: color::alpha(color::SPACE, 0.9),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = list.push(DrawCommand::GradientRect {
             rect,
@@ -695,7 +699,7 @@ impl Panel {
             0.0,
         );
         let name = if offer.name.trim().is_empty() {
-            unlockables::find(&offer.id).map_or("A saber shader", |skin| skin.name)
+            unlockables::find(&offer.id).map_or("A kyber", |skin| skin.name)
         } else {
             offer.name.trim()
         };
@@ -705,7 +709,7 @@ impl Panel {
             format_args!("{name}"),
             frame.rect(x + 14.0, y + 230.0, width - 28.0, 38.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -720,14 +724,14 @@ impl Panel {
         });
         let subtitle = was
             .as_ref()
-            .map_or_else(|| "Saber shader".to_owned(), |was| format!("Was {was}"));
+            .map_or_else(|| "Kyber".to_owned(), |was| format!("Was {was}"));
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!("{subtitle}"),
             frame.rect(x, y + 270.0, width, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -736,7 +740,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + (width - struck) * 0.5, y + 281.0, struck, 1.6),
                 radius: 0.8 * s,
-                color: color::alpha(color::TEXT, 0.7),
+                color: color::alpha(color::text(), 0.7),
             });
         }
         self.forge_offer_marks(frame, &offer, [x, y, width]);
@@ -764,18 +768,18 @@ impl Panel {
         let (status, status_colour) = match state {
             Can::Buy if offer.wished => (
                 format!("{}  On your wishlist", symbols::GIFT),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            Can::Buy => (String::new(), color::MUTED),
+            Can::Buy => (String::new(), color::muted()),
             Can::Bought => (
                 format!("{}  Bought today: it is yours", symbols::TICK),
-                color::GOLD,
+                color::gold(),
             ),
             Can::Owned => (
                 format!("{}  You hold it already", symbols::TICK),
-                color::GOLD,
+                color::gold(),
             ),
-            Can::Short(missing) => (format!("{} more needed", priced(missing)), color::MUTED),
+            Can::Short(missing) => (format!("{} more needed", priced(missing)), color::muted()),
         };
         text(
             &mut self.ui,
@@ -818,9 +822,9 @@ impl Panel {
         {
             let words = crate::economy::outcome_words(outcome, name);
             let colour = if outcome.done() {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             };
             text(
                 &mut self.ui,
@@ -857,7 +861,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + 30.0, y + 68.0, pill, 28.0),
                 radius: 14.0 * s,
-                color: color::GOLD,
+                color: color::gold(),
             });
             text(
                 &mut self.ui,
@@ -879,13 +883,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 14.0 * s,
-                color: color::alpha(color::SPACE, 0.85),
+                color: color::alpha(color::space(), 0.85),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 14.0 * s,
                 width: 1.1 * s,
-                color: color::alpha(color::GOLD, 0.7),
+                color: color::alpha(color::gold(), 0.7),
             });
             text(
                 &mut self.ui,
@@ -893,7 +897,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(left, y + 73.0, pill, 20.0),
                 14.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -940,7 +944,7 @@ impl Panel {
             format_args!("Yours at once, outside the daily limit; they open like any other."),
             frame.rect(RIGHT_X - 600.0, HOLOCRONS_HEAD_Y - 12.0, 600.0, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -955,13 +959,13 @@ impl Panel {
             let choice = offers + index;
             let chosen = self.forge.shop_selected == choice;
             let tier = holocron_tier(tier_id);
-            let colour = tier.map_or(color::HOLO, |tier| tier.colour);
+            let colour = tier.map_or(color::holo(), |tier| tier.colour);
             let name = crate::terms::say(tier.map_or(tier_id, |tier| tier.name));
             let rect = frame.rect(x, y, width, HOLOCRON_HEIGHT);
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
                 rect,
                 radius: RADIUS * s,
-                color: color::alpha(color::SPACE, 0.88),
+                tint: color::tint(color::acrylic::CARD),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
                 rect,
@@ -1018,12 +1022,12 @@ impl Panel {
                         "{} more credits needed",
                         crate::cards::credits_text(price - credits)
                     ),
-                    color::MUTED,
+                    color::muted(),
                 )
             } else {
                 (
-                    "A sealed card and credits, a saber shader or kyber shards".to_owned(),
-                    color::MUTED,
+                    "A sealed card and credits, a kyber or kyber shards".to_owned(),
+                    color::muted(),
                 )
             };
             let _ = left_lines(
@@ -1074,9 +1078,9 @@ impl Panel {
             {
                 let words = crate::economy::outcome_words(outcome, &name);
                 let colour = if outcome.done() {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::EMBER
+                    color::ember()
                 };
                 text(
                     &mut self.ui,
@@ -1108,32 +1112,30 @@ impl Panel {
             )
         };
         let line = if total == 0 {
-            crate::terms::say("Every shader holocrons drop is yours already.").into_owned()
+            crate::terms::say("Every kyber holocrons drop is yours already.").into_owned()
         } else if !held.is_empty() && !self.forge.craft_list.is_empty() {
             // Hub report #305: the search also names held shaders Craft leaves out.
             held_note(&held)
         } else {
-            format!(
-                "{total} saber shaders you lack, made with kyber shards: {affordable} within reach."
-            )
+            format!("{total} kybers you lack, made with kyber shards: {affordable} within reach.")
         };
         self.forge_intro(&line);
         self.forge_filter(frame, "Affordable", false);
         let list = self.forge.craft_list.clone();
         if list.is_empty() {
             let words: std::borrow::Cow<'_, str> = if total == 0 {
-                "You hold every saber shader holocrons drop. New ones join the Forge as they                  come."
+                "You hold every kyber holocrons drop. New ones join the Forge as they                  come."
                     .into()
             } else if let [skin] = held.as_slice() {
                 // Hub report #305: crafting refuses a held shader, so say why it is missing.
                 format!(
-                    "You hold the {} already. The Forge crafts only shaders you lack; another                      copy comes from holocrons.",
+                    "You hold the {} already. The Forge crafts only kybers you lack; another                      copy comes from holocrons.",
                     skin.name
                 )
                 .into()
             } else if !held.is_empty() {
                 format!(
-                    "You hold the {} shaders that match already. The Forge crafts only shaders                      you lack; other copies come from holocrons.",
+                    "You hold the {} kybers that match already. The Forge crafts only kybers                      you lack; other copies come from holocrons.",
                     held.len()
                 )
                 .into()
@@ -1143,7 +1145,7 @@ impl Panel {
             let title = if total == 0 {
                 "Nothing left to craft"
             } else if held.is_empty() {
-                "No shader matches"
+                "No kyber matches"
             } else {
                 "Yours already"
             };
@@ -1183,11 +1185,11 @@ impl Panel {
     fn forge_break(&mut self, frame: &Frame, inputs: &Inputs<'_>, seconds: f32) {
         let (copies, shaders, gives) = self.forge.spare;
         let line = if self.forge.selecting {
-            "Picking: click shaders to pick them, + and - for copies.".to_owned()
+            "Picking: click kybers to pick them, + and - for copies.".to_owned()
         } else if self.forge.data.last {
-            "Turn saber shaders you hold into kyber shards: duplicates first.".to_owned()
+            "Turn kybers you hold into kyber shards: duplicates first.".to_owned()
         } else {
-            "Turn duplicate saber shaders into kyber shards: you keep your last copy.".to_owned()
+            "Turn duplicate kybers into kyber shards: you keep your last copy.".to_owned()
         };
         self.forge_intro(&line);
         self.forge_filter(frame, "Duplicates", self.marks.kept);
@@ -1197,19 +1199,19 @@ impl Panel {
             let (title, words) = if any && !self.forge.data.last && copies == 0 {
                 (
                     "No duplicates yet",
-                    "A shader holocrons bring you again lands here, to break down into kyber \
+                    "A kyber holocrons bring you again lands here, to break down into kyber \
                      shards. This SJK hub breaks down duplicates only.",
                 )
             } else if any || self.forge.break_filter.only {
                 (
-                    "No shader matches",
+                    "No kyber matches",
                     "T steps the tier, D shows only duplicates, Shift+F only favourites, / \
                      searches.",
                 )
             } else {
                 (
                     "Nothing to break down yet",
-                    "Saber shaders holocrons bring you, craft or buy can be broken down into \
+                    "Kybers holocrons bring you, craft or buy can be broken down into \
                      kyber shards here. A medal's or a card's stays with it.",
                 )
             };
@@ -1257,7 +1259,7 @@ impl Panel {
         let mut chips: Vec<(u16, String, Color, bool)> = vec![(
             TIER_BASE,
             "All".to_owned(),
-            color::HOLO,
+            color::holo(),
             filter.shaders.tier.is_none(),
         )];
         for (index, tier) in FILTER_TIERS.iter().enumerate() {
@@ -1268,13 +1270,13 @@ impl Panel {
                 filter.shaders.tier == Some(*tier),
             ));
         }
-        chips.push((ONLY_TOKEN, only.to_owned(), color::GOLD, filter.only));
+        chips.push((ONLY_TOKEN, only.to_owned(), color::gold(), filter.only));
         // Break down's Select, on a hub that breaks several shaders at once (05/11/2026).
         if self.forge.section == Section::Break && self.forge.data.many {
             chips.push((
                 SELECT_TOKEN,
                 format!("{}  Select", symbols::TICK),
-                color::GOLD,
+                color::gold(),
                 self.forge.selecting,
             ));
         }
@@ -1282,7 +1284,7 @@ impl Panel {
             chips.push((
                 FAVOURITES_TOKEN,
                 format!("{}  Favourites", symbols::EDITION),
-                color::GOLD,
+                color::gold(),
                 filter.shaders.favourite,
             ));
         }
@@ -1309,7 +1311,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(left, CHIPS_Y + 5.0, width, CHIP_HEIGHT - 10.0),
                 15.0 * s,
-                if lit { color::TEXT } else { color::MUTED },
+                if lit { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1329,7 +1331,7 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect,
                     radius: 8.0 * s,
-                    color: color::alpha(color::GOLD, if lit { 0.16 } else { 0.08 }),
+                    color: color::alpha(color::gold(), if lit { 0.16 } else { 0.08 }),
                 });
             }
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -1337,15 +1339,15 @@ impl Panel {
                 radius: 8.0 * s,
                 width: 1.2 * s,
                 color: if lit {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::alpha(color::HOLO, 0.3)
+                    color::alpha(color::holo(), 0.3)
                 },
             });
             let ink = if lit {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::QUIET
+                color::quiet()
             };
             let marks: &[[f32; 4]] = if grid {
                 &[
@@ -1385,7 +1387,7 @@ impl Panel {
             ],
             &filter.shaders.query,
             self.forge.search_focus,
-            "Search shaders",
+            "Search kybers",
             found,
             forge::SEARCH_TOKEN,
         );
@@ -1446,7 +1448,7 @@ impl Panel {
             format_args!("{sign}"),
             frame.rect(x, y + 8.0, 56.0, 40.0),
             32.0 * frame.s,
-            if lit { color::TEXT } else { color::QUIET },
+            if lit { color::text() } else { color::quiet() },
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -1461,13 +1463,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 12.0 * s,
-            color: color::alpha(color::GOLD, 0.16),
+            color: color::alpha(color::gold(), 0.16),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect: frame.rect(x + 1.0, y + 1.0, width - 2.0, height - 2.0),
             radius: 11.0 * s,
             width: 3.2 * s,
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
         let mark = if copies > 1 {
             format!("-{copies}")
@@ -1478,7 +1480,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x + 6.0, y + 6.0, side, 26.0),
             radius: 13.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
         text(
             &mut self.ui,
@@ -1509,35 +1511,32 @@ impl Panel {
         let token = TILE_BASE + item.index as u16;
         let hovered = self.ui.token_hovered(token);
         let tier = item.skin.tier;
+        let flash = self.first_look(crate::collection_seen::Kind::Kyber, item.skin.id);
         let area = frame.rect(x, y, width, height);
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + 2.0, y + 9.0, width - 4.0, height),
                 radius: 12.0 * s,
-                color: color::alpha(color::SPACE, 0.55),
+                color: color::alpha(color::space(), 0.55),
             });
         }
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: area,
-            radius: 12.0 * s,
-            color: color::alpha(color::SPACE, if chosen || hovered { 0.9 } else { 0.82 }),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 12.0, y, width - 24.0, 4.0),
-            radius: 2.0 * s,
-            color: tier.colour(),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-            rect: frame.rect(x + 4.0, y + 4.0, width - 8.0, 30.0),
-            radius: 10.0 * s,
-            color: color::alpha(tier.colour(), 0.1),
-        });
-        let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
-            rect: area,
-            radius: 12.0 * s,
-            width: if chosen { 1.8 } else { 1.2 } * s,
-            color: color::alpha(tier.colour(), 0.85),
-        });
+        // The tier's frame, one look everywhere (15/11/2026); its effects stay
+        // `rarity_fx`'s, drawn over it.
+        kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [x, y, width, height],
+            tier,
+            kit::TierSize::Tile,
+            kit::TierLook {
+                acrylic: true,
+                chosen,
+                hovered: chosen || hovered,
+                still: true,
+                flash,
+                ..kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect: frame.rect(x - 3.0, y - 3.0, width + 6.0, height + 6.0),
@@ -1566,7 +1565,7 @@ impl Panel {
                 rect,
                 radius: 11.0 * s,
                 width: 1.2 * s,
-                color: color::alpha(color::EMBER, 0.85),
+                color: color::alpha(color::ember(), 0.85),
             });
             text(
                 &mut self.ui,
@@ -1574,7 +1573,7 @@ impl Panel {
                 format_args!("{badge}"),
                 frame.rect(x + width - badge_width - 6.0, y + 9.0, badge_width, 20.0),
                 14.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -1585,7 +1584,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(x + width - badge_width - 6.0, y + 8.0, badge_width, 22.0),
                 radius: 11.0 * s,
-                color: color::GOLD,
+                color: color::gold(),
             });
             text(
                 &mut self.ui,
@@ -1622,15 +1621,24 @@ impl Panel {
             format_args!("{name}"),
             frame.rect(x + 10.0, y + 86.0, width - 20.0, 26.0),
             21.0 * s,
-            if chosen { CHOSEN } else { color::TEXT },
+            if chosen { CHOSEN } else { color::text() },
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        let mark = kit::tier_mark(
+            &mut self.ui,
+            frame,
+            [x + 10.0, y + 128.0],
+            tier,
+            10.0,
+            false,
+        );
+        let mark = if mark > 0.0 { mark + 7.0 } else { 0.0 };
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("{}  {}", tier.symbol(), tier.label()),
-            frame.rect(x + 10.0, y + 118.0, width - 20.0, 20.0),
+            format_args!("{}", tier.label()),
+            frame.rect(x + 10.0 + mark, y + 118.0, width - 20.0 - mark, 20.0),
             14.0 * s,
             tier.colour(),
             FontWeight::Semibold,
@@ -1643,7 +1651,7 @@ impl Panel {
                 format_args!("{}  Worn", symbols::SABER),
                 frame.rect(x + 10.0, y + 118.0, width - 20.0, 20.0),
                 14.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -1675,20 +1683,29 @@ impl Panel {
         let token = TILE_BASE + item.index as u16;
         let hovered = self.ui.token_hovered(token);
         let tier = item.skin.tier;
+        let flash = self.first_look(crate::collection_seen::Kind::Kyber, item.skin.id);
         let width = LIST_RIGHT - LIST_LEFT;
         let area = frame.rect(LIST_LEFT, y, width, ROW_HEIGHT);
-        if chosen || hovered {
-            let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: area,
-                radius: 12.0 * s,
-                color: color::alpha(color::HOLO, if chosen { 0.1 } else { 0.05 }),
-            });
-        }
+        // The tier's frame, one look everywhere (15/11/2026).
+        kit::tier_frame(
+            &mut self.ui,
+            frame,
+            [LIST_LEFT, y + 3.0, width, ROW_HEIGHT - 6.0],
+            tier,
+            kit::TierSize::Row,
+            kit::TierLook {
+                acrylic: true,
+                chosen,
+                hovered: chosen || hovered,
+                flash,
+                ..kit::TierLook::at(seconds)
+            },
+        );
         if chosen {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_LEFT - 12.0, y + 14.0, 4.0, ROW_HEIGHT - 28.0),
                 radius: 2.0 * s,
-                color: color::GOLD,
+                color: color::gold(),
             });
         }
         let swatch_rect = [LIST_LEFT + 10.0, y + 9.0, 330.0, ROW_HEIGHT - 18.0];
@@ -1719,18 +1736,20 @@ impl Panel {
             frame.rect(x, y + 14.0, 300.0, 32.0),
             26.0 * s,
             if chosen {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        let mark = kit::tier_mark(&mut self.ui, frame, [x, y + 64.0], tier, 11.0, false);
+        let mark = if mark > 0.0 { mark + 8.0 } else { 0.0 };
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("{}  {}", tier.symbol(), tier.label()),
-            frame.rect(x, y + 54.0, 300.0, 20.0),
+            format_args!("{}", tier.label()),
+            frame.rect(x + mark, y + 54.0, 300.0 - mark, 20.0),
             15.0 * s,
             tier.colour(),
             FontWeight::Semibold,
@@ -1745,7 +1764,7 @@ impl Panel {
                 format_args!("{}  Worn", symbols::SABER),
                 frame.rect(x + 150.0, y + 54.0, 150.0, 20.0),
                 15.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -1768,7 +1787,7 @@ impl Panel {
                 format_args!("x{}", item.count),
                 frame.rect(LIST_RIGHT - 300.0, y + 30.0, 120.0, 30.0),
                 24.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::End,
             );
@@ -1783,7 +1802,7 @@ impl Panel {
         let colour = if item.reach {
             crate::cards::shard::KYBER
         } else {
-            color::QUIET
+            color::quiet()
         };
         let mark = size * 0.85;
         let [mx, my] = frame.point(x, y + (size - mark) * 0.5);
@@ -1829,14 +1848,14 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, LIST_TOP, 4.0, height),
             radius: 2.0 * s,
-            color: color::alpha(color::HOLO, 0.14),
+            color: color::alpha(color::holo(), 0.14),
         });
         let thumb = height * shown as f32 / lines as f32;
         let top = LIST_TOP + (height - thumb) * first as f32 / (lines - shown) as f32;
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x, top, 4.0, thumb),
             radius: 2.0 * s,
-            color: color::GOLD,
+            color: color::gold(),
         });
     }
 
@@ -1859,10 +1878,10 @@ impl Panel {
         let [x0, y0, width0, height0] = DETAIL;
         let area = frame.rect(x0, y0, width0, height0);
         let tier = skin.tier;
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: RADIUS * s,
-            color: color::alpha(color::SPACE, 0.84),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
             rect: frame.rect(x0, y0, width0, 260.0),
@@ -1915,7 +1934,7 @@ impl Panel {
             ),
             frame.rect(x, y + 3.0, width, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::End,
         );
@@ -1985,7 +2004,7 @@ impl Panel {
             format_args!("{}", skin.name),
             frame.rect(x, y, name_width, 58.0),
             46.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -2004,7 +2023,7 @@ impl Panel {
             [x, y, width],
             (80, 2),
             17.0,
-            color::TEXT,
+            color::text(),
             TextAlign::Start,
         );
         if let Some(parts) = self.skins.get(skin.id).map(|look| {
@@ -2021,7 +2040,7 @@ impl Panel {
                 format_args!("Parts: {}", parts.join(", ")),
                 frame.rect(x, y, width, 22.0),
                 15.0 * s,
-                color::HOLO,
+                color::holo(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2038,13 +2057,13 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect,
             radius: 16.0 * s,
-            color: color::alpha(color::HOLO, 0.06),
+            color: color::alpha(color::holo(), 0.06),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
             rect,
             radius: 16.0 * s,
             width: 1.1 * s,
-            color: color::alpha(color::HOLO, 0.3),
+            color: color::alpha(color::holo(), 0.3),
         });
         text(
             &mut self.ui,
@@ -2052,7 +2071,7 @@ impl Panel {
             format_args!("{words}"),
             frame.rect(x, y + 6.0, width, 20.0),
             15.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -2080,13 +2099,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 12.0 * s,
-                color: color::alpha(color::HOLO, 0.05),
+                color: color::alpha(color::holo(), 0.05),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 12.0 * s,
                 width: 1.0 * s,
-                color: color::alpha(color::HOLO, 0.2),
+                color: color::alpha(color::holo(), 0.2),
             });
             text(
                 &mut self.ui,
@@ -2094,7 +2113,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(bx + 18.0, y + 12.0, width - 36.0, 20.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2163,7 +2182,7 @@ impl Panel {
                     "{} kyber shards left after crafting",
                     crate::economy::shards_text(shards - item.cost)
                 ),
-                color::MUTED,
+                color::muted(),
             )
         } else {
             (
@@ -2171,7 +2190,7 @@ impl Panel {
                     "{} kyber shards more needed: break down a duplicate, or open holocrons",
                     crate::economy::shards_text(item.cost - shards)
                 )),
-                color::EMBER,
+                color::ember(),
             )
         };
         // A copy of its blade card lowers the cost, and the card and its cut are named
@@ -2191,7 +2210,7 @@ impl Panel {
             (
                 "You hold",
                 crate::economy::shards_text(shards),
-                if reach { color::TEXT } else { color::QUIET },
+                if reach { color::text() } else { color::quiet() },
             ),
             (&after.0, after.1),
         );
@@ -2285,7 +2304,7 @@ impl Panel {
                     "{}  Locked: you keep it until you unlock it (L).",
                     symbols::LOCK
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             )
         } else if keep == 0 && item.worn {
             (
@@ -2297,7 +2316,7 @@ impl Panel {
                         "Every copy"
                     }
                 ),
-                color::EMBER,
+                color::ember(),
             )
         } else if keep == 0 {
             (
@@ -2309,7 +2328,7 @@ impl Panel {
                         "Every copy"
                     }
                 ),
-                color::EMBER,
+                color::ember(),
             )
         } else {
             (
@@ -2317,7 +2336,7 @@ impl Panel {
                     "You keep {keep} {}",
                     if keep == 1 { "copy" } else { "copies" }
                 ),
-                color::MUTED,
+                color::muted(),
             )
         };
         let gives = u64::from(taken) * item.gives;
@@ -2337,7 +2356,7 @@ impl Panel {
             (
                 "You will hold",
                 crate::economy::shards_text(shards + gives),
-                color::TEXT,
+                color::text(),
             ),
             (&note.0, note.1),
         );
@@ -2369,7 +2388,7 @@ impl Panel {
             let label = if waiting && self.forge.sent_many.is_some() {
                 "Breaking down...".to_owned()
             } else if picked == 0 {
-                "Pick shaders to break down".to_owned()
+                "Pick kybers to break down".to_owned()
             } else {
                 format!(
                     "Break down selected ({copies})  +{}",
@@ -2430,9 +2449,9 @@ impl Panel {
                 frame.rect(left + 64.0, button_y + 17.0, 150.0, 24.0),
                 17.0 * frame.s,
                 if picked > 0 {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Semibold,
                 TextAlign::Center,
@@ -2492,7 +2511,7 @@ impl Panel {
         let need = self.forge.data.fuse_need(tier);
         let line = match need {
             Some(need) => crate::forge_fuse::summary(tier, need),
-            None => "Duplicates of one tier make a shader of the next you lack.".to_owned(),
+            None => "Duplicates of one tier make a kyber of the next you lack.".to_owned(),
         };
         self.forge_intro(&format!("{line}. You always keep a copy of each."));
         // A chip a tier the hub fuses, in its colour: "Common to Uncommon".
@@ -2529,7 +2548,7 @@ impl Panel {
                 format_args!("{label}"),
                 frame.rect(left, CHIPS_Y + 5.0, width, CHIP_HEIGHT - 10.0),
                 15.0 * s,
-                if lit { color::TEXT } else { color::MUTED },
+                if lit { color::text() } else { color::muted() },
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -2544,8 +2563,8 @@ impl Panel {
                 [LIST_LEFT, LIST_TOP, LIST_RIGHT - LIST_LEFT, 560.0],
                 &format!("No {} duplicates yet", tier.label()),
                 &crate::terms::say_owned(format!(
-                    "A {} shader holocrons bring you again lands here: {} of them fuse into \
-                     a {next} shader you lack. T steps the tier.",
+                    "A {} kyber holocrons bring you again lands here: {} of them fuse into \
+                     a {next} kyber you lack. T steps the tier.",
                     tier.label(),
                     need.unwrap_or(0)
                 )),
@@ -2583,10 +2602,10 @@ impl Panel {
         let [x0, y0, width0, height0] = DETAIL;
         let area = frame.rect(x0, y0, width0, height0);
         let shown = self.forge.fused.map_or(next, |skin| skin.tier);
-        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+        let _ = self.ui.draw_list_mut().push(DrawCommand::Backdrop {
             rect: area,
             radius: RADIUS * s,
-            color: color::alpha(color::SPACE, 0.84),
+            tint: color::tint(color::acrylic::CARD),
         });
         let _ = self.ui.draw_list_mut().push(DrawCommand::GradientRect {
             rect: frame.rect(x0, y0, width0, 260.0),
@@ -2654,7 +2673,7 @@ impl Panel {
                 format_args!("{}", skin.name),
                 frame.rect(x, y, width, 58.0),
                 46.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2666,7 +2685,7 @@ impl Panel {
                 [x, y, width],
                 (80, 2),
                 17.0,
-                color::TEXT,
+                color::text(),
                 TextAlign::Start,
             );
         } else {
@@ -2693,7 +2712,7 @@ impl Panel {
                 format_args!("Fuse duplicates"),
                 frame.rect(x, y, width, 58.0),
                 46.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -2706,7 +2725,7 @@ impl Panel {
                     [x, y, width],
                     (80, 2),
                     17.0,
-                    color::TEXT,
+                    color::text(),
                     TextAlign::Start,
                 );
             }
@@ -2722,7 +2741,7 @@ impl Panel {
                     format_args!("{}  {name}  x{copies}", symbols::COPIES),
                     frame.rect(x, y, width, 22.0),
                     16.0 * s,
-                    color::HOLO,
+                    color::holo(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -2735,7 +2754,7 @@ impl Panel {
                     format_args!("and {} more", picks.len() - shown_max),
                     frame.rect(x, y, width, 22.0),
                     15.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -2748,12 +2767,12 @@ impl Panel {
         let (note, note_colour) = match check {
             Ok(()) => (
                 format!(
-                    "Ready: the SJK hub gives you a {} shader you lack.",
+                    "Ready: the SJK hub gives you a {} kyber you lack.",
                     next.label()
                 ),
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
             ),
-            Err(block) => (crate::forge_fuse::block_words(tier, block), color::EMBER),
+            Err(block) => (crate::forge_fuse::block_words(tier, block), color::ember()),
         };
         text(
             &mut self.ui,
@@ -2818,9 +2837,9 @@ impl Panel {
             frame.rect(stepper + 60.0, button_y + 17.0, 92.0, 24.0),
             17.0 * s,
             if copies > 0 {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -2867,16 +2886,16 @@ impl Panel {
                 (
                     crate::economy::outcome_words(outcome, name),
                     if outcome.done() {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::EMBER
+                        color::ember()
                     },
                 )
             }
-            _ if self.forge.waiting() => ("Asking the SJK hub...".to_owned(), color::MUTED),
+            _ if self.forge.waiting() => ("Asking the SJK hub...".to_owned(), color::muted()),
             _ => match &self.forge.data.why_not {
-                Some(why) => (why.clone(), color::MUTED),
-                None => (String::new(), color::MUTED),
+                Some(why) => (why.clone(), color::muted()),
+                None => (String::new(), color::muted()),
             },
         };
         let _ = left_lines(
@@ -2924,7 +2943,7 @@ impl Panel {
                 // 29/10/2026).
                 if self.marks.worn(skin.id) {
                     lines.push(format!(
-                        "You wear this shader now: breaking it down puts your saber back to \
+                        "You wear this kyber now: breaking it down puts your saber back to \
                          the stock blade{}.",
                         if inputs.pair == crate::saber_skins::Pair::None {
                             ""
@@ -2966,10 +2985,10 @@ impl Panel {
                 let (copies, shaders, gives) = self.forge.spare;
                 let lines = vec![
                     format!(
-                        "{copies} {} of {shaders} saber {} become kyber shards. You keep one \
-                         of each: no shader leaves your collection.",
+                        "{copies} {} of {shaders} {} become kyber shards. You keep one \
+                         of each: no kyber leaves your collection.",
                         if copies == 1 { "copy" } else { "copies" },
-                        if shaders == 1 { "shader" } else { "shaders" }
+                        if shaders == 1 { "kyber" } else { "kybers" }
                     ),
                     crate::terms::say("Copies a medal or a card brings are never touched.")
                         .into_owned(),
@@ -2979,7 +2998,7 @@ impl Panel {
                 let mut lines = lines;
                 if kept > 0 {
                     lines.push(format!(
-                        "{}  Locked shaders are kept whole: {kept} {} skipped.",
+                        "{}  Locked kybers are kept whole: {kept} {} skipped.",
                         symbols::LOCK,
                         if kept == 1 { "is" } else { "are" }
                     ));
@@ -3015,9 +3034,9 @@ impl Panel {
                     );
                 }
                 lines.push(format!(
-                    "{copies} {} of the {picked} saber {} you picked {} kyber shards.",
+                    "{copies} {} of the {picked} {} you picked {} kyber shards.",
                     if copies == 1 { "copy" } else { "copies" },
-                    if picked == 1 { "shader" } else { "shaders" },
+                    if picked == 1 { "kyber" } else { "kybers" },
                     if copies == 1 { "becomes" } else { "become" }
                 ));
                 if lasts > 0 {
@@ -3036,7 +3055,7 @@ impl Panel {
                     .collect();
                 (
                     if lasts > 0 {
-                        "Break down the picked shaders?"
+                        "Break down the picked kybers?"
                     } else {
                         "Break down the picked copies?"
                     },
@@ -3077,7 +3096,11 @@ impl Panel {
             format_args!("{title}"),
             frame.rect(left, y + 40.0, inner, 50.0),
             40.0 * s,
-            if danger { color::EMBER } else { color::TEXT },
+            if danger {
+                color::ember()
+            } else {
+                color::text()
+            },
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -3088,13 +3111,13 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect,
                 radius: 17.0 * s,
-                color: color::alpha(color::EMBER, 0.16),
+                color: color::alpha(color::ember(), 0.16),
             });
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
                 rect,
                 radius: 17.0 * s,
                 width: 1.4 * s,
-                color: color::EMBER,
+                color: color::ember(),
             });
             text(
                 &mut self.ui,
@@ -3102,7 +3125,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(left + inner - pill, y + 54.0, pill, 24.0),
                 18.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
@@ -3153,7 +3176,7 @@ impl Panel {
                     format_args!("and {} more", shown.len() - 5),
                     frame.rect(left, y + 190.0, inner, 20.0),
                     14.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -3163,9 +3186,9 @@ impl Panel {
         for (index, line) in lines.iter().enumerate() {
             // The worn line (the first) in ember, as the pill.
             let colour = if worn_pill && index == 0 {
-                color::EMBER
+                color::ember()
             } else {
-                color::MUTED
+                color::muted()
             };
             line_y = left_lines(
                 &mut self.ui,
@@ -3186,7 +3209,7 @@ impl Panel {
             format_args!("You get"),
             frame.rect(left, buttons - 26.0, 300.0, 20.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -3263,9 +3286,9 @@ impl Panel {
                 lines: vec![
                     Line::how(crate::terms::say(
                         "Found in holocrons as a pile, a few with every card, and from \
-                         breaking saber shaders down here.",
+                         breaking kybers down here.",
                     )),
-                    Line::status("They craft any shader of the trade and buy the shop's offers."),
+                    Line::status("They craft any kyber of the trade and buy the shop's offers."),
                     Line::held(format!(
                         "You hold {}.",
                         crate::economy::shards_text(self.forge.data.shards.unwrap_or(0))
@@ -3274,12 +3297,12 @@ impl Panel {
             }),
             INFO_TOKEN => Some(Card {
                 title: self.forge.section.label().to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![Line::how(self.forge.intro.clone())],
             }),
             CREDITS_TOKEN => Some(Card {
                 title: "Credits".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(crate::terms::say(
                         "Every card a holocron brings comes with credits.",
@@ -3345,8 +3368,8 @@ impl Panel {
 pub(super) fn wishlist_words(list: &[String]) -> String {
     if list.is_empty() {
         return format!(
-            "Your wishlist is empty: wish for up to {} shaders you lack (the toggle on an \
-             offer, on Craft or on the Shaders tab). A wished offer is marked here.",
+            "Your wishlist is empty: wish for up to {} kybers you lack (the toggle on an \
+             offer, on Craft or on the Kybers tab). A wished offer is marked here.",
             crate::wishlist::MAX
         );
     }
@@ -3426,16 +3449,16 @@ fn danger_button(
         rect: area,
         radius: height * 0.5 * s,
         color: if lit {
-            color::EMBER
+            color::ember()
         } else {
-            color::alpha(color::EMBER, 0.1)
+            color::alpha(color::ember(), 0.1)
         },
     });
     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
         rect: area,
         radius: height * 0.5 * s,
         width: 1.6 * s,
-        color: color::EMBER,
+        color: color::ember(),
     });
     text(
         canvas,
@@ -3446,7 +3469,7 @@ fn danger_button(
         if lit {
             Color::new(0.08, 0.03, 0.01, 1.0)
         } else {
-            color::EMBER
+            color::ember()
         },
         FontWeight::Regular,
         TextAlign::Center,

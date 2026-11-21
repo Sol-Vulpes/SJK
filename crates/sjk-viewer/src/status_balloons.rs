@@ -152,7 +152,7 @@ pub(crate) const TOY: &str = "status_balloon";
 pub(crate) const CVAR: &str = "cg_statusBalloons";
 /// Client slots.
 pub(crate) const SLOTS: usize = crate::looks::SLOTS;
-/// One relay event at most this often, as the other toys' ([`crate::banana::SEND_GAP`]),
+/// One relay event at most this often, as the other toys',
 /// well under the hub's 40 a second per key.
 const SEND_GAP: Duration = Duration::from_millis(50);
 /// A reason is told once it has held this long, so a menu flicked open and shut, or

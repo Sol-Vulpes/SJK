@@ -199,7 +199,7 @@ fn gift(token: u16) -> bool {
 }
 
 /// Whether staff who are not the creator may give `unlockable`: only what holocrons can
-/// bring anyway (`droppable`). A Unique one, a medal's blade or a blade not opened to
+/// bring anyway (`droppable`). A Secret one, a medal's blade or a blade not opened to
 /// drops yet stays the creator's to give (the hub refuses it, `creator_only`).
 fn staff_may_unlock(unlockable: &crate::unlockables::Unlockable) -> bool {
     unlockable.droppable
@@ -1360,6 +1360,7 @@ mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_791_250_000,
@@ -2239,8 +2240,8 @@ mod tests {
         };
         // Twenty toys: a page of 14, then the other 6.
         let mut toys: Vec<_> = (0..20).map(|index| toy(&format!("toy_{index}"))).collect();
-        toys[0] = toy(crate::fishing::TOY);
-        toys[1] = toy(crate::mining::TOY);
+        toys[0] = toy(crate::drone::TOY);
+        toys[1] = toy(crate::boombox::TOY);
         let staff = StaffState {
             toys: Some(sjk_identity::ToyStats { people: 9, toys }),
             ..StaffState::default()
@@ -2250,7 +2251,7 @@ mod tests {
         assert!(panel.order.contains(&TOYS_NEXT_TOKEN));
         assert!(!panel.order.contains(&TOYS_PREV_TOKEN));
         assert_eq!(panel.activate(TOY_ROW_BASE + 1), PanelAction::None);
-        assert_eq!(panel.toy_chosen.as_deref(), Some(crate::mining::TOY));
+        assert_eq!(panel.toy_chosen.as_deref(), Some(crate::boombox::TOY));
         let _ = panel.activate(TOYS_NEXT_TOKEN);
         build(&mut panel, &staff);
         assert_eq!(panel.shown.toy_rows.len(), 6);

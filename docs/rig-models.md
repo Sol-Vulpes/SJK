@@ -222,6 +222,20 @@ one way: the cape pushes the hair and not the other way. The log names a `layer`
 does nothing or something odd when the model loads: a joint with no `dynamic` line, a chain
 over itself, or lines that go round in a circle.
 
+A chain kept out of the body (no `nocollide`) is kept off the ground too, so a long tail,
+cape or plait lies on the floor when the player kneels or crouches rather than going
+through it. Each frame a line traced straight down from the player's origin (`MASK_SOLID`,
+96 units) finds the ground, taken as the plane through the point it met with that
+surface's normal, in the model's space (turned with the legs' yaw and undone from the
+player's `iModelScale`). Each joint stays at least its chain's `clearance` above it, and
+never less than half a unit. A joint below it is laid on it at its bone's length from its
+parent, on the side it already leans to (the bone's own, else the model's back), since
+pushing a bone that hangs straight down straight up would leave it where it was; it stops
+moving into the ground. A joint whose parent is further under the ground than its bone is
+long is left alone: the body itself is under the floor there (some death poses sink the
+head below it), and no chain can fix that. A player with no ground in reach, in the air,
+has none. Nothing new goes in the manifest, so older clients still load the model.
+
 ### Bolts on the rig
 
 The driver's bolts (`*r_hand`, `*l_hand`, `*head_top`, the feet, cosmetics, the
@@ -244,7 +258,7 @@ traces and hit boxes stay the driver's.
 | Manifest, presets, fit (axes, scale, alignments, anchors), pose, CPU skin | [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), tests in `rig_model_tests.rs` |
 | Rig surfaces put in the shared vertex buffer | `append_rig_mesh` in [actor_load.rs](../crates/sjk-viewer/src/actor_load.rs) |
 | Per-frame pose and palette upload (GPU and CPU paths) | [actor_pose_steps.rs](../crates/sjk-viewer/src/actor_pose_steps.rs), `rig_skin_records` in [gpu_skinning.rs](../crates/sjk-viewer/src/gpu_skinning.rs) |
-| Dynamic joints (tails, capes), their settings and body capsules | `Settings`, `Capsule`, `Chains` and `simulate` in [rig_dynamics.rs](../crates/sjk-viewer/src/rig_dynamics.rs), `dynamic_settings` and `body_capsules` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), `RigModel::pose_after` |
+| Dynamic joints (tails, capes), their settings and body capsules | `Settings`, `Capsule`, `Chains`, `simulate` and `on_the_ground` in [rig_dynamics.rs](../crates/sjk-viewer/src/rig_dynamics.rs), `ground_under` in [actor_pose_steps.rs](../crates/sjk-viewer/src/actor_pose_steps.rs), `ground_plane` and `Scratch::stand_on` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), `dynamic_settings` and `body_capsules` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), `RigModel::pose_after` |
 | Feet planted on the driver's ground | `Feet`, `Soles`, `sole`, `RigModel::with_feet`, `with_soles` and `planted` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), the ignored tests `feet_against_the_driver` and `walk_against_the_driver` |
 | Bolts and Force points moved onto the rig | `PlayerPreview::bolt`, `RigModel::retarget_bolt` and `retarget_point`, [force_bones.rs](../crates/sjk-viewer/src/force_bones.rs) |
 | Dismemberment skipped, JoF first-person body off | [dismember.rs](../crates/sjk-viewer/src/dismember.rs), [actor_world_submission.rs](../crates/sjk-viewer/src/actor_world_submission.rs) |
@@ -655,7 +669,10 @@ plays its glTF's animations on its own skeleton.
   Groark's idea, hub report #234) puts the emote channel's gain to 0 while the viewed
   player is in a private duel or the server plays Duel or Power Duel (the rule of
   `cg_duelStockBlades`, `duel_blades::in_duel`), so the emotes already playing fall
-  silent too and one still playing when the duel ends is heard again; Typing keeps emote (`cg_emoteTypingKeep`, on) keeps a typing
+  silent too and one still playing when the duel ends is heard again; Hide others'
+  emotes (`cg_hideOthersEmotes`, off), Hidden emotes (`cg_hiddenEmotes`) and Muted
+  emotes (`s_mutedEmotes`) hide other players' emotes, hide single emotes or play them
+  silent on this screen ([hub chat](hub-chat.md#emotes-in-the-client)); Typing keeps emote (`cg_emoteTypingKeep`, on) keeps a typing
   player's emote until they move after; alt-tabbing out always silences an emote's
   sound ([hub chat](hub-chat.md#emotes-in-the-client)).
 - The mixer has 128 voices (32 until 15/10/2026, as retail) and, when they are all

@@ -18,14 +18,6 @@ impl Panel {
             // The card asking covers the page: nothing under it answers the pointer.
             return;
         }
-        // The showcase card a click opened stands over the page in place of a hover card.
-        if self.tab != Tab::Nameplates {
-            self.showcase_open = false;
-        }
-        if self.showcase_open {
-            self.nameplate_showcase(frame, inputs);
-            return;
-        }
         // So does the Extra features note, while its chip shows (the same shader): what
         // the extras are and what unlocks them, or, unlocked, a tick each.
         if self.extras_note
@@ -99,7 +91,7 @@ impl Panel {
         }
         if let Some(row) = within(SHADER_BASE, self.shader_count) {
             let skin = self.skin_at(row);
-            // Never the card of a shader the player may not see (an unheld Unique one; the
+            // Never the card of a shader the player may not see (an unheld Secret one; the
             // list leaves it out already).
             if skin.is_some_and(|skin| !inputs.holdings.shows(skin)) {
                 return None;
@@ -129,7 +121,7 @@ impl Panel {
         if token == TOY_TOKEN {
             return Some(Card {
                 title: "Illuminate holocron".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Light it here, from the quick wheel's Toys \
@@ -140,24 +132,10 @@ impl Panel {
                 ],
             });
         }
-        if token == BOX_TOKEN {
-            return Some(Card {
-                title: "Cardboard box".to_owned(),
-                colour: color::GOLD_BRIGHT,
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Get in here, from the quick wheel's Toys \
-                         page or with a key bound to toy_box.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == RAGDOLL_TOKEN {
             return Some(Card {
                 title: "Ragdoll".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Go limp here, from the quick wheel's Toys \
@@ -171,7 +149,7 @@ impl Panel {
         if token == DRONE_TOKEN {
             return Some(Card {
                 title: "Drone".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it: freecam and peek fly it. Turn it on here, \
@@ -186,7 +164,7 @@ impl Panel {
         if token == BOOMBOX_TOKEN {
             return Some(Card {
                 title: "Boombox".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every verified SJK player has it. Carry it here, from the quick \
@@ -201,7 +179,7 @@ impl Panel {
         if token == BOX_HUNT_TOKEN {
             return Some(Card {
                 title: "Box hunt".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every 10 minutes one player with Box hunt on becomes the mark. Kill \
@@ -213,25 +191,10 @@ impl Panel {
                 ],
             });
         }
-        if token == BANANA_TOKEN {
-            return Some(Card {
-                title: "Banana peel".to_owned(),
-                colour: color::GOLD_BRIGHT,
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here or with a key bound to \
-                         toy_banana, then drop peels with your drop key. Players who have it \
-                         on slip on the ones they walk onto.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == QUESTS_TOKEN {
             return Some(Card {
                 title: "Quests".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
@@ -243,59 +206,15 @@ impl Panel {
                 ],
             });
         }
-        if token == FISHING_TOKEN {
-            return Some(Card {
-                title: "Fishing".to_owned(),
-                colour: color::GOLD_BRIGHT,
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Get the rod out here, from the quick \
-                         wheel's Toys page or with a key bound to toy_fishing, and stand \
-                         still: water ahead, or a pond where there is none.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
         if token == MONITOR_TOKEN {
             return Some(Card {
-                title: "Monitor".to_owned(),
-                colour: color::GOLD_BRIGHT,
+                title: "Force Throw".to_owned(),
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
                          page or with a key bound to toy_monitor, then throw (hold the throw key \
                          to charge) at players who have it on too.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
-        if token == HAX_TOKEN {
-            return Some(Card {
-                title: "The Hax".to_owned(),
-                colour: color::GOLD_BRIGHT,
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_hax; hold Use on a player who has it \
-                         on to hack them.",
-                    ),
-                    Line::status(crate::editions::name(crate::editions::ALPHA)),
-                    Line::held("Yours"),
-                ],
-            });
-        }
-        if token == ORDER_TOKEN {
-            return Some(Card {
-                title: "Order 66".to_owned(),
-                colour: color::GOLD_BRIGHT,
-                lines: vec![
-                    Line::how(
-                        "Every SJK player has it. Turn it on here, from the quick wheel's Toys \
-                         page or with a key bound to toy_order66; order66 executes it.",
                     ),
                     Line::status(crate::editions::name(crate::editions::ALPHA)),
                     Line::held("Yours"),
@@ -328,7 +247,7 @@ fn medal_card(showing: &medals::Showing) -> Card {
     });
     Card {
         title: medal.name().to_owned(),
-        colour: color::GOLD_BRIGHT,
+        colour: color::gold_bright(),
         lines,
     }
 }
@@ -398,7 +317,7 @@ fn achievement_card(
     Card {
         title: title.into_owned(),
         colour: if done {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
             crate::achievements::medallion::tint(kind.category)
         },
@@ -431,7 +350,7 @@ pub(super) fn shader_card(
     let Some(skin) = skin else {
         return Card {
             title: "Stock blade".to_owned(),
-            colour: color::HOLO,
+            colour: color::holo(),
             lines: vec![
                 Line::how("Every player has it: the plain blade, in your saber's colour."),
                 Line::held("Yours"),
@@ -462,14 +381,14 @@ pub(super) fn shader_card(
             // The blade number only while `debug_collectibles` is on (Sol, 21/10/2026).
             Line::status(if holdings.debug() {
                 format!(
-                    "Blade {}. {} blade skin. {}.",
+                    "Blade {}. {} kyber. {}.",
                     skin.number_text(),
                     skin.tier.label(),
                     crate::editions::name(skin.edition)
                 )
             } else {
                 format!(
-                    "{} blade skin. {}.",
+                    "{} kyber. {}.",
                     skin.tier.label(),
                     crate::editions::name(skin.edition)
                 )
@@ -489,10 +408,10 @@ pub(super) fn shader_card(
 pub(super) fn wish_card(on: bool, full: bool, may: bool) -> Card {
     Card {
         title: format!("{}  Wishlist", crate::symbols::GIFT),
-        colour: color::GOLD_BRIGHT,
+        colour: color::gold_bright(),
         lines: vec![
             Line::how(format!(
-                "Up to {} saber shaders you lack, kept on the SJK hub. A wished shader in your \
+                "Up to {} kybers you lack, kept on the SJK hub. A wished kyber in your \
                  shop's offers is marked, and a card tells you once a day.",
                 crate::wishlist::MAX
             )),
@@ -503,7 +422,7 @@ pub(super) fn wish_card(on: bool, full: bool, may: bool) -> Card {
             } else if may {
                 Line::held("A click adds it.")
             } else {
-                Line::status("Only a shader of the trade you lack can be wished for.")
+                Line::status("Only a kyber of the trade you lack can be wished for.")
             },
         ],
     }
@@ -538,7 +457,7 @@ pub(super) fn mark_card(
             let on = chosen.is_some_and(|(id, _)| marks.favourite(id));
             Card {
                 title: format!("{}  Favourite", crate::symbols::EDITION),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
                         "A star: your favourites are listed first, and the Favourites chip \
@@ -558,10 +477,10 @@ pub(super) fn mark_card(
                 chosen.map_or((false, false), |(id, owned)| (marks.locked(id), owned));
             Card {
                 title: format!("{}  Lock", crate::symbols::LOCK),
-                colour: color::GOLD_BRIGHT,
+                colour: color::gold_bright(),
                 lines: vec![
                     Line::how(
-                        "A padlock: a locked shader is never broken down in the Forge (not \
+                        "A padlock: a locked kyber is never broken down in the Forge (not \
                          one copy, not with all duplicates) nor offered in a trade until you \
                          unlock it. The SJK hub holds the lock.",
                     ),
@@ -570,25 +489,25 @@ pub(super) fn mark_card(
                     } else if owned {
                         Line::held("L or a click locks it.")
                     } else {
-                        Line::status("Only a shader you hold can be locked.")
+                        Line::status("Only a kyber you hold can be locked.")
                     },
                 ],
             }
         }
         MarkToken::Favourites => Card {
             title: "Favourites".to_owned(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
             lines: vec![
-                Line::how("Shows your starred shaders alone (Shift+F); again shows them all."),
-                Line::status("Star a shader with F, or its star beside the chosen one."),
+                Line::how("Shows your starred kybers alone (Shift+F); again shows them all."),
+                Line::status("Star a kyber with F, or its star beside the chosen one."),
             ],
         },
         MarkToken::SeenAll => Card {
             title: "New".to_owned(),
-            colour: color::GOLD_BRIGHT,
+            colour: color::gold_bright(),
             lines: vec![
                 Line::how(
-                    "Shaders you got since you last looked (holocrons, gifts, trades, \
+                    "Kybers you got since you last looked (holocrons, gifts, trades, \
                      crafts) carry a New sticker until you choose one, here or in the Forge.",
                 ),
                 Line::status("Kept on this PC only. Mark all seen (N) clears them all."),
@@ -649,7 +568,7 @@ fn tile_card(tile: &crate::cards::binder::Tile) -> Card {
         colour: if tile.owned() {
             tile.tone(&faces).colour
         } else {
-            color::MUTED
+            color::muted()
         },
         lines,
     }
@@ -743,7 +662,7 @@ mod tests {
         };
         let card = achievement_card(kind, Some(&done));
         assert_eq!(card.lines[2].words, "Unlocked 10/10/2026");
-        assert_eq!(card.colour, color::GOLD_BRIGHT);
+        assert_eq!(card.colour, color::gold_bright());
     }
 
     #[test]
@@ -775,7 +694,7 @@ mod tests {
             &none,
         );
         assert!(card.lines[3].words.starts_with("Yours since "), "{card:?}");
-        assert_eq!(card.lines[1].words, "Mythical blade skin. Alpha Edition.");
+        assert_eq!(card.lines[1].words, "Mythical kyber. Alpha Edition.");
         // Its marks follow, each saying what it means.
         let marks = crate::shader_marks::Marks::shown(
             &["saber_sun"],
@@ -807,7 +726,7 @@ mod tests {
         );
         assert_eq!(
             card.lines[1].words,
-            "Blade 001. Mythical blade skin. Alpha Edition."
+            "Blade 001. Mythical kyber. Alpha Edition."
         );
     }
 
@@ -820,7 +739,7 @@ mod tests {
         assert!(star.lines[1].words.contains("unstars"));
         let lock = mark_card(MarkToken::Lock, &marks, Some(("saber_storm", false))).unwrap();
         assert!(lock.lines[0].words.contains("never broken down"));
-        assert_eq!(lock.lines[1].words, "Only a shader you hold can be locked.");
+        assert_eq!(lock.lines[1].words, "Only a kyber you hold can be locked.");
         let none = crate::shader_marks::Marks::default();
         assert!(mark_card(MarkToken::Favourite, &none, None).is_none());
         assert!(mark_card(MarkToken::Favourites, &none, None).is_none());

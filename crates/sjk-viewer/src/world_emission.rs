@@ -3,6 +3,8 @@
 //! ignoring these stages leaves a visible light fixture with no effect on its room.
 #[path = "world_lamp_gain.rs"]
 pub(crate) mod lamp_gain;
+#[path = "emission_memo.rs"]
+mod memo;
 #[path = "emission_texture.rs"]
 mod texture;
 use image::RgbaImage;
@@ -284,7 +286,13 @@ fn wave_mean(wave: &sjk_shader::WaveForm) -> f32 {
 
 /// GL_ONE/GL_ONE uses RGB even when alpha is zero. Include black texels in the
 /// average: a small strip in a large image must not emit like a full white panel.
-fn additive_mean(image: &RgbaImage) -> [f32; 3] {
+/// Kept per large image ([`memo`]): a player model's loader scans it, the render thread
+/// finds it.
+fn additive_mean(image: &Arc<RgbaImage>) -> [f32; 3] {
+    memo::additive(image, || scan_additive_mean(image))
+}
+
+fn scan_additive_mean(image: &RgbaImage) -> [f32; 3] {
     static LINEAR: std::sync::OnceLock<[f32; 256]> = std::sync::OnceLock::new();
     let linear = LINEAR.get_or_init(|| std::array::from_fn(|v| (v as f32 / 255.).powf(2.2)));
     let mut sum = [0f64; 3];

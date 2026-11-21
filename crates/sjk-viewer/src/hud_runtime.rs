@@ -379,6 +379,7 @@ pub(crate) fn update(
         let own_slot = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player).own;
         // A player blocked on this PC gets no card, and a pinned one loses their profile.
         let blocked = gpu.muted_players.slots();
+        gpu.hud.card.edges = gpu.status_bar.reserved();
         gpu.hud.card.update(hud::player_card::Input {
             seen: gpu
                 .crosshair_scan
@@ -440,6 +441,7 @@ pub(crate) fn update(
         );
         // An empty kill feed shows a sample to drag in the HUD edit mode.
         gpu.hud.kill_feed.set_preview(gpu.hud_edit.is_open());
+        gpu.hud.feats.set_preview(gpu.hud_edit.is_open());
         gpu.hud.update_match_information(
             session.game_state(),
             presentation_time,
@@ -589,6 +591,7 @@ pub(crate) fn update(
         let (looks, skins) = (&gpu.looks, &*gpu.blade_skins);
         let hilts = gpu.saber_hilts.as_ref();
         let own_slot = crate::looks::ViewSlots::of(session.game_state(), &snapshot.player).own;
+        gpu.hud.card.edges = gpu.status_bar.reserved();
         gpu.hud.card.update(hud::player_card::Input {
             seen: gpu.crosshair_scan.hit_now(presentation_time),
             bsp: &gpu.bsp,

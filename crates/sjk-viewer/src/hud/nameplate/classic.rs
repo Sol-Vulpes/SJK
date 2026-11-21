@@ -179,20 +179,21 @@ impl State {
                 )
             });
             let after = left + (width + text) * 0.5 + size * 0.15;
+            let side = size * 0.95;
+            let slot = Rect::new(
+                after.min(viewport[0] - side),
+                capitals - side * 0.5,
+                side,
+                side,
+            );
+            // Another client's icon takes the mark's place, the mark small on its foot.
+            let client = entry.client.map(|_| slot);
             let mark = entry.mark.map(|_| {
-                let side = size * 0.95;
-                Rect::new(
-                    after.min(viewport[0] - side),
-                    capitals - side * 0.5,
-                    side,
-                    side,
-                )
-            });
-            // Another client's icon after the mark, smaller.
-            let client = entry.client.map(|_| {
-                let side = size * 0.78;
-                let x = mark.map_or(after, |mark| mark.right() + size * 0.15);
-                Rect::new(x.min(viewport[0] - side), capitals - side * 0.5, side, side)
+                if client.is_some() {
+                    crate::hud::nameplate_math::corner_mark(slot)
+                } else {
+                    slot
+                }
             });
             self.badges(entry, [mark, client], badge, opacity);
         }

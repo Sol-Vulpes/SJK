@@ -7,10 +7,9 @@
 //!
 //! - the mouse: the view shook as the player looked around while kicked down (Rollembones'
 //!   report #146). With [`LOOK_CVAR`] off the mouse does not turn a held view (on by default);
-//! - a toy whose commands carry their own angles (the Ragdoll's walk, the Hax's steering):
+//! - a toy whose commands carry their own angles (the Ragdoll's walk):
 //!   each server rewrite turned the camera on by the gap between the two views, so it spun
-//!   (#139, #140). The toys stop while the view is held ([`crate::ragdoll`],
-//!   [`crate::hax`]).
+//!   (#139, #140). The toy stops while the view is held ([`crate::ragdoll`]).
 
 use crate::GpuState;
 

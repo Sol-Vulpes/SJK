@@ -356,7 +356,7 @@ struct View<'a> {
     back: &'static str,
     /// The levelshot's opacity and texture coordinates, once it is in.
     picture: Option<(f32, Rect, [[f32; 2]; 4])>,
-    /// The world is left out: the navy ground instead.
+    /// The world is left out: the UI's dark ground instead.
     ground: bool,
     /// The menu clock, for the activity mark.
     seconds: f64,
@@ -540,19 +540,19 @@ fn draw(ui: &mut MenuCanvas, viewport: [f32; 2], view: &View<'_>) {
             ui,
             DrawCommand::SolidRect {
                 rect: window,
-                color: color::SPACE,
+                color: color::space(),
             },
         );
     }
     if let Some((opacity, rect, uv)) = view.picture.filter(|(opacity, ..)| *opacity > 0.0) {
         ui.push_opacity(opacity);
-        // A picture wider than the window leaves bands: navy, not the map.
+        // A picture wider than the window leaves bands: the ground, not the map.
         if rect != window {
             push(
                 ui,
                 DrawCommand::SolidRect {
                     rect: window,
-                    color: color::SPACE,
+                    color: color::space(),
                 },
             );
         }
@@ -581,7 +581,7 @@ fn draw(ui: &mut MenuCanvas, viewport: [f32; 2], view: &View<'_>) {
 /// The dark the block sits in: the bottom of the screen, deepest at the left.
 fn shade_corner(ui: &mut MenuCanvas, viewport: [f32; 2]) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     fade(
         ui,
         Rect::new(0.0, height * 0.45, width, height * 0.55),
@@ -600,7 +600,7 @@ fn shade_corner(ui: &mut MenuCanvas, viewport: [f32; 2]) {
 /// all over, more towards the bottom and its left, a touch at the top.
 fn shade_picture(ui: &mut MenuCanvas, viewport: [f32; 2]) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     push(
         ui,
         DrawCommand::SolidRect {
@@ -638,7 +638,11 @@ fn draw_block(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         format_args!("{}", view.kicker),
         frame.rect(LEFT, 812.0, 900.0, 30.0),
         24.0 * s,
-        if failed { color::TEXT } else { color::MUTED },
+        if failed {
+            color::text()
+        } else {
+            color::muted()
+        },
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -648,7 +652,7 @@ fn draw_block(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         format_args!("{}", view.name),
         frame.rect(LEFT, 842.0, 1400.0, 66.0),
         56.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -659,7 +663,7 @@ fn draw_block(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
             format_args!("{address}"),
             frame.rect(LEFT + 2.0, 912.0, 700.0, 28.0),
             18.0 * s,
-            color::HOLO,
+            color::holo(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -693,18 +697,18 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
             ui,
             y + index as f32 * 28.0,
             format_args!("{part}"),
-            color::alpha(color::TEXT, 0.88),
+            color::alpha(color::text(), 0.88),
         );
     }
     if !view.setup.is_empty() {
         y -= 28.0;
-        body(ui, y, format_args!("{}", view.setup), color::MUTED);
+        body(ui, y, format_args!("{}", view.setup), color::muted());
     }
     match view.rules {
         Rules::None => {}
         Rules::Game(rules) => {
             y -= 28.0;
-            body(ui, y, format_args!("{rules}"), color::MUTED);
+            body(ui, y, format_args!("{rules}"), color::muted());
         }
         Rules::Listed {
             mode,
@@ -717,7 +721,7 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
                 ui,
                 y,
                 format_args!("{mode}{comma}{players} of {capacity} playing"),
-                color::MUTED,
+                color::muted(),
             );
         }
     }
@@ -728,7 +732,7 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         format_args!("{}", view.name),
         frame.rect(LEFT, y, 1500.0, 46.0),
         36.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -747,7 +751,7 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
             format_args!("{small}"),
             frame.rect(LEFT + 2.0, y, 1200.0, 34.0),
             26.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -766,7 +770,7 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         format_args!("{large}"),
         frame.rect(LEFT - 4.0, y, 1700.0, 104.0),
         size * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -778,9 +782,9 @@ fn draw_destination(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
         frame.rect(LEFT, y, 900.0, 32.0),
         26.0 * s,
         if matches!(view.status, Status::Failed(_)) {
-            color::TEXT
+            color::text()
         } else {
-            color::MUTED
+            color::muted()
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -797,7 +801,7 @@ fn line(ui: &mut MenuCanvas, frame: &Frame, at: [f32; 3], progress: f32) {
         ui,
         DrawCommand::SolidRect {
             rect: frame.rect(x, y, width, BAR_HEIGHT),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         },
     );
     let lit = width * progress.clamp(0.0, 1.0);
@@ -807,7 +811,7 @@ fn line(ui: &mut MenuCanvas, frame: &Frame, at: [f32; 3], progress: f32) {
             DrawCommand::RoundedRect {
                 rect: frame.rect(x, y, lit, BAR_HEIGHT),
                 radius: BAR_HEIGHT * 0.5 * frame.s,
-                color: color::GOLD,
+                color: color::gold(),
             },
         );
     }
@@ -826,7 +830,7 @@ fn draw_row(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
                 format_args!("{words}"),
                 frame.rect(LEFT + 32.0, ROW_Y, 1100.0, 24.0),
                 18.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -842,7 +846,7 @@ fn draw_row(ui: &mut MenuCanvas, frame: &Frame, view: &View<'_>) {
                     format_args!("{}", Capital(part)),
                     frame.rect(LEFT + 2.0, top + index as f32 * 32.0, 1300.0, 24.0),
                     22.0 * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -869,7 +873,7 @@ pub(crate) fn activity(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, secon
             width: 2.0 * s,
             start: 0.0,
             sweep: std::f32::consts::TAU,
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
             knockout: None,
         },
     );
@@ -883,7 +887,7 @@ pub(crate) fn activity(ui: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, secon
             width: 2.2 * s,
             start,
             sweep: std::f32::consts::FRAC_PI_2 * 1.2,
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
             knockout: None,
         },
     );

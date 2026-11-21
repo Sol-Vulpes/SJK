@@ -72,7 +72,7 @@ pub(crate) fn may_wish(skin: &crate::unlockables::Unlockable, held: bool) -> boo
 
 /// The line players read when the wishlist is full.
 pub(crate) fn full_words() -> String {
-    format!("Your wishlist is full ({MAX} shaders): take one off first.")
+    format!("Your wishlist is full ({MAX} kybers): take one off first.")
 }
 
 /// Add (`on`) shader `id` to the live wishlist or take it off; the line to tell the

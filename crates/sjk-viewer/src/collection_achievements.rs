@@ -55,6 +55,21 @@ fn on_page(standing: &Standing, page: Page) -> bool {
     standing.kind.category.page() == page
 }
 
+/// The board's pages that list something ([`Standing::listed`]), in their own order:
+/// a page whose achievements are all retired and not held (Hobbies, once Fishing and
+/// Mining went, 20/11/2026) leaves the switch. General always stays.
+pub(super) fn pages(standings: &[Standing]) -> Vec<Page> {
+    Page::ALL
+        .into_iter()
+        .filter(|page| {
+            *page == Page::General
+                || standings
+                    .iter()
+                    .any(|standing| standing.listed() && on_page(standing, *page))
+        })
+        .collect()
+}
+
 /// The wall's runs on `page`, of the achievements listed ([`Standing::listed`]): the
 /// categories in their own order ([`Category`]), each's achievements in the catalogue's,
 /// each after the one before on its band when it fits there with a column between
@@ -213,6 +228,11 @@ impl Panel {
             self.lead(frame, "No achievements", "");
             return;
         }
+        self.achievement_pages = pages(standings);
+        if !self.achievement_pages.contains(&self.achievement_page) {
+            self.achievement_page = Page::General;
+            self.achievement = usize::MAX;
+        }
         let page = self.achievement_page;
         let groups = groups(standings, page);
         self.achievement_slots.clear();
@@ -233,17 +253,21 @@ impl Panel {
             frame,
             [LEFT_X + 300.0, LEAD_Y + 16.0, 300.0, 6.0],
             fraction,
-            color::GOLD,
+            color::gold(),
         );
         // The pages' switch, at the wall's top right.
-        let labels = Page::ALL.map(Page::name);
+        let labels: Vec<&str> = self
+            .achievement_pages
+            .iter()
+            .map(|page| page.name())
+            .collect();
         kit::segments(
             &mut self.ui,
             frame,
             LEFT_X + COLUMNS as f32 * CELL - 8.0,
             LEAD_Y + 19.0,
             &labels,
-            Page::ALL
+            self.achievement_pages
                 .iter()
                 .position(|other| *other == page)
                 .unwrap_or(0),
@@ -294,7 +318,7 @@ impl Panel {
                     format_args!("{count}"),
                     frame.rect(left + name_width + 12.0, top + 2.0, 90.0, 24.0),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -325,7 +349,7 @@ impl Panel {
             96,
             1,
             15.0,
-            color::QUIET,
+            color::quiet(),
         );
     }
 
@@ -343,7 +367,14 @@ impl Panel {
         let done = standing.unlocked.is_some();
         let centre = [x + CELL * 0.5 - 4.0, top + RADIUS + 4.0];
         if done {
-            glow(&mut self.ui, frame, centre, RADIUS * 1.5, color::GOLD, 0.16);
+            glow(
+                &mut self.ui,
+                frame,
+                centre,
+                RADIUS * 1.5,
+                color::gold(),
+                0.16,
+            );
         }
         medallion::draw(
             &mut self.ui,
@@ -362,7 +393,7 @@ impl Panel {
                 width: 2.0 * s,
                 start: 0.0,
                 sweep: std::f32::consts::TAU,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
                 knockout: None,
             });
         }
@@ -380,9 +411,9 @@ impl Panel {
                 frame.rect(centre[0] - CELL * 0.5 - 6.0, y, CELL + 12.0, 20.0),
                 14.0 * s,
                 match (chosen, done) {
-                    (true, _) => color::GOLD_BRIGHT,
-                    (false, true) => color::TEXT,
-                    (false, false) => color::MUTED,
+                    (true, _) => color::gold_bright(),
+                    (false, true) => color::text(),
+                    (false, false) => color::muted(),
                 },
                 FontWeight::Regular,
                 TextAlign::Center,
@@ -408,7 +439,7 @@ impl Panel {
             frame,
             centre,
             BIG_RADIUS * 2.0,
-            if done { color::GOLD } else { hue },
+            if done { color::gold() } else { hue },
             if done { 0.32 } else { 0.16 },
         );
         medallion::draw(
@@ -429,9 +460,9 @@ impl Panel {
             frame.rect(SHOWCASE_X, y, SHOWCASE_WIDTH, 56.0),
             50.0 * s,
             if done {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Semibold,
             TextAlign::Center,
@@ -462,7 +493,7 @@ impl Panel {
             56,
             2,
             20.0,
-            color::TEXT,
+            color::text(),
         );
         y += 12.0;
         let width = 520.0;
@@ -471,7 +502,7 @@ impl Panel {
             frame,
             [middle - width * 0.5, y, width, 6.0],
             standing.fraction(),
-            if done { color::GOLD } else { hue },
+            if done { color::gold() } else { hue },
         );
         // A secret says nothing of its goal or how far the player is.
         let progress = if standing.secret() {
@@ -499,7 +530,7 @@ impl Panel {
             format_args!("{progress}"),
             frame.rect(middle - width * 0.5, y + 14.0, width * 0.5, 22.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -510,9 +541,9 @@ impl Panel {
             frame.rect(middle, y + 14.0, width * 0.5, 22.0),
             16.0 * s,
             if done {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::End,
@@ -577,7 +608,7 @@ impl Panel {
                 format_args!("{}", crate::terms::say(kind.name)),
                 frame.rect(x + 54.0, y + 6.0, 260.0, 28.0),
                 22.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -598,7 +629,7 @@ impl Panel {
                 ),
                 frame.rect(x + 470.0, y + 8.0, 90.0, 22.0),
                 15.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -619,7 +650,7 @@ fn bar(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, y, width, height),
         radius: height * 0.5 * s,
-        color: color::alpha(color::HOLO, 0.14),
+        color: color::alpha(color::holo(), 0.14),
     });
     let filled = width * fraction.clamp(0.0, 1.0);
     if filled > 0.5 {
@@ -660,6 +691,40 @@ mod tests {
         crate::achievements::Record::default().standings(&held)
     }
 
+    /// The removed toys' achievements (retired 20/11/2026), all of them: what a player
+    /// who earned everything still sees, the wall's fullest case.
+    fn removed_toys() -> Vec<&'static str> {
+        crate::achievements::ALL
+            .iter()
+            .filter(|kind| kind.retired && kind.id != "surveyor")
+            .map(|kind| kind.id)
+            .collect()
+    }
+
+    /// A page with nothing listed leaves the switch (Hobbies for a new player, since
+    /// Fishing and Mining were removed, 20/11/2026): a saved Hobbies opens General, the
+    /// switch has two segments, and F turns between those two.
+    #[test]
+    fn a_page_with_nothing_listed_leaves_the_switch() {
+        let standings = standings_holding(&[]);
+        let inputs = Inputs {
+            standings: &standings,
+            ..super::super::tests::inputs(Holdings::Known(&[]), "")
+        };
+        let font = crate::text::load_modern(1.0, None).expect("Inter").font;
+        let mut panel = Panel::new();
+        panel.open(Tab::Achievements, true, true, ReturnTarget::InGame);
+        panel.achievement_page = Page::Hobbies;
+        panel.build(&inputs, &font, [1_920.0, 1_080.0]);
+        assert_eq!(panel.achievement_page, Page::General);
+        assert!(panel.ui.rect_for(ACHIEVEMENT_PAGE_BASE + 1).is_some());
+        assert!(panel.ui.rect_for(ACHIEVEMENT_PAGE_BASE + 2).is_none());
+        let _ = panel.key(winit::keyboard::KeyCode::KeyF, false, true);
+        assert_eq!(panel.achievement_page, Page::Fun);
+        let _ = panel.key(winit::keyboard::KeyCode::KeyF, false, true);
+        assert_eq!(panel.achievement_page, Page::General);
+    }
+
     /// The Toy Master's found ones are on the Fun page and take its first band with room
     /// (beside Order 66), not a fifth band below the wall, and the wall still reads band
     /// by band.
@@ -675,8 +740,18 @@ mod tests {
             description: Some("Found.".to_owned()),
             group: Some(sjk_identity::wire::TOY_MASTER.to_owned()),
         };
-        let standings = crate::achievements::Record::default()
-            .standings(&[found("secret_wall_a"), found("secret_wall_b")]);
+        let mut held = vec![found("secret_wall_a"), found("secret_wall_b")];
+        held.extend(
+            removed_toys()
+                .into_iter()
+                .map(|id| sjk_identity::Achievement {
+                    group: None,
+                    name: None,
+                    description: None,
+                    ..found(id)
+                }),
+        );
+        let standings = crate::achievements::Record::default().standings(&held);
         let groups = groups(&standings, Page::Fun);
         let master = groups
             .iter()
@@ -703,7 +778,28 @@ mod tests {
     /// seven toys fit four too, two to a band but the last; Hobbies' two share one. Every listed achievement is on one page.
     #[test]
     fn the_wall_packs_the_categories_into_bands() {
-        let standings = standings_holding(&[]);
+        // A new player: the removed toys' achievements are not there (Force Throw's
+        // came back, 21/11/2026), and Hobbies,
+        // Fishing's and Mining's page, leaves the switch.
+        let new = standings_holding(&[]);
+        let fun: Vec<_> = groups(&new, Page::Fun)
+            .iter()
+            .map(|g| (g.category.name(), g.band, g.column, g.members.len()))
+            .collect();
+        assert_eq!(
+            fun,
+            [
+                ("Drone", 0, 0, 2),
+                ("Boombox", 0, 3, 3),
+                ("Force Throw", 1, 0, 6),
+                ("Box hunt", 1, 7, 4)
+            ]
+        );
+        assert!(groups(&new, Page::Hobbies).is_empty());
+        assert_eq!(pages(&new), [Page::General, Page::Fun]);
+        // One who earned them all keeps every one, as before they were retired.
+        let standings = standings_holding(&removed_toys());
+        assert_eq!(pages(&standings), Page::ALL);
         let layout = |page: Page| -> Vec<(&str, usize, usize, usize)> {
             groups(&standings, page)
                 .iter()
@@ -728,7 +824,7 @@ mod tests {
                 ("Hax", 1, 0, 7),
                 ("Drone", 1, 8, 2),
                 ("Boombox", 2, 0, 3),
-                ("Monitor", 2, 4, 6),
+                ("Force Throw", 2, 4, 6),
                 ("Box hunt", 3, 0, 4),
             ]
         );
@@ -742,6 +838,7 @@ mod tests {
                 .flat_map(|page| slots(&groups(standings, *page)).collect::<Vec<_>>())
                 .collect()
         };
+        assert_eq!(all(&new).len(), crate::achievements::OBTAINABLE);
         let slots = all(&standings);
         assert_eq!(slots.len(), crate::achievements::ALL.len() - 1);
         assert!(!slots.iter().any(|slot| slot.index == index_of("surveyor")));
@@ -750,7 +847,9 @@ mod tests {
                 .iter()
                 .all(|slot| slot.column < COLUMNS && slot.band < 4)
         );
-        let holder = standings_holding(&["surveyor"]);
+        let mut everything = removed_toys();
+        everything.push("surveyor");
+        let holder = standings_holding(&everything);
         let slots = all(&holder);
         assert_eq!(slots.len(), crate::achievements::ALL.len());
         assert!(slots.iter().any(|slot| slot.index == index_of("surveyor")));
@@ -837,7 +936,8 @@ mod tests {
     /// has no place; the pages' switch answers too.
     #[test]
     fn the_wall_fits_and_answers_the_pointer() {
-        let standings = crate::achievements::standings(&[]);
+        // Every page at its fullest: the removed toys' achievements held.
+        let standings = standings_holding(&removed_toys());
         let inputs = Inputs {
             standings: &standings,
             ..super::super::tests::inputs(Holdings::Known(&[]), "")
@@ -849,7 +949,7 @@ mod tests {
             [1_440.0, 1_080.0],
             [2_560.0, 1_080.0],
         ] {
-            for page in Page::ALL {
+            for page in pages(&standings) {
                 let mut panel = Panel::new();
                 panel.open(Tab::Achievements, true, true, ReturnTarget::InGame);
                 panel.achievement_page = page;

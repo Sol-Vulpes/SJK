@@ -5,6 +5,7 @@
 
 use super::holocrons_panel::{Data, PanelAction};
 use super::*;
+use crate::profile_hub::Tab;
 use sjk_ui::InputEvent;
 
 /// The `holocrons` command.
@@ -57,19 +58,51 @@ impl ViewerConsole {
         }
     }
 
-    fn holocrons_panel_action(&mut self, action: PanelAction) {
+    pub(super) fn holocrons_panel_action(&mut self, action: PanelAction) {
         match action {
             PanelAction::None => {}
             PanelAction::Close => self.close_holocrons_panel(),
-            PanelAction::Hub(tab) => {
-                let target = self.profile_hub_return;
-                self.open_profile_hub_page(tab, target);
+            PanelAction::Hall => {
+                // Back to the Collection's hall, on the Holocrons tile.
+                if self.holocrons_panel.is_hub() {
+                    let target = self.profile_hub_return;
+                    self.open_profile_hub_page(Tab::Hall, target);
+                } else {
+                    let owns_console = self.holocrons_panel.close();
+                    self.show_collection_panel(
+                        Tab::Hall,
+                        owns_console,
+                        false,
+                        crate::player_menu::ReturnTarget::MainMenu,
+                    );
+                }
+                self.collection_panel
+                    .choose_hall_tile(super::collection_panel::hall::Tile::Holocrons);
             }
             PanelAction::Open(ids) => {
                 if !crate::player_identity::open_holocrons(ids) {
                     self.holocrons_panel.refused(
                         "Holocrons need the SJK identity: switch it on in Settings, Network.",
                         std::time::Instant::now(),
+                    );
+                }
+            }
+            PanelAction::Servers => {
+                // The viewer shows the server list once the page is closed.
+                self.close_holocrons_panel();
+                self.pending_servers = true;
+            }
+            PanelAction::Achievements => {
+                if self.holocrons_panel.is_hub() {
+                    let target = self.profile_hub_return;
+                    self.open_profile_hub_page(Tab::Achievements, target);
+                } else {
+                    let owns_console = self.holocrons_panel.close();
+                    self.show_collection_panel(
+                        Tab::Achievements,
+                        owns_console,
+                        false,
+                        crate::player_menu::ReturnTarget::MainMenu,
                     );
                 }
             }
@@ -156,6 +189,10 @@ impl ViewerConsole {
         }
         let now = std::time::Instant::now();
         self.holocrons_panel.refresh(now, || Data::read(enabled));
+        // The Collection's Inventory asked to open one of the tier chosen.
+        if let Some(action) = self.holocrons_panel.take_open_soon(now) {
+            self.holocrons_panel_action(action);
+        }
         // The opening's answer is looked for every frame only while the page waits.
         if self.holocrons_panel.opening() {
             let outcome = crate::player_identity::opening_outcome();

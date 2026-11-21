@@ -212,6 +212,7 @@ impl GpuState {
     /// nothing while `shown` is false (menus, console, scoreboard, intermission).
     pub(crate) fn append_world_pings(&mut self, viewport: [f32; 2], shown: bool) {
         let shown = shown || forced(&self.world_pings);
+        self.world_pings.edges = self.status_bar.reserved();
         self.world_pings
             .build(self.frame_view, Instant::now(), shown);
         if self.world_pings.list.commands().is_empty() {

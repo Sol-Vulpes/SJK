@@ -6,7 +6,9 @@ pub const LAG_SAMPLES: usize = 128;
 /// One snapshot latency sample and its protocol snapshot flags.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SnapshotSample {
-    /// Round-trip latency in milliseconds, or `-1` for a missing snapshot.
+    /// The snapshot's ping in milliseconds (stock's `snap->ping`,
+    /// [`crate::ClientSession::snapshot_ping`]), `0` when it has none (a demo, a local
+    /// game) or `-1` for a missing snapshot.
     pub ping: i32,
     /// Protocol `snapFlags`; bit zero is `SNAPFLAG_RATE_DELAYED`.
     pub flags: u8,

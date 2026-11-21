@@ -163,10 +163,15 @@ impl Options {
 
 /// Where the chat's messages show, in pixels, with as many lines as `cg_chatBoxLines`
 /// keeps: the box the HUD edit mode drags ([`crate::hud_edit`]) whether messages show
-/// or not.
-pub(crate) fn box_rect(console: Option<&ViewerConsole>, viewport: [f32; 2]) -> sjk_ui::Rect {
+/// or not, inside the room the status bars keep (`edges`).
+pub(crate) fn box_rect(
+    console: Option<&ViewerConsole>,
+    viewport: [f32; 2],
+    edges: crate::status_bar::Reserved,
+) -> sjk_ui::Rect {
     let options = Options::read(console);
-    let geometry = options.geometry(viewport);
+    let mut geometry = options.geometry(viewport);
+    geometry.bottom = geometry.bottom.min(viewport[1] - edges.bottom);
     let lines = options.lines.max(1) as f32;
     let height = geometry.row * lines + geometry.gap * (lines - 1.0);
     sjk_ui::Rect::new(

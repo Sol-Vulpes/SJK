@@ -505,11 +505,15 @@ impl GpuState {
         let out = 1.0 - stage.blades_in.clamp(0.0, 1.0);
         // Where a lone staff's two halves lie on screen, for a click on it to choose one.
         let mut halves = [None; 2];
-        // The Saber Lab lights the blades and puts them out as a match does, a frame's
-        // growth at a time; elsewhere they are out in full.
-        let lit = stage.lab.map(|lab| lab.lit);
-        let clash = stage.lab.map(|lab| lab.clash);
         let millis = (seconds * 1_000.0) as i64;
+        // The Saber Lab lights the blades and puts them out as a match does, a frame's
+        // growth at a time; elsewhere they are out in full, but for a first look in the
+        // Collection, which lights a New kyber held out till then.
+        let lit = stage
+            .lab
+            .map(|lab| lab.lit)
+            .or_else(|| stage.reveal.lit(millis));
+        let clash = stage.lab.map(|lab| lab.clash);
         // On the stage (not in a preview) the blades trail as long as the move the model's
         // torso plays has a match's trail last (a stance none, an attack 200 ms).
         let trail = (trails && !preview).then(|| trail_length(&actor.upper.sequence.name));

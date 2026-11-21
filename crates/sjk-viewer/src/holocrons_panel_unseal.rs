@@ -132,13 +132,19 @@ impl Panel {
         vignette(&mut self.ui, frame, viewport, 0.97);
         let colour = holocrons::slot(tier).colour;
         halo(&mut self.ui, frame, colour, 0.2);
+        // A dormant kyber is attuned, not opened (Sol, 15/11/2026).
+        let words = if holocrons::slot(tier).is_kyber() {
+            "Attuning..."
+        } else {
+            "Opening..."
+        };
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("Opening..."),
+            format_args!("{words}"),
             frame.rect(MIDDLE[0] - 400.0, 690.0, 800.0, 44.0),
             34.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Center,
         );
@@ -193,7 +199,7 @@ impl Panel {
                 format_args!("{} of {count}", index + 1),
                 frame.rect(MIDDLE[0] - 300.0, 124.0, 600.0, 34.0),
                 24.0 * s,
-                color::alpha(color::MUTED, words),
+                color::alpha(color::muted(), words),
                 FontWeight::Regular,
                 TextAlign::Center,
             );
@@ -239,8 +245,8 @@ pub(super) fn vignette(
     let s = frame.s;
     let [cx, cy] = frame.point(MIDDLE[0], MIDDLE[1]);
     let (half_x, half_y) = (CLEAR[0] * 0.5 * s, CLEAR[1] * 0.5 * s);
-    let dark = color::alpha(color::SPACE, alpha);
-    let clear = color::alpha(color::SPACE, 0.0);
+    let dark = color::alpha(color::space(), alpha);
+    let clear = color::alpha(color::space(), 0.0);
     let (left, top) = ((cx - half_x).max(0.0), (cy - half_y).max(0.0));
     let (right, bottom) = (
         (cx + half_x).min(viewport[0]),

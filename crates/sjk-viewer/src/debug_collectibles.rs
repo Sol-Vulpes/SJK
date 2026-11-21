@@ -155,7 +155,7 @@ mod tests {
         assert!(me.achievements.iter().all(|held| held.unlocked > 0));
         let holdings = crate::unlockables::Holdings::of(true, Some(&dressed));
         assert!(crate::unlockables::blade_skins().all(|skin| holdings.can_wear(skin)));
-        // The Unique ones too, which only their holders see otherwise.
+        // The Secret ones too, which only their holders see otherwise.
         assert_eq!(
             holdings.listed_count(),
             crate::unlockables::blade_skins().count()

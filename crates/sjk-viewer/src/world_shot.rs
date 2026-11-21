@@ -19,6 +19,8 @@ pub(crate) fn on_big_stack(shots: impl FnOnce() + Send + 'static) {
 }
 
 thread_local! {
+    /// Draw acrylic backdrops as their plain tint, to time the blur against it.
+    pub(crate) static BACKDROP_OFF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// Keep `GpuState::movers` from frame to frame without a snapshot.
     pub(crate) static MOVERS_PINNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -133,7 +135,10 @@ pub(crate) fn attach_target(gpu: &mut GpuState, size: [u32; 2]) {
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        // Read by the acrylic backdrops' blur, as a Vulkan swapchain image is.
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::TEXTURE_BINDING,
         view_formats: &ui_target::surface_view_formats(format, gpu.context.ui_direct),
     }));
 }
@@ -289,38 +294,24 @@ mod movers;
 #[path = "world_shot_illuminate.rs"]
 mod holocron;
 
-#[path = "world_shot_cardboard_box.rs"]
-mod cardboard_box;
-
-#[path = "world_shot_fishing.rs"]
-mod fishing_shots;
-
 #[path = "world_shot_map_edits.rs"]
 mod map_edit_shots;
 
 #[path = "world_shot_ghost_editor.rs"]
 mod ghost_editor_shots;
 
-#[path = "world_shot_banana.rs"]
-mod banana_shots;
 #[path = "world_shot_body_fade.rs"]
 mod body_fade_shots;
 #[path = "world_shot_boombox.rs"]
 mod boombox_shots;
 #[path = "world_shot_drone.rs"]
 mod drone_shots;
-#[path = "world_shot_hax.rs"]
-mod hax_shots;
 #[path = "world_shot_monitor.rs"]
 mod monitor_shots;
 #[path = "world_shot_mystery_box.rs"]
 mod mystery_box_shots;
-#[path = "world_shot_order66.rs"]
-mod order66_shots;
 #[path = "world_shot_petals.rs"]
 mod petals;
-#[path = "world_shot_propgun.rs"]
-mod propgun_shots;
 #[path = "world_shot_ragdoll.rs"]
 mod ragdoll_shots;
 #[path = "world_shot_toy_master.rs"]
@@ -355,8 +346,23 @@ mod toon_shots;
 #[path = "world_shot_collection.rs"]
 mod collection;
 
+#[path = "world_shot_blade_stills.rs"]
+mod blade_stills_shots;
+
+#[path = "world_shot_collection_perf.rs"]
+mod collection_perf_shots;
+
+#[path = "world_shot_collection_glass.rs"]
+mod collection_glass_shots;
+
+#[path = "world_shot_blade_flicker.rs"]
+mod blade_flicker_shots;
+
 #[path = "world_shot_holocrons.rs"]
 mod holocrons_tab;
+
+#[path = "world_shot_notify_banners.rs"]
+mod notify_banner_shots;
 
 #[path = "world_shot_cards.rs"]
 mod cards_shots;
@@ -379,6 +385,8 @@ mod graphics_reload;
 #[path = "world_shot_saber_kill.rs"]
 mod saber_kill;
 
+#[path = "world_shot_emblem.rs"]
+mod emblem_shots;
 #[path = "world_shot_fps_help.rs"]
 mod fps_help_shots;
 #[path = "world_shot_frame_timings.rs"]
@@ -390,6 +398,8 @@ mod model_sync_shots;
 mod playstyle_card_shots;
 #[path = "world_shot_small_card.rs"]
 mod small_card;
+#[path = "world_shot_status_bar.rs"]
+mod status_bar_shots;
 
 #[path = "world_shot_emote_help.rs"]
 mod emote_help_shots;
@@ -1332,6 +1342,7 @@ Found the fog bug, ask me about it!"
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: "🦊".to_owned(),
             created: 1_791_250_000,
@@ -1406,6 +1417,7 @@ Found the fog bug, ask me about it!"
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -1563,6 +1575,7 @@ like this one.",
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 1_791_250_000,
@@ -1763,13 +1776,13 @@ like this one.",
                 people: 63,
                 toys: [
                     (
-                        crate::fishing::TOY,
+                        crate::drone::TOY,
                         [9, 31, 48],
                         [21_600, 151_200, 412_000],
                         214,
                     ),
                     (
-                        crate::mining::TOY,
+                        crate::quests::TOY,
                         [7, 22, 40],
                         [14_400, 98_000, 301_000],
                         160,
@@ -1786,13 +1799,6 @@ like this one.",
                         [3_000, 21_000, 77_000],
                         61,
                     ),
-                    (
-                        crate::cardboard_box::TOY,
-                        [2, 9, 17],
-                        [900, 8_400, 23_000],
-                        48,
-                    ),
-                    (crate::order66::TOY, [3, 8, 15], [1_200, 7_000, 19_500], 22),
                 ]
                 .into_iter()
                 .map(|(toy, people, secs, uses)| sjk_identity::ToyUse {
@@ -2210,119 +2216,6 @@ like this one.",
         });
     }
 
-    /// The unlock pop-up over play on the live duel6 (no menu), at 1920x1080 and
-    /// 1440x1080: an achievement's card coming in (the ring sweeping, the burst, the
-    /// glint), held and leaving, each moment held still, and a sheet of the top of the
-    /// screen at every moment; a medal's, each holocron tier's and an update's card,
-    /// coming in and held, on a sheet; then an achievement's over the SJK UI's main page.
-    #[test]
-    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
-    fn duel6_unlock_toast() {
-        use crate::unlock_toast::{ENTER, HOLD, LEAVE, Unlock, UnlockToast};
-        on_big_stack(|| {
-            let streak = Unlock::Achievement {
-                kind: crate::achievements::find("streak_5").expect("Rampage"),
-                crystal: true,
-            };
-            let lightning = Unlock::Achievement {
-                kind: crate::achievements::find("dark_side_25").expect("Unlimited Power"),
-                crystal: true,
-            };
-            let mut others = vec![Unlock::Medal {
-                medal: crate::medals::Medal::BugHunter,
-                count: 2,
-                promoted: None,
-            }];
-            for (index, tier) in crate::holocrons::TIERS.iter().enumerate() {
-                others.push(Unlock::Holocron {
-                    tier,
-                    id: index as u64,
-                    gift: index == 0,
-                    earned: None,
-                });
-            }
-            // A kyber crystal an achievement earned.
-            others.push(Unlock::Holocron {
-                tier: &crate::kyber::TIERS[1],
-                id: 9,
-                gift: false,
-                earned: Some(crate::kyber::Earned::of("kills_100")),
-            });
-            others.push(Unlock::Update {
-                version: crate::update::Version::new("2026.1011.1").expect("a version"),
-                manual: false,
-            });
-            let moments = [
-                (0.1, "entering"),
-                (0.25, "landing"),
-                (0.45, "sweep"),
-                (0.7, "burst"),
-                (0.95, "glint"),
-                (2.5, "held"),
-                (ENTER + HOLD + LEAVE * 0.4, "leaving"),
-            ];
-            let cvars = [
-                ("ui_menuStyle", "sjk"),
-                (crate::settings::quick::HIDE_CVAR, "1"),
-            ];
-            for (size, prefix) in [
-                ([1920, 1080], "duel6-achievement"),
-                ([1440, 1080], "duel6-achievement-4x3"),
-            ] {
-                let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, None, &cvars)
-                else {
-                    return;
-                };
-                let tour = menu_backdrop::tour_for("Yavin Training Grounds").expect("the tour");
-                let (yaw, pitch) = look(tour[0].from, tour[0].at);
-                aim(&mut gpu, tour[0].from, yaw, pitch);
-                if let Some(console) = gpu.console.as_mut() {
-                    console.close_for_connection();
-                }
-                let _ = frame(&mut gpu, 60);
-                std::fs::create_dir_all(directory()).expect("the shot directory");
-                let mut tops = Vec::new();
-                for (at, name) in moments {
-                    gpu.unlock_toast = UnlockToast::preview(&[streak, lightning], at);
-                    let image = frame(&mut gpu, 3);
-                    let path = directory().join(format!("{prefix}-{name}.png"));
-                    image.save(&path).expect("write the shot");
-                    println!("{}", path.display());
-                    let width = image.width().min(760);
-                    let x = (image.width() - width) / 2;
-                    tops.push(image::imageops::crop_imm(&image, x, 50, width, 240).to_image());
-                }
-                println!(
-                    "{}",
-                    sheet(&tops, 2, 760, &format!("{prefix}-moments")).display()
-                );
-                let mut cards = Vec::new();
-                for unlock in &others {
-                    for at in [0.7, 2.5] {
-                        gpu.unlock_toast = UnlockToast::preview(&[*unlock], at);
-                        let image = frame(&mut gpu, 3);
-                        let width = image.width().min(760);
-                        let x = (image.width() - width) / 2;
-                        cards.push(image::imageops::crop_imm(&image, x, 50, width, 240).to_image());
-                    }
-                }
-                println!(
-                    "{}",
-                    sheet(&cards, 2, 760, &format!("{prefix}-medal-holocrons")).display()
-                );
-            }
-            let menu = menu::ClientMenu::new(true, String::new());
-            let Some((mut gpu, _profile)) =
-                open("maps/mp/duel6.bsp", [1920, 1080], Some(menu), &cvars)
-            else {
-                return;
-            };
-            let _ = frame(&mut gpu, 10);
-            gpu.unlock_toast = UnlockToast::preview(&[lightning], 2.5);
-            println!("{}", shoot(&mut gpu, 6, "duel6-achievement-menu").display());
-        });
-    }
-
     /// Every scoreboard look with the SJK emblem and medal ribbon bars after the names
     /// of the made-up players the hub knows: classic on a free for all, the SJK UI's on
     /// a free for all and a duel (the bars on a duelist's card).
@@ -2441,7 +2334,7 @@ like this one.",
                 println!("{}", shoot(&mut gpu, 4, name).display());
             }
             // A server's change of map, its world (not the menu's) behind:
-            // the navy ground instead, until the new map is named.
+            // the UI's ground instead, until the new map is named.
             gpu.is_menu_world = false;
             if let Some(menu) = gpu.client_menu.as_mut() {
                 menu.loading_for_shot(Stage::Loading, true, None, true, None);

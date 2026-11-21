@@ -182,7 +182,7 @@ impl Card {
             format_args!("{}", notice.kicker),
             frame.rect(TEXT_X, top + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -192,7 +192,7 @@ impl Card {
             format_args!("{}", notice.title),
             frame.rect(TEXT_X, top + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -203,7 +203,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, body_top + y, TEXT_WIDTH, LINE),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

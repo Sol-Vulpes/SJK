@@ -77,7 +77,7 @@ pub(crate) fn tier_lines(tier: &SeasonTier) -> Vec<String> {
             .iter()
             .position(|rarity| rarity.id == floor)
             .unwrap_or(0);
-        let mut line = format!("Saber shader, guaranteed: {} or better", tier_name(floor));
+        let mut line = format!("Kyber, guaranteed: {} or better", tier_name(floor));
         if let Some(odds) = &tier.shader_tier {
             let kept: Vec<u32> = odds
                 .iter()
@@ -133,7 +133,7 @@ pub(crate) fn notes(tables: Option<&SeasonTables>) -> Vec<String> {
         "A holocron keeps the season it dropped in: an Alpha one opens by the Alpha tables, whenever you open it.".to_owned(),
         "A Beta Uncommon holocron opens as an Alpha one, and counts towards the pity.".to_owned(),
         pity,
-        "The pity raises the guaranteed shader. Tags, banners and shards do not count.".to_owned(),
+        "The pity raises the guaranteed kyber. Tags, banners and shards do not count.".to_owned(),
         "Opening a Beta holocron needs the SJK release that brought Beta, or newer.".to_owned(),
     ]
 }

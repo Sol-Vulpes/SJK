@@ -32,7 +32,7 @@ pub(crate) enum ConsoleStyle {
     #[default]
     Classic,
     /// The SJK UI's console (`sjk`, the deck): the classic console's grid,
-    /// keys and behaviour in a full-width navy panel with a header, a framed
+    /// keys and behaviour in a full-width dark panel with a header, a framed
     /// input band and a lit rail along its bottom edge, in the SJK UI's colours
     /// and type ([`super::sjk`]). What `auto` gives with the SJK UI's menus.
     Sjk,

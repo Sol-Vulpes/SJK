@@ -168,23 +168,15 @@ impl GpuState {
         update(self, presentation_time)?;
         sounds::update(self, presentation_time, audio);
         self.play_emote_sounds(audio);
-        self.play_cardboard_box_sounds(audio);
-        self.play_fishing_sounds(audio);
-        self.play_mining_sounds(audio);
         self.play_quest_sounds(audio);
-        self.play_order66_sounds(audio);
-        self.play_hax_sounds(audio);
         self.play_ragdoll_sounds(audio);
         self.play_drone_sounds(audio);
         self.play_monitor_sounds(audio);
-        self.play_banana_sounds(audio);
         self.play_tag_sounds(audio);
-        self.play_propgun_sounds(audio);
         self.play_boombox_sounds(audio);
         self.play_mystery_box_sounds(audio);
         self.play_wheel_of_doom_sounds(audio);
         self.play_toy_master_sounds(audio);
-        self.spawn_hax_glyphs(audio, presentation_time);
         Ok(())
     }
 
