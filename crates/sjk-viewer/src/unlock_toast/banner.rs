@@ -5,7 +5,7 @@
 //!
 //! - Motion: it comes down from above the screen's top edge on a damped spring ([`ENTER`]
 //!   seconds, settling past its place by a few pixels and back), rests [`HOLD`] seconds
-//!   just under the top edge ([`MARGIN`] below [`top_inset`]) and goes back up out of the
+//!   just under the top edge ([`MARGIN`] below it) and goes back up out of the
 //!   screen, gathering speed ([`LEAVE`]); it never fades out in place. With
 //!   `ui_rarityEffects 0` it fades in and out over a short drift instead ([`FADE_IN`],
 //!   [`FADE_OUT`]), with no spring and its icon's ring already full.
@@ -42,7 +42,8 @@ pub(crate) const FADE_OUT: f32 = 0.3;
 pub(crate) const WIDTH: f32 = 600.0;
 pub(crate) const HEIGHT: f32 = 112.0;
 const RADIUS: f32 = 24.0;
-/// Its top's distance under [`top_inset`].
+/// Its top's distance under the screen's top edge (under the top status bar from
+/// 17/11 to 21/11/2026, which is gone).
 pub(crate) const MARGIN: f32 = 14.0;
 /// The shadow's layers: how far each reaches out and how far it falls, each as dark as
 /// [`SHADOW_ALPHA`].
@@ -85,24 +86,6 @@ const BODY_ROW: [f32; 2] = [61.0, 21.0];
 const NOTE_ROW: [f32; 2] = [82.0, 18.0];
 /// What the header ends with: banners show as things happen.
 const NOW: &str = "now";
-
-thread_local! {
-    /// The top status bar's height this frame ([`set_top_inset`]).
-    static TOP_INSET: std::cell::Cell<f32> = const { std::cell::Cell::new(0.0) };
-}
-
-/// Note where the top status bar ends this frame, in window pixels (0 without it): the
-/// frame sets it before the banner is laid out (`main.rs`, from
-/// `status_bar::State::reserved` while the top bar is drawn).
-pub(crate) fn set_top_inset(pixels: f32) {
-    TOP_INSET.with(|top| top.set(pixels.max(0.0)));
-}
-
-/// Where the top status bar ends, in window pixels: the banner rests [`MARGIN`] under it.
-/// 0 while the bar is not there (the screen's top edge).
-pub(crate) fn top_inset(_viewport: [f32; 2]) -> f32 {
-    TOP_INSET.with(std::cell::Cell::get)
-}
 
 /// How long a banner lasts, coming in, resting and going.
 pub(crate) fn lifetime(reduced: bool) -> f32 {
@@ -209,7 +192,7 @@ pub(crate) fn scale(viewport: [f32; 2]) -> f32 {
 /// The banner's place and size in the window `t` seconds after it began.
 pub(crate) fn rect(viewport: [f32; 2], t: f32, reduced: bool) -> Rect {
     let s = scale(viewport);
-    let rest = top_inset(viewport) + MARGIN * s;
+    let rest = MARGIN * s;
     let travel = if reduced {
         DRIFT * s
     } else {
@@ -581,7 +564,7 @@ mod tests {
             let card = rect(viewport, ENTER + 1.0, false);
             assert!((card.width - WIDTH * s).abs() < 1e-3);
             assert!((card.x + card.width * 0.5 - viewport[0] * 0.5).abs() < 1e-3);
-            assert!((card.y - top_inset(viewport) - MARGIN * s).abs() < 1e-3);
+            assert!((card.y - MARGIN * s).abs() < 1e-3);
             // About a third of the screen across, never its whole width.
             assert!(card.width / viewport[0] < 0.35);
         }

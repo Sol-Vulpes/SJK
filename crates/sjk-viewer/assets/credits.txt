@@ -246,7 +246,7 @@ did: JA+ server mode: SJK's server runs as a JA+ 2.4 B7 server with g_mod japlus
 did: JA+ server mode: its emotes, grappling hook and admins, who log in with their SJK key (after VisionJK)
 did: Lights in map edits: lights added, moved and recoloured for every player, map lamps turned off or moved
 did: Door and lift shadows on lamp light within a fixed budget a frame: no more stutter when they move
-did: Two status bars docked to the screen's edges, the HUD inside them: your wallet, kyber, weapons and time below, the match above
+did: The status bar at the screen's bottom, the HUD above it: your wallet, kyber, weapons, match and time
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

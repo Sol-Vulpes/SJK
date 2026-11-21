@@ -3901,6 +3901,21 @@ PC's clock is read at most once a second into retained text
 
 ## Status bars
 
+**Since 21/11/2026 one bar, at the bottom** (Sol: "merge the new top bar we did with the
+bottom bar, so we only have a bottom bar"; one row, trimmed). The top bar's parts moved
+into it: on the left after the effects the Force powers and the place and score, in the
+centre after the weapons the time left, on the right after the toys the feed, the server's
+name, the map, the game type, the players, the ping and the frame rate, then the time and
+the date (`Part::ALL` is the bar's order). The server's name, the game type and the date
+start off (`Part::on_by_default`; a value saved earlier stays). When room runs out, one
+ranking (`Part::keep`) decides for all 21 parts: the server's name, the game type, the
+date, the toys, the effects and the feed go first, the time left and the clock last.
+`cg_statusBarTop` is retired (dropped from saved settings at load); the top parts keep
+their `cg_statusBarTop*` switch names, so saved choices hold, under "Bar: ..." rows.
+Nothing is kept at the top edge any more (`Reserved::top` is 0), and the notification
+banner rests under the screen's top edge again. What follows describes the two bars of
+16/11 to 21/11/2026; the parts, their looks and the room kept at the bottom still hold.
+
 Two thin bars docked to the screen's edges over play (Sol's requests, 15/11/2026 for the
 first bar, 16/11/2026: "stick it to the top or bottom of the screen, not a bubble ... both
 enabled same time"): full width, flush with the edge, about 28 pixels tall at 1080 lines

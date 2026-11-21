@@ -1202,6 +1202,8 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         // The cardboard box toy's sounds and sight, removed on 20/11/2026.
         "s_toyBoxSound",
         "cg_toyBoxShow",
+        // The top status bar's switch, gone on 21/11/2026 (Sol: one bar, at the bottom).
+        crate::status_bar::RETIRED_TOP_CVAR,
         // The Banana peel toy's switch, sounds and sight, removed on 20/11/2026.
         "cl_toyBanana",
         "s_toyBananaSound",

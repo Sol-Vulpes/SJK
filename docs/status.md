@@ -1,3 +1,16 @@
+## One status bar (21/11/2026)
+
+Step 5 of the season 2 work (the UI upgrade, Sol: "merge the new top bar we did with the
+bottom bar, so we only have a bottom bar"), branch `personal/one-status-bar`. The top bar's
+ten parts joined the bottom bar in one row ([client.md](client.md#status-bars)): one strip
+(`State::bar`) laid out from both inputs (`bar_pieces` merges the two piece lists in
+`Part::ALL`'s order without allocating), one ranking for what goes when room runs out, the
+server's name, game type and date off by default. `cg_statusBarTop` is retired, the top
+edge keeps no room (`Reserved::top` stays for the callers, always 0), and the notification
+banner's top inset went. The changelog's unreleased lines (the bars came after 2026.1117.1)
+describe the one bar. Verified: the viewer's tests, fmt, Clippy (no new warnings), the
+status bar world shots at 1080p, 4K large text, 21:9 and 4:3.
+
 ## Force box, the DOOM coin roll and Force Throw (20-21/11/2026)
 
 Step 4 of the season 2 work (Sol's announcement of 19/11), branch `personal/force-box`.

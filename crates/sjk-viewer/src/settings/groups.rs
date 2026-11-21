@@ -642,7 +642,6 @@ impl Group {
                 const { crate::status_bar::Part::Toys.cvar() },
                 const { crate::status_bar::Part::Time.cvar() },
                 const { crate::status_bar::Part::Date.cvar() },
-                crate::status_bar::TOP_CVAR,
                 const { crate::status_bar::Part::Force.cvar() },
                 const { crate::status_bar::Part::Score.cvar() },
                 const { crate::status_bar::Part::TimeLeft.cvar() },
@@ -828,7 +827,7 @@ impl Group {
                 ("cg_nameplate", "Nameplates"),
                 (crate::world_ping::SHOW_CVAR, "World pings"),
                 ("cg_drawFps", "Readouts"),
-                (crate::status_bar::CVAR, "Status bars"),
+                (crate::status_bar::CVAR, "Status bar"),
                 ("cg_drawChat", "Chat"),
             ],
             Self::Display => &[
@@ -862,7 +861,7 @@ impl Group {
                 ("cg_nameplate", "Nameplates"),
                 (crate::world_ping::SHOW_CVAR, "World pings"),
                 ("cg_drawFps", "Readouts"),
-                (crate::status_bar::CVAR, "Status bars"),
+                (crate::status_bar::CVAR, "Status bar"),
                 (crate::scoreboard::style::CVAR, "Scoreboard"),
             ],
             Self::Advanced(Advanced::Chat) => {
