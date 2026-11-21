@@ -100,7 +100,7 @@ pub(super) fn build(editor: &mut Editor, ui: &mut MenuCanvas, viewport: [f32; 2]
 fn scrim(ui: &mut MenuCanvas, frame: &Frame, viewport: [f32; 2]) {
     let [width, height] = viewport;
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     let (start, dark) = (x(FADE_START).max(0.0), x(FADE_DARK));
     if dark > start {
         fade_across(
@@ -126,7 +126,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, editor: &Editor) {
         format_args!("Ghost editor"),
         frame.rect(COLUMN_X, TITLE_Y - 26.0, COLUMN_WIDTH, 52.0),
         42.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -153,7 +153,7 @@ fn header(ui: &mut MenuCanvas, frame: &Frame, editor: &Editor) {
             value,
             rect,
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -178,7 +178,7 @@ fn ground(ui: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], radius: f32) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: radius * s,
-            color: color::alpha(color::SPACE, 0.6),
+            color: color::alpha(color::space(), 0.6),
         },
     );
     push(
@@ -187,7 +187,7 @@ fn ground(ui: &mut MenuCanvas, frame: &Frame, rect: [f32; 4], radius: f32) {
             rect: frame.rect(x, y, width, height),
             radius: radius * s,
             width: 1.5 * s,
-            color: color::alpha(color::HOLO, 0.35),
+            color: color::alpha(color::holo(), 0.35),
         },
     );
 }
@@ -205,7 +205,7 @@ fn list(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             frame,
             LIST_Y + 16.0,
             format_args!("Record one first: ghost record <name>"),
-            color::MUTED,
+            color::muted(),
         );
     }
     let open = editor.loaded.as_ref().map(|loaded| loaded.name.as_str());
@@ -224,7 +224,7 @@ fn list(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
                 DrawCommand::RoundedRect {
                     rect: frame.rect(COLUMN_X + 6.0, top, COLUMN_WIDTH - 12.0, LIST_ROW),
                     radius: 8.0 * s,
-                    color: color::alpha(color::HOLO, if focused { 0.2 } else { 0.1 }),
+                    color: color::alpha(color::holo(), if focused { 0.2 } else { 0.1 }),
                 },
             );
         }
@@ -234,7 +234,7 @@ fn list(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
                 DrawCommand::RoundedRect {
                     rect: frame.rect(COLUMN_X + 6.0, top + 6.0, 3.0, LIST_ROW - 12.0),
                     radius: 1.5 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 },
             );
         }
@@ -243,9 +243,9 @@ fn list(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             .as_ref()
             .is_ok_and(|(map, _)| map.eq_ignore_ascii_case(&editor.here));
         let name_colour = match (chosen, here) {
-            (true, _) => color::GOLD_BRIGHT,
-            (false, true) => color::TEXT,
-            (false, false) => color::QUIET,
+            (true, _) => color::gold_bright(),
+            (false, true) => color::text(),
+            (false, false) => color::quiet(),
         };
         let text_rect =
             |x: f32, width: f32| frame.rect(x, top + (LIST_ROW - 22.0) * 0.5, width, 22.0);
@@ -276,9 +276,9 @@ fn list(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             Ok((map, millis)) => detail(
                 ui,
                 format_args!("{map}  {:.1} s", seconds(*millis)),
-                if here { color::MUTED } else { color::QUIET },
+                if here { color::muted() } else { color::quiet() },
             ),
-            Err(_) => detail(ui, format_args!("cannot be read"), color::EMBER),
+            Err(_) => detail(ui, format_args!("cannot be read"), color::ember()),
         }
         ui.hit_region(
             token,
@@ -342,7 +342,7 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             frame,
             TIMELINE_Y + 6.0,
             format_args!("Choose a ghost in the list to cut it."),
-            color::MUTED,
+            color::muted(),
         );
         return;
     };
@@ -359,7 +359,7 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             24.0,
         ),
         15.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -383,11 +383,11 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             .take_while(|column| column.0 == motion)
             .count();
         let colour = match motion {
-            Motion::Still => color::alpha(color::HOLO, 0.14),
-            Motion::Ground => color::alpha(color::HOLO, 0.5),
-            Motion::Air => color::alpha(color::HOLO, 0.85),
-            Motion::Talk if loaded.clear_talk => color::alpha(color::EMBER, 0.35),
-            Motion::Talk => color::alpha(color::EMBER, 0.85),
+            Motion::Still => color::alpha(color::holo(), 0.14),
+            Motion::Ground => color::alpha(color::holo(), 0.5),
+            Motion::Air => color::alpha(color::holo(), 0.85),
+            Motion::Talk if loaded.clear_talk => color::alpha(color::ember(), 0.35),
+            Motion::Talk => color::alpha(color::ember(), 0.85),
         };
         push(
             ui,
@@ -436,7 +436,7 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
                 ui,
                 DrawCommand::SolidRect {
                     rect: frame.rect(from, TIMELINE_Y + 3.0, to - from, TIMELINE_HEIGHT - 6.0),
-                    color: color::alpha(color::SPACE, 0.7),
+                    color: color::alpha(color::space(), 0.7),
                 },
             );
         }
@@ -446,12 +446,12 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
         (
             start_x,
             if clean {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             },
         ),
-        (end_x, color::GOLD),
+        (end_x, color::gold()),
     ] {
         push(
             ui,
@@ -519,7 +519,7 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             frame,
             NOTE_Y,
             format_args!("Starts mid-move: the replay may drift or get lost"),
-            color::EMBER,
+            color::ember(),
         );
     } else if !editor.here.is_empty() && !loaded.cut.map().eq_ignore_ascii_case(&editor.here) {
         line(
@@ -527,7 +527,7 @@ fn cut(ui: &mut MenuCanvas, frame: &Frame, editor: &mut Editor) {
             frame,
             NOTE_Y,
             format_args!("Recorded on {}: its path shows there", loaded.cut.map()),
-            color::MUTED,
+            color::muted(),
         );
     }
 }
@@ -560,9 +560,9 @@ fn handle_row(
         frame.rect(COLUMN_X, y + 2.0, 160.0, 26.0),
         19.0 * s,
         if focused {
-            color::TEXT
+            color::text()
         } else {
-            color::alpha(color::TEXT, 0.88)
+            color::alpha(color::text(), 0.88)
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -573,7 +573,7 @@ fn handle_row(
         value,
         frame.rect(COLUMN_X + 120.0, y + 2.0, COLUMN_WIDTH - 120.0, 26.0),
         21.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -612,9 +612,9 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, editor: &Editor) {
             frame.rect(COLUMN_X, BUBBLES_Y - 14.0, 300.0, 28.0),
             19.0 * s,
             if focused {
-                color::TEXT
+                color::text()
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -641,15 +641,15 @@ fn foot(ui: &mut MenuCanvas, frame: &Frame, editor: &Editor) {
         Some((
             editor.status.as_str(),
             if editor.status_error {
-                color::EMBER
+                color::ember()
             } else {
-                color::TEXT
+                color::text()
             },
         ))
     } else if loaded.is_some_and(Loaded::changed) {
         Some((
             "Not saved: Save overwrites it, Duplicate keeps it",
-            color::MUTED,
+            color::muted(),
         ))
     } else {
         None
@@ -770,9 +770,9 @@ fn path(ui: &mut MenuCanvas, loaded: &Loaded, camera: Camera, viewport: [f32; 2]
         };
         let kept = to.index > first && from.index < last;
         let (width, colour) = match (kept, to.talk && !loaded.clear_talk) {
-            (true, true) => (3.0, color::alpha(color::EMBER, 0.9)),
-            (true, false) => (3.0, color::alpha(color::HOLO, 0.9)),
-            (false, _) => (2.0, color::alpha(color::QUIET, 0.45)),
+            (true, true) => (3.0, color::alpha(color::ember(), 0.9)),
+            (true, false) => (3.0, color::alpha(color::holo(), 0.9)),
+            (false, _) => (2.0, color::alpha(color::quiet(), 0.45)),
         };
         push(
             ui,
@@ -789,9 +789,9 @@ fn path(ui: &mut MenuCanvas, loaded: &Loaded, camera: Camera, viewport: [f32; 2]
     let start = loaded.cut.start_at(loaded.first);
     let centre = feet(start.origin);
     let colour = if loaded.cut.is_clean(loaded.first) {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else {
-        color::EMBER
+        color::ember()
     };
     ring(ui, &project, centre, START_RING, 3.0 * s, colour);
     let yaw = super::short_to_degrees(start.view[1]).to_radians();
@@ -817,7 +817,7 @@ fn path(ui: &mut MenuCanvas, loaded: &Loaded, camera: Camera, viewport: [f32; 2]
         feet(loaded.cut.origin(loaded.last)),
         END_RING,
         2.0 * s,
-        color::alpha(color::TEXT, 0.85),
+        color::alpha(color::text(), 0.85),
     );
 }
 
@@ -864,7 +864,7 @@ fn strip(ui: &mut MenuCanvas, name: Option<&str>, viewport: [f32; 2]) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: color::alpha(color::SPACE, 0.78),
+            color: color::alpha(color::space(), 0.78),
         },
     );
     push(
@@ -873,7 +873,7 @@ fn strip(ui: &mut MenuCanvas, name: Option<&str>, viewport: [f32; 2]) {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
             width: 1.5 * s,
-            color: color::alpha(color::HOLO, 0.4),
+            color: color::alpha(color::holo(), 0.4),
         },
     );
     text(
@@ -882,7 +882,7 @@ fn strip(ui: &mut MenuCanvas, name: Option<&str>, viewport: [f32; 2]) {
         format_args!("Ghost editor"),
         frame.rect(x + 20.0, y + 8.0, 300.0, 24.0),
         20.0 * s,
-        color::GOLD_BRIGHT,
+        color::gold_bright(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -893,7 +893,7 @@ fn strip(ui: &mut MenuCanvas, name: Option<&str>, viewport: [f32; 2]) {
             value,
             frame.rect(x + 20.0, y + 34.0, width - 40.0, 22.0),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );

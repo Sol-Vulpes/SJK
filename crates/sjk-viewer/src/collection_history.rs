@@ -146,6 +146,9 @@ pub(super) struct Row {
     pub(super) group: Option<(GroupKey, bool, usize)>,
     /// One of an open group's lines, drawn under it.
     pub(super) inner: bool,
+    /// The tier its frame shows (`crate::menu::sjk::kit::tier_frame`): a holocron's, a
+    /// dormant kyber's or a card's; `None` for a line of no tier (credits, a trade).
+    pub(super) tier: Option<crate::unlockables::Rarity>,
 }
 
 /// What tells a group from the others, kept while what is read changes: its second, its
@@ -380,7 +383,17 @@ pub(super) fn tier_colour(id: &str) -> Color {
     crate::holocrons::any(id)
         .map(|tier| tier.colour)
         .or_else(|| crate::cards::Rarity::from_id(id).map(|rarity| rarity.colour))
-        .unwrap_or(crate::menu::sjk::color::GOLD)
+        .unwrap_or(crate::menu::sjk::color::gold())
+}
+
+/// The tier on the ladder of tier `id`: a holocron's or dormant kyber's, a card's rarity's.
+pub(super) fn tier_of(id: &str) -> Option<crate::unlockables::Rarity> {
+    crate::holocrons::any(id)
+        .map(|tier| crate::menu::sjk::kit::holocron_tier(tier.index))
+        .or_else(|| {
+            crate::cards::Rarity::from_id(id)
+                .map(|rarity| crate::menu::sjk::kit::card_tier(rarity.index))
+        })
 }
 
 /// `id` with its first letter in capitals, `_` made spaces ("kyber_rare" "Kyber rare").
@@ -393,8 +406,8 @@ fn capitalised(id: &str) -> String {
     }
 }
 
-/// The name of tier `id`'s thing, as players read it ("Rare Holocron", "Rare Kyber
-/// Crystal"); a tier this client does not know is a holocron of that name.
+/// The name of tier `id`'s thing, as players read it ("Rare Holocron", "Rare Dormant
+/// Kyber"); a tier this client does not know is a holocron of that name.
 fn thing(id: &str) -> String {
     match crate::holocrons::any(id) {
         Some(tier) => tier.title().into_owned(),
@@ -428,7 +441,7 @@ fn article(word: &str) -> &'static str {
 /// The tier's short name ("Rare"), for a group's counts.
 fn tier_label(id: &str) -> String {
     match crate::holocrons::any(id) {
-        Some(tier) if tier.is_kyber() => format!("{} crystal", tier.label),
+        Some(tier) if tier.is_kyber() => format!("{} dormant kyber", tier.label),
         Some(tier) => tier.label.to_owned(),
         None => capitalised(id),
     }
@@ -475,23 +488,30 @@ pub(super) fn row(line: &HistoryLine) -> Row {
         when: sjk_identity::history::local_date_time(at),
         group: None,
         inner: false,
+        tier: None,
     };
     match line {
-        HistoryLine::Came(came) => base(
-            "Drop",
-            tier_colour(&came.tier),
-            came_text(came),
-            Amount::of(-came.price, "credits").into_iter().collect(),
-        ),
-        HistoryLine::Opened(opened) => base(
-            "Opened",
-            tier_colour(&opened.tier),
-            opened_text(opened),
-            Amount::pair(opened.credits, opened.shards),
-        ),
+        HistoryLine::Came(came) => Row {
+            tier: tier_of(&came.tier),
+            ..base(
+                "Drop",
+                tier_colour(&came.tier),
+                came_text(came),
+                Amount::of(-came.price, "credits").into_iter().collect(),
+            )
+        },
+        HistoryLine::Opened(opened) => Row {
+            tier: tier_of(&opened.tier),
+            ..base(
+                "Opened",
+                tier_colour(&opened.tier),
+                opened_text(opened),
+                Amount::pair(opened.credits, opened.shards),
+            )
+        },
         HistoryLine::Credits(ledger) => base(
             "Credits",
-            color::GOLD,
+            color::gold(),
             credits_text(ledger),
             Amount::of(ledger.delta, "credits").into_iter().collect(),
         ),
@@ -503,11 +523,11 @@ pub(super) fn row(line: &HistoryLine) -> Row {
         ),
         HistoryLine::Box(opened) => base(
             "Box",
-            color::EMBER,
+            color::ember(),
             box_text(opened),
             Amount::pair(opened.won - opened.price, opened.shards),
         ),
-        HistoryLine::Trade(trade) => base("Trade", color::HOLO, trade_text(trade), vec![]),
+        HistoryLine::Trade(trade) => base("Trade", color::holo(), trade_text(trade), vec![]),
     }
 }
 
@@ -556,10 +576,17 @@ fn contents(opened: &OpenedLine) -> Vec<String> {
     parts
 }
 
-/// An opening in a sentence: "Opened a Rare Holocron: card Sol (Holo), Tidal blade".
+/// How an opening is said: a dormant kyber is attuned, the rest opened (Sol, 15/11/2026).
+fn opened_verb(kyber: bool) -> &'static str {
+    if kyber { "Attuned" } else { "Opened" }
+}
+
+/// An opening in a sentence: "Opened a Rare Holocron: card Sol (Holo), Tidal blade",
+/// "Attuned a Rare Dormant Kyber: Sun blade".
 pub(super) fn opened_text(opened: &OpenedLine) -> String {
     let name = thing(&opened.tier);
-    let head = format!("Opened {} {name}", article(&name));
+    let kyber = crate::holocrons::any(&opened.tier).is_some_and(|tier| tier.is_kyber());
+    let head = format!("{} {} {name}", opened_verb(kyber), article(&name));
     let parts = contents(opened);
     if parts.is_empty() {
         head
@@ -722,13 +749,13 @@ pub(super) fn group_row(run: &[&HistoryLine]) -> Row {
         .max_by_key(|id| crate::holocrons::any(id).map_or(0, |tier| tier.slot + 1))
         .copied()
         .unwrap_or("");
+    let all_kyber = tiers
+        .iter()
+        .all(|id| crate::holocrons::any(id).is_some_and(|tier| tier.is_kyber()));
     let noun = if same {
         things(tiers[0], count)
-    } else if tiers
-        .iter()
-        .all(|id| crate::holocrons::any(id).is_some_and(|tier| tier.is_kyber()))
-    {
-        format!("{count} Kyber Crystals")
+    } else if all_kyber {
+        format!("{count} Dormant Kybers")
     } else {
         crate::terms::say_owned(format!("{count} Holocrons"))
     };
@@ -786,7 +813,7 @@ pub(super) fn group_row(run: &[&HistoryLine]) -> Row {
                     if unlocks == 1 { "" } else { "s" }
                 ));
             }
-            let mut text = format!("Opened {noun}{breakdown}");
+            let mut text = format!("{} {noun}{breakdown}", opened_verb(all_kyber));
             if !parts.is_empty() {
                 text.push_str(": ");
                 text.push_str(&parts.join(", "));
@@ -796,6 +823,7 @@ pub(super) fn group_row(run: &[&HistoryLine]) -> Row {
     };
     Row {
         colour: tier_colour(rarest),
+        tier: tier_of(rarest),
         text,
         amounts,
         ..first
@@ -1006,7 +1034,7 @@ pub(crate) mod tests {
                 source: "achievement".into(),
                 ..Came::default()
             }),
-            "Earned a Rare Kyber Crystal from an achievement"
+            "Earned a Rare Dormant Kyber from an achievement"
         );
         assert_eq!(
             came_text(&Came {

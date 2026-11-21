@@ -218,6 +218,17 @@ impl GpuState {
         }
     }
 
+    /// Show the server list for an empty Collection page's "Find a server" (15/11/2026):
+    /// over a match as the game menu's, else the main menu's, as Play shows it.
+    pub(crate) fn open_servers_from_collection(&mut self) {
+        if self.live_session.is_some() {
+            self.open_browser_from_game();
+        } else if let (Some(menu), Some(console)) = (&mut self.client_menu, &self.console) {
+            menu.open_servers(console);
+        }
+        self.sync_cursor_policy();
+    }
+
     pub(crate) fn is_team_game(&self) -> bool {
         self.live_session
             .as_ref()

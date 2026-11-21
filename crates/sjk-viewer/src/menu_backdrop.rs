@@ -667,6 +667,28 @@ pub(crate) fn drive(gpu: &mut GpuState, now: Instant) {
         }
         None => sample,
     };
+    // The Collection's hall: the camera turns until the model stands in the hall's column
+    // on the window's right.
+    let sample = match gpu.menu_stage.hall_turn() {
+        Some((target, share)) => {
+            let size = [
+                gpu.configuration.width as f32,
+                gpu.configuration.height as f32,
+            ];
+            let aspect = size[0] / size[1].max(1.0);
+            let fov = crate::menu_stage::frame_fit_fov(gpu.field_of_view, aspect);
+            let window_x = crate::console::collection_panel::hall::stage_share(size);
+            let framed = window_yaw(sample, target, window_x, fov, aspect);
+            let turn = (framed - sample.yaw + std::f32::consts::PI)
+                .rem_euclid(std::f32::consts::TAU)
+                - std::f32::consts::PI;
+            Sample {
+                yaw: sample.yaw + turn * share,
+                ..sample
+            }
+        }
+        None => sample,
+    };
     gpu.camera_position = sample.origin;
     gpu.camera_yaw = sample.yaw;
     gpu.camera_pitch = sample.pitch;
@@ -712,10 +734,22 @@ const BUILD_FRAME_X: f32 = 0.78;
 /// Collection's frame across, the view `fov` degrees high in a window `aspect` wide: the
 /// frame is 16:9 at most, centred in a wider window.
 pub(crate) fn framed_yaw(sample: Sample, target: Vec3, frame_x: f32, fov: f32, aspect: f32) -> f32 {
-    let way = target - sample.origin;
-    let toward = way.y.atan2(way.x);
     let frame_share = (16.0 / 9.0 / aspect.max(0.01)).min(1.0);
     let window_x = 0.5 + (frame_x - 0.5) * frame_share;
+    window_yaw(sample, target, window_x, fov, aspect)
+}
+
+/// The yaw (radians) that shows `target`, seen from `sample`'s place, at `window_x` of the
+/// window across, the view `fov` degrees high in a window `aspect` wide.
+pub(crate) fn window_yaw(
+    sample: Sample,
+    target: Vec3,
+    window_x: f32,
+    fov: f32,
+    aspect: f32,
+) -> f32 {
+    let way = target - sample.origin;
+    let toward = way.y.atan2(way.x);
     let half_width = (fov.to_radians() * 0.5).tan() * aspect;
     // Turned left of the target by its angle off the middle, the target shows right of it.
     toward + ((2.0 * window_x - 1.0) * half_width).atan()

@@ -790,6 +790,23 @@ lines (Sol's JoF test at 350 FPS, 07/11/2026, a 3 ms frame under 10 to 25 ms of
 minute-to-minute swing); flip it a few times and read the changes. The kept
 snapshots cover 20 seconds at 100 a second for it.
 
+Each snapshot gets stock's ping, `cl.snap.ping`
+([snapshot_ping.rs](../crates/sjk-client/src/snapshot_ping.rs),
+`ClientSession::snapshot_ping`), as `CL_WritePacket` and `CL_ParseSnapshot` make it: every
+move packet leaves its time and the stamp of its newest command in a ring of 256 (stock
+keeps 32, which at 125 packets a second gives 999 past a 256 ms round trip), stamps of 0
+(the map load's) left out; a snapshot read walks back from the newest packet to the first
+whose stamp its `ps.commandTime` has reached and takes the time since it left, 999 when none
+has. A new game state clears the ring, and a local game, which sends no packet, has no
+ping. The server runs a packet's commands as it arrives, so the ping is a round trip plus
+up to one packet interval at the server (a later packet would have been the one found) and
+up to a frame before the client reads the snapshot: the same parts as the server's own
+measure on the scoreboard (`SV_CalcPings`, a snapshot's leaving to the packet that
+acknowledges it), the other way round. The lagometer graphs it and the top bar averages it
+([client.md](client.md#status-bars)). A server without `sv_pingFix` times
+acknowledgements by its frame clock, so its scoreboard reads in whole frames' steps that
+the client cannot reproduce.
+
 `rate` defaults to 90000 bytes a second (11/10/2026, Sol's choice): stock's 25000
 leaves about 600 bytes a snapshot at a server's 40 a second, less than a busy
 free-for-all's snapshot, so the server delayed snapshots and other players looked

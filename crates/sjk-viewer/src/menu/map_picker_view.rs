@@ -72,7 +72,7 @@ impl CreateGameMenu {
             header,
             frame.rect(NAME_X, HEADER_TOP, 560.0, HEADER_HEIGHT),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -87,13 +87,13 @@ impl CreateGameMenu {
                 HEADER_HEIGHT,
             ),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
         let _ = ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LIST_X, HEADER_TOP + HEADER_HEIGHT, LIST_WIDTH, 1.0),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         });
         let (first, selected) = (self.picker.first(), self.picker.selected());
         for slot in 0..VISIBLE.min(shown.saturating_sub(first)) {
@@ -110,7 +110,7 @@ impl CreateGameMenu {
                 let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(LIST_X, top, LIST_WIDTH, ROW),
                     radius: 10.0 * s,
-                    color: color::alpha(color::HOLO, 0.05),
+                    color: color::alpha(color::holo(), 0.05),
                 });
             }
             if entry.name == self.draft.map {
@@ -131,7 +131,7 @@ impl CreateGameMenu {
                 if chosen {
                     Color::new(1.0, 1.0, 1.0, 1.0)
                 } else {
-                    color::alpha(color::TEXT, 0.88)
+                    color::alpha(color::text(), 0.88)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -143,7 +143,11 @@ impl CreateGameMenu {
                     format_args!("{}", entry.name),
                     frame.rect(FILE_RIGHT - FILE_WIDTH, top, FILE_WIDTH, ROW),
                     18.0 * s,
-                    if chosen { color::TEXT } else { color::MUTED },
+                    if chosen {
+                        color::text()
+                    } else {
+                        color::muted()
+                    },
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -157,13 +161,13 @@ impl CreateGameMenu {
                 format_args!("No map matches \u{201c}{filter}\u{201d}."),
                 frame.rect(NAME_X, ROWS_TOP + 8.0, LIST_WIDTH - 56.0, 36.0),
                 19.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
         }
         if shown > VISIBLE {
-            ui.scrollbar(
+            ui.sjk_scrollbar(
                 SCROLLBAR_TOKEN,
                 frame.rect(
                     LIST_X + LIST_WIDTH + 14.0,
@@ -194,7 +198,7 @@ impl CreateGameMenu {
                 format_args!("{}", entry.title),
                 frame.rect(DETAIL_X, NAME_TOP, DETAIL_WIDTH, 40.0),
                 32.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -204,7 +208,7 @@ impl CreateGameMenu {
                 format_args!("Game types"),
                 frame.rect(DETAIL_X, MODES_TOP, DETAIL_WIDTH, 20.0),
                 14.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -229,7 +233,7 @@ impl CreateGameMenu {
                         26.0,
                     ),
                     18.0 * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );

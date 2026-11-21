@@ -232,7 +232,7 @@ impl Card {
             format_args!("FPS"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -242,7 +242,7 @@ impl Card {
             format_args!("{headline}"),
             frame.rect(TEXT_X, CARD_TOP + 66.0, TEXT_WIDTH, 48.0),
             36.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -253,7 +253,7 @@ impl Card {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, *line_y, TEXT_WIDTH, LINE),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -268,7 +268,11 @@ impl Card {
             format_args!("Don't suggest this again"),
             frame.rect(after + 12.0, middle - 14.0, 260.0, 28.0),
             18.0 * s,
-            if ticked { color::TEXT } else { color::MUTED },
+            if ticked {
+                color::text()
+            } else {
+                color::muted()
+            },
             FontWeight::Regular,
             TextAlign::Start,
         );

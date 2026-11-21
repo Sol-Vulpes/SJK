@@ -611,7 +611,7 @@ pub trait Hub: Send {
         _last: bool,
     ) -> Result<crate::wire::ShatterAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not shatter shaders".to_owned(),
+            "this hub client does not shatter kybers".to_owned(),
         ))
     }
 
@@ -622,7 +622,7 @@ pub trait Hub: Send {
         _identity: &Identity,
     ) -> Result<crate::wire::ShatterAllAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not shatter shaders".to_owned(),
+            "this hub client does not shatter kybers".to_owned(),
         ))
     }
 
@@ -636,7 +636,7 @@ pub trait Hub: Send {
         _last: bool,
     ) -> Result<crate::wire::ShatterAllAnswer, (HubError, Option<String>)> {
         Err((
-            HubError::Protocol("this hub client does not shatter shaders".to_owned()),
+            HubError::Protocol("this hub client does not shatter kybers".to_owned()),
             None,
         ))
     }
@@ -648,7 +648,7 @@ pub trait Hub: Send {
         _id: &str,
     ) -> Result<crate::wire::CraftAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not craft shaders".to_owned(),
+            "this hub client does not craft kybers".to_owned(),
         ))
     }
 
@@ -661,7 +661,7 @@ pub trait Hub: Send {
         _ids: &[String],
     ) -> Result<crate::wire::FuseAnswer, HubError> {
         Err(HubError::Protocol(
-            "this hub client does not fuse shaders".to_owned(),
+            "this hub client does not fuse kybers".to_owned(),
         ))
     }
 
@@ -786,6 +786,19 @@ pub trait Hub: Send {
     ) -> Result<crate::mystery_box::OpenAnswer, HubError> {
         Err(HubError::Protocol(
             "this hub client does not open mystery boxes".to_owned(),
+        ))
+    }
+
+    /// Roll a DOOM coin at mystery box `id`, which the player stands at on `server`
+    /// (`POST /v1/mystery-box/doom`, the Force box's held Use, since 20/11/2026).
+    fn doom_mystery_box(
+        &mut self,
+        _identity: &Identity,
+        _id: i64,
+        _server: &str,
+    ) -> Result<crate::wheel_of_doom::DoomAnswer, HubError> {
+        Err(HubError::Protocol(
+            "this hub client does not roll DOOM coins".to_owned(),
         ))
     }
 
@@ -2481,6 +2494,20 @@ impl Hub for HttpHub {
             Some(identity),
             "POST",
             "/v1/mystery-box/open",
+            Some(json!({ "box": id, "server": server })),
+        )?)
+    }
+
+    fn doom_mystery_box(
+        &mut self,
+        identity: &Identity,
+        id: i64,
+        server: &str,
+    ) -> Result<crate::wheel_of_doom::DoomAnswer, HubError> {
+        parse(self.send(
+            Some(identity),
+            "POST",
+            "/v1/mystery-box/doom",
             Some(json!({ "box": id, "server": server })),
         )?)
     }

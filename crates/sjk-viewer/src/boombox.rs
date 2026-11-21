@@ -768,7 +768,7 @@ pub(crate) fn instance(
 pub(crate) fn place_spot(
     origin: Vec3,
     yaw: f32,
-    mut trace: impl FnMut(Vec3, Vec3) -> Option<crate::banana::Ground>,
+    mut trace: impl FnMut(Vec3, Vec3) -> Option<crate::floor_spot::Ground>,
 ) -> Option<Vec3> {
     let yaw = yaw.to_radians();
     let way = Vec3::new(yaw.cos(), yaw.sin(), 0.0);
@@ -792,7 +792,7 @@ pub(crate) fn place_spot(
 /// there is none, or it is too steep or sky.
 pub(crate) fn floor_under(
     from: Vec3,
-    trace: &mut impl FnMut(Vec3, Vec3) -> Option<crate::banana::Ground>,
+    trace: &mut impl FnMut(Vec3, Vec3) -> Option<crate::floor_spot::Ground>,
 ) -> Option<Vec3> {
     trace(from, from - Vec3::Z * FLOOR_SEARCH)
         .filter(|floor| floor.normal.z >= FLAT_ENOUGH && !floor.sky)
@@ -988,7 +988,7 @@ impl GpuState {
         };
         let origin = Vec3::from_array(state.origin);
         let yaw = state.view_angles[1];
-        let Some(rest) = place_spot(origin, yaw, |from, to| self.banana_trace(from, to)) else {
+        let Some(rest) = place_spot(origin, yaw, |from, to| self.floor_trace(from, to)) else {
             self.boombox_centre("Nowhere to put the boombox down here");
             return;
         };
@@ -1037,7 +1037,7 @@ impl GpuState {
     pub(crate) fn place_boombox_at(&mut self, at: Vec3, yaw: f32) -> Result<String, String> {
         self.boombox_may_put_down()?;
         let rest = floor_under(at + Vec3::Z * 16.0, &mut |from, to| {
-            self.banana_trace(from, to)
+            self.floor_trace(from, to)
         })
         .ok_or("No floor flat enough there for the boombox")?;
         if !self.boombox_put_down(rest, yaw) {
@@ -1109,7 +1109,7 @@ impl GpuState {
         let mut rested = Vec::new();
         for (slot, event) in heard {
             let rest = match &event {
-                Event::Put(spot) => self.banana_rest(spot.at).0,
+                Event::Put(spot) => self.floor_rest(spot.at).0,
                 _ => Vec3::ZERO,
             };
             rested.push((slot, event, rest));
@@ -1776,11 +1776,11 @@ mod tests {
 
     /// A floor at height 0 everywhere but over the pit (x past 100), and a wall at x 30
     /// when `wall`; traced as a point.
-    fn world(wall: bool) -> impl FnMut(Vec3, Vec3) -> Option<crate::banana::Ground> {
+    fn world(wall: bool) -> impl FnMut(Vec3, Vec3) -> Option<crate::floor_spot::Ground> {
         move |from: Vec3, to: Vec3| {
             if wall && from.x < 30.0 && to.x >= 30.0 {
                 let s = (30.0 - from.x) / (to.x - from.x);
-                return Some(crate::banana::Ground {
+                return Some(crate::floor_spot::Ground {
                     stop: from.lerp(to, s),
                     normal: Vec3::NEG_X,
                     sky: false,
@@ -1788,7 +1788,7 @@ mod tests {
             }
             (from.z > 0.0 && to.z <= 0.0 && from.x <= 100.0).then(|| {
                 let s = from.z / (from.z - to.z);
-                crate::banana::Ground {
+                crate::floor_spot::Ground {
                     stop: from.lerp(to, s),
                     normal: Vec3::Z,
                     sky: false,

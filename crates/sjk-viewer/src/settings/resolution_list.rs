@@ -186,7 +186,7 @@ impl SettingsMenu {
             format_args!("Resolution"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -196,7 +196,7 @@ impl SettingsMenu {
             format_args!("{}", self.picker.note()),
             frame.rect(TEXT_X, CARD_TOP + 88.0, TEXT_WIDTH, 26.0),
             18.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -239,9 +239,9 @@ impl SettingsMenu {
                 frame.rect(TEXT_X + 8.0, middle - 15.0, SIZE_WIDTH, 30.0),
                 23.0 * s,
                 match (selected, in_use) {
-                    (true, _) => color::TEXT,
-                    (false, true) => color::GOLD_BRIGHT,
-                    (false, false) => color::alpha(color::TEXT, 0.88),
+                    (true, _) => color::text(),
+                    (false, true) => color::gold_bright(),
+                    (false, false) => color::alpha(color::text(), 0.88),
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -260,9 +260,9 @@ impl SettingsMenu {
                 frame.rect(tags_x, middle - 12.0, right - DOT_ROOM - tags_x, 24.0),
                 16.0 * s,
                 if in_use {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::MUTED
+                    color::muted()
                 },
                 FontWeight::Regular,
                 TextAlign::End,
@@ -270,7 +270,7 @@ impl SettingsMenu {
             if in_use {
                 self.resolution_shape(
                     [right - 10.0, middle - 4.0, 8.0, 8.0],
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     frame,
                 );
             }
@@ -283,10 +283,10 @@ impl SettingsMenu {
             let track = [CARD_X + CARD_WIDTH - 20.0, ROWS_TOP, 4.0, page as f32 * ROW];
             let thumb = (page as f32 / count as f32).clamp(0.08, 1.0) * track[3];
             let travel = (track[3] - thumb) * first as f32 / (count - page) as f32;
-            self.resolution_shape(track, color::alpha(color::HOLO, 0.12), frame);
+            self.resolution_shape(track, color::alpha(color::holo(), 0.12), frame);
             self.resolution_shape(
                 [track[0], track[1] + travel, track[2], thumb],
-                color::alpha(color::HOLO, 0.55),
+                color::alpha(color::holo(), 0.55),
                 frame,
             );
         }

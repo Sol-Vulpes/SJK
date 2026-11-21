@@ -1,6 +1,7 @@
 //! The Monitor, SJK's meme toy (`toy_monitor`; Sol's idea, 26/10/2026, after the old
 //! sandbox-game joke of hurling a big CRT monitor at someone): a player with the toy on
-//! throws an old square monitor (`monitor_throw`, [`MODEL`]); one that hits another
+//! throws an old square monitor (`monitor_throw`; since 21/11/2026 Force Throw, which
+//! hurls Jedi Academy's own junk instead, [`JUNK`]); one that hits another
 //! player who has the toy on too knocks them down as a ragdoll and sends them flying,
 //! the way the monitor struck them.
 //!
@@ -31,7 +32,7 @@
 //!
 //! - **Busy:** nobody is struck while typing (a key catcher open: the chat, the
 //!   console, a menu, the talk balloon's `EF_TALK` for others) or away (alt-tabbed or
-//!   idle, or an away tag in their name, as the Hax reads it): a monitor passes through.
+//!   idle, or an away tag in their name: `toy_rules`): a monitor passes through.
 //! - **Foreseen:** every SJK client also tries each monitor against the other players
 //!   who have the toy on (their look says so) as it sees them, and on a hit knocks
 //!   their body down and bounces the monitor at once, as a shooter shows a hit before
@@ -83,22 +84,79 @@ pub(crate) const SHOW_CVAR: &str = "cg_toyMonitorShow";
 pub(crate) const TOY: &str = "monitor";
 /// The toy's icon (quick wheel, Collection, key bindings).
 pub(crate) const ICON: &str = "gfx/sjk/toy_monitor.png";
-/// The monitor: an old beige CRT, 20 units wide, its screen facing +X, its centre at
-/// the origin.
-pub(crate) const MODEL: &str = "models/sjk/monitor.md3";
-/// Heard as a monitor leaves the hand, as it strikes a body, and as it knocks on the
-/// world (all made by `scripts/monitor_assets.py`).
-pub(crate) const THROW_SOUND: &str = "sound/sjk/monitor/throw.wav";
-pub(crate) const BONK_SOUND: &str = "sound/sjk/monitor/bonk.wav";
-pub(crate) const KNOCK_SOUND: &str = "sound/sjk/monitor/knock.wav";
-/// Heard by the thrower while a throw charges; heard as a charged throw leaves the
-/// hand; heard by the thrower when their monitor strikes someone.
-pub(crate) const CHARGE_SOUND: &str = "sound/sjk/monitor/charge.wav";
-pub(crate) const THROW_HARD_SOUND: &str = "sound/sjk/monitor/throw_hard.wav";
+/// What Force Throw hurls (Sol, 21/11/2026: the Monitor reworked, an old CRT monitor
+/// of SJK's own thrown before): Jedi Academy's own junk, read from the player's game by
+/// path, never shipped. Each throw's from its thrower and number ([`junk_of`]), the same
+/// on every client, drawn scaled to the flight's body (`flight::SHAPE`, about 22 units)
+/// and centred on it, so the throw flies and strikes as the monitor did.
+pub(crate) struct Junk {
+    pub(crate) model: &'static str,
+    /// Its size against the model's own.
+    scale: f32,
+    /// It bursts into [`CHUNKS`] where it comes to rest (a crate).
+    bursts: bool,
+}
+
+pub(crate) const JUNK: [Junk; 3] = [
+    Junk {
+        model: "models/map_objects/imperial/crate_banded.md3",
+        scale: 0.72,
+        bursts: true,
+    },
+    Junk {
+        model: "models/map_objects/imperial/r5destroyed.md3",
+        scale: 0.48,
+        bursts: false,
+    },
+    Junk {
+        model: "models/map_objects/imperial/gonkdestroyed.md3",
+        scale: 0.43,
+        bursts: false,
+    },
+];
+
+/// The pieces a crate bursts into (Jedi Academy's own).
+pub(crate) const CHUNKS: [&str; 4] = [
+    "models/chunks/crate/crate1_1.md3",
+    "models/chunks/crate/crate1_2.md3",
+    "models/chunks/crate/crate1_3.md3",
+    "models/chunks/crate/crate1_4.md3",
+];
+
+/// Which of [`JUNK`] throw `number` of the player in `thrower` hurls.
+fn junk_index(thrower: u8, number: u8) -> usize {
+    (usize::from(thrower) * 7 + usize::from(number)) % JUNK.len()
+}
+
+/// The junk of throw `number` of the player in `thrower`.
+pub(crate) fn junk_of(thrower: u8, number: u8) -> &'static Junk {
+    &JUNK[junk_index(thrower, number)]
+}
+
+// Its sounds: Jedi Academy's own (the Monitor's synthesized ones before), but for the
+// thrower's hit tick, which is SJK's (`scripts/force_throw_assets.py`).
+/// Heard as junk leaves the hand (a Force push), as it strikes a body, and as it knocks
+/// on the world.
+pub(crate) const THROW_SOUND: &str = "sound/weapons/force/push.mp3";
+pub(crate) const BONK_SOUND: &str = "sound/weapons/explosions/debris1.wav";
+pub(crate) const KNOCK_SOUND: &str = "sound/weapons/explosions/smalldebris.wav";
+/// Heard by the thrower while a throw charges (Force jump's build-up); heard as a
+/// charged throw leaves the hand (the same push); heard by the thrower when their throw
+/// strikes someone.
+pub(crate) const CHARGE_SOUND: &str = "sound/weapons/force/jumpbuild.mp3";
+pub(crate) const THROW_HARD_SOUND: &str = THROW_SOUND;
 pub(crate) const HIT_SOUND: &str = "sound/sjk/monitor/hit.wav";
-/// Heard as a Screen Saver rises (a CRT's degauss) and as it ends (its power-off).
-pub(crate) const SAVER_ON_SOUND: &str = "sound/sjk/monitor/saver_on.wav";
-pub(crate) const SAVER_OFF_SOUND: &str = "sound/sjk/monitor/saver_off.wav";
+/// Heard as a Force Barrier rises (Force Absorb's) and as it ends.
+pub(crate) const SAVER_ON_SOUND: &str = "sound/weapons/force/absorb.mp3";
+pub(crate) const SAVER_OFF_SOUND: &str = "sound/weapons/force/noforce.mp3";
+/// Heard as a crate bursts.
+pub(crate) const BURST_SOUND: &str = "sound/weapons/explosions/cratebust1.wav";
+/// How many pieces a crate bursts into, how long they last (fading over the last
+/// [`CHUNK_FADE`]), and how fast they fly out (units a second).
+const CHUNK_COUNT: usize = 8;
+const CHUNK_LIFE: f32 = 2.0;
+const CHUNK_FADE: f32 = 0.5;
+const CHUNK_SPEED: f32 = 220.0;
 /// The throw event: this, then [`Event::text`]'s numbers.
 const THROW_PREFIX: &str = "throw_";
 /// How fast a monitor leaves the hand, units a second (the thrower's speed added).
@@ -183,8 +241,6 @@ const CHARGE_SOURCE: sjk_audio::SourceId = sjk_audio::SourceId(0x5100_0001);
 const CHARGE_CHANNEL: sjk_audio::ChannelId = sjk_audio::ChannelId(1);
 /// The numbers of a player's monitors go round this many.
 const NUMBERS: u8 = 100;
-// A banana peel's slip names no monitor by a number past them all.
-const _: () = assert!(NUMBERS < crate::ragdoll::UNTHROWN);
 const SLOTS: usize = crate::looks::SLOTS;
 
 /// A bundled file's bytes, by its name in `assets/monitor`.
@@ -194,20 +250,10 @@ macro_rules! bundled {
     };
 }
 
-/// The bundled files at their game paths (made by `scripts/monitor_assets.py`).
-const FILES: [(&str, &[u8]); 12] = [
-    (MODEL, bundled!("monitor.md3")),
-    ("models/sjk/monitor.jpg", bundled!("monitor.jpg")),
-    ("shaders/sjk_monitor.shader", bundled!("monitor.shader")),
+/// The bundled files at their game paths (made by `scripts/force_throw_assets.py`).
+const FILES: [(&str, &[u8]); 2] = [
     (ICON, bundled!("toy_monitor.png")),
-    (THROW_SOUND, bundled!("throw.wav")),
-    (BONK_SOUND, bundled!("bonk.wav")),
-    (KNOCK_SOUND, bundled!("knock.wav")),
-    (CHARGE_SOUND, bundled!("charge.wav")),
-    (THROW_HARD_SOUND, bundled!("throw_hard.wav")),
     (HIT_SOUND, bundled!("hit.wav")),
-    (SAVER_ON_SOUND, bundled!("saver_on.wav")),
-    (SAVER_OFF_SOUND, bundled!("saver_off.wav")),
 ];
 
 /// Mount the bundled files.
@@ -269,6 +315,65 @@ struct Shown {
     told: u64,
     rest: Option<Instant>,
     knocked: Option<Instant>,
+    /// It burst into pieces as it came to rest (a crate): it is gone.
+    burst: bool,
+}
+
+/// A piece of a crate that burst: which of [`CHUNKS`], where it began, how it flies and
+/// turns, the floor it stops on, and since when.
+struct Chunk {
+    model: usize,
+    from: Vec3,
+    velocity: Vec3,
+    axis: Vec3,
+    spin: f32,
+    floor: f32,
+    born: Instant,
+}
+
+impl Chunk {
+    /// Where it is and how it is turned `seconds` after the burst, and how much shows
+    /// (0: gone).
+    fn pose(&self, seconds: f32) -> (Vec3, glam::Quat, f32) {
+        let gravity = 800.0;
+        // It falls until it reaches the floor, and lies there.
+        let landing = {
+            let (a, b, c) = (-0.5 * gravity, self.velocity.z, self.from.z - self.floor);
+            (-b - (b * b - 4.0 * a * c).max(0.0).sqrt()) / (2.0 * a)
+        };
+        let flying = seconds.min(landing.max(0.0));
+        let at = self.from
+            + self.velocity * flying
+            + Vec3::new(0.0, 0.0, -0.5 * gravity * flying * flying);
+        let turn = glam::Quat::from_axis_angle(self.axis, self.spin * flying);
+        let level = ((CHUNK_LIFE - seconds) / CHUNK_FADE).clamp(0.0, 1.0);
+        (at, turn, level)
+    }
+}
+
+/// The pieces of a crate bursting at `at`, its floor `floor`, at `now`, flung out the
+/// same way for the same `seed`.
+fn burst(at: Vec3, floor: f32, seed: u32, now: Instant) -> impl Iterator<Item = Chunk> {
+    let mut state = seed.wrapping_mul(0x9E37_79B9) | 1;
+    let mut next = move || {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        (state >> 8) as f32 / (1 << 24) as f32
+    };
+    (0..CHUNK_COUNT).map(move |index| {
+        let angle = (index as f32 + next() * 0.6) / CHUNK_COUNT as f32 * std::f32::consts::TAU;
+        let out = Vec3::new(angle.cos(), angle.sin(), 0.0);
+        Chunk {
+            model: index % CHUNKS.len(),
+            from: at + out * 4.0,
+            velocity: out * CHUNK_SPEED * (0.5 + next()) + Vec3::Z * (150.0 + 150.0 * next()),
+            axis: Vec3::new(next() - 0.5, next() - 0.5, next() - 0.5).normalize_or(Vec3::Z),
+            spin: 6.0 + 8.0 * next(),
+            floor,
+            born: now,
+        }
+    })
 }
 
 impl Shown {
@@ -280,11 +385,15 @@ impl Shown {
             told: 0,
             rest: None,
             knocked: None,
+            burst: false,
         }
     }
 
     /// How much of it shows (it fades out once it has lain [`LINGER`]); 0: gone.
     fn level(&self) -> f32 {
+        if self.burst {
+            return 0.0;
+        }
         self.rest.map_or(1.0, |rest| {
             let over = rest.elapsed().saturating_sub(LINGER).as_secs_f32();
             (1.0 - over / FADE).max(0.0)
@@ -379,6 +488,8 @@ pub(crate) struct Monitor {
     own_struck: Vec<(u8, u64)>,
     /// The Drone's landing a hit already counted for Special Delivery.
     delivered: Option<Instant>,
+    /// The pieces of crates that burst, flying or lying.
+    chunks: Vec<Chunk>,
 }
 
 /// Special Delivery: how soon after the Drone landed the player it watched must be hit.
@@ -452,6 +563,7 @@ impl Monitor {
     fn leave(&mut self) {
         self.server = None;
         self.shown.clear();
+        self.chunks.clear();
         self.struck = None;
         self.tell_at = None;
         self.mark = None;
@@ -661,7 +773,7 @@ impl GpuState {
     pub(crate) fn toggle_monitor(&mut self) {
         self.monitor.toggle();
         self.monitor_centre(&crate::toy_switch_words::switched(
-            "Monitor",
+            "Force Throw",
             self.monitor.on(),
         ));
     }
@@ -700,9 +812,9 @@ impl GpuState {
     /// Why the player may not throw now, if they may not.
     fn monitor_refusal(&self) -> Option<&'static str> {
         if !self.monitor.on {
-            Some("Turn the Monitor toy on to throw one")
+            Some("Turn the Force Throw toy on to throw")
         } else if self.ragdoll.on() || !self.ragdoll.strikable() {
-            Some("No monitor right now")
+            Some("No Force throw right now")
         } else {
             None
         }
@@ -750,7 +862,7 @@ impl GpuState {
             .config_string(0)
             .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
             .unwrap_or(0);
-        self.monitor.duel = crate::order66::duelling(&session.latest_snapshot().player, gametype);
+        self.monitor.duel = crate::toy_rules::duelling(&session.latest_snapshot().player, gametype);
         self.monitor.unseen = self
             .console
             .as_ref()
@@ -957,7 +1069,7 @@ impl GpuState {
         self.monitor.saver = Some(own);
         crate::player_identity::toy_event(TOY, &saver::event(Some(own.until)), by);
         self.monitor_saver_cue(SAVER_ON_SOUND, None);
-        self.monitor_centre("^3SCREEN SAVER^7: monitors pass through you for 30 seconds");
+        self.monitor_centre("^5FORCE BARRIER^7: thrown junk passes through you for 30 seconds");
     }
 
     /// The player's monitor struck the player in `slot` at `at`, by their word: during
@@ -1258,7 +1370,7 @@ impl GpuState {
             || self.monitor.saver_holds(self.monitor.time)
             || !self.ragdoll.strikable()
             || self.talk_button()
-            || self.hax_own_away()
+            || self.own_away()
         {
             return None;
         }
@@ -1398,6 +1510,23 @@ impl GpuState {
                 });
             }
             if shown.flight.asleep() {
+                // A crate bursts where it comes to rest.
+                if shown.rest.is_none() && junk_of(shown.thrower, shown.number).bursts {
+                    let at = shown.flight.centre();
+                    let seed = u32::from(shown.thrower) << 8 | u32::from(shown.number);
+                    self.monitor.chunks.extend(burst(
+                        at,
+                        at.z - flight::RADIUS * 0.6,
+                        seed,
+                        Instant::now(),
+                    ));
+                    self.monitor.cues.push(Cue {
+                        path: BURST_SOUND,
+                        at: Some(at),
+                        volume: 1.0,
+                    });
+                    shown.burst = true;
+                }
                 shown.rest.get_or_insert_with(Instant::now);
             }
         }
@@ -1456,17 +1585,36 @@ impl GpuState {
 
     /// Add this frame's monitors, between their last two steps.
     pub(crate) fn submit_monitors(&mut self, presentation_time: i64) {
+        let now = Instant::now();
+        self.monitor
+            .chunks
+            .retain(|chunk| now.duration_since(chunk.born).as_secs_f32() < CHUNK_LIFE);
         if self.monitor.duel || self.monitor.unseen {
             return;
         }
-        let Some(mesh) = self
-            .object_meshes
-            .iter()
-            .position(|mesh| mesh.appearance.model == MODEL)
-        else {
-            return;
+        let mesh_of = |model: &str| {
+            self.object_meshes
+                .iter()
+                .position(|mesh| mesh.appearance.model == model)
         };
+        let junk: [Option<usize>; 3] = JUNK.each_ref().map(|junk| mesh_of(junk.model));
+        let chunks: [Option<usize>; 4] = CHUNKS.map(mesh_of);
+        for chunk in &self.monitor.chunks {
+            let Some(mesh) = chunks[chunk.model] else {
+                continue;
+            };
+            let (at, turn, level) = chunk.pose(now.duration_since(chunk.born).as_secs_f32());
+            self.object_groups[mesh].push(ActorInstance::new(
+                at.to_array(),
+                turn.to_array(),
+                [level; 3],
+            ));
+        }
         for shown in &self.monitor.shown {
+            let kind = junk_of(shown.thrower, shown.number);
+            let Some(mesh) = junk[junk_index(shown.thrower, shown.number)] else {
+                continue;
+            };
             let since = (presentation_time - i64::from(shown.flight.throw().moment)).max(0);
             let fraction = if shown.flight.asleep() {
                 1.0
@@ -1474,10 +1622,13 @@ impl GpuState {
                 (since % i64::from(STEP_MS)) as f32 / STEP_MS as f32
             };
             let (centre, turn) = shown.flight.pose(fraction);
+            // The model's own centre on the flight's.
+            let scale = kind.scale * shown.level();
+            let middle = Vec3::from_array(self.object_meshes[mesh].center) * scale;
             self.object_groups[mesh].push(ActorInstance::new(
-                centre.to_array(),
+                (centre - turn * middle).to_array(),
                 turn.to_array(),
-                [shown.level(); 3],
+                [scale; 3],
             ));
         }
     }
@@ -1502,6 +1653,7 @@ impl GpuState {
                     HIT_SOUND,
                     SAVER_ON_SOUND,
                     SAVER_OFF_SOUND,
+                    BURST_SOUND,
                 ],
             );
             self.monitor.sounds_registered = Some(audio.generation());
@@ -1731,5 +1883,38 @@ mod tests {
         monitor.put(Shown::new(3, 4, &throw(99)));
         assert_eq!(monitor.find(3, 4).unwrap().flight.throw().moment, 99);
         assert_eq!(monitor.shown.len(), 5);
+    }
+
+    /// Every throw's junk is one of the three, the same for the same throw, and a
+    /// player's throws go round them.
+    #[test]
+    fn each_throw_hurls_the_same_junk_everywhere_and_they_take_turns() {
+        assert!(std::ptr::eq(junk_of(3, 41), junk_of(3, 41)));
+        let models: std::collections::BTreeSet<&str> =
+            (0..3).map(|number| junk_of(5, number).model).collect();
+        assert_eq!(models.len(), 3);
+        assert_eq!(JUNK.iter().filter(|junk| junk.bursts).count(), 1);
+    }
+
+    /// A burst flings its pieces out and up, the same for the same seed; they land on
+    /// the floor, lie there and fade out by the end of their life.
+    #[test]
+    fn a_crate_bursts_into_pieces_that_fall_to_the_floor_and_fade() {
+        let now = Instant::now();
+        let at = Vec3::new(10.0, 20.0, 50.0);
+        let pieces: Vec<Chunk> = burst(at, 40.0, 7, now).collect();
+        let again: Vec<Chunk> = burst(at, 40.0, 7, now).collect();
+        assert_eq!(pieces.len(), CHUNK_COUNT);
+        for (piece, same) in pieces.iter().zip(&again) {
+            assert_eq!(piece.velocity, same.velocity);
+            assert!(piece.velocity.z > 0.0);
+            assert!((piece.velocity.truncate()).length() > 50.0);
+            let (start, _, shown) = piece.pose(0.0);
+            assert!(start.distance(at) < 5.0 && shown == 1.0);
+            let (late, _, faded) = piece.pose(CHUNK_LIFE - 0.1);
+            assert!((late.z - 40.0).abs() < 0.01, "lies on the floor: {late}");
+            assert!(faded < 1.0);
+            assert_eq!(piece.pose(CHUNK_LIFE).2, 0.0);
+        }
     }
 }

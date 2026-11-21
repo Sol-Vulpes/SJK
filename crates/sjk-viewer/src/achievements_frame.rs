@@ -8,25 +8,17 @@ use super::*;
 
 /// Count what the live `snapshot` of `session` shows for the achievements;
 /// `obituaries_before` is the obituary tracker's count before the snapshot was observed;
-/// `boxed` whether the player hides in the cardboard box, `toys` what the toys tell of
-/// the moment ([`GpuState::toy_moments`]).
+/// `toys` what the toys tell of the moment ([`GpuState::toy_moments`]).
 pub(crate) fn observe(
     tracker: &mut achievements::tracker::Tracker,
     obituaries: &sjk_client::ObituaryTracker,
     session: &ClientSession,
     snapshot: &Snapshot,
     obituaries_before: u64,
-    boxed: bool,
     toys: achievements::tracker::Toys,
     now: Instant,
 ) {
-    // The feed keeps the newest eight; more in one snapshot than that is unheard of.
-    let new = (obituaries.decoded() - obituaries_before).min(8) as usize;
-    let mut events = [None; 8];
-    for (slot, offset) in events.iter_mut().zip((0..new).rev()) {
-        *slot = obituaries.feed().newest(offset);
-    }
-    let events: Vec<sjk_client::ObituaryEvent> = events.into_iter().flatten().collect();
+    let events = fresh_obituaries(obituaries, obituaries_before);
     // The play signals the next holocron claim carries (`holocrons/signals.rs`).
     crate::holocrons::signals::snapshot(&snapshot.player, session.game_state().client_num, &events);
     let seen = achievements::tracker::Seen {
@@ -35,19 +27,30 @@ pub(crate) fn observe(
         server: session.server(),
         local: session.is_local(),
         obituaries: &events,
-        boxed,
         toys,
         now,
     };
     achievements::update(|record| tracker.observe(&seen, record));
 }
 
+/// The obituaries decoded since the tracker counted `before`, oldest first.
+pub(crate) fn fresh_obituaries(
+    obituaries: &sjk_client::ObituaryTracker,
+    before: u64,
+) -> Vec<sjk_client::ObituaryEvent> {
+    // The feed keeps the newest eight; more in one snapshot than that is unheard of.
+    let new = (obituaries.decoded() - before).min(8) as usize;
+    let mut events = [None; 8];
+    for (slot, offset) in events.iter_mut().zip((0..new).rev()) {
+        *slot = obituaries.feed().newest(offset);
+    }
+    events.into_iter().flatten().collect()
+}
+
 impl GpuState {
     /// What the toys tell the tracker of this moment, for their achievements.
     pub(crate) fn toy_moments(&self) -> achievements::tracker::Toys {
         achievements::tracker::Toys {
-            lifted_by: self.cardboard_box.lifted_by(),
-            steering: self.hax.steering().map(u16::from),
             landed: self.drone.landed(),
             listeners: self.boombox.listeners(),
         }

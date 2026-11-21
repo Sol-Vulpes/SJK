@@ -259,7 +259,7 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Blade skin sounds",
+        label: "Kyber sounds",
         cvar: crate::audio::SKIN_SOUNDS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
@@ -357,6 +357,21 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Hide others' emotes",
+        cvar: crate::emote_filters::OTHERS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Hidden emotes",
+        cvar: crate::emote_filters::HIDE_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Muted emotes",
+        cvar: crate::emote_filters::MUTE_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
         label: "Attack ends emote",
         cvar: crate::emotes::ATTACK_STOP_CVAR,
         kind: ValueKind::Bool,
@@ -400,21 +415,6 @@ pub(super) const AUDIO: &[Setting] = &[
         },
     },
     Setting {
-        label: "Cardboard box sounds",
-        cvar: crate::toy_sounds::Toy::Box.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Order 66 sounds",
-        cvar: crate::toy_sounds::Toy::Order66.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Hax sounds",
-        cvar: crate::toy_sounds::Toy::Hax.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Ragdoll sounds",
         cvar: crate::toy_sounds::Toy::Ragdoll.cvar(),
         kind: ValueKind::Bool,
@@ -440,11 +440,6 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Banana peel sounds",
-        cvar: crate::toy_sounds::Toy::Banana.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Tag spray sound",
         cvar: crate::toy_sounds::Toy::Tag.cvar(),
         kind: ValueKind::Bool,
@@ -455,11 +450,6 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Fishing sounds",
-        cvar: crate::toy_sounds::Toy::Fishing.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "WHEEL OF DOOM sounds",
         cvar: crate::toy_sounds::Toy::WheelOfDoom.cvar(),
         kind: ValueKind::Bool,
@@ -467,16 +457,6 @@ pub(super) const AUDIO: &[Setting] = &[
     Setting {
         label: "Quests sounds",
         cvar: crate::toy_sounds::Toy::Quests.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Fishing bite cue",
-        cvar: crate::fishing::CUE_CVAR,
-        kind: ValueKind::Choice(&["0", "1", "2"]),
-    },
-    Setting {
-        label: "Mining sounds",
-        cvar: crate::toy_sounds::Toy::Mining.cvar(),
         kind: ValueKind::Bool,
     },
     Setting {
@@ -578,6 +558,116 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
     Setting {
         label: "Local time: 12-hour",
         cvar: crate::hud::clock::HOURS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Status bar",
+        cvar: crate::status_bar::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: credits",
+        cvar: crate::status_bar::Part::Credits.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: shards",
+        cvar: crate::status_bar::Part::Shards.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: to attune",
+        cvar: crate::status_bar::Part::Crystals.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: DOOM coins",
+        cvar: crate::status_bar::Part::Coins.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: new things",
+        cvar: crate::status_bar::Part::New.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: kyber",
+        cvar: crate::status_bar::Part::Saber.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: effects",
+        cvar: crate::status_bar::Part::Effects.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: weapons",
+        cvar: crate::status_bar::Part::Weapons.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: toys",
+        cvar: crate::status_bar::Part::Toys.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: time",
+        cvar: crate::status_bar::Part::Time.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: date",
+        cvar: crate::status_bar::Part::Date.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: Force powers",
+        cvar: crate::status_bar::Part::Force.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: score",
+        cvar: crate::status_bar::Part::Score.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: time left",
+        cvar: crate::status_bar::Part::TimeLeft.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: joins, leaves",
+        cvar: crate::status_bar::Part::Feed.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: server name",
+        cvar: crate::status_bar::Part::Server.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: map",
+        cvar: crate::status_bar::Part::Map.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: game type",
+        cvar: crate::status_bar::Part::Mode.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: players",
+        cvar: crate::status_bar::Part::Players.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: ping",
+        cvar: crate::status_bar::Part::Ping.cvar(),
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Bar: frame rate",
+        cvar: crate::status_bar::Part::Fps.cvar(),
         kind: ValueKind::Bool,
     },
     Setting {
@@ -1009,6 +1099,26 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Feats",
+        cvar: crate::hud::feats::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat medals",
+        cvar: crate::hud::feats::MEDALS_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Feat announcer",
+        cvar: crate::hud::feats::VOICE_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Announcer voice",
+        cvar: crate::feats::announcer::CVAR,
+        kind: ValueKind::Live(crate::feats::announcer::choices),
+    },
+    Setting {
         label: "Chat",
         cvar: "cg_drawChat",
         kind: ValueKind::Bool,
@@ -1036,6 +1146,26 @@ pub(super) const HUD: &[Setting] = &[
     Setting {
         label: "Do not disturb in duels",
         cvar: crate::chat::quiet::DUEL_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "Duel start line",
+        cvar: crate::duel_lines::START_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel won line",
+        cvar: crate::duel_lines::WIN_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel lost line",
+        cvar: crate::duel_lines::LOSE_CVAR,
+        kind: ValueKind::Text,
+    },
+    Setting {
+        label: "Duel lines to all chat",
+        cvar: crate::duel_lines::TO_ALL_CVAR,
         kind: ValueKind::Bool,
     },
     Setting {
@@ -1229,25 +1359,6 @@ pub(super) const CONTROLS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
 ];
-/// The Hax toy's trap switches, which live on the Collection's Toys tab (the Hax's
-/// card) since 03/11/2026 (Lex's idea): no category shows them, and a search finds them
-/// under [`HAX_PLACE`], where they still switch.
-pub(super) const HAX_TOY: &[Setting] = &[
-    Setting {
-        label: "Hax trap",
-        cvar: crate::hax::TRAP_CVAR,
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Hax trap while away",
-        cvar: crate::hax::AWAY_CVAR,
-        kind: ValueKind::Bool,
-    },
-];
-
-/// Where [`HAX_TOY`]'s switches are, as a search's heading names it.
-pub(super) const HAX_PLACE: &str = "Collection > Toys > Hax";
-
 pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Asset browser",
@@ -1367,11 +1478,6 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Show banana peels",
-        cvar: crate::banana::SHOW_CVAR,
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Show others' tags",
         cvar: crate::tags::SHOW_CVAR,
         kind: ValueKind::Bool,
@@ -1384,11 +1490,6 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Show others' holocrons",
         cvar: crate::toy_sight::ILLUMINATE,
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Show others' boxes",
-        cvar: crate::toy_sight::CARDBOARD_BOX,
         kind: ValueKind::Bool,
     },
     Setting {
@@ -1516,7 +1617,7 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Duel figures (JoF)",
         cvar: crate::duel_ghost::CVAR,
-        kind: ValueKind::Bool,
+        kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
         label: "Hide others in duel",
@@ -1713,9 +1814,37 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Collection hall",
+        cvar: crate::console::collection_panel::hall::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Menu style",
         cvar: crate::menu::style::CVAR,
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),
+    },
+    Setting {
+        label: "Theme",
+        cvar: crate::menu::sjk::theme::CVAR,
+        kind: ValueKind::Choice(&crate::menu::sjk::theme::Theme::NAMES),
+    },
+    Setting {
+        label: "Theme hue",
+        cvar: crate::menu::sjk::theme::HUE_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::HUE_MAX,
+            step: crate::menu::sjk::theme::HUE_STEP,
+        },
+    },
+    Setting {
+        label: "Theme saturation",
+        cvar: crate::menu::sjk::theme::SATURATION_CVAR,
+        kind: ValueKind::Integer {
+            min: 0,
+            max: crate::menu::sjk::theme::SATURATION_MAX,
+            step: crate::menu::sjk::theme::SATURATION_STEP,
+        },
     },
     Setting {
         label: "SJK Launcher notice",
@@ -1965,7 +2094,7 @@ pub(super) const NETWORK: &[Setting] = &[
     },
     Setting {
         label: "Holocron notifications",
-        cvar: crate::holocron_popup::NOTIFICATIONS_CVAR,
+        cvar: crate::holocron_banners::NOTIFICATIONS_CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {

@@ -208,6 +208,9 @@ pub(crate) struct WorldPings {
     pub(crate) refusal_said: Option<(String, Instant)>,
     /// The game server the pings belong to.
     pub(crate) server: Option<std::net::SocketAddr>,
+    /// The room the status bars keep at the screen's edges: a ping off screen stands
+    /// inside it (`status_bar.rs`).
+    pub(crate) edges: crate::status_bar::Reserved,
     /// World shots draw the pings without a game.
     #[cfg(test)]
     pub(crate) forced: bool,
@@ -224,6 +227,7 @@ impl Default for WorldPings {
             outcome_seen: 0,
             refusal_said: None,
             server: None,
+            edges: crate::status_bar::Reserved::NONE,
             #[cfg(test)]
             forced: false,
         }
@@ -341,7 +345,8 @@ impl WorldPings {
         let margin = 44.0 * unit;
         for (index, mark) in self.marks.iter_mut().enumerate() {
             let age = now.saturating_duration_since(mark.born);
-            let Some((at, on_screen)) = screen_place(camera, mark.point, margin) else {
+            let Some((at, on_screen)) = screen_place_inside(camera, mark.point, margin, self.edges)
+            else {
                 continue;
             };
             let alpha = fade(age);
@@ -453,6 +458,17 @@ fn fade(age: Duration) -> f32 {
 /// toward it (a point behind the eye lands on the side it lies on, the bottom when
 /// straight behind). `None` for a degenerate camera.
 pub(crate) fn screen_place(camera: Camera, point: Vec3, margin: f32) -> Option<([f32; 2], bool)> {
+    screen_place_inside(camera, point, margin, crate::status_bar::Reserved::NONE)
+}
+
+/// [`screen_place`] with the border moved in by the room the status bars keep at the top
+/// and the bottom (`edges`), so a ping off screen stands inside them.
+pub(crate) fn screen_place_inside(
+    camera: Camera,
+    point: Vec3,
+    margin: f32,
+    edges: crate::status_bar::Reserved,
+) -> Option<([f32; 2], bool)> {
     let forward = (camera.target - camera.eye).normalize_or_zero();
     let right = forward.cross(camera.up).normalize_or_zero();
     if forward == Vec3::ZERO || right == Vec3::ZERO {
@@ -468,7 +484,9 @@ pub(crate) fn screen_place(camera: Camera, point: Vec3, margin: f32) -> Option<(
     if depth > 0.01 && tan > 0.0 {
         let scale = cy / (tan * depth);
         let (x, y) = (cx + dx * scale, cy + dy * scale);
-        if (margin..=width - margin).contains(&x) && (margin..=height - margin).contains(&y) {
+        if (margin..=width - margin).contains(&x)
+            && (margin + edges.top..=height - margin - edges.bottom).contains(&y)
+        {
             return Some(([x, y], true));
         }
     }
@@ -477,7 +495,8 @@ pub(crate) fn screen_place(camera: Camera, point: Vec3, margin: f32) -> Option<(
     } else {
         (dx, dy)
     };
-    let (reach_x, reach_y) = ((cx - margin).max(1.0), (cy - margin).max(1.0));
+    let edge = if dy < 0.0 { edges.top } else { edges.bottom };
+    let (reach_x, reach_y) = ((cx - margin).max(1.0), (cy - margin - edge).max(1.0));
     let scale = (reach_x / dx.abs().max(1e-6)).min(reach_y / dy.abs().max(1e-6));
     Some(([cx + dx * scale, cy + dy * scale], false))
 }
@@ -648,6 +667,17 @@ mod tests {
         assert!(!on && (at[0] - 40.0).abs() < 0.01);
         // Straight behind: the bottom.
         let (at, on) = screen_place(camera, Vec3::new(-100.0, 0.0, 0.0), 40.0).unwrap();
+        // Inside the status bars: an off-screen ping above stands under the top bar.
+        let edges = crate::status_bar::Reserved {
+            top: 30.0,
+            bottom: 20.0,
+        };
+        let (high, _) =
+            screen_place_inside(camera, Vec3::new(10.0, 0.0, 100.0), 40.0, edges).unwrap();
+        assert!(high[1] >= 70.0 - 1e-3, "{high:?}");
+        let (low, _) =
+            screen_place_inside(camera, Vec3::new(10.0, 0.0, -100.0), 40.0, edges).unwrap();
+        assert!(low[1] <= camera.viewport[1] - 60.0 + 1e-3, "{low:?}");
         assert!(!on && (at[1] - 1040.0).abs() < 0.01);
     }
 

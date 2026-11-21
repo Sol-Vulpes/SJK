@@ -16,8 +16,8 @@
 //! The artwork moves as retail's shaders move it ([`motion`]): the ring
 //! turns, the side glyphs climb over their backdrop, a reflection drifts
 //! through the logo, the glows flicker (the renderer recomposes those), and
-//! the focused entry's text pulses. The emblem's core glows and its blade
-//! lights shimmer. Labels and buttons are in retail's capitals ([`Caps`]).
+//! the focused entry's text pulses. The emblem's sun burns behind its steel.
+//! Labels and buttons are in retail's capitals ([`Caps`]).
 
 use super::ClassicMain;
 use super::layout::{CANVAS, HINT_Y, LOGO, Page, Placement, Slot};
@@ -269,7 +269,12 @@ pub(crate) fn page_backdrop(
         backdrop(canvas, viewport, place);
     }
     if page == Page::Main {
-        emblem::draw(canvas, place.rect(emblem::CLASSIC_RING), motion::seconds());
+        emblem::draw_reaching(
+            canvas,
+            place.rect(emblem::CLASSIC_RING),
+            motion::seconds(),
+            emblem::Reach::Contained,
+        );
     }
     logo(canvas, place, art_set);
 }

@@ -1,5 +1,5 @@
 //! The toy relay (`PROTOCOL.md`, "Toy relay"): toy events that must reach one player
-//! at once, many times a second (the Hax toy's hacker steering the hacked player),
+//! at once, many times a second (the Hax toy's hacker steering the hacked player until 20/11/2026; the Ragdoll's falls),
 //! which the feed's toy events cannot carry. Two threads of their own: one sends what
 //! the viewer hands it as soon as it comes, the other keeps a long poll open at the hub
 //! for the events meant for the player, while the viewer says it listens.

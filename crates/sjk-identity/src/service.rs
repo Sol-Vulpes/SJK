@@ -335,6 +335,12 @@ pub struct Snapshot {
         u64,
         Result<crate::wheel_of_doom::Spin, crate::wheel_of_doom::Refused>,
     )>,
+    /// The answer to the last [`Service::doom_mystery_box`], by serial, or why it was
+    /// refused (in the player's words, with the seconds left to wait).
+    pub mystery_box_doom: Option<(
+        u64,
+        Result<crate::wheel_of_doom::Doom, crate::wheel_of_doom::Refused>,
+    )>,
     /// The box hunt as last read, by serial, for the server named
     /// ([`Service::read_box_hunt`]).
     pub box_hunt: Option<(u64, String, crate::mystery_box::HuntState)>,
@@ -802,6 +808,7 @@ impl Snapshot {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -965,6 +972,11 @@ enum Command {
         id: i64,
         server: String,
     },
+    /// Roll a DOOM coin at mystery box `id` on `server`.
+    DoomMysteryBox {
+        id: i64,
+        server: String,
+    },
     /// SJK's creator: place a mystery box (its id is ignored).
     PlaceMysteryBox(crate::mystery_box::MysteryBox),
     /// SJK's creator: remove mystery box `id`.
@@ -1053,6 +1065,8 @@ enum Command {
     MakeGifTag(String),
     /// The feed relayed a holocron drop of the player's own key.
     OwnDrop,
+    /// The hub's event says it paid the player credits (`Service::credits_came`).
+    CreditsCame,
     /// The viewer wants fresh holocron progress.
     RefreshHolocrons,
     /// The game menu opened (`Service::menu_opened`).
@@ -1364,15 +1378,15 @@ fn trade_refusal(error: &HubError) -> String {
     let words = match error {
         HubError::Rejected { code, message, .. } => match code.as_str() {
             "not_a_duplicate" => "That is your last one: only duplicates can be shattered.",
-            "comes_with_card" => "That shader comes with your card: it stays with the card.",
-            "not_held" => "You hold no copy of that shader any more.",
+            "comes_with_card" => "That kyber comes with your card: it stays with the card.",
+            "not_held" => "You hold no copy of that kyber any more.",
             "no_duplicates" => "You hold no duplicates to break down.",
-            "locked" => "That shader is locked: unlock it first.",
-            "not_shatterable" => "That shader cannot be shattered.",
-            "not_craftable" => "That shader cannot be crafted.",
+            "locked" => "That kyber is locked: unlock it first.",
+            "not_shatterable" => "That kyber cannot be shattered.",
+            "not_craftable" => "That kyber cannot be crafted.",
             "not_enough_shards" => "Not enough kyber shards.",
-            "already_owned" => "You have that shader already.",
-            "not_on_offer" => "That shader is not in the shop any more: the offers changed.",
+            "already_owned" => "You have that kyber already.",
+            "not_on_offer" => "That kyber is not in the shop any more: the offers changed.",
             "not_enough_credits" => "Not enough credits.",
             "already_bought" => "You bought that one today already.",
             "not_for_sale" => "That holocron is not for sale.",
@@ -1461,8 +1475,8 @@ fn wishlist_at_once(snapshot: &mut Snapshot, ids: &[String]) -> bool {
 fn mark_refusal(error: &HubError) -> String {
     let words = match error {
         HubError::Rejected { code, message, .. } => match code.as_str() {
-            "not_held" => "Only a shader you hold can be locked.",
-            "bad_unlock" => "The hub does not know that shader yet.",
+            "not_held" => "Only a kyber you hold can be locked.",
+            "bad_unlock" => "The hub does not know that kyber yet.",
             "not_registered" => "Your identity is not registered at the hub yet.",
             _ => return message.clone(),
         },
@@ -2134,6 +2148,7 @@ impl Worker {
                     )
                 })
             }),
+            Command::DoomMysteryBox { id, server } => self.doom_mystery_box(id, &server, now),
             Command::PlaceMysteryBox(placed) => self.mystery_box(now, |hub, identity| {
                 hub.place_mystery_box(identity, &placed)
                     .map(|id| (BoxDone::Placed(id), None))
@@ -2224,6 +2239,7 @@ impl Worker {
             Command::CraftTags(copies) => self.tag_trade(TagTrade::Craft(copies)),
             Command::MakeGifTag(giphy) => self.tag_trade(TagTrade::Gif(giphy)),
             Command::OwnDrop => self.own_drop(now),
+            Command::CreditsCame => self.profile_soon(now),
             Command::RefreshHolocrons => self.holocrons_soon(now),
             Command::MenuOpened => self.menu_opened(now),
             Command::OpenHolocrons(ids) => self.open_holocrons(&ids, now),
@@ -3802,6 +3818,37 @@ impl Worker {
         });
     }
 
+    /// Roll a DOOM coin at box `id` on `server`, as a wheel's spin: the answer goes in
+    /// [`Snapshot::mystery_box_doom`], the profile after it in [`Snapshot::me`] and the
+    /// DOOM coins left in [`Snapshot::wheel_of_doom`]; a holocron won is read at once.
+    fn doom_mystery_box(&mut self, id: i64, server: &str, now: Instant) {
+        self.wheel_serial += 1;
+        let serial = self.wheel_serial;
+        let outcome = match (self.hub.as_mut(), self.registered) {
+            (Some(hub), true) => hub.doom_mystery_box(&self.identity, id, server),
+            _ => Err(self.not_connected()),
+        };
+        if matches!(&outcome, Ok(answer) if answer.doom.holocron.is_some()) {
+            self.due_holocrons = self.due_holocrons.min(now);
+        }
+        self.update(|snapshot| {
+            let outcome = match outcome {
+                Ok(answer) => {
+                    if let (Some(coins), Some(wheel)) =
+                        (answer.doom.coins, snapshot.wheel_of_doom.as_mut())
+                    {
+                        wheel.coins = coins;
+                        snapshot.wheel_of_doom_revision += 1;
+                    }
+                    snapshot.set_me(answer.profile);
+                    Ok(answer.doom)
+                }
+                Err(error) => Err(crate::wheel_of_doom::refusal(&error)),
+            };
+            snapshot.mystery_box_doom = Some((serial, outcome));
+        });
+    }
+
     fn read_junk(&mut self) {
         let status = match (self.hub.as_mut(), self.registered) {
             (Some(hub), true) => hub.junk_status(&self.identity).ok(),
@@ -4914,6 +4961,12 @@ impl Service {
         let _ = self.commands.send(Command::OpenMysteryBox { id, server });
     }
 
+    /// Roll a DOOM coin at mystery box `id`, which the player stands at on `server` (the
+    /// Force box's held Use): what it gave arrives in [`Snapshot::mystery_box_doom`].
+    pub fn doom_mystery_box(&self, id: i64, server: String) {
+        let _ = self.commands.send(Command::DoomMysteryBox { id, server });
+    }
+
     /// SJK's creator: place `placed` (its id is ignored); the answer arrives in
     /// [`Snapshot::mystery_box`] and the list is read again.
     pub fn place_mystery_box(&self, placed: crate::mystery_box::MysteryBox) {
@@ -5105,6 +5158,13 @@ impl Service {
     /// every 30 seconds, for a page that shows it as it opens.
     pub fn refresh_holocrons(&self) {
         let _ = self.commands.send(Command::RefreshHolocrons);
+    }
+
+    /// A hub event (the box hunt's) says it paid the player credits: the profile, which
+    /// counts them, is read soon, at most twice a minute (hub report #314: else the
+    /// credits showed up to 10 minutes after they were announced).
+    pub fn credits_came(&self) {
+        let _ = self.commands.send(Command::CreditsCame);
     }
 
     /// The game menu opened: read the profile, the holocron progress and the trades
@@ -5813,6 +5873,7 @@ mod tests {
             staff: true,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,
@@ -7058,6 +7119,29 @@ mod tests {
     }
 
     #[test]
+    fn credits_an_event_paid_read_the_profile_soon_at_most_twice_a_minute() {
+        let fake = Fake::default();
+        let t0 = Instant::now();
+        let (mut worker, _) = worker(&fake, t0);
+        worker.handle(Command::Configure(on("https://hub")), t0);
+        worker.tick(t0);
+        let reads = profile_reads(&fake);
+        let at = |seconds| t0 + Duration::from_secs(seconds);
+        // Without it the profile waits for its 10 minutes (hub report #314).
+        worker.tick(at(5));
+        assert_eq!(profile_reads(&fake), reads);
+        worker.handle(Command::CreditsCame, at(5));
+        worker.tick(at(5));
+        assert_eq!(profile_reads(&fake), reads + 1);
+        // Another within the half minute waits for it.
+        worker.handle(Command::CreditsCame, at(15));
+        worker.tick(at(34));
+        assert_eq!(profile_reads(&fake), reads + 1);
+        worker.tick(at(35));
+        assert_eq!(profile_reads(&fake), reads + 2);
+    }
+
+    #[test]
     fn a_drop_of_the_own_key_reads_the_profile_and_progress_soon_at_most_twice_a_minute() {
         let fake = Fake::default();
         *fake.progress.lock().unwrap() = Some(progress(0));
@@ -7503,7 +7587,7 @@ mod tests {
         let refusal = lock(&snapshot).mark_refusal.clone().unwrap();
         assert_eq!(
             refusal,
-            (1, "Only a shader you hold can be locked.".to_owned())
+            (1, "Only a kyber you hold can be locked.".to_owned())
         );
         worker.tick(t1 + HOLOCRONS_SOON);
         assert!(holocron_reads(&fake) > reads, "read again");
@@ -7750,7 +7834,7 @@ mod tests {
         worker.handle(Command::Buy("saber_gone".to_owned()), t0);
         assert_eq!(
             lock(&snapshot).trade.clone().unwrap().message,
-            "That shader is not in the shop any more: the offers changed."
+            "That kyber is not in the shop any more: the offers changed."
         );
         assert_eq!(
             lock(&snapshot).shop.clone().unwrap().serial,

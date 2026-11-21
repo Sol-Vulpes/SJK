@@ -27,6 +27,8 @@
 /// What the console says while `con_chatOnly` shows chat alone.
 pub(super) const CHAT_ONLY: &str = "Chat only";
 
+#[path = "console_find.rs"]
+mod find;
 #[path = "console_sjk.rs"]
 pub(crate) mod sjk;
 
@@ -420,6 +422,8 @@ pub(super) struct State {
     clock: [u8; 8],
     /// What the SJK UI's console keeps between frames.
     pub(super) sjk: sjk::Chrome,
+    /// The find bar (Ctrl+F, `console_find.rs`).
+    pub(super) find: find::Find,
 }
 
 impl State {
@@ -445,6 +449,9 @@ pub(crate) struct ClassicEnv {
     /// Disconnected with the client's menu closed: the console fills the
     /// screen (`Con_DrawConsole`).
     pub(crate) full_screen: bool,
+    /// Where the notify lines start: under the top status bar while it shows
+    /// (`status_bar.rs`), else the screen's top, in pixels.
+    pub(crate) notify_top: f32,
 }
 
 /// The colours a console's rows are drawn in.
@@ -664,7 +671,7 @@ impl ViewerConsole {
             self.presentation.slide(target, options.speed)
         };
         let (grid, ink) = if sjk_look {
-            (sjk::grid(viewport, options.scale), sjk::INK)
+            (sjk::grid(viewport, options.scale), sjk::ink())
         } else {
             (Grid::new(viewport, options.scale), Ink::CLASSIC)
         };
@@ -684,7 +691,7 @@ impl ViewerConsole {
                     ink: Ink::CLASSIC,
                     ..painter
                 };
-                self.classic_notify(frame, &painter, options);
+                self.classic_notify(frame, &painter, options, env.notify_top);
             }
             return;
         }
@@ -693,6 +700,7 @@ impl ViewerConsole {
         // Scrollback rows at this width, new rows keeping a scrolled-back view.
         let text_columns = grid.text_columns(stamps);
         let added = self.classic_rows(text_columns, options.chat_only);
+        self.refresh_find(options.chat_only);
         let total = self.classic.rows.len();
         if self.scroll_offset > 0 {
             self.scroll_offset = self.scroll_offset.saturating_add(added);
@@ -704,6 +712,8 @@ impl ViewerConsole {
         } else {
             self.classic_chrome(frame, &painter, fraction, lines, options)
         };
+        let visible = ((layout.rows_y - layout.rows_top) / grid.pitch).max(0.0) as usize + 1;
+        self.find_jump(visible);
         let mut y = layout.rows_y;
         if self.scroll_offset > 0 {
             if sjk_look {
@@ -745,12 +755,16 @@ impl ViewerConsole {
         // Input row, while the console has the keyboard or fills the screen.
         if self.open || full_screen {
             let prompt = if sjk_look {
-                sjk::PROMPT
+                sjk::prompt()
             } else {
                 Prompt::CLASSIC
             };
-            self.classic_input(frame, &painter, layout.input_y, prompt);
-            if sjk_look {
+            if self.open && self.classic.find.is_open() {
+                self.find_row(frame, &painter, layout.input_y, prompt);
+            } else {
+                self.classic_input(frame, &painter, layout.input_y, prompt);
+            }
+            if sjk_look && !self.classic.find.is_open() {
                 self.sjk_ghost(frame, &painter, layout.input_y, prompt);
             }
         }
@@ -996,6 +1010,11 @@ impl ViewerConsole {
                     });
                 }
             }
+            if visible {
+                self.classic
+                    .find
+                    .highlight(frame, &grid, line, span, text, text_column, y);
+            }
             if visible && translate_hover == Some(line) {
                 frame.quads.push(SolidQuad {
                     rect: [
@@ -1226,13 +1245,15 @@ impl ViewerConsole {
 
     /// The notify lines (`Con_DrawNotify`), the console feed: with
     /// `con_drawNotify` on, of the last `con_notifylines` rows, those written in
-    /// the last `con_notifytime` seconds and not quiet (chat is), from the top
-    /// of the screen, one cell plus `cl_conXOffset` pixels from the left.
+    /// the last `con_notifytime` seconds and not quiet (chat is), from `top` (the
+    /// screen's top, or under the top status bar), one cell plus `cl_conXOffset`
+    /// pixels from the left.
     fn classic_notify(
         &mut self,
         frame: &mut ConsoleFrame,
         painter: &Painter<'_>,
         options: super::console_options::Options,
+        top: f32,
     ) {
         let grid = painter.grid;
         let wanted = options.notify_lines;
@@ -1261,7 +1282,7 @@ impl ViewerConsole {
         rows.truncate(wanted);
         let now = self.shell.command_clock_millis();
         let left = options.notify_x.trunc() + grid.width;
-        let mut y = 0.0;
+        let mut y = top;
         for Row { line, span, .. } in rows.iter().rev().copied() {
             let Some(entry) = self.shell.line(line) else {
                 continue;

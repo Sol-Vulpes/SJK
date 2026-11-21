@@ -121,6 +121,39 @@ fn a_look_target_comes_into_the_model_space_at_its_eyes() {
 }
 
 #[test]
+fn the_ground_under_an_actor_comes_into_its_model_space() {
+    let near = |a: [f32; 3], b: Vec3A| (Vec3A::from_array(a) - b).length() < 1e-3;
+    // Facing the world's +X, the floor 24 under the origin: 24 under the model's.
+    let (point, up) = ground_plane(
+        [10.0, 0.0, 50.0],
+        0.0,
+        1.0,
+        0.0,
+        [10.0, 0.0, 26.0],
+        [0.0, 0.0, 1.0],
+    );
+    assert!(near(point, Vec3A::new(0.0, 0.0, -24.0)), "{point:?}");
+    assert!(near(up, Vec3A::Z), "{up:?}");
+    // A slope rising ahead (+X in the world, the model's -Y) faces the model's back.
+    let rising = Vec3A::new(-0.3, 0.0, 1.0).normalize().to_array();
+    let (_, up) = ground_plane([0.0; 3], 0.0, 1.0, 0.0, [0.0, 0.0, -24.0], rising);
+    assert!(up[1] > 0.2 && up[2] > 0.9, "{up:?}");
+    // Facing +Y, a point ahead in the world is ahead in the model.
+    let (point, _) = ground_plane([0.0; 3], 90.0, 1.0, 0.0, [0.0, 5.0, -24.0], [0.0, 0.0, 1.0]);
+    assert!(near(point, Vec3A::new(0.0, -5.0, -24.0)), "{point:?}");
+    // Half size, drawn 12 lower (`CG_Player`): the floor stays at the scaled feet.
+    let (point, _) = ground_plane(
+        [0.0; 3],
+        0.0,
+        0.5,
+        -12.0,
+        [0.0, 0.0, -24.0],
+        [0.0, 0.0, 1.0],
+    );
+    assert!(near(point, Vec3A::new(0.0, 0.0, -24.0)), "{point:?}");
+}
+
+#[test]
 fn manifest_map_lines_replace_preset_entries() {
     let map = manifest("map head cervical").bone_map().expect("the map");
     let head: Vec<_> = map.iter().filter(|e| e.joint == "head").collect();

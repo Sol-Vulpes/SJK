@@ -180,23 +180,32 @@ impl Layer {
         ];
         let mut pixels = vec![Vec4::ZERO; size[0] * size[1]];
         let mut mean = Vec4::ZERO;
+        let share = 1. / images.len() as f32;
         for image in images {
-            let reduction = Reduction::new(size, [image.width() as usize, image.height() as usize]);
-            for (x, y, p) in image.enumerate_pixels() {
-                let color = Vec4::new(
-                    linear[p[0] as usize],
-                    linear[p[1] as usize],
-                    linear[p[2] as usize],
-                    p[3] as f32 / 255.,
-                );
-                reduction.add(
-                    &mut pixels,
-                    [x as usize, y as usize],
-                    color / images.len() as f32,
-                );
-                mean +=
-                    color / (image.width() as f32 * image.height() as f32 * images.len() as f32);
+            // The reduction is linear: each image's own, kept for a large one
+            // (`super::memo`), weighs its share.
+            let grid = super::memo::grid(image, size, || {
+                let mut pixels = vec![Vec4::ZERO; size[0] * size[1]];
+                let mut mean = Vec4::ZERO;
+                let reduction =
+                    Reduction::new(size, [image.width() as usize, image.height() as usize]);
+                let area = image.width() as f32 * image.height() as f32;
+                for (x, y, p) in image.enumerate_pixels() {
+                    let color = Vec4::new(
+                        linear[p[0] as usize],
+                        linear[p[1] as usize],
+                        linear[p[2] as usize],
+                        p[3] as f32 / 255.,
+                    );
+                    reduction.add(&mut pixels, [x as usize, y as usize], color);
+                    mean += color / area;
+                }
+                (pixels, mean)
+            });
+            for (sum, cell) in pixels.iter_mut().zip(&grid.0) {
+                *sum += *cell * share;
             }
+            mean += grid.1 * share;
         }
         let varied = pixels.iter().any(|p| {
             if cover {

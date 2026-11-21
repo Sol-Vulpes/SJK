@@ -41,7 +41,7 @@ pub(crate) fn install(
     vfs: &sjk_vfs::VirtualFileSystem,
     shaders: &sjk_shader::ShaderCatalog,
 ) -> (ui_renderer::ShapeRenderer, HudOverlay) {
-    let renderer =
+    let mut renderer =
         ui_renderer::ShapeRenderer::new(device, queue, format, crate::DepthTarget::FORMAT);
     let mut hud = HudOverlay::new();
     hud.icons.handles = assets::load(vfs, shaders, |id, rgba| {
@@ -65,6 +65,11 @@ pub(crate) fn install(
         .set_pictures(super::movement_keys::load(vfs, shaders, |id, rgba| {
             renderer.upload_icon(queue, id, rgba)
         }));
+    let feat_pictures = super::feats::load(vfs, shaders, |cell, rgba| {
+        renderer.upload_feat_picture(device, queue, cell, rgba)
+    });
+    hud.feats.set_pictures(feat_pictures);
+    crate::feats::announcer::discover(vfs);
     (renderer, hud)
 }
 

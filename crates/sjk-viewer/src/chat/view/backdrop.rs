@@ -2,7 +2,7 @@
 //! 29/10/2026: the chat is hard to read over a bright map, even with vanilla graphics).
 //! Each drawn row gets its own band, as long as what the row shows (the sender's
 //! emblems and name on a line's first row, its text and emoji pictures) and a little
-//! more, with round ends, in the SJK UI's navy ([`crate::menu::sjk::color::SPACE`]) at
+//! more, with round ends, in the SJK UI's ground ([`crate::menu::sjk::color::space()`]) at
 //! the setting's opacity times the line's own: it slides in, moves and fades out with
 //! its line. Nothing else gets one: no empty space, no GIF under a line, nothing while
 //! the feed shows no line. Bands are pushed before any line's content, so a picture
@@ -28,7 +28,7 @@ pub(super) fn draw(
     let [x, y] = origin;
     let height = g.row * HEIGHT;
     let middle = ink_middle(font, g.font);
-    let colour = crate::menu::sjk::color::alpha(crate::menu::sjk::color::SPACE, opacity);
+    let colour = crate::menu::sjk::color::alpha(crate::menu::sjk::color::space(), opacity);
     let rows = if prefix.is_some() && line.muted {
         1
     } else {
@@ -89,7 +89,7 @@ fn ink_middle(font: &UiFont, size: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use crate::chat::ChatOverlay;
-    use crate::menu::sjk::color::SPACE;
+    use crate::menu::sjk::color::space;
     use crate::text::{TextFace, test_font, visible_text_width_style};
     use sjk_client::ServerEventKind;
     use sjk_identity::{ChatMessage, ChatState};
@@ -115,10 +115,10 @@ mod tests {
 
     fn is_band(command: &DrawCommand) -> bool {
         matches!(command, DrawCommand::RoundedRect { color, .. }
-            if [color.r, color.g, color.b] == [SPACE.r, SPACE.g, SPACE.b])
+            if [color.r, color.g, color.b] == [space().r, space().g, space().b])
     }
 
-    /// The bands drawn: the rounded boxes in the SJK UI's navy, and their colours.
+    /// The bands drawn: the rounded boxes in the SJK UI's ground, and their colours.
     fn bands(chat: &ChatOverlay) -> Vec<(Rect, Color)> {
         chat.ui
             .draw_list()

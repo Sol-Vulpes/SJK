@@ -2,7 +2,7 @@
 //! barely use it"; `docs/cards.md`, "Fusion"): a number of duplicates of one tier, the
 //! hub's `economy.fuse` table, makes one saber shader of the next tier the player does not
 //! hold yet, chosen by the hub. Only on a hub whose economy says `fuse`
-//! ([`crate::economy::fuse_need`]); Mythical (the last tier) and Unique never fuse.
+//! ([`crate::economy::fuse_need`]); Mythical (the last tier) and Secret never fuse.
 //!
 //! This holds the rules the Forge's Fuse section and the badges follow, apart from any
 //! drawing: which copies may go ([`spares`]: of the trade, never a locked shader's, never
@@ -20,14 +20,14 @@ pub(crate) const TIERS: [Rarity; 4] = [
     Rarity::Legendary,
 ];
 
-/// The tier a fusion of `tier` gives; `None` for Mythical and Unique.
+/// The tier a fusion of `tier` gives; `None` for Mythical and Secret.
 pub(crate) fn next_tier(tier: Rarity) -> Option<Rarity> {
     match tier {
         Rarity::Common => Some(Rarity::Uncommon),
         Rarity::Uncommon => Some(Rarity::Rare),
         Rarity::Rare => Some(Rarity::Legendary),
         Rarity::Legendary => Some(Rarity::Mythical),
-        Rarity::Mythical | Rarity::Unique => None,
+        Rarity::Mythical | Rarity::Secret => None,
     }
 }
 
@@ -168,9 +168,9 @@ pub(crate) fn check(
 pub(crate) fn block_words(tier: Rarity, block: Block) -> String {
     let next = next_tier(tier).map_or("next", Rarity::label);
     match block {
-        Block::NoFusion => format!("The SJK hub does not fuse {} shaders.", tier.label()),
+        Block::NoFusion => format!("The SJK hub does not fuse {} kybers.", tier.label()),
         Block::NothingNew => {
-            format!("You hold every {next} shader already: nothing new to fuse into.")
+            format!("You hold every {next} kyber already: nothing new to fuse into.")
         }
         Block::Short { have, need } => format!(
             "{have} of {need} {} duplicates: {} more needed.",
@@ -183,11 +183,11 @@ pub(crate) fn block_words(tier: Rarity, block: Block) -> String {
     }
 }
 
-/// The fusion in a line: "3 duplicates of Common -> 1 Uncommon shader you do not own yet".
+/// The fusion in a line: "3 duplicates of Common -> 1 Uncommon kyber you do not own yet".
 pub(crate) fn summary(tier: Rarity, need: u32) -> String {
     let next = next_tier(tier).map_or("new", Rarity::label);
     format!(
-        "{need} duplicates of {} -> 1 {next} shader you do not own yet",
+        "{need} duplicates of {} -> 1 {next} kyber you do not own yet",
         tier.label()
     )
 }
@@ -340,7 +340,7 @@ mod tests {
         assert!(check(Rarity::Common, &last, &list, Some(3), 4).is_err());
         assert_eq!(
             summary(Rarity::Common, 3),
-            "3 duplicates of Common -> 1 Uncommon shader you do not own yet"
+            "3 duplicates of Common -> 1 Uncommon kyber you do not own yet"
         );
         assert_eq!(
             block_words(Rarity::Rare, Block::Short { have: 1, need: 3 }),
@@ -355,6 +355,6 @@ mod tests {
         assert_eq!(targets(Rarity::Common, |_| true), 0);
         assert_eq!(targets(Rarity::Mythical, |_| false), 0);
         assert_eq!(next_tier(Rarity::Legendary), Some(Rarity::Mythical));
-        assert_eq!(next_tier(Rarity::Unique), None);
+        assert_eq!(next_tier(Rarity::Secret), None);
     }
 }

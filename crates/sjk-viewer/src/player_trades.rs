@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 pub(crate) const COMMAND: &str = "trade";
 /// The trade window's size: 0 small, 1 normal (the default), 2 large.
 pub(crate) const SIZE_CVAR: &str = "cl_tradeWindowSize";
-pub(crate) const HELP: &str = "Trade holocrons and duplicate shaders with a player on this server: trade <player>; trade alone opens the trade window; trade accept, decline or cancel answers";
+pub(crate) const HELP: &str = "Trade holocrons and duplicate kybers with a player on this server: trade <player>; trade alone opens the trade window; trade accept, decline or cancel answers";
 /// How long the toast tells of an ended trade, or of a refusal with no trade on.
 const TOLD_FOR: Duration = Duration::from_secs(6);
 

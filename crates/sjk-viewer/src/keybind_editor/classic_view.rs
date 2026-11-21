@@ -689,10 +689,19 @@ mod tests {
         editor.open_classic(&console, 0, Span::ALL);
         assert_eq!(editor.count_matches("   "), 0);
         assert_eq!(editor.count_matches("no such action at all"), 0);
-        // A heading finds all of its category, an action's name only itself.
+        // A heading finds all of its category, an action's name only itself (a setting's
+        // toggle that names it too, as "Bottom bar: weapons" does).
+        let toggles = category_range(Category::Toggles as usize)
+            .filter(|action| {
+                ACTIONS[*action]
+                    .label
+                    .to_ascii_lowercase()
+                    .contains("weapons")
+            })
+            .count();
         assert_eq!(
             editor.count_matches("weapons"),
-            category_range(Category::Weapons as usize).len()
+            category_range(Category::Weapons as usize).len() + toggles
         );
         assert!(editor.count_matches("jump") >= 1);
         assert_eq!(editor.search_text(), "");

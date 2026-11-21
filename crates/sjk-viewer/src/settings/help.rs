@@ -108,6 +108,7 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::clock::CVAR, "1", "Time"),
     (crate::hud::clock::CVAR, "2", "Time and date"),
     (crate::hud::clock::CVAR, "3", "Date"),
+    (crate::feats::announcer::CVAR, "sjk", "SJK"),
     (
         crate::chat::incoming_color::CVAR,
         "0",
@@ -163,9 +164,6 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
         "10",
         crate::chat::incoming_color::LABELS[10],
     ),
-    (crate::fishing::CUE_CVAR, "0", "Off"),
-    (crate::fishing::CUE_CVAR, "1", "Sound off"),
-    (crate::fishing::CUE_CVAR, "2", "Always"),
     (crate::chat_sounds::MASTER_CVAR, "0", "Off"),
     (crate::chat_sounds::MASTER_CVAR, "1", "On"),
     (crate::chat_sounds::MASTER_CVAR, "2", "Distinct (EJK)"),
@@ -177,13 +175,13 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::devmap_bar::CVAR, "0", "While held"),
     (crate::devmap_bar::CVAR, "1", "Bottom"),
     (crate::devmap_bar::CVAR, "2", "Top"),
-    (crate::holocron_popup::NOTIFICATIONS_CVAR, "0", "Off"),
+    (crate::holocron_banners::NOTIFICATIONS_CVAR, "0", "Off"),
     (
-        crate::holocron_popup::NOTIFICATIONS_CVAR,
+        crate::holocron_banners::NOTIFICATIONS_CVAR,
         "1",
         "After duels",
     ),
-    (crate::holocron_popup::NOTIFICATIONS_CVAR, "2", "Always"),
+    (crate::holocron_banners::NOTIFICATIONS_CVAR, "2", "Always"),
     (crate::discord_presence::CVAR, "0", "Off"),
     (crate::discord_presence::CVAR, "1", "On"),
     (crate::discord_presence::CVAR, "2", "Server hidden"),
@@ -211,6 +209,9 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::text::charset::CVAR, "auto", "Auto"),
     (crate::text::charset::CVAR, "western", "Western"),
     (crate::text::charset::CVAR, "cyrillic", "Cyrillic"),
+    (crate::duel_ghost::CVAR, "0", "Dark"),
+    (crate::duel_ghost::CVAR, "1", "Figures"),
+    (crate::duel_ghost::CVAR, "2", "Hidden"),
     (crate::duel_visibility::HIDE_OTHERS_CVAR, "0", "Off"),
     (crate::duel_visibility::HIDE_OTHERS_CVAR, "1", "Auto"),
     (crate::duel_visibility::HIDE_OTHERS_CVAR, "2", "Always"),
@@ -412,7 +413,7 @@ pub(super) const ALPHA_WARNING: &str = "The Solar Renderer is in alpha: some map
 const SJK_TERMS: &[&str] = &[
     crate::unlock_toast::SOUND_CVAR,
     "cl_identity",
-    crate::holocron_popup::NOTIFICATIONS_CVAR,
+    crate::holocron_banners::NOTIFICATIONS_CVAR,
 ];
 
 /// The description of setting `cvar`.
@@ -629,7 +630,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::audio::SKIN_SOUNDS_CVAR,
-        "A blade skin's own ignition, swings and hum: off (normal saber sounds), over the normal ones, or instead of them.",
+        "A kyber's own ignition, swings and hum: off (normal saber sounds), over the normal ones, or instead of them.",
     ),
     ("cg_footsteps", "Footstep sounds, yours and other players'."),
     (
@@ -685,20 +686,20 @@ const HELP: &[(&str, &str)] = &[
         "On: emotes go silent while you duel (private or Duel server), even ones playing; one still playing when the duel ends is heard again.",
     ),
     (
+        crate::emote_filters::OTHERS_CVAR,
+        "On: other players' emotes are not shown or heard on your screen. Yours still play, and the others still see them.",
+    ),
+    (
+        crate::emote_filters::HIDE_CVAR,
+        "Emote ids, such as dance wave: not shown when other players play them, on your screen only. Also emote_hide <id>.",
+    ),
+    (
+        crate::emote_filters::MUTE_CVAR,
+        "Emote ids, such as dance wave: they play without their sound on your screen, yours too. Also emote_mute <id>.",
+    ),
+    (
         crate::toy_sounds::VOLUME_CVAR,
         "Loudness of every toy's sounds: 1 as made, 2 twice as loud, 0 silent. Each toy can also be silenced below.",
-    ),
-    (
-        crate::toy_sounds::Toy::Box.cvar(),
-        "Off: cardboard box sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
-        crate::toy_sounds::Toy::Order66.cvar(),
-        "Off: Order 66 sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
-        crate::toy_sounds::Toy::Hax.cvar(),
-        "Off: Hax sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
     (
         crate::toy_sounds::Toy::Ragdoll.cvar(),
@@ -721,10 +722,6 @@ const HELP: &[(&str, &str)] = &[
         "Off: mystery boxes open silently on this PC, yours and other players'.",
     ),
     (
-        crate::toy_sounds::Toy::Banana.cvar(),
-        "Off: Banana peel sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
-    ),
-    (
         crate::toy_sounds::Toy::Tag.cvar(),
         "Off: tags go up without the spray can's sound on this PC, yours and other players'.",
     ),
@@ -741,24 +738,12 @@ const HELP: &[(&str, &str)] = &[
         "A font from this PC for the console, kept to its even grid. What it lacks comes from SJK's fonts.",
     ),
     (
-        crate::toy_sounds::Toy::Fishing.cvar(),
-        "Off: your casts, bites and catches are silent. The toy still works.",
-    ),
-    (
         crate::toy_sounds::Toy::WheelOfDoom.cvar(),
         "Off: every WHEEL OF DOOM spins silently on this PC, yours and other players', quacks included.",
     ),
     (
         crate::toy_sounds::Toy::Quests.cvar(),
         "Off: no chime as you are given a quest, named in one or finish one. Quests still work.",
-    ),
-    (
-        crate::fishing::CUE_CVAR,
-        "A \"!\" over the float and \"Bite! Press Use!\" when a fish bites. Sound off: only while the fishing sounds can't be heard.",
-    ),
-    (
-        crate::toy_sounds::Toy::Mining.cvar(),
-        "Off: your swings, blows and finds are silent. The toy still works.",
     ),
     (
         crate::away_emote::SJK_CVAR,
@@ -786,7 +771,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::unlock_toast::SOUND_CVAR,
-        "Plays the secret-area chime with each unlock card: an achievement, or a new medal or holocron in a match.",
+        "Plays the secret-area chime with each reward's banner: an achievement, a new holocron, or a new medal in a match.",
     ),
     // HUD
     (
@@ -989,6 +974,22 @@ const HELP: &[(&str, &str)] = &[
         "cg_killfeed",
         "The last kills, killer, weapon icon, victim, at the top right or wherever Move HUD elements put it.",
     ),
+    (
+        crate::hud::feats::CVAR,
+        "Double kills, sprees, first blood, revenge and HOOKED! (a JA+ grapple kill) are called out by an announcer and shown as medals.",
+    ),
+    (
+        crate::hud::feats::MEDALS_CVAR,
+        "With Feats on, each feat shows as a medal under the top centre.",
+    ),
+    (
+        crate::hud::feats::VOICE_CVAR,
+        "With Feats on, the announcer says each feat.",
+    ),
+    (
+        crate::feats::announcer::CVAR,
+        "The announcer's voice. A PK3 adds one with a folder in sound/sjk/announcer; lines it lacks use SJK's.",
+    ),
     ("cg_drawChat", "Shows chat messages over the game."),
     (
         "cl_unfocusedChatbox",
@@ -1163,11 +1164,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::team_sabers::TEAM_COLORS_CVAR,
-        "Team games: sabers in the team's colour, shaders worn over it. Off changes only the other team's colour and RGB or black.",
+        "Team games: sabers in the team's colour, kybers worn over it. Off changes only the other team's colour and RGB or black.",
     ),
     (
         crate::team_sabers::CVAR,
-        "In capture the flag, every red or blue player's sabers in their team's colour, with no blade shader. Off by default.",
+        "In capture the flag, every red or blue player's sabers in their team's colour, with no kyber. Off by default.",
     ),
     (
         crate::saber_rgb::black::CVAR,
@@ -1178,20 +1179,8 @@ const HELP: &[(&str, &str)] = &[
         "Draw the Blade Lab skins (Serpent, Comic and the rest) as Creyon's Blade Lab drew them; off uses their skin files.",
     ),
     (
-        crate::hax::TRAP_CVAR,
-        "The Hax toy: a player who hacks you springs a trap; after two seconds you both blow up, as in Order 66.",
-    ),
-    (
-        crate::hax::AWAY_CVAR,
-        "With the Hax trap on: players may hack you while you are away, and blow up with you. Others can see it is set.",
-    ),
-    (
         crate::monitor::SHOW_CVAR,
         "Off: no Monitor toy monitor is drawn, yours or other players', nor their sounds heard. You can still be hit while the toy is on.",
-    ),
-    (
-        crate::banana::SHOW_CVAR,
-        "Off: no Banana peel toy peel is drawn, yours or other players', nor their sounds heard. You can still slip while the toy is on.",
     ),
     (
         crate::tags::SHOW_CVAR,
@@ -1204,10 +1193,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::toy_sight::ILLUMINATE,
         "Off: other players' Illuminate holocrons are not drawn on this PC. Yours still is.",
-    ),
-    (
-        crate::toy_sight::CARDBOARD_BOX,
-        "Off: other players' cardboard boxes are not drawn on this PC, and you cannot lift them.",
     ),
     (
         crate::toy_sight::RAGDOLL,
@@ -1231,7 +1216,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::tactical::CVAR,
-        "Minimal: no emotes, toys, pop-ups. Medium: low graphics, no weather, fog, blade skins. Max: flat world, one model.",
+        "Minimal: no emotes, toys, pop-ups. Medium: low graphics, no weather, fog, kybers. Max: flat world, one model.",
     ),
     (
         crate::tactical::DUEL_CVAR,
@@ -1240,6 +1225,22 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::chat::quiet::DUEL_CVAR,
         "Do not disturb turns on as each duel starts and off as it ends.",
+    ),
+    (
+        crate::duel_lines::START_CVAR,
+        "Whispered to your opponent as a private duel starts, once a duel. Empty: nothing is sent.",
+    ),
+    (
+        crate::duel_lines::WIN_CVAR,
+        "Whispered to your opponent when you win a private duel, say gg. Empty: nothing is sent.",
+    ),
+    (
+        crate::duel_lines::LOSE_CVAR,
+        "Whispered to your opponent when you lose a private duel. Empty: nothing is sent.",
+    ),
+    (
+        crate::duel_lines::TO_ALL_CVAR,
+        "The duel lines go to all chat instead of a whisper to your opponent.",
     ),
     (
         crate::tactical::MODEL_CVAR,
@@ -1251,7 +1252,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::stock_blades::CVAR,
-        "For weak PCs: blades drawn stock in their colour, no shaders or effects. Others: not yours. All: yours too.",
+        "For weak PCs: blades drawn stock in their colour, no kybers or effects. Others: not yours. All: yours too.",
     ),
     (
         crate::effect_aux::saber_rain_steam::CVAR,
@@ -1307,7 +1308,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::duel_ghost::CVAR,
-        "On: players in a duel show as see-through blue figures, as on JoF EJK. Off: dark under a blue bubble, as in the base game.",
+        "Others' duels, when you are in none. Figures: see-through blue, as on JoF EJK. Dark: under a blue bubble, as stock. Hidden: gone.",
     ),
     (
         crate::duel_visibility::HIDE_OTHERS_CVAR,
@@ -1464,8 +1465,24 @@ const HELP: &[(&str, &str)] = &[
         "Animates rarity: Rare frames breathe, Legendary ones catch a sheen, Mythical ones a running spark. Off keeps the tier frames still.",
     ),
     (
+        crate::console::collection_panel::hall::CVAR,
+        "The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.",
+    ),
+    (
         crate::menu::style::CVAR,
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
+    ),
+    (
+        crate::menu::sjk::theme::CVAR,
+        "The SJK UI's colours: warm, the sun's; cold, deep navy and holo blue; or custom, the hue and saturation below.",
+    ),
+    (
+        crate::menu::sjk::theme::HUE_CVAR,
+        "Turns the SJK UI to any colour, keeping each colour's lightness so text reads as well. Moving it picks the custom theme.",
+    ),
+    (
+        crate::menu::sjk::theme::SATURATION_CVAR,
+        "How colourful the custom theme is, from greys to the warm theme's strength. Moving it picks the custom theme.",
     ),
     (
         crate::launcher_notice::CVAR,
@@ -1477,7 +1494,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::menu_pictures::CVAR,
-        "Map pictures behind the menus and drawn saber shaders, not live ones: saves video memory. On by itself on small cards.",
+        "Map pictures behind the menus and drawn kybers, not live ones: saves video memory. On by itself on small cards.",
     ),
     (
         crate::quick_wheel::pages::FILE,
@@ -1602,8 +1619,8 @@ const HELP: &[(&str, &str)] = &[
         "Cheat buttons in games with cheats on (devmap): bottom, top, or only while +devbar (Ctrl) is held. Hold it to click them.",
     ),
     (
-        crate::holocron_popup::NOTIFICATIONS_CVAR,
-        "A card for each holocron found in play; After duels holds it in a private duel until the end. The holocron waits in ESC.",
+        crate::holocron_banners::NOTIFICATIONS_CVAR,
+        "A banner at the top of the screen for each holocron found; After duels holds it in a private duel until the end.",
     ),
     (
         crate::chat::client_icons::CVAR,
@@ -1671,6 +1688,94 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::hud::clock::HOURS_CVAR,
         "Counts the HUD clock's hours from 1 to 12 with am and pm, instead of 0 to 23.",
+    ),
+    (
+        crate::status_bar::CVAR,
+        "A thin bar on the screen's bottom edge: your money, kyber, weapons, toys, match and time. The HUD moves above it.",
+    ),
+    (
+        crate::status_bar::Part::Credits.cvar(),
+        "Shows your credits on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Shards.cvar(),
+        "Shows your kyber shards on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Crystals.cvar(),
+        "Shows how many dormant kybers you have left to attune on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Coins.cvar(),
+        "Shows your DOOM coins on the status bar, once the hub has said how many.",
+    ),
+    (
+        crate::status_bar::Part::New.cvar(),
+        "Says on the status bar when your Collection holds new things: in words for that map, then a gold dot.",
+    ),
+    (
+        crate::status_bar::Part::Saber.cvar(),
+        "Shows the kyber on your saber, in its tier's colour, on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Effects.cvar(),
+        "Shows what is on about you on the status bar: blade extras, finisher, Tactical, Do not disturb, away.",
+    ),
+    (
+        crate::status_bar::Part::Weapons.cvar(),
+        "Shows the weapons you hold in the status bar's middle, the one in your hand lit, with its ammunition.",
+    ),
+    (
+        crate::status_bar::Part::Toys.cvar(),
+        "Shows every toy on the status bar, its picture lit while it is on.",
+    ),
+    (
+        crate::status_bar::Part::Time.cvar(),
+        "Shows your PC's local time at the status bar's right, on the 24-hour clock.",
+    ),
+    (
+        crate::status_bar::Part::Date.cvar(),
+        "Shows the date at the status bar's right, day first.",
+    ),
+    (
+        crate::status_bar::Part::Force.cvar(),
+        "Shows the Force powers you know on the status bar, the selected one lit and one in use marked.",
+    ),
+    (
+        crate::status_bar::Part::Score.cvar(),
+        "Shows your place and score on the status bar, or the teams' scores in a team game.",
+    ),
+    (
+        crate::status_bar::Part::TimeLeft.cvar(),
+        "Shows the match's time left in the status bar's middle when the server sets a time limit. The HUD's match timer steps aside.",
+    ),
+    (
+        crate::status_bar::Part::Feed.cvar(),
+        "Tells on the status bar who joins and leaves the server, for a few seconds each.",
+    ),
+    (
+        crate::status_bar::Part::Server.cvar(),
+        "Shows the server's name on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Map.cvar(),
+        "Shows the map on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Mode.cvar(),
+        "Shows the game type on the status bar: FFA, Duel, CTF...",
+    ),
+    (
+        crate::status_bar::Part::Players.cvar(),
+        "Shows how many players are on the server and how many it holds on the status bar.",
+    ),
+    (
+        crate::status_bar::Part::Ping.cvar(),
+        "Shows your ping on the status bar, green when low, ember when high.",
+    ),
+    (
+        crate::status_bar::Part::Fps.cvar(),
+        "Shows your frame rate on the status bar. The FPS readout keeps its frame times under it.",
     ),
     (
         crate::hud::movement_keys::CVAR,
@@ -2073,8 +2178,6 @@ mod tests {
             RENDER_LIGHTING,
             RENDER_SHADOWS,
             RENDER_WEATHER,
-            // Rows only a search shows (they live on the Collection's Hax card).
-            HAX_TOY,
         ]
         .into_iter()
         .flatten();

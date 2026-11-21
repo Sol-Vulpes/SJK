@@ -245,7 +245,7 @@ pub(crate) fn compile_stage(stage: &ShaderStage) -> GpuStage {
     result.texture_vectors = [[s[0], s[1], s[2], 0.0], [t[0], t[1], t[2], 0.0]];
     result.generators = [
         generator_code(stage.rgb_generator.as_deref(), stage.rgb_constant.is_some()),
-        generator_code(
+        alpha_generator_code(
             stage.alpha_generator.as_deref(),
             stage.alpha_constant.is_some(),
         ),
@@ -344,6 +344,22 @@ fn generator_code(generator: Option<&str>, constant: bool) -> f32 {
         "portal" => 11.0,
         _ => 0.0,
     }
+}
+
+/// [`generator_code`] for an `alphaGen`, plus the two it has alone: `dot` (12) and
+/// `oneMinusDot` (13), how squarely the surface faces the viewer and its rim
+/// (`stage_runtime.wgsl`, `generated_color`). rd-vanilla parses both but leaves the alpha
+/// as it was (no `AGEN_DOT` case in `ComputeColors`, MP or SP, `tr_shade.cpp`), and no
+/// retail shader uses them.
+fn alpha_generator_code(generator: Option<&str>, constant: bool) -> f32 {
+    if !constant {
+        match generator.map(str::to_ascii_lowercase).as_deref() {
+            Some("dot") => return 12.0,
+            Some("oneminusdot") => return 13.0,
+            _ => {}
+        }
+    }
+    generator_code(generator, constant)
 }
 
 pub(crate) fn alpha_function_code(function: Option<&str>) -> f32 {
@@ -556,6 +572,26 @@ mod vertex_lit_tests {
         assert_eq!(vertex[0].alpha_generator.as_deref(), Some("vertex"));
         // A lightmapped surface keeps both stages as written.
         assert_eq!(stages(script, 0).len(), 2);
+    }
+
+    #[test]
+    fn dot_alpha_generators_get_their_own_codes() {
+        let generators = |directive: &str| {
+            let script = format!(
+                "textures/a {{
+{{ map textures/a/rim blendFunc GL_SRC_ALPHA GL_ONE {directive} }}
+}}"
+            );
+            compile_stage(&stages(&script, 0)[0]).generators
+        };
+        assert_eq!(generators("alphaGen dot")[1], 12.0);
+        assert_eq!(generators("alphaGen oneMinusDot")[1], 13.0);
+        assert_eq!(generators("alphaGen lightingSpecular")[1], 10.0);
+        // Only alpha has them: an rgbGen of the name is unknown, so identity.
+        assert_eq!(generators("rgbGen dot")[0], 0.0);
+        assert!(
+            include_str!("stage_runtime.wgsl").contains("alpha_kind == 12 || alpha_kind == 13")
+        );
     }
 
     #[test]

@@ -12,7 +12,7 @@ pub(crate) const CVAR: &str = "cl_sjkChatClientIcons";
 
 /// A client whose messages start with its own icon. Its players wear it on the
 /// scoreboard and the player card too, in place of SJK's emblem (presence's `client`),
-/// and small after the mark on their nameplate.
+/// and in the mark's place on their nameplate, the mark small on its foot.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct ClientIcon {
     /// `ChatMessage::client` as the hub sends it.
@@ -76,7 +76,7 @@ pub(crate) fn set_shown(on: bool) {
     SHOWN.store(on, Ordering::Relaxed);
 }
 
-/// The icon after the mark on the nameplate of a player on `client`
+/// The icon in the mark's place on the nameplate of a player on `client`
 /// (`hud/nameplate.rs`): its own while [`CVAR`] is on, none for SJK, whose players'
 /// plates need no emblem, or with it off.
 pub(crate) fn plate_texture(client: &str) -> Option<sjk_ui::TextureId> {

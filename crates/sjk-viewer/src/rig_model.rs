@@ -1440,6 +1440,11 @@ impl RigModel {
         !self.eyes.is_empty()
     }
 
+    /// Whether a chain stays off the ground, so [`Scratch::stand_on`] is worth calling.
+    pub(crate) fn wants_ground(&self) -> bool {
+        !self.chains.is_empty() && self.chains.wants_ground()
+    }
+
     pub(crate) fn pose(
         &self,
         bones: &[[[f32; 4]; 3]],
@@ -1472,6 +1477,7 @@ impl RigModel {
             dynamics: chain_state,
             eyes: eye_state,
             look,
+            ground: found_ground,
             plant,
             last: _,
         } = scratch;
@@ -1534,6 +1540,8 @@ impl RigModel {
             self.eyes.turn(pose, eye_state, target, step);
         }
         if !self.chains.is_empty() {
+            // The ground where the chains stand before the lift raises the rig.
+            chain_state.ground = found_ground.map(|(point, up)| (point - Vec3A::Z * self.lift, up));
             dynamics::simulate(&self.joints, &self.chains, pose, chain_state, step);
         }
         if self.lift != 0.0 {
@@ -1754,6 +1762,8 @@ pub(crate) struct Scratch {
     /// The actor's eye turns, and the point they look at, in the model's space.
     eyes: eyes::State,
     look: Option<Vec3A>,
+    /// The ground under the actor in the model's space: a point on it and its upward normal.
+    ground: Option<(Vec3A, Vec3A)>,
     /// The rise the feet planting gave the last pose ([`PLANT_EASE`]).
     plant: Option<f32>,
     last: Option<std::time::Instant>,
@@ -1784,6 +1794,35 @@ impl Scratch {
     pub(crate) fn look_at(&mut self, point: Option<[f32; 3]>) {
         self.look = point.map(Vec3A::from_array);
     }
+
+    /// The ground under the actor ([`ground_plane`]), which its colliding chains stay above;
+    /// `None`: none in reach.
+    pub(crate) fn stand_on(&mut self, ground: Option<([f32; 3], [f32; 3])>) {
+        self.ground = ground.map(|(point, up)| (Vec3A::from_array(point), Vec3A::from_array(up)));
+    }
+}
+
+/// How far under a player's origin the ground is looked for, game units: the feet stand
+/// 24 under it (`DEFAULT_MINS_2`), and a long strand reaches no further than this.
+pub(crate) const GROUND_REACH: f32 = 96.0;
+
+/// The ground a trace met at `point` (world) with the upward `normal`, in the model space of
+/// an actor at `origin` facing `yaw_degrees` (its legs', the game's yaw) drawn `scale` times
+/// its size and `raised` units up (`CG_Player`'s `iModelScale` correction): what
+/// [`Scratch::stand_on`] takes.
+pub(crate) fn ground_plane(
+    origin: [f32; 3],
+    yaw_degrees: f32,
+    scale: f32,
+    raised: f32,
+    point: [f32; 3],
+    normal: [f32; 3],
+) -> ([f32; 3], [f32; 3]) {
+    // The model's -Y is the entity's +X (`weapon_view::actor_world_rotation`).
+    let turn = Mat3A::from_rotation_z(-(yaw_degrees + 90.0).to_radians());
+    let offset = Vec3A::from_array(point) - Vec3A::from_array(origin) - Vec3A::Z * raised;
+    let up = (turn * Vec3A::from_array(normal)).normalize_or_zero();
+    ((turn * offset / scale.max(0.01)).to_array(), up.to_array())
 }
 
 /// How high above a player's origin its eyes are, game units: `DEFAULT_VIEWHEIGHT`

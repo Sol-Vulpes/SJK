@@ -2,12 +2,11 @@
 //! under one row of tabs. Medals (given by the SJK team, hanging from a rail),
 //! Achievements (a wall of medallions by category), Shaders (the saber's looks: the
 //! stock blade and every blade skin, owned or locked), Toys (the Illuminate holocron)
-//! Nameplates (ornaments for the plate over the player's head; none yet) and Cards (the
-//! sealed cards opening holocrons brought, and the credits), and since 21/10/2026 the
-//! Forge between them (the shop, crafting and breaking shaders down, [`forge`]). Every
-//! tab shows its things on the left, each in its place from the start (the ones the
-//! player lacks dimmed), and the one chosen up close on the right; on Shaders, Toys and
-//! Nameplates that is the player's own model, on the menu map's stage or in a live
+//! and Cards (the sealed cards opening holocrons brought, and the credits), and since
+//! 21/10/2026 the Forge between them (the shop, crafting and breaking shaders down,
+//! [`forge`]). Every tab shows its things on the left, each in its place from the start
+//! (the ones the player lacks dimmed), and the one chosen up close on the right; on
+//! Shaders and Toys that is the player's own model, on the menu map's stage or in a live
 //! preview over a match ([`Backstage`]), wearing the shader chosen, a locked one too
 //! (only on this screen: nothing is sent).
 //!
@@ -45,20 +44,30 @@ mod finishers;
 pub(crate) mod forge;
 #[path = "collection_forge_view.rs"]
 mod forge_view;
+#[path = "collection_hall.rs"]
+pub(crate) mod hall;
 #[path = "collection_history.rs"]
 pub(crate) mod history;
 #[path = "collection_history_view.rs"]
 mod history_view;
 #[path = "collection_hover.rs"]
 mod hover;
+#[path = "collection_inventory.rs"]
+pub(crate) mod inventory;
+#[path = "collection_inventory_view.rs"]
+mod inventory_view;
 #[path = "collection_loadouts.rs"]
 pub(crate) mod loadouts;
+#[path = "collection_log_book.rs"]
+mod log_book;
 #[path = "collection_marks_view.rs"]
 mod marks_view;
 #[path = "collection_medals.rs"]
 mod medals;
-#[path = "collection_nameplates.rs"]
-mod nameplates;
+#[path = "collection_news.rs"]
+mod news;
+#[path = "collection_reveal.rs"]
+pub(crate) mod reveal;
 #[path = "collection_saber_lab_builder.rs"]
 mod saber_lab_builder;
 #[path = "collection_saber_lab_editor.rs"]
@@ -75,13 +84,15 @@ pub(crate) mod swatch;
 mod tags;
 #[path = "collection_toys.rs"]
 pub(crate) mod toys;
+#[path = "collection_transition.rs"]
+pub(crate) mod transition;
 #[path = "collection_view.rs"]
 mod view;
 
 pub(crate) use saber_lab_tab::{LAB_SABER_AREA, LabStage, LabView};
 pub(crate) use spin::SaberTurn;
 pub(crate) use toys::{COMMANDS as TOY_COMMANDS, options_on as toy_options, unseen as toys_unseen};
-pub(crate) use view::{MODEL_AREA, SABER_AREA, row_labels};
+pub(crate) use view::{EmptyButton, Ghosts, MODEL_AREA, SABER_AREA, empty_state, row_labels};
 
 /// The things' tokens: the medals, the achievements, the shaders' rows, the shader's
 /// Equip or Unequip, the toy and its switch.
@@ -111,16 +122,11 @@ const TOY_TOKEN: u16 = 1_310;
 const TOY_SWITCH_TOKEN: u16 = 1_311;
 /// The chosen toy's card's second switch: other players' toy seen or not.
 const TOY_SIGHT_TOKEN: u16 = 1_305;
-/// The chosen toy's card's own switches after it (the Hax's trap), one token each.
+/// The chosen toy's card's own switches after it, one token each (none since the Hax's
+/// trap went, 20/11/2026).
 const TOY_OPTION_TOKEN: u16 = 1_390;
 /// Most own switches a toy's card holds.
 const TOY_OPTION_TOKENS: usize = 4;
-/// The cardboard box's niche on Toys (Illuminate's is [`TOY_TOKEN`]).
-const BOX_TOKEN: u16 = 1_314;
-/// Order 66's niche on Toys.
-const ORDER_TOKEN: u16 = 1_315;
-/// The Hax's niche on Toys.
-const HAX_TOKEN: u16 = 1_318;
 /// The Ragdoll's niche on Toys.
 const RAGDOLL_TOKEN: u16 = 1_309;
 /// The Drone's niche on Toys.
@@ -131,29 +137,21 @@ const BOOMBOX_TOKEN: u16 = 1_307;
 const MONITOR_TOKEN: u16 = 1_303;
 /// Box hunt's niche on Toys.
 const BOX_HUNT_TOKEN: u16 = 1_304;
-/// The Banana peel's niche on Toys.
-const BANANA_TOKEN: u16 = 1_375;
-/// Fishing's niche on Toys.
-const FISHING_TOKEN: u16 = 1_378;
-/// Mining's niche on Toys (after the toy cards' own switches, [`TOY_OPTION_TOKEN`]).
-const MINING_TOKEN: u16 = 1_394;
 /// Quests' niche on Toys.
 const QUESTS_TOKEN: u16 = 1_397;
-/// The Fishing card's Sell junk button: past the nameplate styles' and the toy
-/// options' tokens, which a click reads by range.
-const SELL_JUNK_TOKEN: u16 = 1_395;
-/// The Fishing card's Sell fish button and the Mining card's Sell ore (the catch market,
-/// 15/11/2026), in the free run above the panel's other tokens.
-const SELL_CATCH_TOKEN: u16 = 1_420;
-/// Fishing's place among the toys (`collection_toys::TOYS`).
-const FISHING_TOY: usize = 10;
-/// The WHEEL OF DOOM's niche on Toys, and its place among the toys.
+/// The WHEEL OF DOOM's niche on Toys.
 const WHEEL_OF_DOOM_TOKEN: u16 = 1_396;
-const WHEEL_OF_DOOM_TOY: usize = 11;
-/// Mining's, whose card sells rubble by the same button token.
-const MINING_TOY: usize = 12;
-/// Quests' place among the toys.
-const QUESTS_TOY: usize = 13;
+/// Each toy's place among the toys (`collection_toys::TOYS`, [`TOY_TOKENS`],
+/// [`Panel::toy`]): named, so a toy removed (the Banana peel, 20/11/2026) moves only
+/// these.
+const ILLUMINATE_TOY: usize = 0;
+const RAGDOLL_TOY: usize = 1;
+const DRONE_TOY: usize = 2;
+const BOOMBOX_TOY: usize = 3;
+const MONITOR_TOY: usize = 4;
+const BOX_HUNT_TOY: usize = 5;
+const WHEEL_OF_DOOM_TOY: usize = 6;
+const QUESTS_TOY: usize = 7;
 /// The Toys tab's "?", the Toy Master's (`collection_toys::Panel::toy_master_badge`): its
 /// hover card tells of the toys hidden on maps and names those the player found.
 const TOY_MASTER_TOKEN: u16 = 1_376;
@@ -162,10 +160,6 @@ const SABER_TOKEN: u16 = 1_316;
 /// The shader card's way to the Forge: Craft in the Forge (one not held) or Break down
 /// in the Forge (a copy of the player's own).
 const FORGE_LINK_TOKEN: u16 = 1_317;
-/// The Nameplates tab's See and share nameplates switch.
-const SHARE_TOKEN: u16 = 1_319;
-/// The Nameplates tab's style choices, one per [`crate::hud::nameplate::Style`].
-const STYLE_BASE: u16 = 1_380;
 /// The target switch over the lone saber: the first saber (or half), the second (1_303,
 /// 1_304, 1_307 and 1_308 are the Monitor's, Box hunt's, the Boombox's and the Drone's).
 const TARGET_FIRST_TOKEN: u16 = 1_301;
@@ -174,45 +168,33 @@ const TARGET_SECOND_TOKEN: u16 = 1_302;
 const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
-/// The toys the Toys tab shows: Illuminate, the cardboard box, Order 66, the Hax, the
-/// Ragdoll, the Drone, the Boombox, the Monitor, Box hunt, the Banana peel, Fishing,
-/// then the WHEEL OF DOOM, Mining and Quests.
-const TOY_COUNT: usize = 14;
+/// The toys the Toys tab shows: Illuminate, the Ragdoll, the Drone,
+/// the Boombox, the Monitor, Box hunt, then the WHEEL OF DOOM and Quests.
+const TOY_COUNT: usize = 8;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
-    BOX_TOKEN,
-    ORDER_TOKEN,
-    HAX_TOKEN,
     RAGDOLL_TOKEN,
     DRONE_TOKEN,
     BOOMBOX_TOKEN,
     MONITOR_TOKEN,
     BOX_HUNT_TOKEN,
-    BANANA_TOKEN,
-    FISHING_TOKEN,
     WHEEL_OF_DOOM_TOKEN,
-    MINING_TOKEN,
     QUESTS_TOKEN,
 ];
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`TOY_SWITCH_END`]. From 1_360 they ran into
 /// [`FAVOURITE_TOKEN`] at the thirteenth toy (08/11/2026); no other token of the panel lies
-/// between 1_400 and 3_000 but the Fishing and Mining cards' log book buttons
-/// ([`LOG_BOOK_TOKEN`], [`BRAG_TOKEN`]).
+/// between 1_400 and 3_000 but the Log book's Share buttons ([`BRAG_TOKEN`]).
 const TOY_SWITCH_BASE: u16 = 1_460;
-/// The Fishing and Mining cards' Log book button, which shows the log book in place of
-/// the toy's words or goes back, and the book's Share button ([`crate::catch_book`]).
-const LOG_BOOK_TOKEN: u16 = 1_440;
+/// The Log book page's Share buttons ([`crate::catch_book`]): the fish book's, then the
+/// mining book's.
 const BRAG_TOKEN: u16 = 1_441;
+const BRAG_MINING_TOKEN: u16 = 1_442;
 const TOY_SWITCH_END: u16 = 1_500;
 const _: () = assert!(TOY_SWITCH_BASE + TOY_COUNT as u16 <= TOY_SWITCH_END);
-const _: () = assert!(
-    SELL_JUNK_TOKEN >= STYLE_BASE + crate::hud::nameplate::Style::ALL.len() as u16
-        && SELL_JUNK_TOKEN >= TOY_OPTION_TOKEN + TOY_OPTION_TOKENS as u16
-);
-/// The chosen toy's key, which a click or K waits for a key to bind, and Order 66's
-/// second (the key that executes the order).
+/// The chosen toy's key, which a click or K waits for a key to bind, and its second (the
+/// Monitor's throw).
 const BIND_TOKEN: u16 = 1_377;
 const BIND_SECOND_TOKEN: u16 = 1_379;
 /// The chosen shader's star and padlock on the Shaders tab's card (29/10/2026, collection
@@ -222,8 +204,6 @@ const LOCK_TOKEN: u16 = 1_373;
 const SEEN_ALL_TOKEN: u16 = 1_374;
 /// The "?" chip beside the New sticker on the Shaders tab, which opens the New note.
 const NEW_NOTE_TOKEN: u16 = 1_371;
-/// The Nameplates tab's Showcase current set (10/11/2026).
-const SHOWCASE_TOKEN: u16 = 1_370;
 /// The chosen shader's Extra features chip on the Shaders tab's card (10/11/2026), and
 /// the open note's own area (a click on it neither closes it nor reaches the page under
 /// it).
@@ -288,7 +268,7 @@ const SHADER_ROWS: usize = 1 + unlockables::ALL.len();
 const SHADER_SLOTS: usize = SHADER_ROWS + 1;
 const _: () = assert!(SHADER_BASE as usize + SHADER_SLOTS <= SHADER_LIMIT as usize);
 /// The Shaders tab's filter (14/10/2026): its tier chips (All, then the five tiers, and
-/// Unique's for a player who holds a Unique shader), the owned-only chip and the search
+/// Secret's for a player who holds a Secret shader), the owned-only chip and the search
 /// field.
 const FILTER_TIER_BASE: u16 = 7_300;
 const FILTER_OWNED_TOKEN: u16 = 7_310;
@@ -313,7 +293,7 @@ const _: () = assert!(FILTER_EDITION_TOKEN < CARD_BASE);
 /// The most characters a search holds.
 const SEARCH_MAX: usize = 24;
 /// The tiers the Forge's chips filter by, after All, the commonest first, as its Craft
-/// list stands. The Forge never lists Unique (no Unique shader is traded).
+/// list stands. The Forge never lists Secret (no Secret shader is traded).
 const FILTER_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Common,
     unlockables::Rarity::Uncommon,
@@ -323,7 +303,7 @@ const FILTER_TIERS: [unlockables::Rarity; 5] = [
 ];
 
 /// The Shaders tab's tier strip (25/10/2026), after All: the rarest first, as the wall
-/// stands, and Unique's first of all for a player who holds a Unique shader.
+/// stands, and Secret's first of all for a player who holds a Secret shader.
 const STRIP_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Mythical,
     unlockables::Rarity::Legendary,
@@ -332,7 +312,7 @@ const STRIP_TIERS: [unlockables::Rarity; 5] = [
     unlockables::Rarity::Common,
 ];
 const STRIP_TIERS_WITH_UNIQUE: [unlockables::Rarity; 6] = [
-    unlockables::Rarity::Unique,
+    unlockables::Rarity::Secret,
     unlockables::Rarity::Mythical,
     unlockables::Rarity::Legendary,
     unlockables::Rarity::Rare,
@@ -432,7 +412,7 @@ impl ShaderSort {
 /// cards), 1 the list.
 pub(crate) const SHADER_VIEW_CVAR: &str = "ui_shaderList";
 
-/// The blade skin of shader row `row` with no filter, for a player who holds no Unique
+/// The blade skin of shader row `row` with no filter, for a player who holds no Secret
 /// shader: `None` for the stock blade (row 0) or past the end. The page itself reads the
 /// filtered list ([`Panel::skin_at`]).
 #[cfg(test)]
@@ -461,14 +441,6 @@ pub(crate) enum PanelAction {
     /// Light the Illuminate holocron (`true`) or put it out: the same as `toy_illuminate`,
     /// set rather than toggled.
     Illuminate(bool),
-    /// Get in the cardboard box (`true`) or out: the same as `toy_box`, set rather than
-    /// toggled.
-    CardboardBox(bool),
-    /// Turn Order 66 on (`true`) or off: the same as `toy_order66`, set rather than
-    /// toggled.
-    Order66(bool),
-    /// Turn the Hax on (`true`) or off: the same as `toy_hax`, set rather than toggled.
-    Hax(bool),
     /// Go limp (`true`) or get up: the same as `toy_ragdoll`, set rather than toggled.
     Ragdoll(bool),
     /// Turn the Drone on (`true`) or off: the same as `toy_drone`, set rather than toggled.
@@ -484,28 +456,11 @@ pub(crate) enum PanelAction {
     BoxHunt(bool),
     /// Turn Quests on (`true`) or off: the same as `toy_quests`, set rather than toggled.
     Quests(bool),
-    /// Turn the Banana peel on (`true`) or off: the same as `toy_banana`, set rather than
-    /// toggled.
-    Banana(bool),
-    /// Get the fishing rod out (`true`) or put it away: the same as `toy_fishing`, set
-    /// rather than toggled.
-    Fishing(bool),
-    /// Take the pickaxe in hand (`true`) or put it away: the same as `toy_mining`, set
-    /// rather than toggled.
-    Mining(bool),
-    /// Sell the fished junk to the hub: the same as `fishing_sell`.
-    SellJunk,
     /// Press the WHEEL OF DOOM's switch: the same as `toy_wheelofdoom` (the first shows
     /// the price, a second spins).
     WheelOfDoom,
-    /// Sell the dug rubble to the hub: the same as `mining_sell`.
-    SellRubble,
-    /// Sell the fish held at the catch market: the same as `fishing_sellfish`.
-    SellFish,
-    /// Sell the ore held at the catch market: the same as `mining_sellore`.
-    SellOre,
-    /// Share the last rare catch in the SJK chat: the same as `fishing_brag`, or
-    /// `mining_brag` (`mining`).
+    /// Share a log book's rarest catch in the SJK chat (the Log book page's Share): the
+    /// fish book's, or the mining book's (`mining`).
     Brag {
         mining: bool,
     },
@@ -524,6 +479,10 @@ pub(crate) enum PanelAction {
     Banner(&'static str),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
+    /// Show the Holocrons page on the tier at this slot ([`crate::holocrons::slot`]) and
+    /// open (or attune) its oldest there, in the page's ceremony: the Inventory's Open and
+    /// Attune (15/11/2026).
+    OpenHolocron(usize),
     /// Switch blade skin `skin`'s option `option` on or off (`cg_saberSkinOptions`).
     SkinOption {
         skin: &'static str,
@@ -554,11 +513,6 @@ pub(crate) enum PanelAction {
     BuyHolocron(String),
     /// Ask the hub to reveal the player's sealed cards.
     RevealCards,
-    /// See and share nameplates on (`true`) or off: `cg_nameplate`
-    /// ([`crate::hud::nameplate::see_and_share`]).
-    SeeAndShare(bool),
-    /// The nameplates' look: `cg_nameplateStyle` ([`crate::hud::nameplate::Style`]).
-    NameplateStyle(crate::hud::nameplate::Style),
     /// Other players' toy seen (`true`) or hidden on this PC: set the toy's `cvar`
     /// ([`crate::toy_sight`]).
     ToySight {
@@ -568,7 +522,7 @@ pub(crate) enum PanelAction {
     /// Carry out what the Loadouts card asked: wear, save, rename or empty a slot
     /// ([`loadouts::Request`]).
     Loadout(loadouts::Request),
-    /// One of the chosen toy's own switches on its card (the Hax's trap) on (`true`) or
+    /// One of the chosen toy's own switches on its card on (`true`) or
     /// off: set its `cvar`.
     ToyOption {
         cvar: &'static str,
@@ -589,6 +543,8 @@ pub(crate) enum PanelAction {
         mark: sjk_identity::Mark,
         on: bool,
     },
+    /// Show the server list (an empty page's way to fill it, 15/11/2026).
+    Servers,
 }
 
 /// What the marks a frame shows were read from ([`Panel::follow_marks`]).
@@ -627,16 +583,15 @@ pub(super) fn mark_action(
     PanelAction::Mark { id, mark, on }
 }
 
-/// Where the player's model stands behind Shaders, Toys and Nameplates this frame, as
+/// Where the player's model stands behind Shaders and Toys this frame, as
 /// the renderer says ([`crate::menu_stage`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) enum Backstage {
     /// Nowhere: the page draws the thing itself.
     #[default]
     None,
-    /// On the menu map's stage, right of the page; `head` is where the top of its head
-    /// is in the window, when known.
-    World { head: Option<[f32; 2]> },
+    /// On the menu map's stage, right of the page.
+    World,
     /// In the live preview the page shows at [`MODEL_AREA`], once a frame of it is drawn.
     Preview { ready: bool },
 }
@@ -668,6 +623,15 @@ pub(crate) struct StageWish {
     /// The Saber Lab tab: the model holds the saber and swings it, the saber floats
     /// beside it too ([`crate::saber_lab`]).
     pub(crate) lab: Option<LabStage>,
+    /// The hall ([`hall`]): the model stands in the column on the window's right, the
+    /// backdrop camera turned to put it there.
+    pub(crate) hall: bool,
+    /// The saber on its own holds a New kyber not looked at yet: its blade stays out
+    /// until the first look lights it (`collection_reveal.rs`).
+    pub(crate) held_off: bool,
+    /// How many first looks lit the saber on its own: a new one ignites it with the
+    /// kyber's own sound.
+    pub(crate) ignite: u32,
 }
 
 /// What the page knows this frame.
@@ -684,12 +648,6 @@ pub(crate) struct Inputs<'a> {
     /// The Illuminate holocron is lit now (the client's own state, kept in the console
     /// by the viewer each frame).
     pub(crate) illuminate: bool,
-    /// The player is in the cardboard box now (kept as [`Self::illuminate`] is).
-    pub(crate) cardboard_box: bool,
-    /// The Order 66 toy is on now (kept as [`Self::illuminate`] is).
-    pub(crate) order66: bool,
-    /// The Hax toy is on now (kept as [`Self::illuminate`] is).
-    pub(crate) hax: bool,
     /// The player is limp now (the Ragdoll, kept as [`Self::illuminate`] is).
     pub(crate) ragdoll: bool,
     /// The Drone toy is on now (kept as [`Self::illuminate`] is).
@@ -702,21 +660,11 @@ pub(crate) struct Inputs<'a> {
     pub(crate) box_hunt: bool,
     /// Quests are on now (kept as [`Self::illuminate`] is).
     pub(crate) quests: bool,
-    /// The Banana peel toy is on now (kept as [`Self::illuminate`] is).
-    pub(crate) banana: bool,
-    /// The fishing rod is out now (kept as [`Self::illuminate`] is).
-    pub(crate) fishing: bool,
-    /// The pickaxe is in hand now (kept as [`Self::illuminate`] is).
-    pub(crate) mining: bool,
-    /// The Fishing card's catches and junk sale, as the viewer last gave them; none
-    /// lists nothing.
-    pub(crate) fishing_card: Option<&'a crate::fishing_sell::Card>,
     /// A WHEEL OF DOOM of the player's spins, or one of its effects runs.
     pub(crate) wheel_of_doom: bool,
-    /// The Mining card's finds and rubble sale, the same way.
-    pub(crate) mining_card: Option<&'a crate::fishing_sell::Card>,
-    /// The `name` cvar, for the nameplate.
-    pub(crate) name: &'a str,
+    /// The Fishing and Mining log books, as read when the Collection opened
+    /// ([`crate::catch_book::load`]); none shows nothing.
+    pub(crate) log_books: Option<&'a crate::catch_book::Books>,
     /// The stock blade's colour (`color1`), for its swatch.
     pub(crate) stock: sjk_ui::Color,
     /// [`SHADER_VIEW_CVAR`]: the Shaders tab shows the grid of cards.
@@ -728,12 +676,6 @@ pub(crate) struct Inputs<'a> {
     /// What the player holds that a second skin can go on (two sabers, a staff): the
     /// shader card offers its button, named for it.
     pub(crate) pair: crate::saber_skins::Pair,
-    /// See and share nameplates (`cg_nameplate`): the player sees nameplates and shares
-    /// their health, shield and Force.
-    pub(crate) share: bool,
-    /// The nameplates' look (`cg_nameplateStyle`), which the Nameplates tab draws and
-    /// offers to change.
-    pub(crate) nameplate_style: crate::hud::nameplate::Style,
     /// The keys bound to the toys' commands, as players read them ("F5", "F5 / K"), in
     /// the order of [`toys::COMMANDS`]; empty for none (or none known).
     pub(crate) toy_keys: &'a [String],
@@ -741,7 +683,7 @@ pub(crate) struct Inputs<'a> {
     /// order (each one's "See" switch off, [`crate::toy_sight`]).
     pub(crate) toys_unseen: u16,
     /// The toys' own switches on their cards that are on, as bits in the order of
-    /// [`toys::options_on`] (the Hax's trap, then its trap while away).
+    /// [`toys::options_on`].
     pub(crate) toy_options: u16,
     /// `cg_tag`: the tag `toy_tag` sticks.
     pub(crate) tag: &'a str,
@@ -776,7 +718,13 @@ pub(crate) struct Panel {
     /// Shown as the SJK UI's Collection screen: its way back names where it returns.
     hub: bool,
     back: ReturnTarget,
+    /// The kind on show, or shown last while the hall shows.
     tab: Tab,
+    /// The hall shows ([`hall`]), in place of [`Self::tab`], and its state; whether a
+    /// kind has shown yet (the hall chooses its tile on coming back).
+    hall: bool,
+    kind_shown: bool,
+    hall_state: hall::Hall,
     ui: MenuCanvas,
     /// The thing chosen on each tab: a medal in the order shown, an achievement in the
     /// catalogue's order, a shader's row.
@@ -787,10 +735,11 @@ pub(crate) struct Panel {
     achievement_slots: Vec<achievements::Slot>,
     /// The achievements board's page on show.
     achievement_page: crate::achievements::Page,
+    /// The board's pages with something on them, as the switch shows them
+    /// (`collection_achievements::pages`): its segments and F go through these.
+    achievement_pages: Vec<crate::achievements::Page>,
     shader: usize,
-    /// The toy chosen on Toys: 0 Illuminate, 1 the cardboard box, 2 Order 66, 3 the Hax,
-    /// 4 the Ragdoll, 5 the Drone, 6 the Boombox, 7 the Monitor, 8 Box hunt, 9 the Banana
-    /// peel, 10 Fishing, 11 Mining.
+    /// The toy chosen on Toys, by its place ([`ILLUMINATE_TOY`] to [`QUESTS_TOY`]).
     toy: usize,
     /// The banner chosen on Banners, which banners the profile holds and the one worn.
     banner: usize,
@@ -823,12 +772,6 @@ pub(crate) struct Panel {
     /// The GIF tags part of the card (10/11/2026): what the hub and the player allow, the
     /// GIPHY link pasted for the blank tag and its second press.
     tag_gif: tags::GifCard,
-    /// The player was in the cardboard box, as the last frame's inputs said.
-    box_on: bool,
-    /// Order 66 was on, as the last frame's inputs said.
-    order66_on: bool,
-    /// The Hax was on, as the last frame's inputs said.
-    hax_on: bool,
     /// The player was limp, as the last frame's inputs said.
     ragdoll_on: bool,
     /// The Drone was on, as the last frame's inputs said.
@@ -841,20 +784,12 @@ pub(crate) struct Panel {
     box_hunt_on: bool,
     /// Quests were on, as the last frame's inputs said.
     quests_on: bool,
-    /// The Banana peel was on, as the last frame's inputs said.
-    banana_on: bool,
-    /// The fishing rod was out, as the last frame's inputs said.
-    fishing_on: bool,
-    /// The pickaxe was in hand, as the last frame's inputs said.
-    mining_on: bool,
-    /// See and share nameplates was on, as the last frame's inputs said.
-    share_on: bool,
     /// The toys (bits by the Toys tab's order) whose other players' are hidden here, as
     /// the last frame's inputs said.
     toys_unseen: u16,
     /// The toys' own switches that are on, as the last frame's inputs said.
     toy_options: u16,
-    /// The Loadouts card (Shaders, Tags and Nameplates open it) and the slots it shows,
+    /// The Loadouts card (Shaders and Tags open it) and the slots it shows,
     /// as the console last read them ([`Self::set_loadouts`]).
     loadouts: loadouts::Card,
     loadout_slots: [Option<loadouts::Loadout>; loadouts::SLOTS],
@@ -907,6 +842,9 @@ pub(crate) struct Panel {
     /// of them it showed.
     shader_first: usize,
     shader_lines: Vec<shaders::Line>,
+    /// The chosen tile's rise on the wall, and how far it has risen this frame (0 to 1).
+    shader_rise: shaders::Lift,
+    shader_lift: f32,
     shader_shown: usize,
     /// How the list orders its rows, and whether the blades' numbers showed last frame
     /// (their order is offered only then).
@@ -931,10 +869,8 @@ pub(crate) struct Panel {
     /// the preview show what it has on rather than the other side's choice.
     jump_to_worn: bool,
     /// The chosen toy's key waiting to be bound: its command's place in the toy's
-    /// commands (0 the switch's, 1 Order 66's order), until a key, Escape or a click.
+    /// commands (0 the switch's, 1 the Monitor's throw), until a key, Escape or a click.
     bind_wait: Option<usize>,
-    /// The Fishing or Mining card shows its log book in place of the toy's words.
-    toy_book: bool,
     /// How many medals the last frame showed.
     medals_shown: usize,
     shader_rows: [ShaderRow; SHADER_SLOTS],
@@ -949,7 +885,7 @@ pub(crate) struct Panel {
     finishers_shown: bool,
     finisher_worn: Option<&'static str>,
     shader_filter: ShaderFilter,
-    /// The Shaders tab offers Unique's chip: the player holds a Unique shader, as the last
+    /// The Shaders tab offers Secret's chip: the player holds a Secret shader, as the last
     /// frame's holdings said ([`Panel::tier_chips`]).
     unique_chip: bool,
     /// The search field takes the typing.
@@ -983,15 +919,16 @@ pub(crate) struct Panel {
     /// The shader chosen on Shaders or in the Forge while it was New: seen once it has
     /// stayed chosen a second (`shader_marks::Look`), not when a sweep passes over it.
     viewing: crate::shader_marks::Look,
+    /// The first looks at New things: a flash, a card's turn, a kyber's ignition, a cue.
+    reveals: reveal::Reveals,
+    /// The motion between the hall and a kind, and between kinds.
+    transition: transition::Transition,
     /// A click just chose a shader (on Shaders or a Forge tile): a New one is seen at once,
     /// its sticker gone, without waiting its second (Creyon, 31/10/2026).
     clicked_shader: bool,
     /// The New note shows (10/11/2026): a click on the "?" beside the New sticker opened
     /// it; another click anywhere, Escape or leaving the tab closes it.
     new_note: bool,
-    /// The Nameplates tab's showcase card shows: Showcase current set opened it; a click
-    /// but on it, Style or See & share nameplates, Escape or leaving the tab closes it.
-    showcase_open: bool,
     /// Every shader's extras count as unlocked, for a world shot of the gold chip.
     #[cfg(test)]
     extras_for_shot: bool,
@@ -1016,6 +953,10 @@ pub(crate) struct Panel {
     /// The marks a world shot or a test shows in place of the live ones.
     #[cfg(test)]
     pub(crate) preview_marks: Option<crate::shader_marks::Marks>,
+    /// New on the other kinds: cards, tags, finishers ([`news`], 15/11/2026).
+    news: news::NewsState,
+    /// What the empty state on show offers, as the last frame drew it.
+    empty_action: Option<view::EmptyAction>,
     /// How much wider than the display family the page's text face is drawn.
     widen: f32,
     epoch: Instant,
@@ -1024,6 +965,8 @@ pub(crate) struct Panel {
     pub(super) skins: std::sync::Arc<crate::saber_skins::LoadedSkins>,
     /// The History tab: its filter, rows and reads ([`history`]).
     history: history::History,
+    /// The Inventory tab: its search, order and list ([`inventory`]).
+    inventory: inventory::Inventory,
     /// What a world shot shows in place of the own profile's unlocks.
     #[cfg(test)]
     pub(crate) preview: Option<Vec<sjk_identity::Unlock>>,
@@ -1055,6 +998,9 @@ impl Panel {
             hub: false,
             back: ReturnTarget::MainMenu,
             tab: Tab::Medals,
+            hall: false,
+            kind_shown: false,
+            hall_state: hall::Hall::default(),
             // #117 (Nib): the Forge's Craft grid on its Legendary and Mythical lines, its
             // fifteen swatches drawn (the menu pictures on, or before their live pictures are
             // ready), took up to about 2 100 commands; 2 048 dropped the last ones on some
@@ -1068,6 +1014,7 @@ impl Panel {
             achievement: usize::MAX,
             achievement_slots: Vec::with_capacity(crate::achievements::ALL.len()),
             achievement_page: crate::achievements::Page::General,
+            achievement_pages: crate::achievements::Page::ALL.to_vec(),
             shader: 0,
             toy: 0,
             banner: 0,
@@ -1087,19 +1034,12 @@ impl Panel {
             tag_confirm: None,
             tag_gif: tags::GifCard::default(),
             tag_in_use: None,
-            box_on: false,
-            order66_on: false,
-            hax_on: false,
             ragdoll_on: false,
             drone_on: false,
             boombox_on: false,
             monitor_on: false,
             box_hunt_on: false,
             quests_on: false,
-            banana_on: false,
-            fishing_on: false,
-            mining_on: false,
-            share_on: false,
             toys_unseen: 0,
             toy_options: 0,
             loadouts: loadouts::Card::default(),
@@ -1128,6 +1068,8 @@ impl Panel {
             lab_stage_view: false,
             shader_first: 0,
             shader_lines: Vec::new(),
+            shader_rise: shaders::Lift::default(),
+            shader_lift: 1.0,
             shader_shown: 0,
             shader_sort: ShaderSort::default(),
             shader_numbers: false,
@@ -1138,7 +1080,6 @@ impl Panel {
             saber_press: None,
             jump_to_worn: false,
             bind_wait: None,
-            toy_book: false,
             medals_shown: 0,
             shader_rows: [ShaderRow::default(); SHADER_SLOTS],
             // Until the first frame reads the holdings: what a player who holds nothing sees.
@@ -1163,9 +1104,10 @@ impl Panel {
             marks: Default::default(),
             marks_from: None,
             viewing: crate::shader_marks::Look::default(),
+            reveals: reveal::Reveals::default(),
+            transition: transition::Transition::default(),
             clicked_shader: false,
             new_note: false,
-            showcase_open: false,
             #[cfg(test)]
             extras_for_shot: false,
             extras_note: false,
@@ -1177,10 +1119,13 @@ impl Panel {
             shader_wish: None,
             #[cfg(test)]
             preview_marks: None,
+            news: news::NewsState::default(),
+            empty_action: None,
             widen: 1.0,
             epoch: Instant::now(),
             skins: Default::default(),
             history: Default::default(),
+            inventory: Default::default(),
             #[cfg(test)]
             preview: None,
             #[cfg(test)]
@@ -1228,7 +1173,7 @@ impl Panel {
 
     /// Whether the tab on show offers the Loadouts card: those where a look is chosen.
     fn offers_loadouts(&self) -> bool {
-        matches!(self.tab, Tab::Shaders | Tab::Tags | Tab::Nameplates)
+        self.hall || matches!(self.tab, Tab::Shaders | Tab::Tags)
     }
 
     /// What the Loadouts card answered, as the page's action.
@@ -1243,6 +1188,8 @@ impl Panel {
         if !self.open {
             // Shaders opens on what the player wears.
             self.shader = usize::MAX;
+            // Opening the Collection plays no motion.
+            self.transition.reset();
         }
         self.open = true;
         self.loadouts.close();
@@ -1253,13 +1200,20 @@ impl Panel {
     }
 
     /// Turn to `tab`, if it is one of the Collection's this page draws (Holocrons is
-    /// the Holocrons page).
+    /// the Holocrons page): a kind, or the hall ([`Tab::Hall`]).
     pub(crate) fn show(&mut self, tab: Tab) {
+        if tab == Tab::Hall {
+            self.enter_hall();
+            return;
+        }
         if tab.screen() == crate::profile_hub::Screen::Collection && tab != Tab::Holocrons {
+            self.hall = false;
+            self.kind_shown = true;
             if tab != self.tab {
                 self.leave_viewing();
                 self.leave_search();
                 self.forge.leave_search();
+                self.inventory.leave_search();
                 self.forge.ask = None;
                 self.card_inspect = false;
                 self.bind_wait = None;
@@ -1268,19 +1222,15 @@ impl Panel {
         }
     }
 
-    /// The tab on show (or shown last).
+    /// The tab on show (or shown last): [`Tab::Hall`] while the hall shows.
     pub(crate) fn tab(&self) -> Tab {
+        if self.hall { Tab::Hall } else { self.tab }
+    }
+
+    /// The kind on show, or shown last while the hall shows: what the Collection opens on
+    /// when [`hall::CVAR`] is off.
+    pub(crate) fn kind(&self) -> Tab {
         self.tab
-    }
-
-    /// Whether the Toys tab's chosen toy is Fishing, whose card lists the catches.
-    pub(crate) fn fishing_chosen(&self) -> bool {
-        self.toy == FISHING_TOY
-    }
-
-    /// Whether the Toys tab's chosen toy is Mining, whose card lists the finds.
-    pub(crate) fn mining_chosen(&self) -> bool {
-        self.toy == MINING_TOY
     }
 
     /// Whether the page is the SJK UI's Collection screen.
@@ -1344,11 +1294,23 @@ impl Panel {
         self.trade_known = known;
     }
 
-    /// What the stage should show while the page is open on Shaders, Toys or
-    /// Nameplates.
+    /// What the stage should show while the page is open on Shaders or Toys.
     pub(crate) fn stage_wish(&self) -> Option<StageWish> {
         if !self.open {
             return None;
+        }
+        if self.hall {
+            return Some(StageWish {
+                skin: PreviewSkin::Worn,
+                saber: None,
+                on_second: false,
+                on_both: false,
+                holocron: false,
+                lab: None,
+                hall: true,
+                held_off: false,
+                ignite: 0,
+            });
         }
         match self.tab {
             Tab::Shaders => Some(StageWish {
@@ -1363,22 +1325,20 @@ impl Panel {
                 on_both: self.both_sides(),
                 holocron: false,
                 lab: None,
+                hall: false,
+                held_off: self.held_off(),
+                ignite: self.reveals.ignitions(),
             }),
             Tab::Toys => Some(StageWish {
                 skin: PreviewSkin::Worn,
                 saber: None,
                 on_second: false,
                 on_both: false,
-                holocron: self.toy == 0,
+                holocron: self.toy == ILLUMINATE_TOY,
                 lab: None,
-            }),
-            Tab::Nameplates => Some(StageWish {
-                skin: PreviewSkin::Worn,
-                saber: None,
-                on_second: false,
-                on_both: false,
-                holocron: false,
-                lab: None,
+                hall: false,
+                held_off: false,
+                ignite: 0,
             }),
             Tab::SaberLab => self.lab_wish(),
             _ => None,
@@ -1425,21 +1385,14 @@ impl Panel {
                 .get(self.shader)
                 .copied()
                 .map_or(PanelAction::None, |row| self.wear_action(row)),
-            Tab::Toys if self.toy == 1 => PanelAction::CardboardBox(!self.box_on),
-            Tab::Toys if self.toy == 2 => PanelAction::Order66(!self.order66_on),
-            Tab::Toys if self.toy == 3 => PanelAction::Hax(!self.hax_on),
-            Tab::Toys if self.toy == 4 => PanelAction::Ragdoll(!self.ragdoll_on),
-            Tab::Toys if self.toy == 5 => PanelAction::Drone(!self.drone_on),
-            Tab::Toys if self.toy == 6 => PanelAction::Boombox(!self.boombox_on),
-            Tab::Toys if self.toy == 7 => PanelAction::Monitor(!self.monitor_on),
-            Tab::Toys if self.toy == 8 => PanelAction::BoxHunt(!self.box_hunt_on),
-            Tab::Toys if self.toy == 9 => PanelAction::Banana(!self.banana_on),
-            Tab::Toys if self.toy == FISHING_TOY => PanelAction::Fishing(!self.fishing_on),
+            Tab::Toys if self.toy == RAGDOLL_TOY => PanelAction::Ragdoll(!self.ragdoll_on),
+            Tab::Toys if self.toy == DRONE_TOY => PanelAction::Drone(!self.drone_on),
+            Tab::Toys if self.toy == BOOMBOX_TOY => PanelAction::Boombox(!self.boombox_on),
+            Tab::Toys if self.toy == MONITOR_TOY => PanelAction::Monitor(!self.monitor_on),
+            Tab::Toys if self.toy == BOX_HUNT_TOY => PanelAction::BoxHunt(!self.box_hunt_on),
             Tab::Toys if self.toy == WHEEL_OF_DOOM_TOY => PanelAction::WheelOfDoom,
-            Tab::Toys if self.toy == MINING_TOY => PanelAction::Mining(!self.mining_on),
             Tab::Toys if self.toy == QUESTS_TOY => PanelAction::Quests(!self.quests_on),
             Tab::Toys => PanelAction::Illuminate(!illuminate),
-            Tab::Nameplates => PanelAction::SeeAndShare(!self.share_on),
             Tab::Tags => self.choose_tag(),
             Tab::Banners => self.wear_banner(),
             Tab::Cards => {
@@ -1563,7 +1516,8 @@ impl Panel {
         *chosen = next as usize;
     }
 
-    /// A key; `illuminate` is whether the holocron is lit.
+    /// A key; `illuminate` is whether the holocron is lit. On the hall its own keys;
+    /// in a kind, an Escape the kind leaves to the page comes back to the hall.
     pub(crate) fn handle_key(
         &mut self,
         event: &KeyEvent,
@@ -1578,6 +1532,32 @@ impl Panel {
             return PanelAction::None;
         };
         self.hover.keyed();
+        if self.hall && !self.loadouts.is_open() {
+            return self.hall_key(key, shift, control);
+        }
+        let action = self.kind_key(event, key, shift, control, illuminate);
+        self.escape_to_hall(key, action)
+    }
+
+    /// What a kind's `key` answered (`action`): an Escape that would close the page shows
+    /// the hall instead (the Loadouts card, a field or a note took theirs already).
+    fn escape_to_hall(&mut self, key: KeyCode, action: PanelAction) -> PanelAction {
+        if key == KeyCode::Escape && action == PanelAction::Close && !self.hall {
+            self.enter_hall();
+            return PanelAction::None;
+        }
+        action
+    }
+
+    /// A pressed key on a kind's page (or the Loadouts card over the hall).
+    fn kind_key(
+        &mut self,
+        event: &KeyEvent,
+        key: KeyCode,
+        shift: bool,
+        control: bool,
+        illuminate: bool,
+    ) -> PanelAction {
         if self.loadouts.is_open() {
             let reply = self.loadouts.key(
                 key,
@@ -1616,6 +1596,11 @@ impl Panel {
         if self.tab == Tab::History
             && !control
             && let Some(action) = self.history_key(key, shift)
+        {
+            return action;
+        }
+        if self.tab == Tab::Inventory
+            && let Some(action) = self.inventory_key(event.text.as_deref(), key, shift, control)
         {
             return action;
         }
@@ -1800,8 +1785,8 @@ impl Panel {
         PanelAction::None
     }
 
-    /// The tiers the Shaders tab's strip offers after All: [`STRIP_TIERS`], and Unique's
-    /// first only for a player who holds a Unique shader.
+    /// The tiers the Shaders tab's strip offers after All: [`STRIP_TIERS`], and Secret's
+    /// first only for a player who holds a Secret shader.
     fn tier_chips(&self) -> &'static [unlockables::Rarity] {
         if self.unique_chip {
             &STRIP_TIERS_WITH_UNIQUE
@@ -1880,6 +1865,9 @@ impl Panel {
 
     /// Mark every New shader seen (N, or Mark all seen).
     fn see_all(&mut self) -> PanelAction {
+        if self.finishers_shown {
+            return self.see_kind_all();
+        }
         if self.marks.new_count() > 0 {
             crate::shader_marks::see_all(self.marks.new_ids());
             ui_cues_click();
@@ -1938,11 +1926,73 @@ impl Panel {
             && let Some(id) = chosen.filter(|_| new)
         {
             crate::shader_marks::see(id);
+            self.reveal_kyber(id);
             return;
         }
         if let Some(id) = self.viewing.observe(chosen, new, self.look_clock()) {
             crate::shader_marks::see(id);
+            self.reveal_kyber(id);
         }
+    }
+
+    /// Kyber `id`, New, was just seen: its first look, lighting the saber on its own when
+    /// it holds it.
+    fn reveal_kyber(&mut self, id: &'static str) {
+        use crate::collection_seen::Kind;
+        let staged = self
+            .stage_wish()
+            .is_some_and(|wish| wish.saber.is_some() && wish.skin == PreviewSkin::Skin(id));
+        let now = self.look_clock();
+        let cue = self.reveals.start(
+            Kind::Kyber,
+            &[id],
+            reveal::tier_of(Kind::Kyber, id),
+            now,
+            staged,
+        );
+        crate::audio::ui_cues::post(cue);
+    }
+
+    /// Things `things`, New, were just seen together on a page: their first look.
+    pub(super) fn reveal_things(&mut self, things: &[crate::collection_seen::Thing]) {
+        let Some(kind) = things.first().map(|thing| thing.kind) else {
+            return;
+        };
+        let mut ids: Vec<&str> = things.iter().map(|thing| thing.id.as_str()).collect();
+        ids.dedup();
+        let tier = ids
+            .iter()
+            .map(|id| reveal::tier_of(kind, id))
+            .max()
+            .unwrap_or(crate::unlockables::Rarity::Common);
+        let now = self.look_clock();
+        let cue = self.reveals.start(kind, &ids, tier, now, false);
+        crate::audio::ui_cues::post(cue);
+    }
+
+    /// How bright the first-look flash over thing `id` of `kind` is now (0: none, and
+    /// always with `ui_rarityEffects 0`).
+    pub(super) fn first_look(&self, kind: crate::collection_seen::Kind, id: &str) -> f32 {
+        self.reveals
+            .flash(kind, id, self.look_clock(), crate::rarity_fx::enabled())
+    }
+
+    /// How far card `id` faces the player now: a first look turns it over.
+    pub(super) fn first_turn(&self, id: &str) -> f32 {
+        self.reveals
+            .turn(id, self.look_clock(), crate::rarity_fx::enabled())
+    }
+
+    /// The saber on its own holds a New kyber the first look has not lit yet: its blade
+    /// stays out until then.
+    fn held_off(&self) -> bool {
+        use crate::collection_seen::Kind;
+        if self.finishers_shown || self.shader == 0 {
+            return false;
+        }
+        self.skin_at(self.shader).is_some_and(|skin| {
+            self.marks.is_new(skin.id) && !self.reveals.revealed(Kind::Kyber, skin.id)
+        })
     }
 
     /// The milliseconds the New marks' second is counted on ([`Self::view`]).
@@ -1996,6 +2046,7 @@ impl Panel {
         if let Some(id) = self.viewing.leave(self.look_clock()) {
             crate::shader_marks::see(id);
         }
+        self.leave_news();
     }
 
     /// A key while the search field has the typing: Escape or Enter leave it (Escape
@@ -2055,11 +2106,6 @@ impl Panel {
         // Escape closes the Extra features note; other keys (its number keys too) leave it.
         if self.extras_note && key == KeyCode::Escape {
             self.extras_note = false;
-            return PanelAction::None;
-        }
-        // Escape closes the showcase card first; other keys (Style's too) leave it.
-        if self.showcase_open && key == KeyCode::Escape {
-            self.showcase_open = false;
             return PanelAction::None;
         }
         // The finishers page has no rows to step: Escape and Tab only.
@@ -2159,13 +2205,23 @@ impl Panel {
         match key {
             KeyCode::Escape => return PanelAction::Close,
             KeyCode::KeyV if self.tab == Tab::Shaders => return self.set_grid(!self.grid),
-            // F turns the achievements board's page: General, Fun, Hobbies.
+            // F turns the achievements board's page, through the ones the switch shows.
             KeyCode::KeyF if self.tab == Tab::Achievements => {
-                self.set_achievement_page(self.achievement_page.next());
+                let pages = &self.achievement_pages;
+                let at = pages
+                    .iter()
+                    .position(|page| *page == self.achievement_page)
+                    .unwrap_or(0);
+                if let Some(page) = pages.get((at + 1) % pages.len().max(1)).copied() {
+                    self.set_achievement_page(page);
+                }
             }
             // K waits for a key to bind to the chosen toy.
             KeyCode::KeyK if self.tab == Tab::Toys => self.bind_wait = Some(0),
             KeyCode::KeyR if self.tab == Tab::Cards => return self.reveal(),
+            KeyCode::KeyN if matches!(self.tab, Tab::Cards | Tab::Tags) => {
+                return self.see_kind_all();
+            }
             KeyCode::Tab => self.step(if shift { -1 } else { 1 }, true),
             KeyCode::ArrowLeft if !vertical => self.step(-1, false),
             KeyCode::ArrowRight if !vertical => self.step(1, false),
@@ -2178,6 +2234,9 @@ impl Panel {
             }
             KeyCode::ArrowUp | KeyCode::ArrowLeft => self.step(-1, false),
             KeyCode::ArrowDown | KeyCode::ArrowRight => self.step(1, false),
+            KeyCode::Enter | KeyCode::NumpadEnter if self.empty_action.is_some() => {
+                return self.press_empty_action();
+            }
             KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
                 return self.activate(illuminate);
             }
@@ -2250,6 +2309,9 @@ impl Panel {
                 &self.loadout_slots,
             );
             return Self::loadout_reply(reply);
+        }
+        if self.hall {
+            return self.hall_pointer(event);
         }
         // The lone saber turns with a drag that starts on it, wherever it goes after.
         if matches!(self.tab, Tab::Shaders | Tab::SaberLab) {
@@ -2344,6 +2406,14 @@ impl Panel {
             return PanelAction::None;
         }
         if let InputEvent::PointerWheel { delta, .. } = event
+            && self.tab == Tab::Inventory
+        {
+            if delta.y != 0.0 {
+                self.inventory.scroll(if delta.y > 0.0 { -3 } else { 3 });
+            }
+            return PanelAction::None;
+        }
+        if let InputEvent::PointerWheel { delta, .. } = event
             && self.tab == Tab::Cards
         {
             if self.card_inspect {
@@ -2381,6 +2451,9 @@ impl Panel {
         if event.kind == UiEventKind::Activate && event.token != Some(SEARCH_TOKEN) {
             self.leave_search();
         }
+        if event.kind == UiEventKind::Activate && event.token != Some(inventory::SEARCH_TOKEN) {
+            self.inventory.leave_search();
+        }
         // A click anywhere but on its "?" closes the New note.
         if event.kind == UiEventKind::Activate && event.token != Some(NEW_NOTE_TOKEN) {
             self.new_note = false;
@@ -2394,15 +2467,6 @@ impl Panel {
         if event.kind == UiEventKind::Activate && !keeps_extras {
             self.extras_note = false;
         }
-        // The showcase card stays open while Style or See & share changes what it shows.
-        let keeps_showcase = event.token.is_some_and(|token| {
-            token == SHOWCASE_TOKEN
-                || token == SHARE_TOKEN
-                || (STYLE_BASE..STYLE_BASE + 3).contains(&token)
-        });
-        if event.kind == UiEventKind::Activate && !keeps_showcase {
-            self.showcase_open = false;
-        }
         // A click anywhere but on the key waiting lets go of it.
         if event.kind == UiEventKind::Activate
             && !matches!(event.token, Some(BIND_TOKEN | BIND_SECOND_TOKEN))
@@ -2412,6 +2476,27 @@ impl Panel {
         let Some(token) = event.token else {
             return PanelAction::None;
         };
+        // The breadcrumb's Collection: back to the hall.
+        if token == crate::profile_hub::HALL_TOKEN {
+            if event.kind == UiEventKind::Activate {
+                self.enter_hall();
+            }
+            return PanelAction::None;
+        }
+        if self.tab == Tab::Inventory
+            && let Some(action) = self.inventory_button(token, event.kind == UiEventKind::Activate)
+        {
+            return action;
+        }
+        if self.tab == Tab::Inventory
+            && let Some(action) = self.inventory.token(
+                token,
+                event.kind == UiEventKind::Activate,
+                matches!(event.kind, UiEventKind::HoverEnter | UiEventKind::Hover),
+            )
+        {
+            return action;
+        }
         if self.tab == Tab::History
             && let Some(action) = self.history_token(
                 token,
@@ -2542,9 +2627,9 @@ impl Panel {
             }
             if let Some(page) = token
                 .checked_sub(ACHIEVEMENT_PAGE_BASE)
-                .and_then(|index| crate::achievements::Page::ALL.get(usize::from(index)))
+                .and_then(|index| self.achievement_pages.get(usize::from(index)).copied())
             {
-                self.set_achievement_page(*page);
+                self.set_achievement_page(page);
                 return PanelAction::None;
             }
             if let Some(toy) = token
@@ -2633,12 +2718,6 @@ impl Panel {
         {
             return action;
         }
-        if let Some(style) = token
-            .checked_sub(STYLE_BASE)
-            .and_then(|index| crate::hud::nameplate::Style::ALL.get(usize::from(index)))
-        {
-            return PanelAction::NameplateStyle(*style);
-        }
         if let Some(index) = token
             .checked_sub(OPTION_BASE)
             .map(usize::from)
@@ -2650,20 +2729,10 @@ impl Panel {
             BACK_TOKEN => PanelAction::Close,
             LIST_VIEW_TOKEN => self.set_grid(false),
             GRID_VIEW_TOKEN => self.set_grid(true),
-            WEAR_TOKEN | TOY_SWITCH_TOKEN | SHARE_TOKEN => self.activate(illuminate),
+            WEAR_TOKEN | TOY_SWITCH_TOKEN => self.activate(illuminate),
             TOY_SIGHT_TOKEN => self.toy_sight(),
-            // One card shows at a time: the button sells what that toy's log holds.
-            SELL_JUNK_TOKEN if self.toy == MINING_TOY => PanelAction::SellRubble,
-            SELL_JUNK_TOKEN => PanelAction::SellJunk,
-            SELL_CATCH_TOKEN if self.toy == MINING_TOY => PanelAction::SellOre,
-            SELL_CATCH_TOKEN => PanelAction::SellFish,
-            LOG_BOOK_TOKEN => {
-                self.toy_book = !self.toy_book;
-                PanelAction::None
-            }
-            BRAG_TOKEN => PanelAction::Brag {
-                mining: self.toy == MINING_TOY,
-            },
+            BRAG_TOKEN => PanelAction::Brag { mining: false },
+            BRAG_MINING_TOKEN => PanelAction::Brag { mining: true },
             loadouts::OPEN_TOKEN => {
                 self.loadouts.open();
                 PanelAction::None
@@ -2682,6 +2751,8 @@ impl Panel {
             LOCK_TOKEN => self.toggle_mark(sjk_identity::Mark::Locked),
             SHADER_WISH_TOKEN => self.toggle_wish(),
             SEEN_ALL_TOKEN => self.see_all(),
+            news::KIND_SEEN_ALL_TOKEN => self.see_kind_all(),
+            view::EMPTY_ACTION_TOKEN => self.press_empty_action(),
             NEW_NOTE_TOKEN => {
                 self.new_note = !self.new_note;
                 PanelAction::None
@@ -2691,26 +2762,14 @@ impl Panel {
                 PanelAction::None
             }
             EXTRAS_BODY_TOKEN => PanelAction::None,
-            SHOWCASE_TOKEN => {
-                self.showcase_open = !self.showcase_open;
-                PanelAction::None
-            }
             // A toy's row chooses it; its own switch runs it.
-            TOY_TOKEN | BOX_TOKEN | ORDER_TOKEN | HAX_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN
-            | BOOMBOX_TOKEN | MONITOR_TOKEN | BOX_HUNT_TOKEN | BANANA_TOKEN | FISHING_TOKEN
-            | WHEEL_OF_DOOM_TOKEN | MINING_TOKEN | QUESTS_TOKEN => {
+            TOY_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN | BOOMBOX_TOKEN | MONITOR_TOKEN
+            | BOX_HUNT_TOKEN | WHEEL_OF_DOOM_TOKEN | QUESTS_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
             }
             REVEAL_TOKEN => self.reveal(),
-            token => match crate::profile_hub::collection_tab_of(token) {
-                Some(Tab::Holocrons) => PanelAction::Hub(Tab::Holocrons),
-                Some(tab) => {
-                    self.tab = tab;
-                    PanelAction::None
-                }
-                None => PanelAction::None,
-            },
+            _ => PanelAction::None,
         }
     }
 
@@ -2839,25 +2898,17 @@ impl Panel {
         self.hover.pin(index.map(|index| base + index as u16));
     }
 
-    /// Open (or close) the New note, the Extra features note and the showcase card, for
-    /// a world shot.
+    /// Open (or close) the New note and the Extra features note, for a world shot.
     #[cfg(test)]
-    pub(crate) fn notes_for_shot(&mut self, new_note: bool, extras_note: bool, showcase: bool) {
+    pub(crate) fn notes_for_shot(&mut self, new_note: bool, extras_note: bool) {
         self.new_note = new_note;
         self.extras_note = extras_note;
-        self.showcase_open = showcase;
     }
 
     /// Let every shader's extras count as unlocked (`unlocked`), for a world shot.
     #[cfg(test)]
     pub(crate) fn extras_unlocked_for_shot(&mut self, unlocked: bool) {
         self.extras_for_shot = unlocked;
-    }
-
-    /// Choose the Toys tab's toy `index` (0 Illuminate), for a world shot.
-    #[cfg(test)]
-    pub(crate) fn choose_toy_for_shot(&mut self, index: usize) {
-        self.toy = index.min(TOY_COUNT - 1);
     }
 
     /// Hold the lone saber turned so, still, as a drag would (`None` lets go), for a
@@ -2882,6 +2933,12 @@ impl Panel {
         self.shader = row.min(SHADER_ROWS - 1);
     }
 
+    /// Choose kyber `id` on the Kybers page (its view scrolls to it), for a world shot.
+    #[cfg(test)]
+    pub(crate) fn focus_shader_for_shot(&mut self, id: &'static str) {
+        self.shader_focus = Some(id);
+    }
+
     /// The token of the thing chosen on the tab on show, for the canvas's focus.
     fn focus_token(&self) -> u16 {
         match self.tab {
@@ -2892,8 +2949,8 @@ impl Panel {
             Tab::Tags => TAG_BASE + self.tag.min(self.tag_entries.len().saturating_sub(1)) as u16,
             Tab::Banners => BANNER_BASE + self.banner as u16,
             Tab::Cards if self.cards_shown > 0 => CARD_BASE + self.card as u16,
-            Tab::Nameplates => SHARE_TOKEN,
             Tab::History => self.history_focus(),
+            Tab::Inventory => self.inventory.focus(),
             Tab::Forge => match self.forge.ask {
                 Some(ask) => {
                     if matches!(
@@ -2939,29 +2996,19 @@ mod tests {
             setting,
             standings: &[],
             illuminate: true,
-            cardboard_box: false,
-            order66: false,
-            hax: false,
             ragdoll: false,
             drone: false,
             boombox: false,
             monitor: false,
             box_hunt: false,
-            banana: false,
-            fishing: false,
-            mining: false,
             quests: false,
-            fishing_card: None,
             wheel_of_doom: false,
-            mining_card: None,
-            name: "^1Sol^7Vulpes",
+            log_books: None,
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
             grid: false,
             options: "",
             second: "",
             pair: crate::saber_skins::Pair::None,
-            share: true,
-            nameplate_style: crate::hud::nameplate::Style::Holo,
             toy_keys: &[],
             toys_unseen: 0,
             toy_options: 0,
@@ -2981,7 +3028,7 @@ mod tests {
         assert_eq!(TOY_COUNT, TOY_TOKENS.len());
     }
 
-    /// The Shaders tab's rows for a player who holds no Unique shader: the stock blade
+    /// The Shaders tab's rows for a player who holds no Secret shader: the stock blade
     /// and every other blade skin.
     pub(super) fn rows_shown() -> usize {
         1 + Holdings::Known(&[]).listed_count()
@@ -3187,13 +3234,13 @@ mod tests {
         assert!(!panel.shader_filter.active());
     }
 
-    /// Sol's rule (25/10/2026): a Unique shader shows only to its holders. Not held, it is
+    /// Sol's rule (25/10/2026): a Secret shader shows only to its holders. Not held, it is
     /// not listed, found by a search (its name, its tier's word or its number), counted in
     /// the headline, the Saber pill or the tab's tally, and has no chip; held, it is listed
     /// first (the rarest), counted, and its chip lists it. Taken back, its chip goes too.
     #[test]
     fn a_unique_shader_shows_only_to_its_holders() {
-        // The shaders every player sees: all but the Unique ones.
+        // The shaders every player sees: all but the Secret ones.
         let total = unlockables::blade_skins()
             .filter(|skin| !skin.hidden_unless_held())
             .count();
@@ -3211,11 +3258,11 @@ mod tests {
         let seen = runs(&panel);
         assert!(seen.contains(&format!("1 of {total} owned")), "{seen:?}");
         assert!(seen.contains(&format!("1/{total}")), "{seen:?}");
-        assert!(seen.iter().all(|run| !run.contains("Unique")), "{seen:?}");
+        assert!(seen.iter().all(|run| !run.contains("Secret")), "{seen:?}");
         assert!(panel.ui.rect_for(FILTER_TIER_BASE + 6).is_none(), "no chip");
         let counts = view::counts(&lacking);
         assert_eq!((counts[2].held, counts[2].total), (Some(1), total));
-        for query in ["thousand", "Cranes", "unique", "167", "#167"] {
+        for query in ["thousand", "Cranes", "secret", "167", "#167"] {
             panel.shader_filter.query = query.to_owned();
             redraw(&mut panel, &lacking);
             assert!(ids(&panel).is_empty(), "{query}");
@@ -3223,7 +3270,7 @@ mod tests {
         panel.shader_filter = ShaderFilter::default();
         for _ in 0..STRIP_TIERS_WITH_UNIQUE.len() + 1 {
             let _ = panel.cycle_tier(false);
-            assert_ne!(panel.shader_filter.tier, Some(unlockables::Rarity::Unique));
+            assert_ne!(panel.shader_filter.tier, Some(unlockables::Rarity::Secret));
         }
 
         let both = [
@@ -3252,9 +3299,9 @@ mod tests {
         let card = panel.card_of(SHADER_BASE + 1, &holding).expect("its card");
         assert_eq!(card.title, "Thousand Cranes blade");
         assert_eq!(card.lines[0].words, unlockables::PERSONAL_THANKS);
-        // T from All: the first segment, Unique's, lists it alone.
+        // T from All: the first segment, Secret's, lists it alone.
         let _ = panel.cycle_tier(false);
-        assert_eq!(panel.shader_filter.tier, Some(unlockables::Rarity::Unique));
+        assert_eq!(panel.shader_filter.tier, Some(unlockables::Rarity::Secret));
         redraw(&mut panel, &holding);
         assert_eq!(ids(&panel), ["saber_thousand_cranes"]);
         // Taken back: no chip, no filter on it, not listed.
@@ -3359,14 +3406,14 @@ mod tests {
             (Tab::Achievements, false),
             (Tab::Shaders, true),
             (Tab::Toys, true),
-            (Tab::Nameplates, true),
+            (Tab::Tags, false),
         ] {
             panel.show(tab);
             assert_eq!(panel.stage_wish().is_some(), wants, "{tab:?}");
         }
         // A tab of the Profile screen is not the page's.
         panel.show(Tab::Saber);
-        assert_eq!(panel.tab(), Tab::Nameplates);
+        assert_eq!(panel.tab(), Tab::Tags);
         let _ = panel.close();
         assert_eq!(panel.stage_wish(), None);
     }
@@ -3440,32 +3487,33 @@ mod tests {
         }
     }
 
-    /// The box's niche chooses it, then runs it; Enter and the switch get in or out by
-    /// the state the page was told, and the stage holds no holocron for it.
+    /// The Ragdoll's niche, the first after Illuminate, chooses it, then runs it; Enter
+    /// and the switch go limp or get up by the state the page was told, and the stage
+    /// holds no holocron for it.
     #[test]
-    fn the_cardboard_box_is_chosen_then_put_on_or_taken_off() {
+    fn the_toy_after_illuminate_is_chosen_then_switched() {
         let mut shown = inputs(Holdings::Known(&[]), "");
         let mut panel = drawn(Tab::Toys, &shown);
         let _ = panel.key(KeyCode::ArrowRight, false, false);
-        assert_eq!(panel.toy, 1);
+        assert_eq!(panel.toy, RAGDOLL_TOY);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
-            PanelAction::CardboardBox(true)
+            PanelAction::Ragdoll(true)
         );
         assert!(panel.stage_wish().is_some_and(|wish| !wish.holocron));
-        shown.cardboard_box = true;
+        shown.ragdoll = true;
         let mut panel = drawn(Tab::Toys, &shown);
         let _ = panel.key(KeyCode::ArrowRight, false, false);
         redraw(&mut panel, &shown);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
-            PanelAction::CardboardBox(false)
+            PanelAction::Ragdoll(false)
         );
-        let all = panel.ui.text_runs().collect::<Vec<_>>().join("\n");
-        assert!(
-            all.contains("toy_box") && all.contains("In the box"),
-            "{all}"
+        let all = panel.ui.text_runs().collect::<Vec<_>>().join(
+            "
+",
         );
+        assert!(all.contains("toy_ragdoll") && all.contains("Limp"), "{all}");
         let _ = panel.key(KeyCode::ArrowLeft, false, false);
         assert_eq!(
             panel.key(KeyCode::Enter, false, true),
@@ -3473,94 +3521,23 @@ mod tests {
         );
     }
 
-    /// The Fishing card's Sell junk button sells (its token is no nameplate style's or
-    /// toy option's, which a click reads by range first).
+    /// The Monitor, the first row of With others: chosen, then turned on or off by the
+    /// state the page was told; its row chooses it, its row's own switch runs it, and
+    /// another row's switch runs that toy and chooses it.
     #[test]
-    fn the_fishing_cards_sell_button_sells() {
-        let log = crate::fishing::Log::parse(
-            "boot 3
-hilt 1
-",
-        );
-        let card = crate::fishing_sell::card(&log, Some((8, 15)), false, None);
-        let mut shown = inputs(Holdings::Known(&[]), "");
-        shown.fishing_card = Some(&card);
-        let mut panel = drawn(Tab::Toys, &shown);
-        panel.toy = FISHING_TOY;
-        redraw(&mut panel, &shown);
-        let rect = panel.ui.rect_for(SELL_JUNK_TOKEN).expect("the Sell button");
-        let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
-        let button = sjk_ui::PointerButton::Primary;
-        let action = [
-            InputEvent::PointerMove(at),
-            InputEvent::PointerPress {
-                position: at,
-                button,
-            },
-            InputEvent::PointerRelease {
-                position: at,
-                button,
-            },
-        ]
-        .into_iter()
-        .map(|event| panel.pointer_at(event, true, Instant::now()))
-        .find(|action| *action != PanelAction::None)
-        .unwrap_or(PanelAction::None);
-        assert_eq!(action, PanelAction::SellJunk);
-    }
-
-    /// The Mining card's Sell rubble button, the same token on its own card.
-    #[test]
-    fn the_mining_cards_sell_button_sells_rubble() {
-        let log = crate::mining::Log::parse(
-            "rubble 3
-fossil 1
-",
-        );
-        let card = crate::mining_sell::card(&log, Some((6, 15)), false, None);
-        let mut shown = inputs(Holdings::Known(&[]), "");
-        shown.mining_card = Some(&card);
-        let mut panel = drawn(Tab::Toys, &shown);
-        panel.toy = MINING_TOY;
-        redraw(&mut panel, &shown);
-        let rect = panel.ui.rect_for(SELL_JUNK_TOKEN).expect("the Sell button");
-        let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
-        let button = sjk_ui::PointerButton::Primary;
-        let action = [
-            InputEvent::PointerMove(at),
-            InputEvent::PointerPress {
-                position: at,
-                button,
-            },
-            InputEvent::PointerRelease {
-                position: at,
-                button,
-            },
-        ]
-        .into_iter()
-        .map(|event| panel.pointer_at(event, true, Instant::now()))
-        .find(|action| *action != PanelAction::None)
-        .unwrap_or(PanelAction::None);
-        assert_eq!(action, PanelAction::SellRubble);
-    }
-
-    /// Order 66 is the third toy, the sixth row (the first With others): chosen, then
-    /// turned on or off by the state the page was told; its row chooses it, its row's
-    /// own switch runs it.
-    #[test]
-    fn order_66_is_chosen_then_turned_on_or_off() {
+    fn the_monitor_is_chosen_then_turned_on_or_off() {
         let mut shown = inputs(Holdings::Known(&[]), "");
         let mut panel = drawn(Tab::Toys, &shown);
-        for _ in 0..5 {
+        for _ in 0..4 {
             let _ = panel.key(KeyCode::ArrowRight, false, false);
         }
-        assert_eq!(panel.toy, 2);
+        assert_eq!(panel.toy, MONITOR_TOY);
         assert_eq!(
             panel.key(KeyCode::Enter, false, false),
-            PanelAction::Order66(true)
+            PanelAction::Monitor(true)
         );
         assert!(panel.stage_wish().is_some_and(|wish| !wish.holocron));
-        shown.order66 = true;
+        shown.monitor = true;
         let click = |panel: &mut Panel, token: u16| {
             let rect = panel.ui.rect_for(token).expect("a pointer area");
             let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
@@ -3582,51 +3559,29 @@ fossil 1
             .unwrap_or(PanelAction::None)
         };
         let mut panel = drawn(Tab::Toys, &shown);
-        assert_eq!(click(&mut panel, ORDER_TOKEN), PanelAction::None, "chosen");
-        assert_eq!(panel.toy, 2);
+        assert_eq!(
+            click(&mut panel, MONITOR_TOKEN),
+            PanelAction::None,
+            "chosen"
+        );
+        assert_eq!(panel.toy, MONITOR_TOY);
         redraw(&mut panel, &shown);
         assert_eq!(
-            click(&mut panel, ORDER_TOKEN),
+            click(&mut panel, MONITOR_TOKEN),
             PanelAction::None,
             "still chosen"
         );
         assert_eq!(
-            click(&mut panel, TOY_SWITCH_BASE + 2),
-            PanelAction::Order66(false)
+            click(&mut panel, TOY_SWITCH_BASE + MONITOR_TOY as u16),
+            PanelAction::Monitor(false)
         );
         // Another row's switch runs that toy, and chooses it.
         assert_eq!(
-            click(&mut panel, TOY_SWITCH_BASE + 3),
-            PanelAction::Hax(true)
+            click(&mut panel, TOY_SWITCH_BASE + DRONE_TOY as u16),
+            PanelAction::Drone(true)
         );
-        assert_eq!(panel.toy, 3);
-        let all = panel.ui.text_runs().collect::<Vec<_>>().join("\n");
-        assert!(
-            all.contains("toy_order66") && all.contains("In the order"),
-            "{all}"
-        );
-        // The Hax acts only on players who have it on: its card has no "See" switch.
+        assert_eq!(panel.toy, DRONE_TOY);
         redraw(&mut panel, &shown);
-        assert!(panel.ui.rect_for(TOY_SIGHT_TOKEN).is_none());
-        // Its card holds its trap's two switches (moved from Settings > Gameplay).
-        assert_eq!(
-            click(&mut panel, TOY_OPTION_TOKEN),
-            PanelAction::ToyOption {
-                cvar: crate::hax::TRAP_CVAR,
-                on: true,
-            }
-        );
-        shown.toy_options = toys::options_on(|cvar| cvar == crate::hax::AWAY_CVAR);
-        redraw(&mut panel, &shown);
-        assert_eq!(
-            click(&mut panel, TOY_OPTION_TOKEN + 1),
-            PanelAction::ToyOption {
-                cvar: crate::hax::AWAY_CVAR,
-                on: false,
-            }
-        );
-        assert!(panel.ui.rect_for(TOY_OPTION_TOKEN + 2).is_none());
-        shown.toy_options = 0;
         // The Monitor's hides the monitors, and shows them again.
         let _ = click(&mut panel, MONITOR_TOKEN);
         redraw(&mut panel, &shown);
@@ -3637,7 +3592,7 @@ fossil 1
                 seen: false,
             }
         );
-        shown.toys_unseen = 1 << 7;
+        shown.toys_unseen = 1 << MONITOR_TOY;
         redraw(&mut panel, &shown);
         assert_eq!(
             click(&mut panel, TOY_SIGHT_TOKEN),
@@ -3648,88 +3603,8 @@ fossil 1
         );
         assert_eq!(
             toys::unseen(|cvar| cvar != crate::toy_sight::DRONE),
-            1 << 5,
+            1 << DRONE_TOY,
             "the Drone's bit"
-        );
-    }
-
-    /// The Nameplates tab's Style row offers every nameplate style, the one in use
-    /// lit, and a click on another asks for it; each style's plate fits the page.
-    #[test]
-    fn the_style_row_chooses_the_nameplates_look() {
-        use crate::hud::nameplate::Style;
-        for style in Style::ALL {
-            let shown = Inputs {
-                nameplate_style: style,
-                ..inputs(Holdings::Known(&[]), "")
-            };
-            let mut panel = drawn(Tab::Nameplates, &shown);
-            assert!(!panel.ui.overflowed(), "{style:?}");
-            for (index, other) in Style::ALL.into_iter().enumerate() {
-                let rect = panel
-                    .ui
-                    .rect_for(STYLE_BASE + index as u16)
-                    .expect("a style's segment");
-                let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
-                let button = sjk_ui::PointerButton::Primary;
-                let action = [
-                    InputEvent::PointerMove(at),
-                    InputEvent::PointerPress {
-                        position: at,
-                        button,
-                    },
-                    InputEvent::PointerRelease {
-                        position: at,
-                        button,
-                    },
-                ]
-                .into_iter()
-                .map(|event| panel.pointer_at(event, true, Instant::now()))
-                .find(|action| *action != PanelAction::None);
-                assert_eq!(action, Some(PanelAction::NameplateStyle(other)));
-            }
-            let all = panel.ui.text_runs().collect::<Vec<_>>().join(
-                "
-",
-            );
-            assert!(all.contains("Capsule") && all.contains("Classic"), "{all}");
-        }
-    }
-
-    /// The Nameplates tab's See and share nameplates switch, clicked or with Enter, flips the
-    /// state the page was told, and says what off means.
-    #[test]
-    fn the_share_switch_flips_sharing() {
-        let mut shown = inputs(Holdings::Known(&[]), "");
-        let mut panel = drawn(Tab::Nameplates, &shown);
-        let rect = panel.ui.rect_for(SHARE_TOKEN).expect("the switch");
-        let at = sjk_ui::Vec2::new(rect.x + rect.width * 0.5, rect.y + rect.height * 0.5);
-        let button = sjk_ui::PointerButton::Primary;
-        let action = [
-            InputEvent::PointerMove(at),
-            InputEvent::PointerPress {
-                position: at,
-                button,
-            },
-            InputEvent::PointerRelease {
-                position: at,
-                button,
-            },
-        ]
-        .into_iter()
-        .map(|event| panel.pointer_at(event, true, Instant::now()))
-        .find(|action| *action != PanelAction::None);
-        assert_eq!(action, Some(PanelAction::SeeAndShare(false)));
-        shown.share = false;
-        redraw(&mut panel, &shown);
-        assert_eq!(
-            panel.key(KeyCode::Enter, false, false),
-            PanelAction::SeeAndShare(true)
-        );
-        let all = panel.ui.text_runs().collect::<Vec<_>>().join("\n");
-        assert!(
-            all.contains("See & share nameplates") && all.contains("you see no nameplates"),
-            "{all}"
         );
     }
 
@@ -3811,8 +3686,8 @@ fossil 1
                     sjk_ui::DrawCommand::Border { color: paint, .. }
                     | sjk_ui::DrawCommand::RoundedRect { color: paint, .. } => {
                         use crate::menu::sjk::color;
-                        *paint == color::alpha(color::GOLD_BRIGHT, 0.85)
-                            || *paint == color::alpha(color::GOLD_BRIGHT, 0.9)
+                        *paint == color::alpha(color::gold_bright(), 0.85)
+                            || *paint == color::alpha(color::gold_bright(), 0.9)
                     }
                     _ => false,
                 })
@@ -3991,7 +3866,7 @@ fossil 1
         assert!(panel.ui.rect_for(TARGET_SECOND_TOKEN).is_none());
         // Two sabers on the stage, the first wearing the Sun and the second nothing of its
         // own. The switch's pills are hit over the sabers' room (the later region wins).
-        panel.set_backstage(Backstage::World { head: None });
+        panel.set_backstage(Backstage::World);
         let dual = |first, second| Inputs {
             second,
             pair: crate::saber_skins::Pair::TwoSabers,
@@ -4093,11 +3968,13 @@ fossil 1
             [1920.0, 1080.0],
         );
         assert!(!panel.stage_wish().unwrap().on_second);
+        // The breadcrumb's Collection goes to the hall, on the Shaders tile.
         assert_eq!(
-            click(&mut panel, crate::profile_hub::TOKEN + 1),
+            click(&mut panel, crate::profile_hub::HALL_TOKEN),
             PanelAction::None
         );
-        assert_eq!(panel.tab(), Tab::Achievements);
+        assert_eq!(panel.tab(), Tab::Hall);
+        assert_eq!(panel.hall_tile(), hall::Tile::Shaders);
         panel.build(
             &inputs(Holdings::Known(&owned), ""),
             &fonts.font,
@@ -4487,14 +4364,14 @@ fossil 1
             })
             .collect();
         let fonts = crate::text::load_modern(1.0, None).expect("Inter");
-        for tab in [Tab::Shaders, Tab::Tags, Tab::Nameplates] {
+        for tab in [Tab::Shaders, Tab::Tags] {
             for grid in [false, true] {
                 for (size, stage) in [[1920.0, 1080.0], [1280.0, 720.0], [2560.0, 1440.0]]
                     .into_iter()
                     .flat_map(|size| {
                         [
                             Backstage::None,
-                            Backstage::World { head: None },
+                            Backstage::World,
                             Backstage::Preview { ready: true },
                         ]
                         .map(|stage| (size, stage))

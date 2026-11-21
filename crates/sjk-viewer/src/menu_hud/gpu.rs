@@ -292,6 +292,7 @@ impl Gpu {
         frame: Option<&Frame>,
         viewport: [f32; 2],
         scale: f32,
+        lift: f32,
     ) {
         self.counts = [0; 2];
         let (Some(atlas), Some(frame)) = (&self.atlas, frame) else {
@@ -304,6 +305,8 @@ impl Gpu {
                 continue;
             };
             let [x, y, width, height] = to_pixels(picture.rect, picture.side, viewport, scale);
+            // Above the bottom status bar while it shows (`status_bar.rs`).
+            let y = y - lift;
             let target = if entry.additive {
                 &mut self.additive
             } else {

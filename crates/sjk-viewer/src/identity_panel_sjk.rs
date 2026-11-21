@@ -40,7 +40,7 @@ impl Panel {
             format_args!("Identity"),
             frame.rect((end - frame.origin[0]) / s + 22.0, 57.0, 600.0, 60.0),
             48.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -50,7 +50,7 @@ impl Panel {
             format_args!("{}", view.headline),
             frame.rect(COLUMN_X, TOP, COLUMN_WIDTH, 64.0),
             52.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -63,7 +63,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(COLUMN_X, y, COLUMN_WIDTH, 28.0),
                     18.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -86,7 +86,7 @@ impl Panel {
             if focused {
                 Color::new(1.0, 1.0, 1.0, 1.0)
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -123,7 +123,7 @@ impl Panel {
             format_args!("About you, optional, up to {BIO_LIMIT} characters"),
             frame.rect(COLUMN_X, y, COLUMN_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -204,7 +204,7 @@ impl Panel {
                 format_args!("{message}"),
                 frame.rect(x + 8.0, top + 12.0, COLUMN_X + COLUMN_WIDTH - x - 8.0, 26.0),
                 17.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -237,7 +237,7 @@ impl Panel {
                 format_args!("{}", player.slot),
                 frame.rect(COLUMN_X, row_y, 40.0, 30.0),
                 20.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::End,
             );
@@ -247,7 +247,7 @@ impl Panel {
                 format_args!("{}", player.name),
                 frame.rect(COLUMN_X + 60.0, row_y, COLUMN_WIDTH - 200.0, 30.0),
                 19.0 * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -258,7 +258,7 @@ impl Panel {
                     format_args!("Verified"),
                     frame.rect(COLUMN_X + COLUMN_WIDTH - 140.0, row_y, 130.0, 30.0),
                     19.0 * s,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
