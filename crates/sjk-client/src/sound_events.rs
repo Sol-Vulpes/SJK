@@ -1458,7 +1458,10 @@ impl LegacySoundAdapter {
                 ))
             }
             29 => {
-                layered = self.saber_overrides.swing(source, variant);
+                layered = self
+                    .saber_overrides
+                    .swing(source, variant)
+                    .map(|swing| (swing, self.saber_overrides.alone(source)));
                 Some((
                     LegacySoundEvent::SaberAttack,
                     self.saber_attack[variant % 8],
@@ -1558,9 +1561,11 @@ impl LegacySoundAdapter {
                     .saber_overrides
                     .general(sound, &self.sounds, entity.origin, snapshot)
                 {
-                    saber_overrides::GeneralSkin::Skin(skin) => layered = Some(skin),
+                    saber_overrides::GeneralSkin::Skin { sound, alone } => {
+                        layered = Some((sound, alone));
+                    }
                     // Its skin already replaced this toggle's first sound.
-                    saber_overrides::GeneralSkin::Voiced if self.saber_overrides.only => return,
+                    saber_overrides::GeneralSkin::Voiced { alone: true } => return,
                     _ => {}
                 }
                 Some((
@@ -1640,10 +1645,11 @@ impl LegacySoundAdapter {
             _ => None,
         };
         if let Some((kind, sound, sound_source, channel, listener_relative)) = simple {
-            // With `s_saberSkinSounds 2` a blade skin's sound replaces the stock one.
+            // With `s_saberSkinSounds 2`, or a set that always replaces them
+            // (`SaberSoundSet::replace`), a blade skin's sound replaces the stock one.
             let (sound, layered) = match layered {
-                Some(skin) if self.saber_overrides.only => (Some(skin), None),
-                other => (sound, other),
+                Some((skin, true)) => (Some(skin), None),
+                other => (sound, other.map(|(skin, _)| skin)),
             };
             self.emit(
                 kind,

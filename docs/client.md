@@ -6739,7 +6739,9 @@ player hears the choice, [unlockables.md](unlockables.md#saber-sounds)); what fo
 holds for the set they are heard with. A skin brings its own sounds, heard for each player wearing it, over the stock ones,
 which keep playing (the skin's sound goes on a channel of its own, so that it does not
 cut the stock one), or, with `s_saberSkinSounds 2` (Settings > Sound > Kyber
-sounds: Only skin; 1, With normal, is the default), in their place, or, with
+sounds: Only skin; 1, With normal, is the default), in their place (as a skin whose
+`sounds` say `replace` is heard in either of those modes, since 21/11/2026:
+`SaberSoundSet::replace`, the Varykino Blossom's breeze), or, with
 `s_saberSkinSounds 0` (Off), not at all, every player heard with the stock sounds
 (the table of who wears which set is passed empty), so a skin's own sounds are heard clearly
 (Creyon's request, 18/10/2026; a thrown saber hums with the skin's alone too since

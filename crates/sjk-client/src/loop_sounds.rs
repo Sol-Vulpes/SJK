@@ -160,8 +160,13 @@ pub(crate) struct LegacyLoopAdapter {
     /// Registered hums of the replacement saber sound sets, by set.
     /// Each set's hum; `None` where its file did not load, so the sabers' own hum plays.
     saber_hums: Vec<Option<u16>>,
+    /// Whether each set's hum replaces the sabers' own in either mode
+    /// (`SaberSoundSet::replace`), by set.
+    saber_hums_alone: Vec<bool>,
     /// The hum each client's blade skin plays over its sabers' own.
     hum_overrides: [Option<u16>; MAX_CLIENTS],
+    /// Whether that hum plays in their place ([`Self::saber_hums_alone`]).
+    hum_alone: [bool; MAX_CLIENTS],
     /// `s_saberSkinSounds 2`: a skin's hum replaces the sabers' own.
     pub(crate) skin_hum_only: bool,
     client_config_hash: [u64; MAX_CLIENTS],
@@ -243,6 +248,8 @@ impl LegacyLoopAdapter {
             jetpack_sounds: crate::LegacyJetpackSounds::default(),
             sabers,
             saber_hums: Vec::new(),
+            saber_hums_alone: Vec::new(),
+            hum_alone: [false; MAX_CLIENTS],
             hum_overrides: [None; MAX_CLIENTS],
             skin_hum_only: false,
             client_config_hash: std::array::from_fn(|client| {
@@ -502,7 +509,9 @@ impl LegacyLoopAdapter {
         // A thrown saber of a blade skin's wearer hums with the skin as well, or with
         // the skin alone under `s_saberSkinSounds 2`, as the held sabers do.
         let skin = self.thrown_saber_hum(state);
-        if !(self.skin_hum_only && skin.is_some()) {
+        let alone = crate::thrown_sabers::legacy_thrown_saber_owner(state)
+            .is_some_and(|owner| self.hum_alone(usize::from(owner)));
+        if !(alone && skin.is_some()) {
             self.push(
                 if state.entity_type() == ET_MISSILE {
                     LegacyLoopKind::Missile
@@ -589,8 +598,9 @@ impl LegacyLoopAdapter {
         let loops = self.saber_loops(client);
         let primary_active = !state.saber_in_flight();
         let secondary_active = state.saber_holstered() == 0 && loops.secondary.is_some();
-        // With `s_saberSkinSounds 2` a blade skin's hum replaces the sabers' own.
-        let stock = !(self.skin_hum_only && self.hum_overrides[client].is_some());
+        // With `s_saberSkinSounds 2`, or a set that always replaces them, a blade skin's
+        // hum replaces the sabers' own.
+        let stock = !(self.hum_alone(client) && self.hum_overrides[client].is_some());
         if primary_active && stock {
             self.push(
                 LegacyLoopKind::SaberHumPrimary,
@@ -632,8 +642,9 @@ impl LegacyLoopAdapter {
         let loops = self.saber_loops(client);
         let primary_active = !player.saber_in_flight();
         let secondary_active = player.saber_holstered() == 0 && loops.secondary.is_some();
-        // With `s_saberSkinSounds 2` a blade skin's hum replaces the sabers' own.
-        let stock = !(self.skin_hum_only && self.hum_overrides[client].is_some());
+        // With `s_saberSkinSounds 2`, or a set that always replaces them, a blade skin's
+        // hum replaces the sabers' own.
+        let stock = !(self.hum_alone(client) && self.hum_overrides[client].is_some());
         if primary_active && stock {
             self.push(
                 LegacyLoopKind::SaberHumPrimary,
@@ -663,13 +674,14 @@ impl LegacyLoopAdapter {
     /// (`LegacySoundAdapter::register_saber_sound_sets`).
     pub(crate) fn register_saber_hums(
         &mut self,
-        hums: &[&str],
+        hums: &[(&str, bool)],
         vfs: &VirtualFileSystem,
         register: &mut impl FnMut(&str, &[u8]) -> Option<SoundHandle>,
     ) {
+        self.saber_hums_alone = hums.iter().map(|(_, alone)| *alone).collect();
         self.saber_hums = hums
             .iter()
-            .map(|path| {
+            .map(|(path, _)| {
                 if !sound_present(vfs, path) {
                     return None;
                 }
@@ -684,6 +696,16 @@ impl LegacyLoopAdapter {
         self.hum_overrides = sets.map(|set| {
             set.and_then(|set| self.saber_hums.get(usize::from(set)).copied().flatten())
         });
+        self.hum_alone = sets.map(|set| {
+            set.and_then(|set| self.saber_hums_alone.get(usize::from(set)).copied())
+                .unwrap_or(false)
+        });
+    }
+
+    /// Whether client `client`'s blade skin hum plays in place of its sabers' own: with
+    /// `s_saberSkinSounds 2`, or a set that always replaces them.
+    fn hum_alone(&self, client: usize) -> bool {
+        self.skin_hum_only || self.hum_alone.get(client).copied().unwrap_or(false)
     }
 
     /// A thrown saber's hum when its owner wears a blade skin: the skin's, to play over

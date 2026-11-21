@@ -27,6 +27,7 @@ const SKIN: SaberSoundSet<'static> = SaberSoundSet {
         "sound/sjk/skin_swing2.wav",
         "sound/sjk/skin_swing3.wav",
     ],
+    replace: false,
 };
 
 const SABERS: &str = r#"

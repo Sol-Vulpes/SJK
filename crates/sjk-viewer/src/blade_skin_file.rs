@@ -442,6 +442,12 @@ pub(crate) struct Sounds {
     pub(crate) off: String,
     pub(crate) hum: String,
     pub(crate) swings: [String; 3],
+    /// Whether they are heard in place of the stock saber sounds whatever
+    /// `s_saberSkinSounds` is (but 0, which plays no skin's sounds), not over them: for
+    /// sounds too soft to be heard over the stock hum (the Varykino Blossom's breeze,
+    /// Kushina, 21/11/2026). Absent: over them, as every skin before.
+    #[serde(default)]
+    pub(crate) replace: bool,
 }
 
 /// `base + grain × granulation`.

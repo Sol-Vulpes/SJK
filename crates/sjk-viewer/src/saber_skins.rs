@@ -1425,6 +1425,7 @@ impl LoadedSkins {
                     off: &sounds.off,
                     hum: &sounds.hum,
                     swings: [&sounds.swings[0], &sounds.swings[1], &sounds.swings[2]],
+                    replace: sounds.replace,
                 }
             })
             .collect()

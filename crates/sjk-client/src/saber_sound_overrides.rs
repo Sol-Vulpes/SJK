@@ -51,6 +51,10 @@ pub struct SaberSoundSet<'a> {
     pub hum: &'a str,
     /// Swings, chosen like `.sab` `swingSound1`-`3`.
     pub swings: [&'a str; 3],
+    /// Whether the set's sounds replace the stock ones for its wearer in either
+    /// `s_saberSkinSounds` mode, as `s_saberSkinSounds 2` does for every set: for a set
+    /// too soft to be heard over the stock hum (the Varykino Blossom's breeze).
+    pub replace: bool,
 }
 
 /// A set's sounds in the event adapter's table; `None` where the set's file did not
@@ -61,6 +65,8 @@ pub(crate) struct EventSet {
     on: Option<u16>,
     off: Option<u16>,
     swings: [Option<u16>; 3],
+    /// [`SaberSoundSet::replace`].
+    replace: bool,
 }
 
 /// Whether a sound switches a saber on or off.
@@ -93,11 +99,11 @@ pub(crate) struct SaberSoundOverrides {
 pub(crate) enum GeneralSkin {
     /// Not a toggle of a client wearing a set with that sound: the stock sound alone.
     Stock,
-    /// The set's sound, over the stock one or in its place.
-    Skin(u16),
+    /// The set's sound, over the stock one or, `alone`, in its place.
+    Skin { sound: u16, alone: bool },
     /// Another sound of a toggle the set already voiced: the stock sound alone, or
-    /// nothing with `s_saberSkinSounds 2`.
-    Voiced,
+    /// nothing when the set's sounds play `alone`.
+    Voiced { alone: bool },
 }
 
 impl SaberSoundOverrides {
@@ -121,6 +127,7 @@ impl SaberSoundOverrides {
                 on: intern(set.on),
                 off: intern(set.off),
                 swings: set.swings.map(&mut intern),
+                replace: set.replace,
             })
             .collect();
         self.toggles.clear();
@@ -160,6 +167,13 @@ impl SaberSoundOverrides {
         }
         let set = (*self.clients.get(usize::from(source))?)?;
         self.sets.get(usize::from(set)).copied()
+    }
+
+    /// Whether the set entity `source` wears plays in place of the stock sounds:
+    /// with `s_saberSkinSounds 2`, or a set that always replaces them
+    /// ([`SaberSoundSet::replace`]).
+    pub(crate) fn alone(&self, source: u16) -> bool {
+        self.only || self.for_source(source).is_some_and(|set| set.replace)
     }
 
     /// The set's swing for `variant`, as `ci->saber[0].swingSound[Q_irand(0, 2)]`.
@@ -211,10 +225,15 @@ impl SaberSoundOverrides {
         let voiced = &mut self.voiced[usize::from(client)];
         let key = (snapshot.server_time, toggle);
         if *voiced == Some(key) {
-            return GeneralSkin::Voiced;
+            return GeneralSkin::Voiced {
+                alone: self.only || set.replace,
+            };
         }
         *voiced = Some(key);
-        GeneralSkin::Skin(skin)
+        GeneralSkin::Skin {
+            sound: skin,
+            alone: self.only || set.replace,
+        }
     }
 
     fn toggle(&self, path: &str) -> Option<Toggle> {
@@ -309,7 +328,7 @@ impl LegacySoundAdapter {
     ) {
         self.saber_overrides
             .register(sets, &mut self.sounds, vfs, &mut register);
-        let hums: Vec<&str> = sets.iter().map(|set| set.hum).collect();
+        let hums: Vec<(&str, bool)> = sets.iter().map(|set| (set.hum, set.replace)).collect();
         self.loops.register_saber_hums(&hums, vfs, &mut register);
         // The clients' hums point into the table just rebuilt: an unchanged client list
         // would not refresh them ([`Self::set_saber_sound_overrides`]).

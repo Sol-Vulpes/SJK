@@ -18,6 +18,7 @@ const SET: SaberSoundSet<'static> = SaberSoundSet {
         "sound/test/blade/swing2.wav",
         "sound/test/blade/swing3.wav",
     ],
+    replace: false,
 };
 
 fn vfs() -> VirtualFileSystem {
@@ -75,6 +76,11 @@ fn game_state() -> GameState {
 }
 
 fn adapter() -> LegacySoundAdapter {
+    adapter_with(SET)
+}
+
+/// The adapter with `set` registered as set 0.
+fn adapter_with(set: SaberSoundSet<'static>) -> LegacySoundAdapter {
     let vfs = vfs();
     let mut next = 0;
     let mut register = |_: &str, _: &[u8]| {
@@ -82,7 +88,7 @@ fn adapter() -> LegacySoundAdapter {
         Some(SoundHandle(next))
     };
     let mut adapter = LegacySoundAdapter::new(&game_state(), &vfs, &mut register);
-    adapter.register_saber_sound_sets(&[SET], &vfs, &mut register);
+    adapter.register_saber_sound_sets(&[set], &vfs, &mut register);
     adapter
 }
 
@@ -473,9 +479,27 @@ fn with_skin_sounds_only_the_set_replaces_the_stock_sounds_of_its_wearer() {
     wear(&mut adapter, SKINNED);
     adapter.set_saber_skin_sounds_only(true);
     assert!(adapter.saber_skin_sounds_only());
+    assert_the_set_alone(&mut adapter);
+}
+
+#[test]
+fn a_set_that_replaces_the_stock_sounds_plays_alone_in_either_mode() {
+    // The Varykino Blossom's soft breeze (`replace`), not heard over the stock hum
+    // otherwise: alone for its wearer with `s_saberSkinSounds 1` too.
+    let mut adapter = adapter_with(SaberSoundSet {
+        replace: true,
+        ..SET
+    });
+    wear(&mut adapter, SKINNED);
+    assert!(!adapter.saber_skin_sounds_only());
+    assert_the_set_alone(&mut adapter);
+}
+
+/// The wearer `SKINNED` hears the set alone, the other player the stock sounds.
+fn assert_the_set_alone(adapter: &mut LegacySoundAdapter) {
     // Ignition: the wearer hears the set's alone, the other player the stock one.
     let sounds = played(
-        &mut adapter,
+        adapter,
         vec![
             with_event(player_entity(SKINNED, AT_SKINNED), 33, 0),
             with_event(player_entity(STOCK, AT_STOCK), 33, 0),
@@ -492,7 +516,7 @@ fn with_skin_sounds_only_the_set_replaces_the_stock_sounds_of_its_wearer() {
     for round in 0..8_u16 {
         let event = 29 | (round % 4) << 8;
         let sounds = played(
-            &mut adapter,
+            adapter,
             vec![
                 with_event(player_entity(SKINNED, AT_SKINNED), event, round as u8),
                 with_event(player_entity(STOCK, AT_STOCK), event, round as u8),
@@ -550,6 +574,7 @@ fn a_set_whose_files_are_not_in_the_game_data_leaves_the_stock_sounds_even_alone
             "sound/test/missing/swing2.wav",
             "sound/test/missing/swing3.wav",
         ],
+        replace: false,
     };
     let vfs = vfs();
     let mut next = 0;

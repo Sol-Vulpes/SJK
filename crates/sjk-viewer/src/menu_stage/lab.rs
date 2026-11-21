@@ -305,7 +305,9 @@ impl GpuState {
             };
             play(&[own, hilt, Some(stock)], SWITCH_CHANNEL);
         }
-        // The hilt's own swings, else the stock one; the skin's over it.
+        // The hilt's own swings, else the stock one; the skin's over it, or in their
+        // place for a skin whose sounds always replace them (`replace`).
+        let alone = skin_sounds.is_some_and(|sounds| sounds.replace);
         let swing = |variant: usize, stock: &str| {
             hilt.filter(|hilt| hilt.sound_swing[0].is_some())
                 .and_then(|hilt| hilt.sound_swing[variant % 3].clone())
@@ -314,8 +316,18 @@ impl GpuState {
         let skin_swing = |variant| skin.and_then(|index| skins.swing(index, variant));
         if attacked && lab.lit {
             let stock = format!("{SWING_PREFIX}{}.mp3", attack_variant % 8 + 1);
-            play(&[Some(&swing(attack_variant, &stock))], FREE_CHANNEL);
-            play(&[skin_swing(attack_variant)], FREE_CHANNEL);
+            if alone {
+                play(
+                    &[
+                        skin_swing(attack_variant),
+                        Some(&swing(attack_variant, &stock)),
+                    ],
+                    FREE_CHANNEL,
+                );
+            } else {
+                play(&[Some(&swing(attack_variant, &stock))], FREE_CHANNEL);
+                play(&[skin_swing(attack_variant)], FREE_CHANNEL);
+            }
         }
         let actor = self.menu_stage.actor.as_ref().expect("checked above");
         self.menu_stage.lab_sounds.cursor.advance(
@@ -334,8 +346,15 @@ impl GpuState {
                 } else if lab.lit {
                     // A cued swing (the spins and specials), as a match plays it
                     // (`HiltCatalog::animation_sound`).
-                    play(&[Some(&swing(variant, standard))], FREE_CHANNEL);
-                    play(&[skin_swing(variant)], FREE_CHANNEL);
+                    if alone {
+                        play(
+                            &[skin_swing(variant), Some(&swing(variant, standard))],
+                            FREE_CHANNEL,
+                        );
+                    } else {
+                        play(&[Some(&swing(variant, standard))], FREE_CHANNEL);
+                        play(&[skin_swing(variant)], FREE_CHANNEL);
+                    }
                 }
             },
         );

@@ -494,13 +494,13 @@ impl LegacySoundAdapter {
 
     /// What `client` plays for `switch`: each hand's own (`soundOn`/`soundOff` or their
     /// defaults), then its blade skin's one sound on top when it wears one, or that sound
-    /// alone with `s_saberSkinSounds 2`.
+    /// alone with `s_saberSkinSounds 2` or a set that always replaces them.
     fn switch_sounds(&self, client: u16, switch: Switch) -> [Option<u16>; 3] {
         let skin = match switch {
             Switch::On => self.saber_overrides.on(client),
             Switch::Off => self.saber_overrides.off(client),
         };
-        if skin.is_some() && self.saber_overrides.only {
+        if skin.is_some() && self.saber_overrides.alone(client) {
             return [None, None, skin];
         }
         let [first, second] = self.saber_switch.hands(client).sounds(switch);

@@ -1244,7 +1244,9 @@ from the looks.
   own, so the skin's does not cut them), at the paths the file names in its pack, unless
   the wearer chose other saber sounds ([Saber sounds](#saber-sounds)). With
   `s_saberSkinSounds 2` (Settings > Sound > Kyber sounds: Only skin) they play in
-  the stock ones' place, and with `0` (Off) they are not played: the stock ones alone. A sound
+  the stock ones' place, as a skin whose `sounds` say `replace` always does (since
+  21/11/2026, the Varykino Blossom's soft breeze, which the stock hum drowned), and with
+  `0` (Off) they are not played: the stock ones alone. A sound
   the file names that is not in the game data (no pack carries it yet) is left out: the
   stock one plays there as for a player without a skin, in either mode, never silence
   (`sound_present` in `sjk-client`, the viewer's `has_sound` for animation swings). The viewer
@@ -1746,7 +1748,7 @@ rooted at the emitter, running up the blade for their span, instead of anywhere 
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
-| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack | 1-63 characters, relative, no `..` |
+| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack; optional `replace` (`true`): heard in place of the stock saber sounds with `s_saberSkinSounds 1` too, as `2` makes every skin's (for sounds too soft to be heard over the stock hum: the Varykino Blossom's breeze, 21/11/2026). A client from before refuses a file with `replace`, so only a signature's built-in file names it | 1-63 characters, relative, no `..` |
 
 Other coefficients are any number from -1000 to 1000.
 
