@@ -13,8 +13,9 @@
 //!
 //! Each chain has its own [`Settings`] (a cape: no wag, stiffer), and its points are
 //! pushed out of the body's [`Capsule`]s (trunk and legs, measured once from the mesh;
-//! the arms too for a chain that asks, [`Settings::arms`]) so a tail or a cape swings
-//! past the legs rather than through them.
+//! the arms and the head too for a chain that asks, [`Settings::arms`] and
+//! [`Settings::head`]) so a tail or a cape swings past the legs rather than through them,
+//! and hair past the face.
 
 use super::Joint;
 use glam::{Affine3A, Mat3A, Quat, Vec3A};
@@ -90,6 +91,9 @@ pub(crate) struct Settings {
     pub(crate) drag: f32,
     /// Whether the arms' capsules push the chain's points out too.
     pub(crate) arms: bool,
+    /// Whether the head's capsule pushes the chain's points out too: hair kept from
+    /// swinging through the face and the skull.
+    pub(crate) head: bool,
 }
 
 impl Default for Settings {
@@ -104,6 +108,7 @@ impl Default for Settings {
             clearance: 0.0,
             drag: 0.0,
             arms: false,
+            head: false,
         }
     }
 }
@@ -180,7 +185,8 @@ impl Motion {
 
 /// A part of the body dynamic chains are kept out of: the segment between two
 /// joints, thickened to `radius` (game units), measured in the bind pose from the
-/// vertices the first joint carries.
+/// vertices the first joint carries. The head's has no second joint to aim at: its
+/// segment is [`Self::head`]'s, moving with `from`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Capsule {
     pub(super) from: usize,
@@ -188,6 +194,10 @@ pub(super) struct Capsule {
     pub(super) radius: f32,
     /// An arm's: only a chain that asks ([`Settings::arms`]) is kept out of it.
     pub(super) arm: bool,
+    /// The head's: its segment's ends in `from`'s bind frame (`to` is `from`), along
+    /// the head's own vertices. Only a chain that asks ([`Settings::head`]) is kept out
+    /// of it.
+    pub(super) head: Option<[Vec3A; 2]>,
 }
 
 /// At most this many capsules (one bit each in a chain joint's mask).
@@ -197,6 +207,21 @@ const MAX_CAPSULES: usize = 64;
 const RADIUS_PERCENTILE: f32 = 0.25;
 /// Fewer vertices than this on a joint make no capsule.
 const MIN_SAMPLES: usize = 8;
+/// The share of the head's vertices beyond each end of its segment, before the ends
+/// are drawn in by the radius: a few far ones (a hat's brim, glasses, a bun) do not
+/// lengthen it.
+const HEAD_SPAN_OUTSIDE: f32 = 0.02;
+/// Steps of the power iteration finding the head's long axis.
+const AXIS_STEPS: usize = 32;
+/// The grid (game units) the head's vertices are thinned on, one per cell, before it is
+/// measured, so it is measured by its surface rather than by how its meshes are split: a
+/// dense accessory (a pair of glasses of 8,600 vertices on a head of 3,700) outweighed the
+/// skull.
+const HEAD_CELL: f32 = 0.5;
+/// The share of the head's (thinned) vertices closer to its axis than its radius: more
+/// than the trunk's [`RADIUS_PERCENTILE`], as a head holds eyes, teeth and a mouth under
+/// its surface (on a measured head the trunk's share gave half its width).
+const HEAD_RADIUS_PERCENTILE: f32 = 0.5;
 
 impl Capsule {
     /// The capsule from joint `from` to `to` in the bind pose round `vertices`
@@ -224,7 +249,84 @@ impl Capsule {
             to,
             radius,
             arm: false,
+            head: None,
         })
+    }
+
+    /// The head's capsule round `vertices` (bind-pose positions) carried by joint `head`,
+    /// `None` when there are too few or they are degenerate. They are first thinned to
+    /// one per [`HEAD_CELL`]. A head has no joint to aim at, so its segment runs along the
+    /// vertices' own long axis through their middle: as far as all but a few of them
+    /// reach each way ([`HEAD_SPAN_OUTSIDE`]), less the radius, so its rounded ends stay
+    /// inside too (both ends at the middle, a ball, when that leaves no length). The
+    /// radius leaves [`HEAD_RADIUS_PERCENTILE`] of them closer to the axis, so it sits
+    /// under the skin and the hair on the scalp.
+    pub(super) fn head(joints: &[Joint], head: usize, vertices: &[Vec3A]) -> Option<Self> {
+        let mut cells = std::collections::HashSet::new();
+        let vertices: Vec<Vec3A> = vertices
+            .iter()
+            .copied()
+            .filter(|point| cells.insert((*point / HEAD_CELL).floor().as_ivec3().to_array()))
+            .collect();
+        if vertices.len() < MIN_SAMPLES {
+            return None;
+        }
+        let middle = vertices.iter().copied().sum::<Vec3A>() / vertices.len() as f32;
+        let spread = vertices.iter().fold(Mat3A::ZERO, |sum, &point| {
+            let d = point - middle;
+            sum + Mat3A::from_cols(d * d.x, d * d.y, d * d.z)
+        });
+        // The long axis: the spread's largest eigenvector. Nearly up is a fair start, a
+        // head being taller than wide in most rigs.
+        let mut axis = Vec3A::new(0.1, 0.1, 1.0).normalize();
+        for _ in 0..AXIS_STEPS {
+            axis = (spread * axis).try_normalize()?;
+        }
+        let quantile = |mut values: Vec<f32>, share: f32| {
+            values.sort_by(f32::total_cmp);
+            values[((values.len() - 1) as f32 * share) as usize]
+        };
+        let radius = quantile(
+            vertices
+                .iter()
+                .map(|&point| (point - middle).reject_from_normalized(axis).length())
+                .collect(),
+            HEAD_RADIUS_PERCENTILE,
+        );
+        if radius <= 0.0 {
+            return None;
+        }
+        let along: Vec<f32> = vertices
+            .iter()
+            .map(|&point| (point - middle).dot(axis))
+            .collect();
+        let low = quantile(along.clone(), HEAD_SPAN_OUTSIDE) + radius;
+        let high = quantile(along, 1.0 - HEAD_SPAN_OUTSIDE) - radius;
+        let (low, high) = if low < high {
+            (low, high)
+        } else {
+            let half = (low + high) / 2.0;
+            (half, half)
+        };
+        let frame = joints[head].bind.inverse();
+        Some(Self {
+            from: head,
+            to: head,
+            radius,
+            arm: false,
+            head: Some([
+                frame.transform_point3a(middle + axis * low),
+                frame.transform_point3a(middle + axis * high),
+            ]),
+        })
+    }
+
+    /// Its segment's ends, `from` and `to` being where its joints stand (bind or posed).
+    fn ends(&self, from: &Affine3A, to: &Affine3A) -> (Vec3A, Vec3A) {
+        match self.head {
+            Some([start, end]) => (from.transform_point3a(start), from.transform_point3a(end)),
+            None => (from.translation, to.translation),
+        }
     }
 }
 
@@ -486,6 +588,13 @@ impl Chains {
             .any(|settings| settings.collide && settings.arms)
     }
 
+    /// Whether a chain is kept out of the head, so it needs a capsule at all.
+    pub(super) fn wants_head(&self) -> bool {
+        self.settings
+            .iter()
+            .any(|settings| settings.collide && settings.head)
+    }
+
     /// How far each layered joint stands outside its plane in `pose`, less its gap:
     /// below zero when it has got through.
     #[cfg(test)]
@@ -525,12 +634,12 @@ impl Chains {
             let mut ignored = 0u64;
             let mut ignored_middle = 0u64;
             for (bit, capsule) in self.capsules.iter().enumerate() {
-                let a = joints[capsule.from].bind.translation;
-                let b = joints[capsule.to].bind.translation;
+                let (a, b) = capsule.ends(&joints[capsule.from].bind, &joints[capsule.to].bind);
                 let away = |point: Vec3A| (point - closest(a, b, point)).length();
                 let (tip, halfway) = (away(point), away(middle));
                 let anchored = capsule.from == self.anchor[slot];
-                let unasked = capsule.arm && !self.settings[slot].arms;
+                let unasked = capsule.arm && !self.settings[slot].arms
+                    || capsule.head.is_some() && !self.settings[slot].head;
                 if anchored || unasked || tip < capsule.radius {
                     ignored |= 1 << bit;
                 }
@@ -814,8 +923,8 @@ fn push_out(
         if !tip && !middle {
             continue;
         }
-        let from = pose[capsule.from].translation;
-        let along = pose[capsule.to].translation - from;
+        let (from, to) = capsule.ends(&pose[capsule.from], &pose[capsule.to]);
+        let along = to - from;
         let squared = along.length_squared();
         let per_squared = if squared <= f32::EPSILON {
             0.0
@@ -917,6 +1026,7 @@ mod tests {
                 to: 1,
                 radius: 6.0,
                 arm: false,
+                head: None,
             }],
         );
         let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
@@ -935,6 +1045,91 @@ mod tests {
             kicked[0].translation,
             kicked[1].translation,
         )
+    }
+
+    /// A head 60 units up, its vertices rings of radius 4 from 54 to 66 units, and a
+    /// 14-unit strand hanging 8 units to its side from an anchor on it.
+    fn head_and_strand() -> (Vec<Joint>, Vec<Vec3A>) {
+        let head = Vec3A::new(0.0, 0.0, 60.0);
+        let anchor = Vec3A::new(8.0, 0.0, 72.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, head),
+            joint(Some(0), head, anchor),
+            joint(Some(1), anchor, Vec3A::new(8.0, 0.0, 58.0)),
+        ];
+        let vertices = (0..7)
+            .flat_map(|level| ring(Vec3A::new(0.0, 0.0, 54.0 + 2.0 * level as f32), 4.0))
+            .collect();
+        (joints, vertices)
+    }
+
+    #[test]
+    fn the_heads_capsule_runs_along_its_vertices_inside_them() {
+        let (joints, vertices) = head_and_strand();
+        let capsule = Capsule::head(&joints, 0, &vertices).expect("a capsule");
+        assert_eq!((capsule.from, capsule.to), (0, 0));
+        assert!((capsule.radius - 4.0).abs() < 1e-3, "{capsule:?}");
+        // From 54 to 66, less the radius each end, in the head's frame (60 up).
+        let [start, end] = capsule.head.expect("the head's ends");
+        let (low, high) = if start.z < end.z {
+            (start, end)
+        } else {
+            (end, start)
+        };
+        assert!(
+            (low - Vec3A::new(0.0, 0.0, -2.0)).length() < 1e-3,
+            "{low:?}"
+        );
+        assert!(
+            (high - Vec3A::new(0.0, 0.0, 2.0)).length() < 1e-3,
+            "{high:?}"
+        );
+        assert!(Capsule::head(&joints, 0, &vertices[..3]).is_none());
+    }
+
+    /// The strand's tip after the head moves 6 units towards it (its anchor held still),
+    /// with `settings`, and its distance from the head's segment then.
+    fn strand_tip_from_the_moved_head(settings: Settings) -> f32 {
+        let (joints, vertices) = head_and_strand();
+        let order = [0, 1, 2];
+        let mut chains = Chains::under(&joints, &order, &[(1, settings)]);
+        let head = Capsule::head(&joints, 0, &vertices).expect("a capsule");
+        chains.collide_with(&joints, vec![head]);
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut state = State::default();
+        let mut pose = rest.clone();
+        simulate(&joints, &chains, &mut pose, &mut state, None);
+        let mut moved = rest.clone();
+        moved[0].translation += Vec3A::new(6.0, 0.0, 0.0);
+        for _ in 0..30 {
+            pose.clone_from(&moved);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+        }
+        let (a, b) = head.ends(&moved[0], &moved[0]);
+        let tip = pose[2].translation;
+        (tip - closest(a, b, tip)).length()
+    }
+
+    #[test]
+    fn the_head_pushes_only_a_chain_that_asks() {
+        let still = Settings {
+            gravity: 0.0,
+            wag: 0.0,
+            ..Settings::default()
+        };
+        let asked = strand_tip_from_the_moved_head(Settings {
+            head: true,
+            ..still
+        });
+        assert!(asked > 3.9, "pushed out: {asked}");
+        let unasked = strand_tip_from_the_moved_head(still);
+        assert!(unasked < 2.5, "left inside: {unasked}");
+        let passing = strand_tip_from_the_moved_head(Settings {
+            head: true,
+            collide: false,
+            ..still
+        });
+        assert!(passing < 2.5, "nocollide: {passing}");
     }
 
     #[test]
@@ -991,6 +1186,7 @@ mod tests {
             to: 1,
             radius: 10.0,
             arm: false,
+            head: None,
         };
         chains.collide_with(&joints, vec![capsule]);
         let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
@@ -1036,6 +1232,7 @@ mod tests {
             to: 1,
             radius: 3.0,
             arm: false,
+            head: None,
         };
         chains.collide_with(&joints, vec![capsule]);
         let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
@@ -1140,6 +1337,7 @@ mod tests {
             to,
             radius,
             arm: false,
+            head: None,
         };
         chains.collide_with(
             &joints,
@@ -1406,6 +1604,7 @@ mod tests {
             to: 1,
             radius: 1.0,
             arm: true,
+            head: None,
         };
         let mut chains = Chains::under(&joints, &order, &[(2, Settings::default())]);
         assert!(!chains.wants_arms());
@@ -1447,6 +1646,7 @@ mod tests {
             to: 1,
             radius: 7.0,
             arm: false,
+            head: None,
         };
         chains.collide_with(&joints, vec![capsule]);
         assert_eq!(chains.ignored, [0]);

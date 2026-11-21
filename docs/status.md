@@ -472,6 +472,21 @@ carries the model's head (only the plate used it). The nameplates over players a
 settings are untouched: `cg_nameplate` and `cg_nameplateStyle` stay in Settings > HUD
 under Nameplates ([sjk-ui.md](sjk-ui.md#collection)). Verified: build, clippy (no new
 warning) and `cargo test -p sjk-viewer`. Not tried in a game; the world shots were not run.
+## Rig chains: the head as a capsule (18/11/2026)
+
+18/11/2026, `feat/rig-head-collision` based on `main` `afd16b609`. Hair on rig models was kept
+out of the trunk and the legs but not the head, so a strand could swing through the face or
+the skull. A `dynamic` line with the new word `head` now keeps its chain out of a capsule
+measured round the head joint's vertices (thinned on a half-unit grid, median radius, along
+their long axis), as `arms` does for the arms
+([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Off unless a line asks; older
+clients reject a manifest using it. Verified: `cargo test -p sjk-viewer --bin sjk rig_` (61
+passed, three new: the capsule's shape, a moved head pushing only a chain that asks, the
+manifest word and the capsule measured from a rig's mesh), `cargo clippy -p sjk-viewer
+--all-targets` (no warning in the changed code), and the ignored
+`dynamic_chains_of_an_installed_rig` on a local hair rig with `head` on its hair lines: a
+capsule of radius 2.5 and length 3.9 units, inside a head 6.9 wide and 9.4 tall. Not tried
+in a game; the workspace build and tests are left to CI.
 
 ## Game chat: client icons and ticks (13/11/2026)
 
