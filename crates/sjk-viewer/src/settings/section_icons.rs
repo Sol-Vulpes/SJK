@@ -85,8 +85,8 @@ const ICONS: &[(&str, &str)] = &[
     ("Connection", "network"),
     // First setup.
     ("From another client", "import"),
-    ("Styles", "theme"),
-    ("Aim", "mouse_joystick"),
+    ("Look", "theme"),
+    ("Camera and aim", "camera"),
     ("Force shells", "force_powers"),
     // A search's groups, where the category's own picture does not answer.
     (super::search::BEST, "credits"),

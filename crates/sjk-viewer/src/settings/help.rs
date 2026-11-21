@@ -439,6 +439,11 @@ pub(super) fn choice_name(cvar: &str, value: &str) -> Option<&'static str> {
             name.eq_ignore_ascii_case(cvar) && choice.eq_ignore_ascii_case(value.trim())
         })
         .map(|(_, _, shown)| *shown)
+        .or_else(|| {
+            cvar.eq_ignore_ascii_case(crate::menu::sjk::theme::CVAR)
+                .then(|| crate::menu::sjk::theme::Theme::label_of(value))
+                .flatten()
+        })
         .or_else(|| crate::away_emote::choice_name(cvar, value))
         .or_else(|| crate::chat_sounds::choice_name(cvar, value))
         .or_else(|| crate::text::system_font::choice_name(cvar, value))
@@ -1517,7 +1522,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::menu::sjk::theme::CVAR,
-        "The SJK UI's colours: warm, the sun's; cold, deep navy and holo blue; or custom, the hue and saturation below.",
+        "The SJK UI's colours: Solar, the sun's; Sith, red and gold; Jedi, deep navy and holo blue; or Custom, the hue and saturation below.",
     ),
     (
         crate::menu::sjk::theme::HUE_CVAR,

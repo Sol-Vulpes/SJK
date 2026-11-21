@@ -1,5 +1,6 @@
 //! First setup as the SJK UI's pop-up (`docs/sjk-ui.md`, First setup): a card
-//! over the darkened map with its name and what it is for, First setup's rows
+//! over the darkened map with its name and what it is for, the themes as four
+//! tiles, each in its own colours (a click wears it at once), First setup's rows
 //! scrolling inside it as Settings draws them ([`super::sjk_view`]), the
 //! focused row's help under them, and at its foot, always in view, the "Don't
 //! show at start" tick beside All settings and Done.
@@ -23,10 +24,17 @@ const CARD: [f32; 4] = [480.0, 56.0, 960.0, 948.0];
 const MARGIN: f32 = 48.0;
 const TEXT_X: f32 = CARD[0] + MARGIN;
 const TEXT_WIDTH: f32 = CARD[2] - MARGIN * 2.0;
-/// Where Settings' rows column moves to sit in the card, under its header.
-const SHIFT: [f32; 2] = [CARD[0] + 80.0 - ROWS_X, CARD[1] + 164.0 - ROWS_TOP];
+/// The themes' tiles, under the header: their top, height and the gap between two.
+const TILES_TOP: f32 = CARD[1] + 150.0;
+const TILE_HEIGHT: f32 = 104.0;
+const TILE_GAP: f32 = 14.0;
+/// Where Settings' rows column moves to sit in the card, under the tiles.
+const SHIFT: [f32; 2] = [
+    CARD[0] + 80.0 - ROWS_X,
+    TILES_TOP + TILE_HEIGHT + 14.0 - ROWS_TOP,
+];
 /// Lines the card shows before its rows scroll.
-const VISIBLE: usize = 11;
+const VISIBLE: usize = 9;
 /// The focused row's help, under the rows.
 const HELP_TOP: f32 = ROWS_TOP + SHIFT[1] + VISIBLE as f32 * LINE + 12.0;
 /// The foot: its rule, and the middle of its tick and buttons.
@@ -41,6 +49,16 @@ const KEYS_SHIFT: f32 = CARD[1] + CARD[3] + 28.0 - KEYS_Y;
 /// The All settings button's target; Done is the way back's (900).
 pub(super) const ALL_SETTINGS_TOKEN: u16 = 914;
 const DONE_TOKEN: u16 = 900;
+/// Theme tile `i` answers to `THEME_TOKEN + i`, clear of the rows (0-499), the
+/// panel's own tokens (500 to 915) and a list's choices (1000 on).
+pub(super) const THEME_TOKEN: u16 = 930;
+
+/// The theme the tile answering to `token` wears, if it is one.
+pub(super) fn theme_of(token: u16) -> Option<crate::menu::sjk::theme::Theme> {
+    crate::menu::sjk::theme::Theme::ALL
+        .get(usize::from(token.checked_sub(THEME_TOKEN)?))
+        .copied()
+}
 
 impl SettingsMenu {
     /// Draw First setup's pop-up at `reveal` opacity.
@@ -57,6 +75,7 @@ impl SettingsMenu {
         kit::scrim(&mut self.ui, viewport);
         kit::card(&mut self.ui, &frame, CARD);
         self.popup_header(&frame);
+        self.popup_themes(&frame);
         let measure = target.body_measure();
         let slots = self.sjk_rows(&rows, &measure, VISIBLE, LIST_BOTTOM);
         if self.dropdown.is_none() {
@@ -88,7 +107,9 @@ impl SettingsMenu {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("The few settings worth choosing first. Settings has them all, any time."),
+            format_args!(
+                "Pick a look, then the few settings worth choosing first. Settings has them all."
+            ),
             frame.rect(TEXT_X, CARD[1] + 88.0, TEXT_WIDTH, 26.0),
             18.0 * s,
             color::muted(),
@@ -99,7 +120,7 @@ impl SettingsMenu {
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "Coming from another client? Start with the first row: your setup, and the FPS your movement felt like."
+                "Coming from another client? Import from a client brings your setup, and the FPS your movement felt like."
             ),
             frame.rect(TEXT_X, CARD[1] + 116.0, TEXT_WIDTH, 24.0),
             15.0 * s,
@@ -107,6 +128,90 @@ impl SettingsMenu {
             FontWeight::Regular,
             TextAlign::Start,
         );
+    }
+
+    /// The themes, a tile each in the theme's own colours whatever the one worn: its
+    /// ground and glass, a stroke of its line-work, a dot of its gold, its name in its
+    /// text colour. The one in use has a gold edge and "In use"; a click wears one at
+    /// once. The Theme row under them is the same choice for the keyboard.
+    fn popup_themes(&mut self, frame: &Frame) {
+        use crate::menu::sjk::theme::{self, Theme};
+        let s = frame.s;
+        let width = (TEXT_WIDTH - TILE_GAP * 3.0) / 4.0;
+        let worn = theme::current();
+        for (index, choice) in Theme::ALL.into_iter().enumerate() {
+            let palette = theme::preview(choice);
+            let x = TEXT_X + index as f32 * (width + TILE_GAP);
+            let tile = frame.rect(x, TILES_TOP, width, TILE_HEIGHT);
+            let radius = 14.0 * s;
+            let list = self.ui.draw_list_mut();
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: tile,
+                radius,
+                color: palette.space,
+            });
+            // A band of the theme's glass across the foot, as its panels are.
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + 8.0, TILES_TOP + 58.0, width - 16.0, 38.0),
+                radius: 9.0 * s,
+                color: palette.glass_lit,
+            });
+            // Its line-work and its gold.
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + 20.0, TILES_TOP + 74.0, width - 86.0, 6.0),
+                radius: 3.0 * s,
+                color: palette.holo,
+            });
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: frame.rect(x + width - 52.0, TILES_TOP + 66.0, 34.0, 22.0),
+                radius: 11.0 * s,
+                color: palette.gold,
+            });
+            let _ = list.push(DrawCommand::Border {
+                rect: tile,
+                radius,
+                width: if choice == worn { 2.5 } else { 1.5 } * s,
+                color: if choice == worn {
+                    palette.gold
+                } else {
+                    color::alpha(palette.holo, 0.45)
+                },
+            });
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", choice.label()),
+                frame.rect(x + 18.0, TILES_TOP + 12.0, width - 36.0, 34.0),
+                26.0 * s,
+                palette.text,
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+            if choice == worn {
+                text(
+                    &mut self.ui,
+                    TextFamily::Body,
+                    format_args!("In use"),
+                    frame.rect(x + 18.0, TILES_TOP + 18.0, width - 36.0, 24.0),
+                    14.0 * s,
+                    palette.gold,
+                    FontWeight::Regular,
+                    TextAlign::End,
+                );
+            }
+            self.ui.hit_region(THEME_TOKEN + index as u16, tile);
+        }
+    }
+
+    /// Wear theme `theme`, as a click on its tile does.
+    pub(super) fn wear_theme(
+        &mut self,
+        console: &mut ViewerConsole,
+        theme: crate::menu::sjk::theme::Theme,
+    ) {
+        console.set_cvar(crate::menu::sjk::theme::CVAR, theme.name());
+        crate::menu::sjk::theme::sync(console);
+        self.refresh(console);
     }
 
     /// What the focused row does, in up to two lines under the rows.
@@ -206,6 +311,9 @@ impl SettingsMenu {
     }
 }
 
+// The tiles under the header's last line, the rows under the tiles.
+const _: () = assert!(TILES_TOP >= CARD[1] + 116.0 + 24.0);
+const _: () = assert!(ROWS_TOP + SHIFT[1] >= TILES_TOP + TILE_HEIGHT);
 // The rows, their scrollbar, the help and the foot inside the card, in order.
 const _: () = assert!(ROWS_X + SHIFT[0] >= CARD[0] + MARGIN);
 const _: () = assert!(ROWS_X + SHIFT[0] + ROWS_WIDTH + 18.0 <= CARD[0] + CARD[2] - 24.0);
@@ -263,6 +371,28 @@ mod tests {
         assert!(switch_text_on(&menu.values[hide]));
         menu.reset_to_default(&mut console, hide);
         assert_eq!(console.bool_cvar(quick::HIDE_CVAR), Some(false));
+    }
+
+    /// A tile wears its theme at once, and the Theme row under them says the same.
+    #[test]
+    fn a_theme_tile_wears_its_theme() {
+        use crate::menu::sjk::theme::{self, Theme};
+        let (_directory, mut console, mut menu) = popup();
+        assert_eq!(theme_of(THEME_TOKEN), Some(Theme::Warm));
+        assert_eq!(theme_of(THEME_TOKEN + 1), Some(Theme::Sith));
+        assert_eq!(theme_of(THEME_TOKEN + 4), None);
+        assert_eq!(theme_of(THEME_TOKEN - 1), None);
+        menu.wear_theme(&mut console, Theme::Sith);
+        assert_eq!(console.text_value(theme::CVAR), Some("sith"));
+        let row = menu
+            .rows()
+            .iter()
+            .position(|setting| setting.cvar == theme::CVAR)
+            .unwrap();
+        assert_eq!(row, 0, "the look comes first");
+        assert_eq!(menu.values[row], "sith");
+        menu.wear_theme(&mut console, Theme::Warm);
+        assert_eq!(console.text_value(theme::CVAR), Some("warm"));
     }
 
     #[test]

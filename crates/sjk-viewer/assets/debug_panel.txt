@@ -24,6 +24,21 @@
 
 # ---- Console & chat ----
 
+[first-setup-themes]
+area: Menus & settings
+title: First setup opens on the look: Solar, Sith, Jedi and Custom theme tiles
+change: Themes are named Solar (warm), Sith (new, red), Jedi (cold) and Custom.
+change: First setup shows them as four tiles; its first rows are theme, hue, saturation, menus.
+test: Console: firstsetup. Four tiles under the title, each in its own colours.
+test: Click Sith: the whole pop-up turns red at once; the tile gets the gold edge, In use.
+test: Click Jedi, then Solar: each applies at once; Done keeps the last one.
+test: Move Theme hue: the theme becomes Custom and the Custom tile shows that colour.
+test: With Sith worn: main menu, Settings, the status bar and nameplates are red too.
+test: Sith: text and lines stay readable over a bright map (snow, sky) behind glass.
+test: Settings > Interface > Theme: a list of Solar, Sith, Jedi, Custom; same result.
+test: Console: ui_theme jedi and ui_theme solar are understood; ui_theme sith is saved.
+note: A saved ui_theme cold shows as Jedi; nothing is migrated.
+
 [settings-pictures]
 area: Menus & settings
 title: Settings: new icons drawn by one script, long categories cut into pictured sections

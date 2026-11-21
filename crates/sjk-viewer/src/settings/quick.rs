@@ -1,8 +1,7 @@
 //! The FIRST SETUP tab of Settings: the few settings worth choosing once on a first
-//! start (first, bringing the setup from another client and the gameplay FPS it
-//! moved at; then the graphics preset, the menu and
-
-//! camera styles, display, aim, sound, the HUD, nameplates, the Force shells and
+//! start (first the look: the theme, its colour and the menu style; then bringing the
+//! setup from another client and the gameplay FPS it moved at; then the graphics
+//! preset, display, camera and aim, sound, the HUD, nameplates, the Force shells and
 //! the network opt-ins). The rows are the catalogue's own, looked up by cvar, so a
 //! change here is the same change the other tabs make; the import row and the
 //! last row, whether the screen opens at start, are the tab's own.
@@ -28,16 +27,24 @@ const IMPORT_ROW: Setting = Setting {
     kind: ValueKind::ImportPage,
 };
 
-/// The tab's cvars, in order, after the import row.
+/// The look, which the tab opens on: the SJK UI's theme (the pop-up shows its
+/// choices as tiles too, `sjk_popup.rs`), the custom theme's colour, the menu style.
+const LOOK: &[&str] = &[
+    crate::menu::sjk::theme::CVAR,
+    crate::menu::sjk::theme::HUE_CVAR,
+    crate::menu::sjk::theme::SATURATION_CVAR,
+    crate::menu::style::CVAR,
+];
+
+/// The tab's cvars, in order, after the look and the import row.
 const CVARS: &[&str] = &[
     crate::gameplay_fps::CVAR,
     crate::graphics_quality::ROW_NAME,
-    crate::menu::style::CVAR,
-    crate::camera::STYLE_CVAR,
     "r_resolution",
     "r_fullscreen",
     "r_vsync",
     "cg_fov",
+    crate::camera::STYLE_CVAR,
     "sensitivity",
     "m_invert",
     "cl_run",
@@ -62,16 +69,18 @@ const CVARS: &[&str] = &[
 pub(super) fn rows() -> &'static [Setting] {
     static ROWS: OnceLock<Vec<Setting>> = OnceLock::new();
     ROWS.get_or_init(|| {
-        let found = CVARS.iter().filter_map(|cvar| {
-            // Not the QUICK tab itself, which is what is being built.
-            (0..QUICK_TAB)
-                .flat_map(super::settings)
-                .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar))
-                .copied()
-        });
-        [IMPORT_ROW]
-            .into_iter()
-            .chain(found)
+        let found = |cvars: &'static [&'static str]| {
+            cvars.iter().filter_map(|cvar| {
+                // Not the QUICK tab itself, which is what is being built.
+                (0..QUICK_TAB)
+                    .flat_map(super::settings)
+                    .find(|setting| setting.cvar.eq_ignore_ascii_case(cvar))
+                    .copied()
+            })
+        };
+        found(LOOK)
+            .chain([IMPORT_ROW])
+            .chain(found(CVARS))
             .chain([HIDE_ROW])
             .collect()
     })
@@ -83,34 +92,38 @@ mod tests {
 
     #[test]
     fn every_listed_cvar_is_a_setting() {
-        assert_eq!(rows().len(), CVARS.len() + 2);
+        assert_eq!(rows().len(), LOOK.len() + CVARS.len() + 2);
         assert_eq!(rows().last().map(|row| row.cvar), Some(HIDE_CVAR));
     }
 
     #[test]
-    fn the_import_and_gameplay_fps_come_first_then_graphics_and_the_styles() {
-        let cvars: Vec<_> = rows().iter().take(5).map(|row| row.cvar).collect();
+    fn the_look_comes_first_then_the_import_and_graphics() {
+        let cvars: Vec<_> = rows().iter().take(7).map(|row| row.cvar).collect();
         assert_eq!(
             cvars,
             [
+                crate::menu::sjk::theme::CVAR,
+                crate::menu::sjk::theme::HUE_CVAR,
+                crate::menu::sjk::theme::SATURATION_CVAR,
+                crate::menu::style::CVAR,
                 super::super::catalog::IMPORT_ROW,
                 crate::gameplay_fps::CVAR,
                 crate::graphics_quality::ROW_NAME,
-                crate::menu::style::CVAR,
-                crate::camera::STYLE_CVAR
             ]
         );
         assert_eq!(
-            super::super::Group::Quick.lines()[..8],
+            super::super::Group::Quick.lines()[..10],
             [
-                super::super::Line::Heading("From another client"),
+                super::super::Line::Heading("Look"),
                 super::super::Line::Row(0),
                 super::super::Line::Row(1),
-                super::super::Line::Heading("Graphics"),
                 super::super::Line::Row(2),
-                super::super::Line::Heading("Styles"),
                 super::super::Line::Row(3),
+                super::super::Line::Heading("From another client"),
                 super::super::Line::Row(4),
+                super::super::Line::Row(5),
+                super::super::Line::Heading("Graphics"),
+                super::super::Line::Row(6),
             ]
         );
     }

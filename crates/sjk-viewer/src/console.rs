@@ -904,7 +904,7 @@ impl ViewerConsole {
             }
             // The hue and the saturation are the custom theme's: moving one picks it.
             if crate::menu::sjk::theme::follows_custom(name) {
-                let custom = crate::menu::sjk::theme::Theme::NAMES[2];
+                let custom = crate::menu::sjk::theme::Theme::Custom.name();
                 let _ = self
                     .shell
                     .cvars

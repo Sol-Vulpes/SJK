@@ -184,6 +184,12 @@ impl SettingsMenu {
             super::sjk_popup::ALL_SETTINGS_TOKEN if self.popup() => {
                 return SettingsResult::AllSettings;
             }
+            // First setup's theme tiles.
+            _ if self.popup() && super::sjk_popup::theme_of(token).is_some() => {
+                if let Some(theme) = super::sjk_popup::theme_of(token) {
+                    self.wear_theme(console, theme);
+                }
+            }
             _ => {
                 let Some(row) = self.setting_row(token) else {
                     return SettingsResult::None;
