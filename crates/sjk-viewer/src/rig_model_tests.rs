@@ -97,6 +97,30 @@ fn a_manifest_reads_every_key_and_rejects_nonsense() {
 }
 
 #[test]
+fn an_eyes_line_names_the_joints_that_look() {
+    let parsed = manifest("eyes eye_l eye_r\n");
+    assert_eq!(parsed.eyes, ["eye_l", "eye_r"]);
+    assert!(manifest("").eyes.is_empty());
+    assert!(Manifest::parse("eyes").is_err());
+}
+
+#[test]
+fn a_look_target_comes_into_the_model_space_at_its_eyes() {
+    // An actor at the origin facing the world's +X: the model's front is -Y.
+    let point = Vec3A::from_array(look_point([0.0; 3], 0.0, [100.0, 0.0, 0.0]));
+    assert!(
+        (point - Vec3A::new(0.0, -100.0, 36.0)).length() < 1e-3,
+        "{point:?}"
+    );
+    // Facing +Y (yaw 90), a target to its left in the world is still straight ahead.
+    let point = Vec3A::from_array(look_point([10.0, 10.0, 5.0], 90.0, [10.0, 60.0, 5.0]));
+    assert!(
+        (point - Vec3A::new(0.0, -50.0, 36.0)).length() < 1e-3,
+        "{point:?}"
+    );
+}
+
+#[test]
 fn the_ground_under_an_actor_comes_into_its_model_space() {
     let near = |a: [f32; 3], b: Vec3A| (Vec3A::from_array(a) - b).length() < 1e-3;
     // Facing the world's +X, the floor 24 under the origin: 24 under the model's.
