@@ -24,6 +24,23 @@
 
 # ---- Console & chat ----
 
+[settings-pictures]
+area: Menus & settings
+title: Settings: new icons drawn by one script, long categories cut into pictured sections
+change: All 64 settings icons are drawn by scripts/settings_icons_draw.py: one look.
+change: HUD, Gameplay, Sound, Chat, Interface: short sections by subject, a picture each.
+change: Away settings moved from Sound to Gameplay; Page Up/Down jump a section.
+test: Settings (Advanced): each category on the rail has its new icon; Gameplay: sabers.
+test: HUD: sections Layout, Crosshair, Names and cards, Nameplates, Playstyle, Readouts...
+test: Gameplay: Players and models, Sabers, Force, Duels, Maps and remaps, Toys, Camera...
+test: Sound: Volume, Game sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds.
+test: Chat: Chat box, Chat look, Chat tabs, Do not disturb, Duel lines, SJK chat...
+test: Each heading shows a small icon before its name, sharp, no edge of a neighbour.
+test: Page Down goes to the next section's first row, Page Up to the one before.
+test: Search away: the away rows are found under Gameplay. Nothing is under "More".
+test: Classic menus, in-game menu, key bindings, news: their icons are the new set too.
+note: The quick wheel's own icons are still the old boards' (a slightly different hand).
+
 [smart-settings]
 area: Menus & settings
 title: Settings: named stops, units, loudness volumes, dependent rows, smarter search

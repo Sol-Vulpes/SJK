@@ -24,6 +24,8 @@ mod requires;
 mod resolution;
 mod resolution_list;
 mod search;
+mod section_icons;
+mod sections;
 mod sjk_popup;
 pub(crate) mod sjk_view;
 pub(crate) mod slider_peek;
@@ -796,6 +798,9 @@ impl SettingsMenu {
             }
             KeyCode::ArrowUp | KeyCode::KeyW => self.step_selection(-1),
             KeyCode::ArrowDown | KeyCode::KeyS => self.step_selection(1),
+            // Classic+ and SJK: a section at a time.
+            KeyCode::PageDown if classic => self.step_section(1),
+            KeyCode::PageUp if classic => self.step_section(-1),
             KeyCode::ArrowLeft | KeyCode::KeyA => self.adjust(console, -1),
             KeyCode::ArrowRight | KeyCode::KeyD => self.adjust(console, 1),
             // SJK: Space keeps stepping a slider; Enter opens its entry.
@@ -933,6 +938,52 @@ impl SettingsMenu {
         };
         console.set_cvar(setting.cvar, &next);
         self.refresh(console);
+    }
+
+    /// Choose the first row of the next section (`direction` 1) or of the one before
+    /// (-1; from inside a section, its own first row), a section being the rows under
+    /// one sub-heading. The ends stay where they are; a panel without sub-headings
+    /// goes to its first or last row.
+    fn step_section(&mut self, direction: i32) {
+        let Some(classic) = &self.classic else {
+            return;
+        };
+        // Each section's first row, in order.
+        let mut firsts: Vec<usize> = Vec::new();
+        let mut after_heading = true;
+        for line in &classic.lines {
+            match line {
+                Line::Heading(_) => after_heading = true,
+                Line::Row(row) => {
+                    if after_heading {
+                        firsts.push(*row);
+                    }
+                    after_heading = false;
+                }
+            }
+        }
+        let rows: Vec<usize> = classic.rows().collect();
+        let Some(at) = rows.iter().position(|row| *row == self.selected) else {
+            return;
+        };
+        let place = |row: &usize| rows.iter().position(|other| other == row).unwrap_or(0);
+        let target = if direction > 0 {
+            firsts
+                .iter()
+                .copied()
+                .find(|first| place(first) > at)
+                .or(rows.last().copied())
+        } else {
+            firsts
+                .iter()
+                .copied()
+                .rfind(|first| place(first) < at)
+                .or(rows.first().copied())
+        };
+        if let Some(target) = target {
+            self.selected = target;
+            self.reveal_selected();
+        }
     }
 
     /// Whether exclusive fullscreen can be offered; assumed until the

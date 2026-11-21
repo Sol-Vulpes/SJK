@@ -607,6 +607,10 @@ impl ShapeRenderer {
             .chain(settings)
             .map(|(set, texture, &(name, bytes))| (set, texture, (name, bytes)))
             .chain(medals);
+        // The settings' small icons, four to a cell.
+        for (texture, cell) in crate::settings_icons::small_cells() {
+            icons.upload(queue, texture, cell.as_raw());
+        }
         for (set, texture, (name, bytes)) in icons_at_start {
             match image::load_from_memory(bytes) {
                 Ok(icon) => {

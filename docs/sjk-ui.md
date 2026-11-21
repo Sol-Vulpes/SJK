@@ -1129,6 +1129,24 @@ that mode for the visit and leaves the player's choice as it was.
     Key bindings' rows place theirs the same way.
   - A list opens under its field (over it near the bottom), its choice in use
     marked with a gold dot; the controls under it are left out while it is open.
+  - Sections and pictures (since 21/11/2026, Sol's request). Advanced's long
+    categories are cut into sections by subject
+    ([sections.rs](../crates/sjk-viewer/src/settings/sections.rs)), each a heading
+    over at most 15 rows (the status bar's 22 parts aside): Sound is Volume, Game
+    sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds; Gameplay is Players and
+    models, Sabers, Force, Duels, Maps and remaps, Toys, Camera, Prediction, Away (the
+    away settings came from Sound); Interface is Menus, Theme, Console; HUD is Layout,
+    Crosshair, Names and cards, Nameplates, Playstyle, Readouts, Match, Movement,
+    Status bar, Scoreboard; Chat is Chat box, Chat look, Chat tabs, Do not disturb,
+    Duel lines, SJK chat, Translation, Privacy and blocks. A setting no section names
+    would show last under "More"; a test keeps that empty. Every sub-heading of the
+    screen (these, Display's, Graphics', Mods', Network's, First setup's, Simple's and
+    a search's groups) has its settings icon, 32 pixels, before its name
+    ([section_icons.rs](../crates/sjk-viewer/src/settings/section_icons.rs)); the
+    classic+ groups keep their own lists and headings. Page Down chooses the first
+    row of the next section and Page Up of the one before. The icons are all drawn by
+    `scripts/settings_icons_draw.py`
+    ([their README](../crates/sjk-viewer/assets/settings/README.md)).
   - Smarter controls (since 21/11/2026, Sol's request, shaped by the hub's
     [settings usage](client.md#settings-usage): 2,206 runs, 13,951 changes, 2,438
     searches). The cvars and saved values keep their numbers; only the rows differ, in

@@ -2254,6 +2254,10 @@ fn sjk_settings_snapshot() {
         let icon = image::load_from_memory(bytes).expect("a wheel icon");
         icons.insert(crate::ui_renderer::wheel_icon(index).0, icon.into_rgba8());
     }
+    // The sub-headings' small icons, four to a cell.
+    for (texture, cell) in crate::settings_icons::small_cells() {
+        icons.insert(texture.0, cell);
+    }
     let directory = tempfile::tempdir().unwrap();
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
@@ -2394,7 +2398,48 @@ fn sjk_settings_snapshot() {
     console.set_cvar("sensitivity", "2.1");
     console.set_cvar("com_maxfps", "275");
     console.set_cvar("r_dayHour", "19.5");
-    let simple: [Case; 16] = [
+    let simple: [Case; 21] = [
+        // The categories cut into pictured sections.
+        (
+            "sjk-settings-sections-hud",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_nameplateBars"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-hud-top",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_drawHud"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-gameplay",
+            VIEWPORT_WIDE,
+            6,
+            Some("cg_speedTrail"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-sound",
+            VIEWPORT_WIDE,
+            3,
+            Some("s_spatial"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-chat",
+            VIEWPORT_WIDE,
+            9,
+            Some("cg_chatTabFilter"),
+            false,
+            None,
+        ),
         // A number with named stops: its list, a typed value in use ("Custom...").
         (
             "sjk-settings-stops",

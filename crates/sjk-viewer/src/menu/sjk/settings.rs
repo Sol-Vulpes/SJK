@@ -135,7 +135,7 @@ const CATEGORIES: [Category; 20] = [
     },
     regrouped(
         "Gameplay",
-        "game_options",
+        "gameplay",
         Advanced::Gameplay,
         Panel::Group(Group::GameOptions),
     ),
@@ -171,7 +171,7 @@ const CATEGORIES: [Category; 20] = [
     simple("Graphics", "graphics", Simple::Graphics),
     simple("Sound", "sound", Simple::Sound),
     simple("Controls", "mouse_joystick", Simple::Controls),
-    simple("Gameplay", "game_options", Simple::Gameplay),
+    simple("Gameplay", "gameplay", Simple::Gameplay),
     simple("HUD", "hud", Simple::Hud),
     simple("General", "interface", Simple::General),
 ];
