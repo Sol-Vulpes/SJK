@@ -1,3 +1,23 @@
+## Settings pictures and sections (21/11/2026)
+
+Sol's request (21/11: "regen the pictures yourself for all the settings, so we have
+consistent design always, and reorganize if you feel the need"), branch
+`personal/settings-pictures`. Every settings icon is now drawn by
+`scripts/settings_icons_draw.py`: the grey metal disc is computed and the symbol is a
+Phosphor Icons glyph (MIT) embossed on it, so the 64 icons (the 32 there were, redrawn,
+and 32 new for the sub-headings, 64x64 and packed four to an atlas cell, the atlas being
+full) have one look and a new one is a line in the script
+(`crates/sjk-viewer/assets/settings/README.md`). The image service at hand had no credits
+for a new generated board, which is what led to a script; it is also what makes the look
+repeatable. Advanced's long categories are cut into sections by subject
+(`settings/sections.rs`: HUD from 8 headings over 106 rows to 10 sections, Gameplay's
+45-row "Effects" into Sabers, Force, Duels, Maps and remaps, Sound into 7, Chat into 8,
+Interface tidied), the away settings moved from Sound to Gameplay, and every sub-heading
+of the SJK UI's Settings wears a picture (`settings/section_icons.rs`). Page Up and Page
+Down move a section at a time. The classic+ groups keep their own lists. Spec:
+[sjk-ui.md](sjk-ui.md#settings). Checked by unit tests and off-screen snapshots, not yet
+in the game. The quick wheel's icons still come from their boards.
+
 ## Smarter Settings controls (21/11/2026)
 
 Sol's request (21/11: remake the settings' controls, smarter, from the hub's settings

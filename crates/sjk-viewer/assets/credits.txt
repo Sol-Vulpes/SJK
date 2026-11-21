@@ -248,6 +248,7 @@ did: Lights in map edits: lights added, moved and recoloured for every player, m
 did: Door and lift shadows on lamp light within a fixed budget a frame: no more stutter when they move
 did: The status bar at the screen's bottom, the HUD above it: your wallet, kyber, weapons, match and time
 did: Smarter settings: named choices, units, loudness volumes, rows that say what they need, a forgiving search
+did: The settings pictures, drawn by one script, and Settings cut into short pictured sections
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

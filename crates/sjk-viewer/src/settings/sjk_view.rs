@@ -88,6 +88,8 @@ pub(crate) const KEYS_Y: f32 = 992.0;
 /// changed dot.
 /// How much of a control shows while its setting has no effect ([`super::requires`]).
 const IDLE_OPACITY: f32 = 0.4;
+/// A sub-heading's picture, across.
+const HEADING_ICON: f32 = 32.0;
 const NAME_SIZE: f32 = 19.0;
 const DOT_GAP: f32 = 8.0;
 
@@ -286,7 +288,30 @@ impl SettingsMenu {
             }
             match *line {
                 Line::Heading(heading) => {
-                    kit::heading(&mut self.ui, frame, ROWS_X, top + 36.0, ROWS_WIDTH, heading);
+                    // Its picture first ([`super::section_icons`]), then its name.
+                    let picture =
+                        super::section_icons::of(heading).and_then(crate::settings_icons::picture);
+                    let indent = if picture.is_some() {
+                        HEADING_ICON + 10.0
+                    } else {
+                        0.0
+                    };
+                    if let Some(picture) = picture {
+                        let _ = self.ui.draw_list_mut().push(picture.quad(frame.rect(
+                            ROWS_X,
+                            top + 36.0 - HEADING_ICON * 0.5,
+                            HEADING_ICON,
+                            HEADING_ICON,
+                        )));
+                    }
+                    kit::heading(
+                        &mut self.ui,
+                        frame,
+                        ROWS_X + indent,
+                        top + 36.0,
+                        ROWS_WIDTH - indent,
+                        heading,
+                    );
                 }
                 Line::Row(row) => {
                     slots.push((row, top));

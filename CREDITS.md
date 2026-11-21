@@ -528,6 +528,11 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
+- the Settings pictures and sections (21/11/2026): every settings icon drawn by one script
+  (`scripts/settings_icons_draw.py`: a computed metal disc and a Phosphor Icons symbol),
+  64 of them, for the categories and their sub-headings; HUD, Gameplay, Sound, Chat and
+  Interface cut into short sections by subject (`settings/sections.rs`), each heading
+  wearing its picture; Page Up and Page Down move a section at a time;
 - the smarter Settings controls (21/11/2026), shaped by the hub's anonymous settings
   usage: named stops with Custom for the FPS caps, Away after, the prediction smoothing,
   Rate and Snapshots; named choices for the crosshair, overhead names, nameplate bars
@@ -1408,7 +1413,10 @@ OpenJK (`codemp`), EternalJK, JoF EJK and TaystJK/jaPRO are compatibility
 references for Jedi Academy behaviour; SJK reimplements that behaviour and does
 not include their code. The Jedi Knight II HUD's pictures
 (`crates/sjk-viewer/assets/hud/jk2`) are EternalJK's `hudfiles 2` graphics, by Bucky,
-used with Sol's approval. The bundled Inter fonts keep their
+used with Sol's approval. The settings icons' symbols
+(`crates/sjk-viewer/assets/settings`) are glyphs of Phosphor Icons, by the Phosphor Icons
+authors, under the [MIT License](crates/sjk-viewer/assets/settings/Phosphor-LICENSE.txt),
+drawn on SJK's own discs by `scripts/settings_icons_draw.py`. The bundled Inter fonts keep their
 [license](crates/sjk-viewer/assets/fonts/LICENSE.txt), the console font, JetBrains
 Mono by The JetBrains Mono Project Authors, keeps its
 [SIL Open Font License](crates/sjk-viewer/assets/fonts/JetBrainsMono-OFL.txt), the SJK UI's

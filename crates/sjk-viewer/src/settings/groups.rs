@@ -393,6 +393,27 @@ impl Group {
         }
     }
 
+    /// The cvars of the group's rows as shown: [`Self::cvar_list`], and for one of
+    /// Advanced's categories cut into sections ([`super::sections`]) the sections'
+    /// settings in their order, then what the category holds that no section of any
+    /// category names.
+    fn arranged(self) -> Vec<&'static str> {
+        let list = self.cvar_list();
+        let Self::Advanced(advanced) = self else {
+            return list;
+        };
+        let sections = super::sections::of(advanced);
+        let mut cvars: Vec<&'static str> = sections
+            .iter()
+            .flat_map(|section| section.rows.iter().copied())
+            .collect();
+        cvars.extend(
+            list.into_iter()
+                .filter(|cvar| !super::sections::names(cvar)),
+        );
+        cvars
+    }
+
     /// The tab list of a screen showing the group: its name alone.
     pub(super) fn tabs(self) -> &'static [&'static str] {
         std::slice::from_ref(&Self::CAPTIONS[self.index()])
@@ -843,37 +864,14 @@ impl Group {
                 ("cg_fov", "View"),
             ],
             Self::Network => &[("cl_autoUpdate", "SJK online"), ("rate", "Connection")],
-            Self::Advanced(Advanced::Sound) => &[
-                ("s_volume", "Game"),
-                (crate::emotes::VOLUME_CVAR, "Emotes"),
-                (crate::toy_sounds::VOLUME_CVAR, "Toys"),
-                (crate::unlock_toast::SOUND_CVAR, "Notifications"),
-                (crate::chat_sounds::MASTER_CVAR, "Chat sounds"),
-            ],
-            Self::Advanced(Advanced::Gameplay) => &[
-                ("cg_simpleItems", "Items and models"),
-                ("cg_saberTrail", "Effects"),
-                (crate::monitor::SHOW_CVAR, "Toys"),
-                (crate::camera::STYLE_CVAR, "Camera and prediction"),
-            ],
-            Self::Advanced(Advanced::Interface) => &[
-                (crate::menu::style::CVAR, "Menus"),
-                (crate::menu::sjk::theme::CVAR, "Theme"),
-                (crate::console::console_options::STYLE_CVAR, "Console"),
-            ],
-            Self::Advanced(Advanced::Hud) => &[
-                ("cg_drawHud", "Layout"),
-                ("cg_crosshair", "Crosshair"),
-                ("cg_drawCrosshairNames", "Names and cards"),
-                ("cg_nameplate", "Nameplates"),
-                (crate::world_ping::SHOW_CVAR, "World pings"),
-                ("cg_drawFps", "Readouts"),
-                (crate::status_bar::CVAR, "Status bar"),
-                (crate::scoreboard::style::CVAR, "Scoreboard"),
-            ],
-            Self::Advanced(Advanced::Chat) => {
-                &[("cg_drawChat", "Chat box"), ("cl_sjkChat", "SJK chat")]
-            }
+            // Cut into sections ([`super::sections`]).
+            Self::Advanced(
+                Advanced::Sound
+                | Advanced::Gameplay
+                | Advanced::Interface
+                | Advanced::Hud
+                | Advanced::Chat,
+            ) => &[],
             Self::Advanced(Advanced::Mods) => &[
                 ("assetbrowser", "Packs"),
                 ("mod_japlus", "Server mods"),
@@ -941,6 +939,24 @@ impl Group {
             return lines;
         }
         let rows = self.rows();
+        // One of Advanced's categories cut into sections: each section's heading over
+        // its first row, and the rows no section names under "More".
+        if let Self::Advanced(advanced) = self
+            && !super::sections::of(advanced).is_empty()
+        {
+            let mut lines = Vec::with_capacity(rows.len() + 12);
+            let mut last = None;
+            for (row, setting) in rows.iter().enumerate() {
+                let heading = super::sections::holding(advanced, setting.cvar)
+                    .map_or(super::sections::MORE, |section| section.heading);
+                if last != Some(heading) {
+                    lines.push(super::Line::Heading(heading));
+                    last = Some(heading);
+                }
+                lines.push(super::Line::Row(row));
+            }
+            return lines;
+        }
         let mut lines = Vec::with_capacity(rows.len() + self.headings().len());
         for (row, setting) in rows.iter().enumerate() {
             if let Some((_, heading)) = self
@@ -974,7 +990,7 @@ impl Group {
                     )
                     .collect();
             }
-            self.cvar_list()
+            self.arranged()
                 .iter()
                 .filter_map(|cvar| find(cvar))
                 .collect()
@@ -1019,7 +1035,7 @@ mod tests {
             .chain(Group::sjk_only())
             .filter(|group| *group != Group::Graphics)
         {
-            assert_eq!(group.rows().len(), group.cvar_list().len(), "{group:?}");
+            assert_eq!(group.rows().len(), group.arranged().len(), "{group:?}");
         }
     }
 
@@ -1221,12 +1237,19 @@ mod tests {
                 );
             }
             let lines = group.lines();
-            assert_eq!(
-                lines.len(),
-                rows.len() + group.headings().len(),
-                "{group:?}"
+            // A category cut into sections has their headings, not these.
+            let sectioned = matches!(
+                group,
+                Group::Advanced(advanced) if !super::super::sections::of(advanced).is_empty()
             );
-            if !group.headings().is_empty() {
+            if !sectioned {
+                assert_eq!(
+                    lines.len(),
+                    rows.len() + group.headings().len(),
+                    "{group:?}"
+                );
+            }
+            if sectioned || !group.headings().is_empty() {
                 assert!(
                     matches!(lines[0], super::super::Line::Heading(_)),
                     "{group:?}"
