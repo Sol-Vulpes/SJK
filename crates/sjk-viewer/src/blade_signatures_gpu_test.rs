@@ -8,7 +8,10 @@
 //! that its effects stay with the blade as the view changes; `tip` looks down the blade's length
 //! instead, at its tip); `SJK_SIGNATURE_MORE` set adds
 //! three moments: just after it is out, half a second after a clash and while it goes out;
-//! `SJK_SIGNATURE_MOTION=<frames>,<step>` renders frames a fixed step apart.
+//! `SJK_SIGNATURE_MOTION=<frames>,<step>` renders frames a fixed step apart;
+//! `SJK_SIGNATURE_EXTRAS` set wears every extra of the skin (`blade_extras.rs`), and
+//! `SJK_SIGNATURE_ORBIT=butterfly` five near views of the tip, each that many seconds after a
+//! clash as `SJK_SIGNATURE_CLASH=<s>,<s>,<s>,<s>,<s>` names (none: still).
 use super::*;
 use wgpu::util::DeviceExt;
 
@@ -235,7 +238,15 @@ fn every_signature_draws_its_blade_and_nothing_at_the_edge() {
             &skin.glow,
             &skin.core,
         );
-        let color = skins.color_of(signature.id).unwrap();
+        let color = if std::env::var_os("SJK_SIGNATURE_EXTRAS").is_some() {
+            let on = crate::blade_extras::of(signature.id).map_or(0, |extras| extras.bits());
+            // `SJK_SIGNATURE_OFF=<option id>,..`: those parts switched off too.
+            let off = std::env::var("SJK_SIGNATURE_OFF")
+                .map_or(0, |ids| crate::saber_skin_options::bits(ids.split(',')));
+            skins.color_with(signature.id, on | off).unwrap()
+        } else {
+            skins.color_of(signature.id).unwrap()
+        };
         let mut moments = vec![
             // Still, mid swing, just after a clash, while it ignites.
             (3.0, crate::saber_motion::STILL, color),
@@ -280,6 +291,17 @@ fn every_signature_draws_its_blade_and_nothing_at_the_edge() {
                 })
                 .collect();
         }
+        // `SJK_SIGNATURE_IGNITE=<frames>,<step>`: frames a fixed step apart as it lights.
+        if let Ok(spec) = std::env::var("SJK_SIGNATURE_IGNITE") {
+            let (frames, step) = spec.split_once(',').unwrap();
+            let step: f32 = step.parse().unwrap();
+            moments = (0..frames.parse::<u32>().unwrap())
+                .map(|i| {
+                    let age = 0.02 + i as f32 * step;
+                    (6.0, [0.0, 1_000.0, age, 1_000.0], color)
+                })
+                .collect();
+        }
         let orbit = std::env::var("SJK_SIGNATURE_ORBIT").ok();
         if orbit.is_some() {
             let at = std::env::var("SJK_SIGNATURE_AT")
@@ -287,6 +309,11 @@ fn every_signature_draws_its_blade_and_nothing_at_the_edge() {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(3.0);
             moments = vec![(at, crate::saber_motion::STILL, color); 5];
+            if let Ok(spec) = std::env::var("SJK_SIGNATURE_CLASH") {
+                for (moment, since) in moments.iter_mut().zip(spec.split(',')) {
+                    moment.1 = [0.0, since.parse().unwrap(), 1_000.0, 1_000.0];
+                }
+            }
         }
         let mut frames = Vec::new();
         for (index, (seconds, motion, color)) in moments.into_iter().enumerate() {
@@ -312,6 +339,13 @@ fn every_signature_draws_its_blade_and_nothing_at_the_edge() {
                     let yaw = [0.0f32, 0.9, 1.8, 2.7, 3.6][index];
                     eye = glam::Vec3::new(14.0 * yaw.sin(), -14.0 * yaw.cos(), 14.0);
                     at = glam::Vec3::new(0.0, 0.0, 14.0);
+                }
+                // The Varykino Blossom's Butterfly extra: near the tip, round it.
+                if orbit.as_deref() == Some("butterfly") {
+                    let yaw = [0.0f32, 0.7, 1.5, 2.6, 0.3][index];
+                    let lift = [0.0f32, 0.0, 3.0, 0.0, 9.0][index];
+                    eye = glam::Vec3::new(13.0 * yaw.sin(), -13.0 * yaw.cos(), 22.0 + lift);
+                    at = glam::Vec3::new(0.0, 0.0, 22.0);
                 }
                 if orbit.as_deref() == Some("tip") {
                     let aside = [3.0f32, 1.5, 0.6, 4.0, 1.0][index];

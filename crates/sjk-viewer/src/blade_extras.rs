@@ -259,12 +259,21 @@ pub(crate) struct Extra {
     #[serde(default)]
     pub(crate) wake: bool,
     /// A layer the signature itself draws (on its blade, in its own shader), shown only while
-    /// the extra is on: a part slot past the signature's own parts (`// @part` lines), 0 to 5
+    /// the extra is on: a part slot past the signature's own parts (`// @part` lines), 0 to 7
     /// (`SIG_PART_BITS` in `saber.wgsl`), which its shader reads with `part(k)` as it reads a
     /// part, the slot's bit set while the extra is off ([`Worn::hidden`]). The Varykino
-    /// Blossom's Silk threads (Kushina, 20/11/2026).
+    /// Blossom's Silk threads, Butterfly and Lilac light (Kushina, 20-22/11/2026).
     #[serde(default)]
     pub(crate) layer: Option<u8>,
+    /// The colour of the light the blade casts on the world instead of its file's
+    /// (`light.color`), each channel 0 to 4: the Varykino Blossom's Lilac light, whose blade
+    /// its shader turns lilac on its `layer`.
+    #[serde(default)]
+    pub(crate) light: Option<[f32; 3]>,
+    /// The colour of its trail's blur instead of its file's (`trail`), each channel 0 to 1:
+    /// the Lilac light's, whose every effect turns lilac but the blossoms it sheds.
+    #[serde(default)]
+    pub(crate) trail_color: Option<[f32; 3]>,
 }
 
 /// A skin's extras: the card that unlocks them and each one.
@@ -281,6 +290,10 @@ pub(crate) struct Worn {
     pub(crate) trail: Option<TrailKind>,
     pub(crate) sheds: Option<PetalSpec>,
     pub(crate) wake: bool,
+    /// The colour of the light it casts, when an extra sets one ([`Extra::light`]).
+    pub(crate) light: Option<[f32; 3]>,
+    /// The colour of its trail's blur, when an extra sets one ([`Extra::trail_color`]).
+    pub(crate) trail_color: Option<[f32; 3]>,
     /// The section bits of the layers ([`Extra::layer`]) of the extras that are off: added to
     /// the blade's sections off, so its shader leaves those layers out.
     pub(crate) hidden: u64,
@@ -315,6 +328,8 @@ impl Extras {
             worn.trail = extra.trail.or(worn.trail);
             worn.sheds = extra.sheds.or(worn.sheds);
             worn.wake |= extra.wake;
+            worn.light = extra.light.or(worn.light);
+            worn.trail_color = extra.trail_color.or(worn.trail_color);
         }
         worn
     }
@@ -357,7 +372,7 @@ impl Extras {
                     self.skin, extra.id
                 ));
             }
-            if extra.layer.is_some_and(|layer| layer >= 6) {
+            if extra.layer.is_some_and(|layer| layer >= 8) {
                 return Err(format!(
                     "{}: extra {:?} draws on no part slot",
                     self.skin, extra.id
@@ -367,12 +382,32 @@ impl Extras {
                 && extra.sheds.is_none()
                 && !extra.wake
                 && extra.layer.is_none()
+                && extra.light.is_none()
+                && extra.trail_color.is_none()
             {
                 return Err(format!("{}: extra {:?} does nothing", self.skin, extra.id));
             }
             if extra.sheds.is_some_and(|sheds| !sheds.valid()) {
                 return Err(format!(
                     "{}: extra {:?} sheds out of reason",
+                    self.skin, extra.id
+                ));
+            }
+            if extra
+                .light
+                .is_some_and(|light| light.iter().any(|c| !(0.0..=4.0).contains(c)))
+            {
+                return Err(format!(
+                    "{}: extra {:?} casts a light out of reason",
+                    self.skin, extra.id
+                ));
+            }
+            if extra
+                .trail_color
+                .is_some_and(|trail| trail.iter().any(|c| !(0.0..=1.0).contains(c)))
+            {
+                return Err(format!(
+                    "{}: extra {:?} tints its trail out of reason",
                     self.skin, extra.id
                 ));
             }
@@ -575,9 +610,17 @@ mod tests {
     fn a_layer_is_hidden_until_its_extra_is_on() {
         let blossom = of("saber_varykino_blossom").expect("the blossom has extras");
         let silk = crate::blade_skin_file::extras::option_bit("silk_threads");
-        let slot = crate::blade_signatures::part_section(5).unwrap().bit();
-        assert_eq!(blossom.worn(0).hidden, slot);
-        assert_eq!(blossom.worn(silk).hidden, 0);
+        let butterfly = crate::blade_skin_file::extras::option_bit("butterfly");
+        let lilac = crate::blade_skin_file::extras::option_bit("lilac_light");
+        let slot = |k| crate::blade_signatures::part_section(k).unwrap().bit();
+        assert_eq!(blossom.worn(0).hidden, slot(5) | slot(6) | slot(7));
+        assert_eq!(blossom.worn(silk).hidden, slot(6) | slot(7));
+        assert_eq!(blossom.worn(silk | butterfly | lilac).hidden, 0);
+        // The Lilac light casts lilac light only while it is on.
+        assert_eq!(blossom.worn(silk).light, None);
+        assert_eq!(blossom.worn(lilac).light, Some([0.75, 0.58, 1.0]));
+        assert_eq!(blossom.worn(silk).trail_color, None);
+        assert_eq!(blossom.worn(lilac).trail_color, Some([0.66, 0.56, 1.0]));
     }
 
     #[test]
@@ -589,6 +632,8 @@ mod tests {
             sheds: None,
             wake: false,
             layer: None,
+            light: None,
+            trail_color: None,
         };
         let extras = |list: Vec<Extra>| Extras {
             skin: "saber_x",
@@ -622,8 +667,15 @@ mod tests {
             layer: Some(slot),
             ..extra("silk")
         };
-        assert!(extras(vec![layer(5)]).check(0).is_ok());
-        assert!(extras(vec![layer(6)]).check(0).is_err());
+        assert!(extras(vec![layer(7)]).check(0).is_ok());
+        assert!(extras(vec![layer(8)]).check(0).is_err());
+        let bright = |light| Extra {
+            trail: None,
+            light: Some(light),
+            ..extra("lilac")
+        };
+        assert!(extras(vec![bright([0.7, 0.6, 1.0])]).check(0).is_ok());
+        assert!(extras(vec![bright([0.7, -0.1, 5.0])]).check(0).is_err());
         let mut no_finish = extras(vec![extra("flare")]);
         no_finish.gate.finish = "gold".to_owned();
         assert!(no_finish.check(0).is_err());

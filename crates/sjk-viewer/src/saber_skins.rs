@@ -986,8 +986,11 @@ impl LoadedSkin {
         }
         SkinColor {
             index,
-            trail: def.trail,
-            light: def.light.color,
+            // An extra's trail colour and light (the Varykino Blossom's Lilac light), else its
+            // file's.
+            trail: extras.trail_color.unwrap_or(def.trail),
+            // An extra's light (the Varykino Blossom's Lilac light), else its file's.
+            light: extras.light.unwrap_or(def.light.color),
             flicker: LightFlicker {
                 amount: flicker.amount,
                 waves,

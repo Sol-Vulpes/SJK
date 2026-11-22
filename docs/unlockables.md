@@ -1945,17 +1945,19 @@ that only a holder of a given card in a given finish may switch on
 | --- | --- | --- | --- |
 | Sun | the plasma trail | `flare_trail` Flare trail (flames and loops licking past the tip), `swing_embers` Swing embers (sparks flung off the swing), `heat_wake` Heat wake (the air behind the trail shimmers) | a Solar copy of SJK Alpha 000 (Sol) |
 | Moon blade | the moonlight trail | `moonshadow_trail` Moonshadow trail (the eclipse's dark band and diamond flash), `starfall_trail` Starfall trail (shooting stars streaking out of the swing), `moonlit_wake` Moonlit wake (the air behind the trail shimmers) | a Solar copy of SJK Alpha 002 (Creyon) |
-| Varykino Blossom (Kushina's, 20/11/2026) | its pink blur | `blossom_mist` Blossom mist (the blade breathes out a faint, puffy lavender cloud that drifts down with its blossoms, [rendering.md](rendering.md#falling-blossoms)), `ink_stroke` Ink stroke (a lilac sumi-e brush stroke drawn where the tip passes, round where it starts and pointed where it ends, over the same blur, [rendering.md](rendering.md#saber-trails)), `silk_threads` Silk threads (short, dense bindings of thread-thin white-lilac silk wound tight here and there round the wood of the blossom branch, the bark bare between them; `"layer": 5`, gone with the branch) | a Solar copy of SJK Alpha 014 (Kushina) |
+| Varykino Blossom (Kushina's, 20/11/2026) | its pink blur | `blossom_mist` Blossom mist (the blade breathes out a faint, puffy lavender cloud that drifts down with its blossoms, [rendering.md](rendering.md#falling-blossoms)), `ink_stroke` Ink stroke (a lilac sumi-e brush stroke drawn where the tip passes, round where it starts and pointed where it ends, over the same blur, [rendering.md](rendering.md#saber-trails)), `silk_threads` Silk threads (short, dense bindings of thread-thin white-lilac silk wound tight here and there round the wood of the blossom branch, the bark bare between them; `"layer": 5`, gone with the branch), `butterfly` Butterfly (22/11/2026: a white butterfly with a lilac disc across its wings sits on the tip in the Sakura droplet's place, the droplet gone whatever its part switch says; it beats its wings slowly now and then, and a clash startles it up into a little loop above the tip until it settles back; `"layer": 6`), `lilac_light` Lilac light (22/11/2026: every effect turns lilac but the blossoms the swing sheds: the blade's glow (narrower) and core, the light it casts, the trail's blur, the branch's blossoms and bud, the petals drifting round it, the droplet, the clash's ring of petals and the mythical's awakening, flare and rings; its slow light rising up the blade is left out, and its brightest light is held down so a high exposure leaves it lilac, not white or pink; `"layer": 7`, `"light"`, `"trail_color"`) | a Solar copy of SJK Alpha 014 (Kushina) |
 
 - **Declared** by the signature's header: `// @trail plasma` (the trail every wearer gets),
   `// @extras {"card":..,"card_name":..,"finish":..}` (the card that unlocks them) and an
   `// @extra {"id":..,"name":..}` line each, with what it does: `"trail"` (another trail,
   [rendering.md](rendering.md#saber-trails)), `"sheds"` (a `@petals` spec without its part,
-  [rendering.md](rendering.md#falling-blossoms)), `"wake": true` or `"layer": k` (a
+  [rendering.md](rendering.md#falling-blossoms)), `"wake": true`, `"light": [r,g,b]` (the
+  colour of the light the blade casts instead of its file's, each 0 to 4), `"trail_color": [r,g,b]`
+  (its trail's blur instead of its file's `trail`, each 0 to 1) or `"layer": k` (a
   layer the signature draws itself, on its blade, read in its shader as part slot `k` past
-  its own `@part`s, 0 to 5, with `part(k)`: `blade_extras::Worn::hidden` switches the slot's
+  its own `@part`s, 0 to 7, with `part(k)`: `blade_extras::Worn::hidden` switches the slot's
   section off while the extra is off, so its shader leaves the layer out; the Varykino
-  Blossom's Silk threads, 20/11/2026). At most 6 extras; a test checks every line parses,
+  Blossom's Silk threads, 20/11/2026, its Butterfly and Lilac light, 22/11/2026). At most 6 extras; a test checks every line parses,
   that no extra's bit takes an option's or another extra's, and that a layer takes no slot
   of the signature's own parts.
 - **Kept** in `cg_saberSkinOptions` with the parts: a word there names a part switched off

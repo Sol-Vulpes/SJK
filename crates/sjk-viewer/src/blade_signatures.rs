@@ -335,9 +335,11 @@ const LAB: &str = include_str!("blade_signatures/lab.wgsl");
 /// The stand-in signature in `saber.wgsl` that a signature replaces.
 const BEGIN: &str = "// @signature begin\n";
 const END: &str = "// @signature end\n";
-/// The sections a signature's own parts ride on, part 0 to 5 (`SIG_PART_BITS` in
+/// The sections a signature's own parts ride on, part 0 to 7 (`SIG_PART_BITS` in
 /// `saber.wgsl`): sections a signature never draws, so their bits are free.
-const PART_SECTIONS: [&str; 6] = ["sputter", "glitch", "scan", "bands", "segments", "film"];
+const PART_SECTIONS: [&str; 8] = [
+    "sputter", "glitch", "scan", "bands", "segments", "film", "blobs", "front",
+];
 
 /// The section whose bit carries a signature's own part `part` (its `// @part` line, from 0).
 pub(crate) fn part_section(part: u8) -> Option<crate::blade_skin_file::extras::Section> {

@@ -3128,13 +3128,20 @@ at that point and returning the blade's own: `sig_glow(g, b, r, px)` the glow's 
   `sig_orbit` (light) and `sig_orbit_solid` (a layer): the Eclipse's suns, Obsidian Edge's
   shards, Liquid Beskar's orbiting droplets, Carbonite's floating shards, the Kyber Cluster's
   crystals and the Between Worlds duel. `tools/sig3d.py` in the Blade Lab draws the same way.
+  Three last hooks recolour what the renderer draws for a signature: `sig_mouth(g)` the file's
+  glow kept round the emitter, `sig_mythic_light(l)` all of a mythical's shared light (`sig_mythic`:
+  its awakening, flare and rings) and `sig_mythic_breath(b)` its slow breath rising up the blade
+  (the stand-ins leave them; 22/11/2026, the Varykino Blossom's Lilac light turns them lilac and
+  leaves the breath out). A stand-in function in the block starts with `fn`, its comment inside,
+  or `module_source` cannot name it.
 - **Each its own, every part switchable (round 11, 20/10/2026).** Creyon: the mythicals all
   had the same lines (the shared beams) and each effect must switch off on its own. A
   signature now also wears Sol's lightning and prominences (`arcs`), souls, sparks and
   starlines (`motes`) and a colour turn (`hue`) from its file, each with its own pattern, and
   no longer shares the beams. Its options (`Signature::options`, at most six): its own parts,
   named by `// @part` header lines and read in the shader with `part(k)` (the wearer's
-  choices ride on section bits a signature never uses, `SIG_PART_BITS`, gathered into
+  choices ride on section bits a signature never uses, `SIG_PART_BITS`, eight of them (part
+  0 to 7; 22/11/2026, from six, for the Varykino Blossom's Butterfly and Lilac light), gathered into
   `uParts` by `sig_take`), then Sol's sections its file has (named by `// @arcs` and like
   lines), then the swing and clash bursts (the pulse bit). A section named like a part already
   listed joins that part's switch (#115: Holonet Feed's own flecks and its file's motes were both
