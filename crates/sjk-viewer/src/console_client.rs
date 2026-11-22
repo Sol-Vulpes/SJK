@@ -297,6 +297,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::graphics_quality::HELP,
     ),
     (crate::tactical::COMMAND, crate::tactical::HELP),
+    (crate::ejk_mode::COMMAND, crate::ejk_mode::HELP),
     (
         crate::graphics_quality::RENDERER_COMMAND,
         crate::graphics_quality::RENDERER_HELP,
@@ -1412,6 +1413,10 @@ impl crate::GpuState {
             crate::tactical::COMMAND => {
                 let console = self.console.as_mut().ok_or("Console unavailable")?;
                 return crate::tactical::command(console, args);
+            }
+            crate::ejk_mode::COMMAND => {
+                let console = self.console.as_mut().ok_or("Console unavailable")?;
+                return crate::ejk_mode::command(console, args);
             }
             crate::graphics_quality::RENDERER_COMMAND => {
                 let console = self.console.as_mut().ok_or("Console unavailable")?;

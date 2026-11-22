@@ -445,6 +445,7 @@ impl Group {
                 crate::blade_lab_designs::CVAR,
                 crate::duel_blades::CVAR,
                 crate::stock_blades::CVAR,
+                crate::finishers::SHOW_CVAR,
                 crate::effect_aux::saber_rain_steam::CVAR,
                 "cg_speedTrail",
                 crate::actor_world_submission::force_powers::victim::CVAR,
@@ -549,6 +550,7 @@ impl Group {
                 crate::ghost_replay::SHOWCASE_CVAR,
             ],
             Self::Interface => &[
+                crate::ejk_mode::CVAR,
                 crate::menu::style::CVAR,
                 crate::menu::classic::own_look::CVAR,
                 crate::launcher_notice::CVAR,
@@ -806,6 +808,7 @@ impl Group {
                 "cg_chatBoxFontSize",
             ],
             Self::Simple(Simple::General) => &[
+                crate::ejk_mode::CVAR,
                 crate::menu::style::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::player_trades::SIZE_CVAR,
@@ -844,7 +847,7 @@ impl Group {
                 (crate::brush_view::CVAR, "Map tools"),
             ],
             Self::Interface => &[
-                (crate::menu::style::CVAR, "Menus"),
+                (crate::ejk_mode::CVAR, "Menus"),
                 (crate::menu::sjk::theme::CVAR, "Theme"),
                 (crate::console::console_options::STYLE_CVAR, "Console"),
                 (crate::quick_wheel::pages::FILE, "Quick wheel"),
@@ -893,7 +896,7 @@ impl Group {
                 ("cg_nameplate", "Over the game"),
             ],
             Self::Simple(Simple::General) => &[
-                (crate::menu::style::CVAR, "Menus"),
+                (crate::ejk_mode::CVAR, "Menus"),
                 (super::catalog::IMPORT_ROW, "From another client"),
                 ("jof.downloads", "JoF content"),
                 ("sith.downloads", "Sith cloud"),
@@ -1120,9 +1123,11 @@ mod tests {
     fn simple_mode_keeps_its_categories_short() {
         for simple in Simple::ALL {
             let rows = Group::Simple(simple).rows();
-            // General holds the two content collections' automatic updates too.
+            // General holds the two content collections' automatic updates too, and
+            // EJK mode, which a player coming from JoF EJK looks for first.
+            let most = if simple == Simple::General { 16 } else { 15 };
             assert!(
-                (3..=15).contains(&rows.len()),
+                (3..=most).contains(&rows.len()),
                 "{simple:?}: {} rows",
                 rows.len()
             );

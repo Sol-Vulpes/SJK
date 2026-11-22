@@ -14,6 +14,9 @@ and part icons.
 This page holds the rules and the recipe, for new classic pages and for older
 ones being reworked.
 
+EJK mode (`ui_ejkMode`, [client.md](client.md#ejk-mode)) turns the classic style on in
+retail's look with the rest of JoF EJK's look (fonts, console, HUD, scoreboard, graphics).
+
 ## What stays retail
 
 A classic+ page must still read as the retail menu it stands for.

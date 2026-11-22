@@ -1261,6 +1261,10 @@ const HELP: &[(&str, &str)] = &[
         "How far your boombox carries, in units (a player is 64 tall). It fades out toward the edge.",
     ),
     (
+        crate::finishers::SHOW_CVAR,
+        "Finishers play on saber kills, yours and others'. Off: a body is left as the game leaves it, on this PC.",
+    ),
+    (
         crate::duel_blades::CVAR,
         "In a duel you play or follow, and on Duel servers, every blade is a normal one in its own colour.",
     ),
@@ -1517,6 +1521,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::console::collection_panel::hall::CVAR,
         "The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.",
+    ),
+    (
+        crate::ejk_mode::CVAR,
+        "SJK looks like JoF EJK: its menus, fonts, console, HUD, scoreboard and graphics. Off gives your settings back.",
     ),
     (
         crate::menu::style::CVAR,

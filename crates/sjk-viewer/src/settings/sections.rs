@@ -125,6 +125,8 @@ const GAMEPLAY: &[Section] = &[
             "cg_defaultModelRandom",
             "cg_modelBlacklist",
             "cg_simpleItems",
+            // What a saber kill does to the body; Sabers is full.
+            "cg_finishers",
             "cg_tactical",
             "cg_tacticalDuel",
             "cg_tacticalModel",
@@ -235,6 +237,7 @@ const INTERFACE: &[Section] = &[
     section(
         "Menus",
         &[
+            "ui_ejkMode",
             "ui_menuStyle",
             "ui_classicLook",
             "ui_textScale",

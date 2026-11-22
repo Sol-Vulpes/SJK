@@ -129,6 +129,14 @@ const SYNONYMS: &[(&str, &[&str])] = &[
     ("framerate", &["fps"]),
     ("frame rate", &["fps"]),
     ("smoothness", &["fps cap", "vertical sync"]),
+    // EJK mode (`ejk_mode.rs`), by the names players give the client it follows and
+    // the look they ask for.
+    ("eternal", &["ejk mode"]),
+    ("jof", &["ejk mode"]),
+    ("openjk", &["ejk mode"]),
+    ("ojk", &["ejk mode"]),
+    ("classic", &["ejk mode"]),
+    ("retail", &["ejk mode"]),
     ("cel", &["toon"]),
     ("cartoon", &["toon"]),
 ];
@@ -423,6 +431,22 @@ mod tests {
         assert!(finds("anti", "r_superSample"));
         assert!(finds("quite mode", crate::chat::quiet::CVAR));
         assert!(finds("vsync", "r_vsync"));
+    }
+
+    #[test]
+    fn ejk_mode_is_found_by_the_names_players_give_it() {
+        for query in [
+            "ejk",
+            "ejk mode",
+            "eternaljk",
+            "jof",
+            "openjk",
+            "ojk",
+            "classic",
+            "retail",
+        ] {
+            assert!(finds(query, crate::ejk_mode::CVAR), "{query}");
+        }
     }
 
     #[test]

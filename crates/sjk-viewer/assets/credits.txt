@@ -251,6 +251,7 @@ did: Smarter settings: named choices, units, loudness volumes, rows that say wha
 did: The settings pictures, drawn by one script, and Settings cut into short pictured sections
 did: The Solar, Sith, Jedi and Custom themes, picked from tiles in First setup
 did: The classic menus' own look: drawn sharp at any size, in the theme's colours
+did: EJK mode: one switch for JoF EJK's look, your own settings back when it is off
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

@@ -1538,6 +1538,11 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
+        label: "Finishers",
+        cvar: crate::finishers::SHOW_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Saber rain steam",
         cvar: crate::effect_aux::saber_rain_steam::CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
@@ -1823,6 +1828,11 @@ pub(super) const GAME: &[Setting] = &[
     Setting {
         label: "Collection hall",
         cvar: crate::console::collection_panel::hall::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
+        label: "EJK mode",
+        cvar: crate::ejk_mode::CVAR,
         kind: ValueKind::Bool,
     },
     Setting {

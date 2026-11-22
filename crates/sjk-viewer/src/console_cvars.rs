@@ -293,6 +293,18 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Synchronize presentation (0/1)",
         ),
         CvarDefinition::new(
+            crate::ejk_mode::CVAR,
+            false,
+            archive,
+            "EJK mode: SJK looks and feels like JoF EJK (classic menus, the game's fonts, EternalJK's console, HUD and scoreboard, Vanilla graphics, none of SJK's extras over a match); your own settings come back when it is turned off",
+        ),
+        CvarDefinition::new(
+            crate::ejk_mode::RESTORE_CVAR,
+            "",
+            archive,
+            "What EJK mode put aside, given back when it is turned off (written by EJK mode)",
+        ),
+        CvarDefinition::new(
             crate::menu::style::CVAR,
             crate::menu::style::MenuStyle::DEFAULT_NAME,
             archive,
@@ -1275,6 +1287,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "",
             archive,
             "The finisher your saber kills play, by unlock id (finisher_disintegrate), worn once your SJK profile holds it; empty for none",
+        ),
+        CvarDefinition::new(
+            crate::finishers::SHOW_CVAR,
+            true,
+            archive,
+            "Finishers play on saber kills, yours and other players' (0: the body is left as the game leaves it, on this PC; others still see the one you wear)",
         ),
         CvarDefinition::new(
             crate::saber_sound_choice::CVAR,
