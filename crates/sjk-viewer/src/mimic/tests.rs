@@ -630,3 +630,15 @@ fn the_stance_is_cycled_only_between_a_single_sabers_stances_and_never_in_a_swin
         GENCMD_SABER_SWITCH
     );
 }
+
+#[test]
+fn the_leaders_view_is_read_from_their_angular_trajectory() {
+    // `apos.trBase` (netfields 5, 3, 33) holds a player's view; `angles` (25, 9, 24)
+    // is where they spawned or were teleported.
+    let mut entity = EntityState::from_raw_fields(1, vec![0_u32; 132]).unwrap();
+    for (field, value) in [(5, 10.0_f32), (3, 135.0), (25, 0.0), (9, -90.0)] {
+        assert!(entity.set_raw_field(field, value.to_bits()));
+    }
+    let sample = Sample::of_entity(100, &entity);
+    assert_eq!(sample.angles, [10.0, 135.0, 0.0]);
+}

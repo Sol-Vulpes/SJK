@@ -133,7 +133,9 @@ impl Sample {
             time,
             origin: entity.trajectory_base(),
             velocity: entity.trajectory_delta(),
-            angles: entity.angles(),
+            // Not `entity.angles()`: a player's `s.angles` is set where they spawn or are
+            // teleported (`SetClientViewAngle`) and stays there while they turn.
+            angles: entity.angular_trajectory_base(),
             on_ground: entity.ground_entity_num() != NO_GROUND,
             crouched: solid != 0 && solid != 0x00FF_FFFF && top < 30,
             saber_move: entity.saber_move(),

@@ -8370,7 +8370,19 @@ delta_angles` from the predicted state, which a held view rewrites every command
 are now the last command's plus a turn of 6 degrees at most, the keys are read in the
 view the command gets, the pitch stays within 85 degrees, and a held view is said in
 the client log ([client.md](client.md#mimic)). The cause is inferred from the symptoms
-and the code, not reproduced from that session; not yet tried in a game.
+and the code, not reproduced from that session.
+
+Branch `personal/mimic-leader-angles` (22/11/2026). Tried in a game with the above, the
+copy still walked forward while the leader walked left. The real cause: the leader's
+view was read from `entityState_t::angles`, which a player's entity sets only where
+they spawn or are teleported (`SetClientViewAngle`), not from `apos.trBase`, which
+holds their view. The leader's starting yaw was then the yaw they spawned with, so
+their motion was laid into a frame turned by however far they had turned since, and
+their turns and pitch were never seen. The tests feed samples directly and never read
+an entity; one now does. Not yet tried in a game. The same session showed the build
+line three days stale (`c6b3f2d` on a build of `f79c8d2`): the build script watched
+`HEAD`, the branch's loose ref and `packed-refs`, and missed the ref when git had
+packed it; it now watches `HEAD`'s reflog too.
 
 Since branch `personal/experimental-showcase` (11/10/2026) `ghost` and `mimic` are
 experimental, off by default behind Settings > Gameplay > "Experimental: showcase

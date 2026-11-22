@@ -13,6 +13,7 @@ Format, read by the client (crates/sjk-viewer/src/changelog_data.rs, whose
 tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
+- Mimic walks the way the leader does and follows their turns and their look up or down: it read the leader's facing from where they had spawned instead of where they look, so a walk to the left could come out as a walk forward _(Sol)_
 - Mimic with a staff or two sabers keeps its blades: it no longer presses the stance cycle to match a single saber's stance (which put a blade away at each swing), and one blade off no longer counts as a holstered saber _(Sol)_
 - Mimic keeps its view through moves that lock it (lunges, DFAs, back attacks, katas, knockdowns): it no longer looks at the ground or walks the wrong way after them; the view turns like a mouse, 6 degrees a command at most _(Sol)_
 - The classic menus have a look of their own: Settings > Interface > Classic menus' look (`ui_classicLook sjk`) draws them without the game's 640x480 artwork, sharp at any size, and in the theme's colours (Solar, Sith, Jedi or custom) in place of retail's blue and gold. The original artwork is redrawn as shapes (the frame lines, the windows either side of the ring, the ring, the page bar) at the menu's own proportions, with the game's own logo cut clean of its blue plate, the side columns written in Aurebesh, and on a 16:9 screen more of the room drawn beside the page. The pages, entries and keys are the same; Retail stays the default _(Sol)_

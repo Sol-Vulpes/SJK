@@ -65,7 +65,11 @@ fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
 }
 
 /// The files that change when `HEAD` moves: `HEAD` itself, the branch's loose
-/// ref and `packed-refs`, wherever this checkout or worktree keeps them.
+/// ref, `packed-refs` and `HEAD`'s reflog, wherever this checkout or worktree keeps
+/// them. The reflog is what holds when git has packed the branch's ref: the loose file
+/// is then missing as the build script runs, so it is not watched, and the commits
+/// that bring it back touch neither `HEAD` nor `packed-refs` (seen on 22/11/2026: a
+/// build 71 commits on still called itself the commit of three days before).
 fn watched_git_files(directory: &Path) -> Vec<String> {
     let path = |name: &str| {
         git(
@@ -81,6 +85,7 @@ fn watched_git_files(directory: &Path) -> Vec<String> {
         files.extend(path(&branch));
     }
     files.extend(path("packed-refs"));
+    files.extend(path("logs/HEAD"));
     files.retain(|file| Path::new(file).exists());
     files
 }
