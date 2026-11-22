@@ -53,9 +53,7 @@ impl Classes {
         if !is_siege(Some(game)) {
             return Err("Class selection is only available in Siege".into());
         }
-        let info =
-            std::str::from_utf8(game.config_string(0).unwrap()).map_err(|e| e.to_string())?;
-        let info = InfoString::parse(info).map_err(|e| e.to_string())?;
+        let info = game.server_info().ok_or("Missing server info")?;
         let map = info.get("mapname").ok_or("Missing Siege map name")?;
         let map_data = read(vfs, &format!("maps/{map}.siege"))?;
         let teams = group(&map_data, "Teams").ok_or("Missing Siege Teams group")?;
