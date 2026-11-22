@@ -502,12 +502,12 @@ fn the_view_turns_to_the_wanted_one_and_stays_put_through_a_held_view() {
         let before = state.view_angles;
         serve_view(&mut state, angles, false);
         last = Some(angles);
-        for axis in 0..2 {
+        for ((now, before), asked) in state.view_angles.iter().zip(before).zip(asked) {
             assert!(
-                angle_delta(state.view_angles[axis], before[axis]).abs() <= MAX_TURN + 0.01,
+                angle_delta(*now, before).abs() <= MAX_TURN + 0.01,
                 "step {step}"
             );
-            assert!(angle_delta(state.view_angles[axis], asked[axis]).abs() < 0.01);
+            assert!(angle_delta(*now, asked).abs() < 0.01);
         }
     }
     assert!(angle_delta(state.view_angles[0], 20.0).abs() < 0.01);
@@ -530,8 +530,8 @@ fn the_view_turns_to_the_wanted_one_and_stays_put_through_a_held_view() {
         serve_view(&mut state, angles, held);
         known.push_back(state.delta_angles);
         last = Some(angles);
-        for axis in 0..2 {
-            let turned = angle_delta(state.view_angles[axis], before[axis]).abs();
+        for (now, before) in state.view_angles.iter().zip(before).take(2) {
+            let turned = angle_delta(*now, before).abs();
             assert!(
                 turned <= if held { 0.01 } else { MAX_TURN + 0.01 },
                 "step {step}: turned {turned}"
