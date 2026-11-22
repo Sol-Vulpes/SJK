@@ -156,6 +156,7 @@ impl HudOverlay {
     ) {
         self.family = Policy::read(console);
         self.kill_feed.sample(console);
+        self.feats.sample(console);
         self.icons.update(snapshot, game, console);
         self.flag_status.update(snapshot, game, console);
         self.targeting.update(console, &snapshot.player);
@@ -198,8 +199,12 @@ impl HudOverlay {
         let bottom = self.enemy_info.bottom();
         let fps = self.kill_feed.options().fps;
         let readouts = if fps || self.upper_right_timer {
-            crate::console_overlay::upper_right_bottom(viewport_height, fps, self.upper_right_timer)
-                / crate::ui_scale::height_scale(viewport_height)
+            crate::console_overlay::upper_right_bottom(
+                viewport_height,
+                fps,
+                !self.bars.fps,
+                self.upper_right_timer,
+            ) / crate::ui_scale::height_scale(viewport_height)
                 + 6.0
         } else {
             0.0
@@ -273,8 +278,11 @@ impl HudOverlay {
                 28.0 * s,
             );
             if id == 315 {
+                // Where it will stand once moved inside the status bars, as `layout` moves
+                // the family's pieces each by its own edge.
+                let inside = rect.translated(0.0, self.edges.shift(rect, viewport[1]));
                 self.element_bounds
-                    .add(super::placement::Element::Score, Some(rect));
+                    .add(super::placement::Element::Score, Some(inside));
             }
             let _ = self.draw_list.push(DrawCommand::Text {
                 rect,

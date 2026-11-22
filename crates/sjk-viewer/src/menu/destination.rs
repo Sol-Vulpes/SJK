@@ -29,7 +29,7 @@ pub(crate) enum MainDestination {
     Identity,
     /// The Profile page, drawn by the console over the menu.
     Profile,
-    /// The Collection (medals, achievements, shaders, toys, nameplates), drawn by the
+    /// The Collection (medals, achievements, shaders, toys and the rest), drawn by the
     /// console over the menu, on the tab it showed last.
     Collection,
     /// The SJK chat page, drawn by the console over the menu.
@@ -119,8 +119,8 @@ impl ClientMenu {
                 MenuAction::None
             }
             MainDestination::Collection if self.menu_style == MenuStyle::Sjk => {
-                // The SJK UI's Collection screen.
-                let tab = console.collection_tab();
+                // The SJK UI's Collection screen, where it opens (its hall by default).
+                let tab = console.collection_landing();
                 console.open_profile_hub_page(tab, ReturnTarget::MainMenu);
                 MenuAction::None
             }

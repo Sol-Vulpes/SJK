@@ -165,12 +165,27 @@ impl ViewerConsole {
             }
             PanelAction::Hub(tab) if self.profile_panel.mode() == Mode::Hub => {
                 let target = self.profile_hub_return;
+                // See the collection: where the Collection opens.
+                let tab = if tab == HubTab::Hall {
+                    self.collection_landing()
+                } else {
+                    tab
+                };
                 self.open_profile_hub_page(tab, target);
             }
             PanelAction::Hub(tab) => {
                 // On its own the page hands over to the Collection page on its own.
                 let owns_console = self.profile_panel.close();
-                self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
+                let tab = if tab == HubTab::Hall {
+                    self.collection_landing()
+                } else {
+                    tab
+                };
+                if tab == HubTab::Holocrons {
+                    self.show_holocrons_panel(owns_console);
+                } else {
+                    self.show_collection_panel(tab, owns_console, false, ReturnTarget::MainMenu);
+                }
             }
             PanelAction::Save { bio } => {
                 // The page shows the hub's answer, or why nothing could be sent.

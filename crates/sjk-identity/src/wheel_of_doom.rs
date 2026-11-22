@@ -104,6 +104,39 @@ pub struct SpinAnswer {
     pub profile: Profile,
 }
 
+/// One DOOM coin roll at a Force box (a mystery box, since 20/11/2026: the WHEEL OF DOOM
+/// merged into it), as the roller is answered (`POST /v1/mystery-box/doom`).
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Doom {
+    /// The box rolled at.
+    #[serde(rename = "box")]
+    pub box_id: i64,
+    /// What it gave: one of the wheel's outcomes (`holo_rare`, `mirror`, ...).
+    pub outcome: String,
+    /// The holocron a holocron outcome gave.
+    #[serde(default)]
+    pub holocron: Option<BoxHolocron>,
+    /// The DOOM coins the roller holds after.
+    #[serde(default)]
+    pub coins: Option<u64>,
+}
+
+/// `POST /v1/mystery-box/doom`'s answer.
+#[derive(Clone, Debug, Deserialize)]
+pub struct DoomAnswer {
+    /// What the roll gave.
+    pub doom: Doom,
+    /// The roller's profile after (a holocron won).
+    pub profile: Profile,
+}
+
+/// What a feed event of the mystery box's toy says of a coin roll: box `box` gave
+/// `outcome` (`doom_<box>_<outcome>`, since 20/11/2026).
+pub fn parse_doom_event(event: &str) -> Option<(i64, &str)> {
+    let (id, outcome) = event.strip_prefix("doom_")?.split_once('_')?;
+    Some((id.parse().ok()?, outcome)).filter(|(_, outcome)| !outcome.is_empty())
+}
+
 /// What a feed event of [`TOY`] says: placed wheel `wheel` landed on `outcome`
 /// (`land_<wheel>_<outcome>`; the toy's `spin_<outcome>` before 11/11/2026 is not read).
 pub fn parse_event(event: &str) -> Option<(i64, &str)> {
@@ -126,6 +159,42 @@ pub struct Refused {
     pub words: String,
     /// The seconds left of the cooldown (`wheel_cooldown`).
     pub left: Option<u64>,
+}
+
+/// A refused DOOM coin roll at a Force box (`POST /v1/mystery-box/doom`, which answers
+/// the wheel's codes) in the player's words, with the cooldown's seconds left.
+pub fn box_refusal(error: &HubError) -> Refused {
+    let HubError::Rejected { code, message, .. } = error else {
+        return refusal(error);
+    };
+    let seconds = message
+        .split(|c: char| !c.is_ascii_digit())
+        .rfind(|digits| !digits.is_empty())
+        .and_then(|digits| digits.parse::<u64>().ok());
+    let (words, left) = match (code.as_str(), seconds) {
+        ("wheel_busy", Some(left)) => (
+            format!("Someone is rolling a DOOM coin at this Force box: {left} s left"),
+            None,
+        ),
+        ("wheel_cooldown", Some(left)) => {
+            (format!("Your next DOOM coin roll in {left} s"), Some(left))
+        }
+        ("wheel_busy", None) => (
+            "Someone is rolling a DOOM coin at this Force box.".to_owned(),
+            None,
+        ),
+        ("wheel_cooldown", None) => ("Roll your next DOOM coin a little later.".to_owned(), None),
+        ("no_doom_coin", _) => (
+            "No DOOM coin: the teddy bear in a Force box brings one.".to_owned(),
+            None,
+        ),
+        ("wheel_off", _) => ("DOOM coin rolls are off for now.".to_owned(), None),
+        ("no_such_box", _) => ("That Force box is not here any more.".to_owned(), None),
+        ("box_server", _) => ("Force boxes do not open on this server.".to_owned(), None),
+        ("client_update_required", _) => ("Update SJK to roll a DOOM coin.".to_owned(), None),
+        _ => return refusal(error),
+    };
+    Refused { words, left }
 }
 
 /// A refused spin in the player's words, with the cooldown's seconds left when it says.
@@ -297,5 +366,48 @@ mod tests {
                 left: None
             }
         );
+    }
+
+    #[test]
+    fn a_coin_roll_event_names_its_box_and_outcome() {
+        assert_eq!(
+            parse_doom_event("doom_12_holo_rare"),
+            Some((12, "holo_rare"))
+        );
+        assert_eq!(parse_doom_event("doom_3_mirror"), Some((3, "mirror")));
+        assert_eq!(parse_doom_event("open_3_coins"), None);
+        assert_eq!(parse_doom_event("doom_x_mirror"), None);
+        assert_eq!(parse_doom_event("doom_3_"), None);
+        let doom: Doom = serde_json::from_value(serde_json::json!({
+            "id": 9, "box": 4, "outcome": "holo_rare",
+            "holocron": {"id": 2, "tier": "rare"}, "coins": 1,
+        }))
+        .unwrap();
+        assert_eq!((doom.box_id, doom.coins), (4, Some(1)));
+        assert_eq!(doom.holocron.unwrap().tier, "rare");
+    }
+
+    #[test]
+    fn a_refused_coin_roll_speaks_of_the_force_box() {
+        let rejected = |code: &str, message: &str| HubError::Rejected {
+            status: 409,
+            code: code.to_owned(),
+            message: message.to_owned(),
+        };
+        let busy = box_refusal(&rejected("wheel_busy", "busy for 4 s"));
+        assert_eq!(
+            busy.words,
+            "Someone is rolling a DOOM coin at this Force box: 4 s left"
+        );
+        assert_eq!(busy.left, None);
+        let wait = box_refusal(&rejected("wheel_cooldown", "again in 9 s"));
+        assert_eq!(
+            (wait.words.as_str(), wait.left),
+            ("Your next DOOM coin roll in 9 s", Some(9))
+        );
+        for code in ["no_doom_coin", "wheel_off", "no_such_box", "box_server"] {
+            let words = box_refusal(&rejected(code, "")).words;
+            assert!(!words.contains("WHEEL"), "{code}: {words}");
+        }
     }
 }

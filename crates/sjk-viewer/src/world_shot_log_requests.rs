@@ -27,6 +27,7 @@ fn profile(key: &str, name: &str) -> sjk_identity::Profile {
         staff: false,
         creator: false,
         jkr_creator: false,
+        all_access: false,
         trust: None,
         emoji: String::new(),
         created: 1_791_250_000,

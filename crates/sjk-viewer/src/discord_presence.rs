@@ -20,7 +20,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// 0 off, 1 on, 2 on without the server's name.
 pub(crate) const CVAR: &str = "cl_discordPresence";
 
-/// The "Sol JK" application in Discord's developer portal: its name is the game
+/// The "Sun JK" application in Discord's developer portal: its name is the game
 /// name Discord shows. Not a secret; every Rich Presence client carries its id.
 const APPLICATION_ID: &str = "1561491096062922803";
 
@@ -193,16 +193,18 @@ fn tab_words(tab: Tab) -> &'static str {
         Tab::Medals => "Looking at medals",
         Tab::Achievements => "Looking at achievements",
         // The Saber Lab is a development tab: told as the shaders are.
-        Tab::Shaders | Tab::SaberLab => "Looking at saber shaders",
+        Tab::Shaders | Tab::SaberLab => "Looking at kybers",
         Tab::Toys => "Looking at toys",
+        Tab::LogBook => "Reading their log book",
         Tab::Tags => "Looking at tags",
         Tab::Banners => "Choosing a profile banner",
-        Tab::Nameplates => "Looking at nameplates",
         Tab::Holocrons if crate::terms::renamed() => "Opening echoes",
         Tab::Holocrons => "Opening holocrons",
         Tab::Forge => "In the Forge",
         Tab::Cards => "Looking at cards",
         Tab::History => "Looking at their history",
+        Tab::Inventory => "Looking at their inventory",
+        Tab::Hall => "Looking at their collection",
     }
 }
 
@@ -220,7 +222,7 @@ fn timer_key(place: &Place) -> String {
 fn activity(place: &Place, start: Option<u64>) -> Activity {
     let mut activity = Activity {
         large_image: LOGO.into(),
-        large_text: "Sol JK".into(),
+        large_text: "Sun JK".into(),
         start,
         buttons: vec![ActivityButton {
             label: "Get SJK".into(),

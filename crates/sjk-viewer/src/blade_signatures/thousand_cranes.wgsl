@@ -10,7 +10,7 @@
 // @solid 1
 // @palette {"corona.rim_cool":[0.78,0.64,0.5],"corona.rim_hot":[1.0,0.92,0.82],"corona.inner":[1.0,0.97,0.92],"core.white":[1.0,0.99,0.96],"core.fringe_cool":[1.0,0.84,0.74],"core.fringe_hot":[1.0,0.94,0.88],"light.color":[1.0,0.9,0.82],"trail":[1.0,0.9,0.84]}
 
-// Thousand Cranes: the first Unique blade (Sol, 25/10/2026), a personal thank-you given by hand.
+// Thousand Cranes: the first Secret blade (Sol, 25/10/2026), a personal thank-you given by hand.
 // A thousand paper cranes (senbazuru) are the old Japanese gift of thanks and good wishes. A
 // warm silk-white blade with the fine fibres of washi paper in its light, a red thread wound
 // round it, and origami cranes in coloured paper circling it as they rise, each wearer's flock

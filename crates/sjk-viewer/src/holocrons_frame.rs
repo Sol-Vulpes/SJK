@@ -50,7 +50,6 @@ impl GpuState {
                 .is_some_and(console::ViewerConsole::is_open)
             || self.text_dialog.is_open()
             || self.medal_popup.is_open()
-            || self.holocron_popup.is_open()
             || self
                 .client_menu
                 .as_ref()

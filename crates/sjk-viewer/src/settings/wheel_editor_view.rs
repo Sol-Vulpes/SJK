@@ -106,7 +106,7 @@ impl SettingsMenu {
         editor.ui.push_opacity(reveal);
         let _ = editor.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-            color: color::alpha(color::SPACE, 0.6),
+            color: color::alpha(color::space(), 0.6),
         });
         backdrop(&mut editor.ui, viewport);
         crate::menu::sjk::top_bar(
@@ -200,7 +200,7 @@ impl WheelEditor {
                     format_args!("Remove {name}? Delete again"),
                     frame.rect(PAGES_X + 22.0, middle - 14.0, PAGES_WIDTH - 80.0, 28.0),
                     18.0 * s,
-                    color::EMBER,
+                    color::ember(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -218,9 +218,9 @@ impl WheelEditor {
                     ),
                     19.0 * s,
                     match (shown, focused) {
-                        (true, _) => color::GOLD_BRIGHT,
-                        (false, true) => color::TEXT,
-                        (false, false) => color::alpha(color::TEXT, 0.88),
+                        (true, _) => color::gold_bright(),
+                        (false, true) => color::text(),
+                        (false, false) => color::alpha(color::text(), 0.88),
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -244,7 +244,7 @@ impl WheelEditor {
                     ),
                     frame.rect(PAGES_X + PAGES_WIDTH - 150.0, middle - 12.0, 130.0, 24.0),
                     16.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -306,9 +306,9 @@ impl WheelEditor {
             ),
             18.0 * s,
             match (confirming, self.default) {
-                (true, _) => color::EMBER,
-                (false, true) => color::QUIET,
-                (false, false) => color::MUTED,
+                (true, _) => color::ember(),
+                (false, true) => color::quiet(),
+                (false, false) => color::muted(),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -341,9 +341,9 @@ impl WheelEditor {
             ),
             19.0 * s,
             if focused {
-                color::TEXT
+                color::text()
             } else {
-                color::alpha(color::TEXT, 0.88)
+                color::alpha(color::text(), 0.88)
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -474,9 +474,9 @@ impl WheelEditor {
                 ),
                 19.0 * s,
                 if focused || picked {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::TEXT, 0.88)
+                    color::alpha(color::text(), 0.88)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -516,7 +516,7 @@ impl WheelEditor {
                         24.0,
                     ),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -553,7 +553,7 @@ impl WheelEditor {
                 28.0,
             ),
             19.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -570,7 +570,7 @@ impl WheelEditor {
                     26.0,
                 ),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -602,9 +602,9 @@ impl WheelEditor {
             frame.rect(x + 22.0, top + LINE * 0.5 - 14.0, width - 44.0, 28.0),
             18.0 * frame.s,
             match (enabled, focused) {
-                (false, _) => color::QUIET,
-                (true, true) => color::GOLD_BRIGHT,
-                (true, false) => color::alpha(color::GOLD_BRIGHT, 0.8),
+                (false, _) => color::quiet(),
+                (true, true) => color::gold_bright(),
+                (true, false) => color::alpha(color::gold_bright(), 0.8),
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -669,7 +669,7 @@ impl WheelEditor {
                 let keys = self.keys.get(row).cloned().unwrap_or_default();
                 let bind = format!("{} {}", crate::quick_wheel::OPEN_COMMAND, page.id);
                 if keys.is_empty() {
-                    fact(&mut self.ui, frame, &mut y, "Key", "None", color::MUTED);
+                    fact(&mut self.ui, frame, &mut y, "Key", "None", color::muted());
                 } else {
                     fact(
                         &mut self.ui,
@@ -677,10 +677,10 @@ impl WheelEditor {
                         &mut y,
                         "Key",
                         &keys,
-                        color::GOLD_BRIGHT,
+                        color::gold_bright(),
                     );
                 }
-                fact(&mut self.ui, frame, &mut y, "Bind", &bind, color::HOLO);
+                fact(&mut self.ui, frame, &mut y, "Bind", &bind, color::holo());
                 y += 10.0;
                 note(
                     &mut self.ui,
@@ -725,13 +725,13 @@ impl WheelEditor {
                         &mut y,
                         "Runs",
                         slot.command(),
-                        color::HOLO,
+                        color::holo(),
                     );
                     let kind = match slot {
                         Slot::Action(action) => ACTIONS[*action].group.label(),
                         Slot::Custom { .. } => "Custom command",
                     };
-                    fact(&mut self.ui, frame, &mut y, "Kind", kind, color::TEXT);
+                    fact(&mut self.ui, frame, &mut y, "Kind", kind, color::text());
                     y += 10.0;
                     note(
                         &mut self.ui,
@@ -775,7 +775,7 @@ impl WheelEditor {
             format_args!("{title}"),
             frame.rect(DETAIL_X, 186.0, title_width, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -819,7 +819,7 @@ impl WheelEditor {
                     24.0,
                 ),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -920,7 +920,7 @@ impl WheelEditor {
                 if lit {
                     Color::new(1.0, 1.0, 1.0, 1.0)
                 } else {
-                    color::alpha(color::TEXT, 0.88)
+                    color::alpha(color::text(), 0.88)
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -957,7 +957,7 @@ impl WheelEditor {
                         22.0,
                     ),
                     14.0 * s,
-                    color::GOLD,
+                    color::gold(),
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -1005,7 +1005,7 @@ impl WheelEditor {
             ),
             frame.rect(DETAIL_X, 186.0, DETAIL_WIDTH, 40.0),
             30.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1027,7 +1027,7 @@ impl WheelEditor {
                 format_args!("{name}"),
                 frame.rect(DETAIL_X, y, DETAIL_WIDTH, 26.0),
                 17.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -1052,7 +1052,7 @@ impl WheelEditor {
             format_args!("Picture"),
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1112,9 +1112,9 @@ impl WheelEditor {
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 22.0),
             15.0 * s,
             if self.picture_note.is_empty() || self.picture_note.ends_with("...") {
-                color::QUIET
+                color::quiet()
             } else {
-                color::EMBER
+                color::ember()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -1271,7 +1271,7 @@ fn bar(canvas: &mut MenuCanvas, frame: &Frame, x: f32, top: f32) {
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: frame.rect(x, top + LINE * 0.25, 4.0, LINE * 0.5),
         radius: 2.0 * frame.s,
-        color: color::alpha(color::GOLD, 0.8),
+        color: color::alpha(color::gold(), 0.8),
     });
 }
 
@@ -1296,7 +1296,7 @@ fn choice_icon(
             rect,
             radius: rect.width * 0.5,
             width: (1.5 * frame.s).max(1.0),
-            color: color::alpha(color::HOLO, 0.6),
+            color: color::alpha(color::holo(), 0.6),
         },
     };
     let _ = canvas.draw_list_mut().push(command);
@@ -1327,9 +1327,9 @@ fn icon_button(
     let rect = frame.rect(x - BUTTON * 0.5, y - BUTTON * 0.5, BUTTON, BUTTON);
     let hovered = enabled && canvas.token_hovered(token);
     let fill = match (armed, hovered) {
-        (true, _) => color::alpha(color::EMBER, 0.85),
-        (false, true) => color::alpha(color::HOLO, 0.2),
-        (false, false) => color::alpha(color::HOLO, 0.06),
+        (true, _) => color::alpha(color::ember(), 0.85),
+        (false, true) => color::alpha(color::holo(), 0.2),
+        (false, false) => color::alpha(color::holo(), 0.06),
     };
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect,
@@ -1340,13 +1340,13 @@ fn icon_button(
         rect,
         radius: rect.width * 0.5,
         width: (1.2 * s).max(1.0),
-        color: color::alpha(color::HOLO, if enabled { 0.45 } else { 0.15 }),
+        color: color::alpha(color::holo(), if enabled { 0.45 } else { 0.15 }),
     });
     let ink = match (enabled, armed, hovered) {
-        (false, _, _) => color::alpha(color::QUIET, 0.5),
+        (false, _, _) => color::alpha(color::quiet(), 0.5),
         (true, true, _) => Color::new(0.1, 0.04, 0.02, 1.0),
-        (true, false, true) => color::TEXT,
-        (true, false, false) => color::MUTED,
+        (true, false, true) => color::text(),
+        (true, false, false) => color::muted(),
     };
     let centre = frame.point(x, y);
     match glyph {
@@ -1411,7 +1411,7 @@ fn fact(
         format_args!("{name}"),
         frame.rect(DETAIL_X, *y, 96.0, 28.0),
         17.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1440,7 +1440,7 @@ fn note(canvas: &mut MenuCanvas, frame: &Frame, y: &mut f32, words: &str) {
             format_args!("{line}"),
             frame.rect(DETAIL_X, *y, DETAIL_WIDTH, 26.0),
             16.0 * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );

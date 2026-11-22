@@ -130,9 +130,9 @@ impl Panel {
         if let Some((id, outcome)) = parts.answer() {
             let name = banner::get(id).map_or(id, |banner| banner.name);
             let colour = if outcome.done() {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::EMBER
+                color::ember()
             };
             line = Some((crate::economy::outcome_words(outcome, name), colour));
         }
@@ -174,14 +174,14 @@ impl Panel {
                             ""
                         }
                     ),
-                    color::EMBER,
+                    color::ember(),
                 ));
             }
         } else if count > 0
             && let Some(why) = parts.why_not.as_deref()
             && line.is_none()
         {
-            line = Some((why.to_owned(), color::MUTED));
+            line = Some((why.to_owned(), color::muted()));
         }
         if let Some((words, colour)) = line {
             text(
@@ -246,7 +246,7 @@ impl Panel {
             if count == 0 {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                     rect,
-                    color: color::alpha(color::SPACE, 0.55),
+                    color: color::alpha(color::space(), 0.55),
                 });
             }
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -254,9 +254,9 @@ impl Panel {
                 radius: 8.0 * frame.s,
                 width: if index == self.banner { 2.0 } else { 1.0 } * frame.s,
                 color: if index == self.banner {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, 0.3)
+                    color::alpha(color::holo(), 0.3)
                 },
             });
             self.ui
@@ -267,7 +267,7 @@ impl Panel {
                 format_args!("{}", cover.name),
                 frame.rect(x, y + 124.0, 290.0, 26.0),
                 22.0 * frame.s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -319,7 +319,7 @@ impl Panel {
             format_args!("{name}"),
             frame.rect(1200.0, 476.0, 570.0, 50.0),
             30.0 * frame.s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -329,7 +329,7 @@ impl Panel {
             format_args!("{}", chosen.name),
             frame.rect(1050.0, 600.0, 740.0, 48.0),
             38.0 * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -381,7 +381,7 @@ impl Panel {
                 format_args!("{words}"),
                 frame.rect(1050.0, 830.0 + row as f32 * 26.0, 740.0, 26.0),
                 18.0 * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

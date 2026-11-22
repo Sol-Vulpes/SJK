@@ -707,7 +707,7 @@ pub(crate) fn draw(
         format_args!("SJK chat"),
         frame.rect(x, top, width, 30.0),
         24.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -728,7 +728,7 @@ pub(crate) fn draw(
         body(
             canvas,
             status,
-            color::MUTED,
+            color::muted(),
             TextAlign::End,
             format_args!("{} online", view.online),
         );
@@ -736,7 +736,7 @@ pub(crate) fn draw(
         body(
             canvas,
             status,
-            color::QUIET,
+            color::quiet(),
             TextAlign::End,
             format_args!("Not connected"),
         );
@@ -748,13 +748,13 @@ pub(crate) fn draw(
     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
         rect: field,
         radius: 8.0 * s,
-        color: color::alpha(color::HOLO, if lit { 0.14 } else { 0.07 }),
+        color: color::alpha(color::holo(), if lit { 0.14 } else { 0.07 }),
     });
     if lit {
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(x - FIELD_OVERHANG, field_top + 6.0, 3.0, 22.0),
             radius: 1.5 * s,
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
     }
     let inside = frame.rect(x, field_top + 5.0, width - 4.0, 24.0);
@@ -795,7 +795,7 @@ pub(crate) fn draw(
             body(
                 canvas,
                 inside,
-                color::TEXT,
+                color::text(),
                 TextAlign::Start,
                 format_args!("{}{mark}{}", &draft[start..caret], &draft[caret..end]),
             );
@@ -803,14 +803,14 @@ pub(crate) fn draw(
         None if lit => body(
             canvas,
             inside,
-            color::MUTED,
+            color::muted(),
             TextAlign::Start,
             format_args!("Enter to talk to every SJK player"),
         ),
         None => body(
             canvas,
             inside,
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
             format_args!("Say something to every SJK player"),
         ),
@@ -821,7 +821,7 @@ pub(crate) fn draw(
         body(
             canvas,
             frame.rect(x, below, width - 104.0, 20.0),
-            color::QUIET,
+            color::quiet(),
             TextAlign::Start,
             format_args!("{}", view.notice),
         );
@@ -831,7 +831,11 @@ pub(crate) fn draw(
     body(
         canvas,
         open,
-        if lit { color::GOLD_BRIGHT } else { color::GOLD },
+        if lit {
+            color::gold_bright()
+        } else {
+            color::gold()
+        },
         TextAlign::End,
         format_args!("Open chat"),
     );
@@ -923,7 +927,7 @@ fn messages(
             format_args!("Nobody has said anything yet"),
             frame.rect(place.x, bottom - WRAP, place.width, WRAP - 2.0),
             TEXT_SIZE * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -940,7 +944,7 @@ fn messages(
                 let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: whole,
                     radius: 6.0 * s,
-                    color: color::alpha(color::HOLO, 0.08),
+                    color: color::alpha(color::holo(), 0.08),
                 });
             }
             canvas.hit_region(tokens.name(index), whole);
@@ -1009,9 +1013,9 @@ fn message(
     let name = Rect::new(first.x + jof, first.y, name_width + 1.0, first.height);
     if !line.name.is_empty() {
         let colour = if line.official.is_some() {
-            sjk_chat_look::ACCENT
+            sjk_chat_look::accent()
         } else {
-            color::TEXT
+            color::text()
         };
         run(canvas, name, colour, format_args!("{}", line.name));
     }
@@ -1079,7 +1083,7 @@ fn message(
         run(
             canvas,
             Rect::new(x, first.y, colon, first.height),
-            color::TEXT,
+            color::text(),
             format_args!(":"),
         );
     }

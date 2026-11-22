@@ -108,6 +108,13 @@ impl Context {
                     .config_directory()
                     .join(crate::pipeline_cache::FOLDER),
             );
+            // The Collection's blade stills, beside it (`blade_stills.rs`).
+            crate::blade_stills::set_folder(Some(
+                console
+                    .config_directory()
+                    .join(crate::pipeline_cache::FOLDER)
+                    .join(crate::blade_stills::FOLDER),
+            ));
         }
         let hdr = crate::frame_target::aa::hdr::Settings::sample(console);
         crate::gpu_guard::name_uncaptured(&device);

@@ -97,6 +97,8 @@ impl ClientSession {
                 reliable_pacing::DEFAULT_COMMAND_INTERVAL,
             ),
             demo_recorder: Default::default(),
+            sent_packets: Default::default(),
+            snapshot_ping: None,
         }
     }
 }

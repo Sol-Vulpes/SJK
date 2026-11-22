@@ -54,7 +54,7 @@ impl Panel {
             format_args!("Update"),
             frame.rect(TEXT_X, CARD_TOP + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -64,7 +64,7 @@ impl Panel {
             format_args!("This is SJK {installed}"),
             frame.rect(TEXT_X, CARD_TOP + 33.0, TEXT_WIDTH, 26.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -74,7 +74,7 @@ impl Panel {
             format_args!("{}", view.headline),
             frame.rect(TEXT_X, CARD_TOP + 70.0, TEXT_WIDTH, 52.0),
             40.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -86,7 +86,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(TEXT_X, y, TEXT_WIDTH, 28.0),
                 18.0 * s,
-                color::alpha(color::TEXT, 0.86),
+                color::alpha(color::text(), 0.86),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -101,7 +101,7 @@ impl Panel {
                 .push(sjk_ui::DrawCommand::RoundedRect {
                     rect: track,
                     radius: track.height * 0.5,
-                    color: color::alpha(color::HOLO, 0.2),
+                    color: color::alpha(color::holo(), 0.2),
                 });
             let filled = frame.rect(TEXT_X, y, TRACK_WIDTH * progress, 6.0);
             let _ = self
@@ -110,7 +110,7 @@ impl Panel {
                 .push(sjk_ui::DrawCommand::RoundedRect {
                     rect: filled,
                     radius: filled.height * 0.5,
-                    color: color::GOLD,
+                    color: color::gold(),
                 });
             text(
                 &mut self.ui,
@@ -118,7 +118,7 @@ impl Panel {
                 format_args!("{:.0} %", progress * 100.0),
                 frame.rect(TEXT_X + TRACK_WIDTH + 20.0, y - 13.0, 100.0, 30.0),
                 22.0 * s,
-                color::GOLD_BRIGHT,
+                color::gold_bright(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );

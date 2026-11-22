@@ -272,8 +272,58 @@ fn card_shine(input: VertexOutput) -> vec4<f32> {
     return vec4(out.rgb, a);
 }
 
+// Acrylic glass (`sjk_ui::acrylic`, the blur in `ui_renderer/backdrop.rs`): the frame under
+// the 2D layer, blurred, its brightness held under a ceiling so text over it reads on any
+// map, the tint over it at its alpha, a faint grain and a light top edge. start_color = the
+// tint, end_color.x = the corner radius, local = the pixel's place from the backdrop's
+// top-left and size = its size (pixels), uv = the pixel's place on the screen (0 to 1),
+// parameters.x = opacity. The icon texture is the blurred frame here.
+const ACRYLIC_CEILING: f32 = 0.42;
+// The grain's strength, display values either side of the colour.
+const ACRYLIC_GRAIN: f32 = 0.012;
+// The light the top edge catches, and how much: a hairline, and a soft sheen under it.
+// The light is white leaning a little towards the tint's hue (`ACRYLIC_LIGHT_HUE`), so it
+// follows the SJK UI's theme: a warm light on the warm theme's glass, a cool one on the
+// cold theme's.
+const ACRYLIC_LIGHT_HUE: f32 = 0.22;
+const ACRYLIC_EDGE: f32 = 0.2;
+const ACRYLIC_SHEEN: f32 = 0.045;
+
+fn acrylic(input: VertexOutput) -> vec4<f32> {
+    let size = input.size;
+    let p = input.local;
+    let radius = clamp(input.end_color.x, 0.0, min(size.x, size.y) * 0.5);
+    let q = abs(p - size * 0.5) - (size * 0.5 - vec2(radius));
+    let outside = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - radius;
+    let coverage = clamp(0.5 - outside, 0.0, 1.0);
+    if coverage <= 0.0 || size.x <= 0.0 || size.y <= 0.0 {
+        discard;
+    }
+    let blurred = textureSampleLevel(icon_texture, icon_sampler, input.uv, 0.0).rgb;
+    let luma = dot(blurred, vec3(0.2126, 0.7152, 0.0722));
+    let held = blurred * min(1.0, ACRYLIC_CEILING / max(luma, 1.0e-4));
+    var rgb = mix(held, input.start_color.rgb, input.start_color.a);
+    // The top edge: a hairline round the upper corners, then a sheen fading down.
+    let rim = clamp(1.5 + outside, 0.0, 1.0);
+    let upper = 1.0 - smoothstep(0.0, max(radius, 2.0) + 2.0, p.y);
+    let sheen = 1.0 - smoothstep(0.0, max(size.y * 0.45, 1.0), p.y);
+    let tint = input.start_color.rgb;
+    let hue = tint / max(max(tint.r, max(tint.g, tint.b)), 1.0e-4);
+    let light = mix(vec3(1.0), hue, ACRYLIC_LIGHT_HUE);
+    rgb = mix(rgb, light, rim * upper * ACRYLIC_EDGE + sheen * sheen * ACRYLIC_SHEEN);
+    rgb = rgb + (shine_hash(vec2<i32>(floor(input.position.xy))) - 0.5) * 2.0 * ACRYLIC_GRAIN;
+    let a = clamp(coverage * input.parameters.x, 0.0, 1.0);
+    if a <= 0.0 {
+        discard;
+    }
+    return vec4(clamp(rgb, vec3(0.0), vec3(1.0)), a);
+}
+
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    if input.parameters.y > 7.5 {
+        return acrylic(input);
+    }
     if input.parameters.y > 6.5 {
         // Convex polygon, a fan of triangles from its middle: local.x is the distance in
         // pixels to the triangle's outer edge, so coverage fades across the last pixel
@@ -343,7 +393,11 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(input.start_color.rgb, input.start_color.a * coverage);
     }
     if input.parameters.y > 1.5 {
-        return textureSample(icon_texture, icon_sampler, input.uv) * input.start_color;
+        // parameters.x greys the picture (a blade still's dimmed look, `blade_stills.rs`).
+        let sampled = textureSample(icon_texture, icon_sampler, input.uv);
+        let grey = dot(sampled.rgb, vec3(0.299, 0.587, 0.114));
+        let rgb = mix(sampled.rgb, vec3(grey), input.parameters.x);
+        return vec4(rgb, sampled.a) * input.start_color;
     }
     let radius = input.parameters.x;
     // A negative parameters.y is a rounded border: its magnitude is the ring width.

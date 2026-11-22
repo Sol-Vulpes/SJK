@@ -19,9 +19,16 @@ use super::*;
 use crate::holocrons::Tier;
 use crate::sjk_chat_look;
 
-/// The SJK emblem's side before an SJK line's name, against the text size: the
-/// starburst's spikes reach the box's edges, its medallion is about half of it.
-const LOGO_SIDE: f32 = 1.35;
+/// The SJK emblem's side before an SJK line's name, against the text size: its sun
+/// disc is about 0.8 of the box and the stem's ends reach its edges, so the disc
+/// matches another client's icon ([`ICON_SIDE`]). 1.35 until 14/11/2026, when the
+/// emblems were made smaller (Sol's request); 1.2 for the gold starburst until the
+/// steel-and-sun emblem of 16/11/2026.
+const LOGO_SIDE: f32 = 1.12;
+/// Another client's icon's side (`chat/client_icons.rs`) against the text size, centred
+/// in the emblem's box: those icons are full discs, which at the starburst's side looked
+/// much bigger than SJK's emblem (Sol, 14/11/2026: the same size, the EJK one smaller).
+const ICON_SIDE: f32 = 0.9;
 /// The channel label's size against the text size (10 pixels beside 16, as the name
 /// rows' labels were).
 const LABEL_SIZE: f32 = 0.625;
@@ -70,6 +77,9 @@ pub(in crate::chat) struct Prefix<'a> {
     size: f32,
     /// The SJK emblem's side, 0 without one.
     logo: f32,
+    /// The side the emblem is drawn at in its box: the box's for SJK's, smaller for
+    /// another client's icon ([`ICON_SIDE`]).
+    logo_ink: f32,
     /// The emblem drawn: SJK's, or JoF EternalJK's icon for a message sent from it.
     logo_texture: sjk_ui::TextureId,
     /// Where the shown name ends in the line's name (cut to half the feed).
@@ -103,6 +113,13 @@ impl<'a> Prefix<'a> {
         Self {
             size,
             logo: if marks.sjk { size * LOGO_SIDE } else { 0.0 },
+            logo_ink: if crate::chat::client_icons::texture(marks.icon)
+                == crate::ui_renderer::LOGO_TEXTURE
+            {
+                size * LOGO_SIDE
+            } else {
+                size * ICON_SIDE
+            },
             logo_texture: crate::chat::client_icons::texture(marks.icon),
             name_end,
             name_width: visible_text_width_face(font, &name[..name_end], scale, TextFace::Semibold),
@@ -239,8 +256,9 @@ pub(in crate::chat) fn draw(
     let size = prefix.size;
     let middle = y + font.capital_middle(size / font.height.max(1.0));
     if prefix.logo > 0.0 {
+        let ink = prefix.logo_ink;
         let _ = ui.draw_list_mut().push(DrawCommand::TexturedQuad {
-            rect: Rect::new(x, middle - prefix.logo * 0.5, prefix.logo, prefix.logo),
+            rect: Rect::new(x + (prefix.logo - ink) * 0.5, middle - ink * 0.5, ink, ink),
             texture: prefix.logo_texture,
             color: Color::new(1.0, 1.0, 1.0, alpha),
         });
@@ -266,7 +284,7 @@ pub(in crate::chat) fn draw(
         ui.accent_bar(name_rect, Color::new(0.70, 0.88, 0.98, 0.16));
     }
     if !name.is_empty() {
-        let gold = crate::menu::sjk::color::GOLD;
+        let gold = crate::menu::sjk::color::gold();
         ui.text(
             name,
             Rect::new(name_x, y, prefix.name_width + 1.0, row_box(g)),
@@ -774,10 +792,11 @@ mod tests {
         let icons = quads(&chat, crate::ui_renderer::EJK_TEXTURE);
         assert_eq!(logos.len(), 1, "SJK's emblem before SJK's message only");
         assert_eq!(icons.len(), 1, "JoF EternalJK's icon before its message");
-        assert_eq!(
-            (icons[0].width, icons[0].height),
-            (logos[0].width, logos[0].height),
-            "the same size"
+        // A full disc, the size of the emblem's sun, centred where the emblem sits.
+        assert!(icons[0].width < logos[0].width && icons[0].width == icons[0].height);
+        assert!(
+            (icons[0].x + icons[0].width * 0.5 - (logos[0].x + logos[0].width * 0.5)).abs() < 0.01,
+            "the same column"
         );
         assert!(icons[0].y > logos[0].y, "on the second line");
     }
@@ -822,7 +841,7 @@ mod tests {
             .collect();
         let starts: Vec<_> = runs
             .iter()
-            .filter(|(text, ..)| text.starts_with("Fox opened"))
+            .filter(|(text, ..)| text.starts_with("Fox attuned"))
             .map(|(_, rect, colour)| (rect.x, rgb(*colour)))
             .collect();
         assert_eq!(starts.len(), 2, "{runs:?}");
@@ -940,5 +959,46 @@ mod tests {
             "{texts:?}"
         );
         assert_eq!(logos(&chat).len(), 2, "each line has its emblem");
+    }
+
+    /// Hub report #321 (Hormorn): JoF EternalJK's icon reached over the chat's rows. It
+    /// and the tick after the name stay inside their own row at every chat text size
+    /// (`cg_chatBoxFontSize`), so they cover neither the text nor the lines above and
+    /// below.
+    #[test]
+    fn a_client_icon_and_its_tick_fit_their_row_at_every_text_size() {
+        let ejk = |id, name: &str| ChatMessage {
+            reactions: Default::default(),
+            client: "ejk".to_owned(),
+            ..message(id, name, "hello from JoF", true)
+        };
+        let mut chat = feed(&[], vec![ejk(1, "Milamber"), ejk(2, "Figo")]);
+        let (low, high) = crate::chat::options::CHAT_SIZE;
+        for size in [low as f32, 0.5, 0.85, 1.0, 1.5, high as f32] {
+            chat.options.font = size;
+            chat.build(true, &crate::text::test_font(), VIEWPORT, 1_000);
+            let row = chat.options.geometry(VIEWPORT).row;
+            let texts = texts(&chat);
+            let icons = quads(&chat, crate::ui_renderer::EJK_TEXTURE);
+            let ticks = ticks(&chat);
+            assert_eq!((icons.len(), ticks.len()), (2, 2), "at {size}");
+            for (name, icon, tick) in [
+                ("Milamber", icons[0], ticks[0]),
+                ("Figo", icons[1], ticks[1]),
+            ] {
+                let (_, text, _) = drawn(&texts, name);
+                // Both are centred on the row's band, which can sit a fraction of a
+                // pixel over the text's top, so each is held to the row's height and
+                // its middle to the row.
+                for (what, rect) in [("icon", icon), ("tick", tick)] {
+                    let middle = rect.y + rect.height / 2.0;
+                    assert!(
+                        rect.height <= row && middle > text.y && middle < text.y + row,
+                        "{name}'s {what} {rect:?} is taller than or outside its row {row} at {size}"
+                    );
+                }
+                assert!(icon.right() < text.x, "the icon before the name at {size}");
+            }
+        }
     }
 }

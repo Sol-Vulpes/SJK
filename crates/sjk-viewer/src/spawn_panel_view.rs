@@ -119,7 +119,7 @@ impl Panel {
                 format_args!("{message}"),
                 frame.rect(LIST_X, LIST_TOP + 8.0, LIST_WIDTH, 28.0),
                 BODY_SIZE * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -130,7 +130,7 @@ impl Panel {
             self.row_view(frame, measure, slot, position);
         }
         if self.visible.len() > self.rows {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 SCROLLBAR_TOKEN,
                 frame.rect(
                     LIST_X + LIST_WIDTH + 16.0,
@@ -160,9 +160,9 @@ impl Panel {
                     LIST_WIDTH - 8.0,
                     label,
                     if label == COMMUNITY_HEADING {
-                        color::HOLO
+                        color::holo()
                     } else {
-                        color::GOLD
+                        color::gold()
                     },
                 );
                 return;
@@ -178,15 +178,15 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_X, top, LIST_WIDTH, ROW_BAND),
                 radius: 10.0 * s,
-                color: color::alpha(color::HOLO, 0.045),
+                color: color::alpha(color::holo(), 0.045),
             });
         }
         self.ui
             .hit_region(token, frame.rect(LIST_X, top, LIST_WIDTH, ROW_BAND));
         let colour = match (chosen, hovered) {
-            (true, _) => color::GOLD_BRIGHT,
-            (false, true) => color::TEXT,
-            (false, false) => color::alpha(color::TEXT, 0.9),
+            (true, _) => color::gold_bright(),
+            (false, true) => color::text(),
+            (false, false) => color::alpha(color::text(), 0.9),
         };
         let room = LIST_WIDTH - 40.0;
         let rect = frame.rect(LIST_X + 20.0, top + (ROW_BAND - 26.0) * 0.5, room, 26.0);
@@ -229,7 +229,7 @@ impl Panel {
             format_args!("{kind}"),
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 24.0),
             19.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -252,7 +252,7 @@ impl Panel {
             ),
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 52.0),
             TITLE_SIZE * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -274,7 +274,7 @@ impl Panel {
                 format_args!("{}", CHEATS[index].about),
                 frame.rect(DETAIL_X, y, DETAIL_WIDTH, 28.0),
                 BODY_SIZE * s,
-                color::alpha(color::TEXT, 0.88),
+                color::alpha(color::text(), 0.88),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -289,7 +289,7 @@ impl Panel {
             format_args!("/{}{}", shown.prefix, shown.rest),
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 28.0),
             BODY_SIZE * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -321,7 +321,7 @@ impl Panel {
                 24.0,
             ),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -340,7 +340,7 @@ impl Panel {
                 format_args!("{note}"),
                 frame.rect(DETAIL_X, note_y + number as f32 * 26.0, DETAIL_WIDTH, 24.0),
                 15.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -401,7 +401,7 @@ impl Panel {
             ),
             Rect::new(x, y, room, 24.0 * s),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );

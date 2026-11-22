@@ -1,4 +1,4 @@
-// Sol JK site: WebGPU effects from the MIT-licensed Shaders library
+// Sun JK site: WebGPU effects from the MIT-licensed Shaders library
 // (https://github.com/shader-effects-inc/shaders, vendored as
 // vendor/shaders/shaders-4.0.0.js so no third-party server is contacted, with its
 // telemetry off). The home page gets drifting dust and a lightsaber trail that

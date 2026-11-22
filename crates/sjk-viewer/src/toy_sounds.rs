@@ -14,65 +14,44 @@ pub(crate) const MAX_VOLUME: f64 = 2.0;
 /// The toys that make sounds (the Illuminate holocron is silent).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Toy {
-    Box,
-    Order66,
-    Hax,
     Ragdoll,
     Drone,
     Boombox,
     Monitor,
     MysteryBox,
-    Banana,
     /// The Toy Master's hidden toys (`toy_master.rs`).
     Master,
-    PropGun,
     Tag,
-    Fishing,
     /// The WHEEL OF DOOM (`wheel_of_doom.rs`).
     WheelOfDoom,
-    Mining,
     /// The chimes as a quest is given and done (`quests.rs`).
     Quests,
 }
 
 impl Toy {
-    pub(crate) const ALL: [Self; 16] = [
-        Self::Box,
-        Self::Order66,
-        Self::Hax,
+    pub(crate) const ALL: [Self; 9] = [
         Self::Ragdoll,
         Self::Drone,
         Self::Boombox,
         Self::Monitor,
         Self::MysteryBox,
-        Self::Banana,
         Self::Master,
-        Self::PropGun,
         Self::Tag,
-        Self::Fishing,
         Self::WheelOfDoom,
-        Self::Mining,
         Self::Quests,
     ];
 
     /// The switch that lets this toy be heard (on by default).
     pub(crate) const fn cvar(self) -> &'static str {
         match self {
-            Self::Box => "s_toyBoxSound",
-            Self::Order66 => "s_toyOrder66Sound",
-            Self::Hax => "s_toyHaxSound",
             Self::Ragdoll => "s_toyRagdollSound",
             Self::Drone => "s_toyDroneSound",
             Self::Boombox => "s_toyBoomboxSound",
             Self::Monitor => "s_toyMonitorSound",
             Self::MysteryBox => "s_toyMysteryBoxSound",
-            Self::Banana => "s_toyBananaSound",
             Self::Master => "s_toyMasterSound",
-            Self::PropGun => "s_toyPropGunSound",
             Self::Tag => "s_toyTagSound",
-            Self::Fishing => "s_toyFishingSound",
             Self::WheelOfDoom => "s_toyWheelOfDoomSound",
-            Self::Mining => "s_toyMiningSound",
             Self::Quests => "s_toyQuestsSound",
         }
     }
@@ -124,14 +103,14 @@ mod tests {
     #[test]
     fn a_switched_off_toy_or_zero_volume_is_silent() {
         let mut options = Options::default();
-        assert_eq!(options.gain(Toy::Hax, 0.8), Some(0.8));
-        options.heard[Toy::Hax as usize] = false;
-        assert_eq!(options.gain(Toy::Hax, 1.0), None);
-        assert_eq!(options.gain(Toy::Box, 1.0), Some(1.0));
+        assert_eq!(options.gain(Toy::Drone, 0.8), Some(0.8));
+        options.heard[Toy::Drone as usize] = false;
+        assert_eq!(options.gain(Toy::Drone, 1.0), None);
+        assert_eq!(options.gain(Toy::Boombox, 1.0), Some(1.0));
         options.volume = 0.5;
-        assert_eq!(options.gain(Toy::Box, 0.8), Some(0.4));
+        assert_eq!(options.gain(Toy::Boombox, 0.8), Some(0.4));
         options.volume = 0.0;
-        assert_eq!(options.gain(Toy::Box, 1.0), None);
+        assert_eq!(options.gain(Toy::Boombox, 1.0), None);
     }
 
     #[test]

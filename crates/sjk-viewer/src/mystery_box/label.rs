@@ -157,7 +157,7 @@ fn came_out(opening: &Opening, pays: impl Fn(&str) -> Option<u64>) -> Label {
         }
         wire::SHARD_PILE => "A pile of kyber shards".to_owned(),
         wire::AGAIN => "The next roll is free".to_owned(),
-        wire::BLADE => "The box's own saber shader".to_owned(),
+        wire::BLADE => "The box's own kyber".to_owned(),
         _ if won > 0 => format!("+{won} credits"),
         _ => "Nothing inside".to_owned(),
     };
@@ -550,6 +550,7 @@ mod tests {
             opener: None,
             revealed: false,
             blasted: false,
+            doom: None,
         }
     }
 

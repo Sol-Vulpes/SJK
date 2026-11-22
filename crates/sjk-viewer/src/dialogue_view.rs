@@ -24,7 +24,7 @@ impl Panel {
             format_args!("{}", self.node.speaker),
             frame.rect(180.0, 520.0, 1560.0, 50.0),
             36.0 * frame.s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -42,7 +42,7 @@ impl Panel {
                 format_args!("{text}"),
                 frame.rect(180.0, 580.0 + line as f32 * 33.0, 1560.0, 33.0),
                 26.0 * frame.s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -58,7 +58,7 @@ impl Panel {
             self.canvas.hit_region(index as u16 + 1, rect);
             if index == self.node.selected {
                 self.canvas
-                    .accent_bar(frame.rect(168.0, y + 6.0, 3.0, 30.0), color::GOLD);
+                    .accent_bar(frame.rect(168.0, y + 6.0, 3.0, 30.0), color::gold());
             }
             sjk::text(
                 &mut self.canvas,
@@ -67,9 +67,9 @@ impl Panel {
                 rect,
                 25.0 * frame.s,
                 if index == self.node.selected {
-                    color::GOLD
+                    color::gold()
                 } else {
-                    color::TEXT
+                    color::text()
                 },
                 FontWeight::Regular,
                 TextAlign::Start,
@@ -85,7 +85,7 @@ impl Panel {
             ),
             frame.rect(180.0, 990.0, 1560.0, 35.0),
             20.0 * frame.s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );

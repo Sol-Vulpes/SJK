@@ -86,7 +86,7 @@ fn notes() -> [String; 7] {
     [
         "A card's rarity and its finish are rolled apart, so a kind of card is the two chances multiplied, weighed by how often each holocron drops."
             .to_owned(),
-        "Credits and a pile of kyber shards are rolled evenly between the least and the most. A holocron that brings a saber shader or kyber shards brings no card and no credits; the averages count it.".to_owned(),
+        "Credits and a pile of kyber shards are rolled evenly between the least and the most. A holocron that brings a kyber or kyber shards brings no card and no credits; the averages count it.".to_owned(),
         format!(
             "The rarest card is a {} {}: about {} holocrons.",
             RARITIES[rarity].name,
@@ -106,19 +106,19 @@ fn notes() -> [String; 7] {
     .map(crate::terms::say_owned)
 }
 
-/// The notes on how a kyber crystal's shader is picked, and its pity.
+/// The notes on how a dormant kyber's kyber is picked, and its pity.
 fn kyber_notes(pity: Option<crate::kyber::Pity>) -> [String; 6] {
     let every = crate::kyber::current().pity_every;
     [
-        "The shader's tier is rolled with the crystal's odds, then the shader is picked among the droppable shaders of that tier, the ones you do not hold yet first. Holding them all, any of them comes and the copy stacks.".to_owned(),
-        "A tier with no droppable shader gives the nearest commoner tier's, else the commonest above it. Medal shaders never come out of a crystal.".to_owned(),
+        "The kyber's tier is rolled with the dormant kyber's odds, then the kyber is picked among the droppable kybers of that tier, the ones you do not hold yet first. Holding them all, any of them comes and the copy stacks.".to_owned(),
+        "A tier with no droppable kyber gives the nearest commoner tier's, else the commonest above it. Medal kybers never come out of a dormant kyber.".to_owned(),
         format!(
-            "Pity: the {every}th crystal in a row without a Legendary or Mythical shader gives one of them. {}.",
+            "Pity: the {every}th dormant kyber in a row without a Legendary or Mythical kyber gives one of them. {}.",
             crate::kyber::pity_line(pity)
         ),
-        "Each achievement brings its crystal once, when it unlocks: its reward shows on the Achievements tab.".to_owned(),
-        "Crystals are never dropped by play, bought, sold, traded or broken down.".to_owned(),
-        "A crystal brings only shaders of its own edition or an older one: an Alpha crystal Alpha ones only, a Beta one Beta or Alpha.".to_owned(),
+        "Each achievement brings its dormant kyber once, when it unlocks: its reward shows on the Achievements tab.".to_owned(),
+        "Dormant kybers are never dropped by play, bought, sold, traded or broken down.".to_owned(),
+        "A dormant kyber brings only kybers of its own edition or an older one: an Alpha one Alpha kybers only, a Beta one Beta or Alpha.".to_owned(),
     ]
     .map(crate::terms::say_owned)
 }
@@ -133,9 +133,9 @@ fn droppable_in(rarity: crate::unlockables::Rarity) -> usize {
 /// The colour a finish's name reads in.
 fn finish_colour(finish: &Finish) -> Color {
     match finish.index {
-        0 => color::TEXT,
-        1 => color::HOLO,
-        _ => color::GOLD_BRIGHT,
+        0 => color::text(),
+        1 => color::holo(),
+        _ => color::gold_bright(),
     }
 }
 
@@ -166,9 +166,9 @@ fn centred(
 /// A chance in a cell: its share, quiet when none.
 fn chance_cell(canvas: &mut MenuCanvas, frame: &Frame, chance: f64, rect: [f32; 4]) {
     let colour = if chance > 0.0 {
-        color::TEXT
+        color::text()
     } else {
-        color::alpha(color::QUIET, 0.6)
+        color::alpha(color::quiet(), 0.6)
     };
     centred(
         canvas,
@@ -234,7 +234,7 @@ impl Panel {
     pub(super) fn draw_loot(&mut self, frame: &Frame, viewport: [f32; 2]) {
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]),
-            color: color::alpha(color::SPACE, 0.93),
+            color: color::alpha(color::space(), 0.93),
         });
         if self.selected().is_kyber() {
             self.kyber_loot(frame);
@@ -262,12 +262,12 @@ impl Panel {
             &mut self.ui,
             TextFamily::Display,
             format_args!(
-                "Loot table: kyber crystals{}",
+                "Loot table: dormant kybers{}",
                 if self.loot_beta { ", Beta season" } else { "" }
             ),
             frame.rect(LEFT, TITLE_Y, WIDTH, 54.0),
             44.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -275,11 +275,11 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "What opening a kyber crystal gives. The SJK hub rolls each one with these odds."
+                "What attuning a dormant kyber gives. The SJK hub rolls each one with these odds."
             ),
             frame.rect(LEFT, LINE_Y, WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -289,7 +289,7 @@ impl Panel {
             format_args!("{}", crate::kyber::ABOUT),
             frame.rect(LEFT, PACE_Y, WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -299,13 +299,13 @@ impl Panel {
             LEFT,
             TABLE_Y,
             WIDTH,
-            "Per kyber crystal",
+            "Per dormant kyber",
         );
         let odds = crate::kyber::current();
         centred(
             &mut self.ui,
             frame,
-            "Saber shader tier",
+            "Kyber tier",
             [
                 DROP_X,
                 GROUP_Y,
@@ -313,7 +313,7 @@ impl Panel {
                 22.0,
             ],
             15.0,
-            color::QUIET,
+            color::quiet(),
             TextFamily::Body,
             FontWeight::Regular,
         );
@@ -324,15 +324,15 @@ impl Panel {
                 KYBER_CELL * crate::kyber::SHADER_TIERS as f32 - 24.0,
                 1.0,
             ),
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         });
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!("Kyber crystal"),
+            format_args!("Dormant kyber"),
             frame.rect(LEFT + 16.0, COLUMNS_Y, TIER_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -388,15 +388,15 @@ impl Panel {
         let y = ROWS_TOP + crate::kyber::COUNT as f32 * (ROW_HEIGHT + ROW_GAP) + ANY_GAP;
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LEFT, y - ANY_GAP * 0.5 - 1.0, WIDTH, 1.0),
-            color: color::alpha(color::GOLD, 0.35),
+            color: color::alpha(color::gold(), 0.35),
         });
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("Shaders to find"),
+            format_args!("Kybers to find"),
             frame.rect(LEFT + 20.0, y + 12.0, TIER_WIDTH - 20.0, 28.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -409,9 +409,9 @@ impl Panel {
                 [DROP_X + at as f32 * KYBER_CELL, y + 5.0, KYBER_CELL, 26.0],
                 20.0,
                 if count > 0 {
-                    color::TEXT
+                    color::text()
                 } else {
-                    color::alpha(color::QUIET, 0.6)
+                    color::alpha(color::quiet(), 0.6)
                 },
                 TextFamily::Display,
                 FontWeight::Semibold,
@@ -419,10 +419,10 @@ impl Panel {
             centred(
                 &mut self.ui,
                 frame,
-                if count == 1 { "shader" } else { "shaders" },
+                if count == 1 { "kyber" } else { "kybers" },
                 [DROP_X + at as f32 * KYBER_CELL, y + 30.0, KYBER_CELL, 18.0],
                 13.0,
-                color::QUIET,
+                color::quiet(),
                 TextFamily::Body,
                 FontWeight::Regular,
             );
@@ -442,7 +442,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: frame.rect(LEFT, y + 9.0, 5.0, 5.0),
                         radius: 2.5 * s,
-                        color: color::alpha(color::HOLO, 0.7),
+                        color: color::alpha(color::holo(), 0.7),
                     });
                 }
                 text(
@@ -451,7 +451,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(LEFT + 16.0, y, WIDTH - 16.0, 22.0),
                     16.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -471,7 +471,7 @@ impl Panel {
             format_args!("Loot table: Beta holocrons"),
             frame.rect(LEFT, TITLE_Y, WIDTH, 54.0),
             44.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -481,7 +481,7 @@ impl Panel {
             format_args!("{}", crate::terms::say(crate::seasons::ABOUT)),
             frame.rect(LEFT, LINE_Y, WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -495,7 +495,7 @@ impl Panel {
                     format_args!("The SJK hub has not sent the Beta tables yet."),
                     frame.rect(LEFT, y, WIDTH, 24.0),
                     17.0 * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -519,7 +519,7 @@ impl Panel {
         kit::heading(&mut self.ui, frame, LEFT, y, WIDTH, "How it rolls");
         y += 20.0;
         for note in crate::seasons::notes(tables.as_ref()) {
-            y = self.beta_note(frame, &crate::terms::say_owned(note), y, color::HOLO);
+            y = self.beta_note(frame, &crate::terms::say_owned(note), y, color::holo());
         }
     }
 
@@ -540,7 +540,7 @@ impl Panel {
                 format_args!("{part}"),
                 frame.rect(LEFT + 16.0, y, WIDTH - 16.0, 22.0),
                 16.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -558,7 +558,7 @@ impl Panel {
             format_args!("Loot table"),
             frame.rect(LEFT, TITLE_Y, WIDTH, 54.0),
             44.0 * s,
-            color::TEXT,
+            color::text(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -573,7 +573,7 @@ impl Panel {
             ),
             frame.rect(LEFT, LINE_Y, WIDTH, 26.0),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -590,7 +590,7 @@ impl Panel {
             format_args!("{}", crate::terms::say(&pace)),
             frame.rect(LEFT, PACE_Y, WIDTH, 24.0),
             16.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -620,13 +620,13 @@ impl Panel {
                 label,
                 [x, GROUP_Y, width, 22.0],
                 15.0,
-                color::QUIET,
+                color::quiet(),
                 TextFamily::Body,
                 FontWeight::Regular,
             );
             let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                 rect: frame.rect(x + 12.0, GROUP_Y + 26.0, width - 24.0, 1.0),
-                color: color::alpha(color::HOLO, 0.22),
+                color: color::alpha(color::holo(), 0.22),
             });
         }
         // The columns' names.
@@ -649,7 +649,7 @@ impl Panel {
             format_args!("{}", crate::terms::say("Holocron")),
             frame.rect(LEFT + 16.0, COLUMNS_Y, TIER_WIDTH, 24.0),
             16.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -658,7 +658,7 @@ impl Panel {
             "Drop chance",
             DROP_X,
             DROP_WIDTH,
-            color::MUTED,
+            color::muted(),
         );
         for rarity in &RARITIES {
             let x = RARITY_X + rarity.index as f32 * CELL_WIDTH;
@@ -679,7 +679,7 @@ impl Panel {
             "Credits",
             CREDITS_X,
             CREDITS_WIDTH,
-            color::GOLD,
+            color::gold(),
         );
         name(
             &mut self.ui,
@@ -738,13 +738,13 @@ impl Panel {
         let y = ROWS_TOP + holocrons::COUNT as f32 * (ROW_HEIGHT + ROW_GAP) + ANY_GAP;
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(LEFT, y - ANY_GAP * 0.5 - 1.0, WIDTH, 1.0),
-            color: color::alpha(color::GOLD, 0.35),
+            color: color::alpha(color::gold(), 0.35),
         });
         self.loot_row_back(
             frame,
             y,
-            color::alpha(color::GOLD, 0.07),
-            color::GOLD_BRIGHT,
+            color::alpha(color::gold(), 0.07),
+            color::gold_bright(),
         );
         text(
             &mut self.ui,
@@ -752,7 +752,7 @@ impl Panel {
             format_args!("{}", crate::terms::say("Any holocron found")),
             frame.rect(LEFT + 20.0, y + 12.0, TIER_WIDTH - 20.0, 28.0),
             22.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -784,7 +784,7 @@ impl Panel {
                 "\u{2014}",
                 [SHARDS_X, y + 13.0, SHARDS_WIDTH, 28.0],
                 20.0,
-                color::QUIET,
+                color::quiet(),
                 TextFamily::Display,
                 FontWeight::Semibold,
             );
@@ -806,7 +806,7 @@ impl Panel {
             &format!("{:.1} on average", mean),
             [SHARDS_X, y + 30.0, SHARDS_WIDTH, 18.0],
             13.0,
-            color::QUIET,
+            color::quiet(),
             TextFamily::Body,
             FontWeight::Regular,
         );
@@ -857,7 +857,7 @@ impl Panel {
             range,
             [CREDITS_X, y + 5.0, CREDITS_WIDTH, 26.0],
             20.0,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             TextFamily::Display,
             FontWeight::Semibold,
         );
@@ -867,7 +867,7 @@ impl Panel {
             &format!("{} on average", mean.round()),
             [CREDITS_X, y + 30.0, CREDITS_WIDTH, 18.0],
             13.0,
-            color::QUIET,
+            color::quiet(),
             TextFamily::Body,
             FontWeight::Regular,
         );
@@ -924,7 +924,7 @@ impl Panel {
                 format_args!("{} of cards", loot::percent(loot::rarity_any(rarity.index))),
                 frame.rect(LEFT + 16.0, y + 31.0, TIER_WIDTH - 16.0, 18.0),
                 13.0 * s,
-                color::QUIET,
+                color::quiet(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -942,7 +942,7 @@ impl Panel {
                     &loot::percent(chance),
                     [x, y + 3.0, GRID_CELL, 28.0],
                     22.0,
-                    color::TEXT,
+                    color::text(),
                     TextFamily::Display,
                     FontWeight::Semibold,
                 );
@@ -952,7 +952,7 @@ impl Panel {
                     &loot::one_in(chance),
                     [x, y + 31.0, GRID_CELL, 18.0],
                     13.0,
-                    color::MUTED,
+                    color::muted(),
                     TextFamily::Body,
                     FontWeight::Regular,
                 );
@@ -978,7 +978,7 @@ impl Panel {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: frame.rect(NOTES_X, y + 9.0, 5.0, 5.0),
                         radius: 2.5 * s,
-                        color: color::alpha(color::HOLO, 0.7),
+                        color: color::alpha(color::holo(), 0.7),
                     });
                 }
                 text(
@@ -987,7 +987,7 @@ impl Panel {
                     format_args!("{part}"),
                     frame.rect(NOTES_X + 16.0, y, RIGHT - NOTES_X - 16.0, 22.0),
                     15.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -1011,7 +1011,7 @@ impl Panel {
             LOOT_BACK_TOKEN,
         );
         let back = crate::terms::say(if self.selected().is_kyber() {
-            "crystals"
+            "dormant kybers"
         } else {
             "holocrons"
         });
@@ -1211,7 +1211,11 @@ mod tests {
             assert!(!panel.overflowed(), "kyber {viewport:?}");
         }
         let notes = kyber_notes(None);
-        assert!(notes[2].contains("10th crystal in a row"), "{}", notes[2]);
+        assert!(
+            notes[2].contains("10th dormant kyber in a row"),
+            "{}",
+            notes[2]
+        );
         let lines: usize = notes
             .iter()
             .map(|note| wrap(note, KYBER_NOTES_CHARS).count())

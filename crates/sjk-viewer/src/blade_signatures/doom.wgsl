@@ -11,7 +11,7 @@
 // @solid 1
 // @palette {"corona.rim_cool":[0.55,0.0,0.01],"corona.rim_hot":[1.0,0.08,0.04],"corona.inner":[1.0,0.36,0.3],"core.white":[1.0,0.82,0.78],"core.fringe_cool":[0.85,0.02,0.02],"core.fringe_hot":[1.0,0.3,0.22],"light.color":[1.0,0.08,0.05],"trail":[0.9,0.04,0.03]}
 
-// DOOM: the third Unique blade (Sol, 13/11/2026), a thank-you given by hand, its name always
+// DOOM: the third Secret blade (Sol, 13/11/2026), a thank-you given by hand, its name always
 // written in capitals and in red. A blood-red blade with a black heart, beating as a heart does:
 // a black core cracked with red fire runs up it, a dark marbling crawls through its light and
 // every beat throbs up it from the hilt. A death aura hangs round it: black smoke rolls up it in

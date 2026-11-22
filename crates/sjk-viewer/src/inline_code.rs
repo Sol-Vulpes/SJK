@@ -295,9 +295,9 @@ pub(crate) fn draw_rows(
                     ui.hit_region(token, rect);
                 }
                 let colour = if hovered {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::HOLO
+                    color::holo()
                 };
                 text(
                     ui,
@@ -348,16 +348,16 @@ pub(crate) fn draw_rows(
             let _ = ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: chip,
                 radius: look.chip_radius * s,
-                color: color::alpha(color::HOLO, if hovered { 0.24 } else { 0.12 }),
+                color: color::alpha(color::holo(), if hovered { 0.24 } else { 0.12 }),
             });
             let _ = ui.draw_list_mut().push(DrawCommand::Border {
                 rect: chip,
                 radius: look.chip_radius * s,
                 width: s.max(1.0),
                 color: if hovered {
-                    color::GOLD_BRIGHT
+                    color::gold_bright()
                 } else {
-                    color::alpha(color::HOLO, 0.4)
+                    color::alpha(color::holo(), 0.4)
                 },
             });
             text(
@@ -366,7 +366,7 @@ pub(crate) fn draw_rows(
                 format_args!("{}", run.text),
                 frame.rect(place.x + run.x, line_y, run.width, look.line),
                 look.chip_size * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );

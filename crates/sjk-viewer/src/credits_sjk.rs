@@ -307,7 +307,7 @@ impl Panel {
                 format_args!("{error}"),
                 content.rect(COLUMN_X, FIRST, COLUMN_WIDTH, 30.0),
                 19.0 * s,
-                color::EMBER,
+                color::ember(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -341,7 +341,7 @@ impl Panel {
                         NOTICE_LINE,
                     ),
                     NOTICE_SIZE * s,
-                    color::QUIET,
+                    color::quiet(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -454,7 +454,7 @@ impl Panel {
                     format_args!("{}", card.name),
                     c.rect(x, y, COLUMN_WIDTH, line),
                     NAME[usize::from(!featured)] * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -479,7 +479,7 @@ impl Panel {
                         format_args!("{part}"),
                         c.rect(x, ty, room, ROLE_LINE),
                         ROLE * s,
-                        color::MUTED,
+                        color::muted(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -495,7 +495,7 @@ impl Panel {
                         &c,
                         [lx + 4.0, ty + LINK_LINE * 0.5],
                         5.0,
-                        color::HOLO,
+                        color::holo(),
                     );
                     let place = [lx + 16.0, ty, width, LINK_LINE];
                     link(canvas, &c, (token, &entry.label), place, LINK, view, areas);
@@ -533,9 +533,9 @@ impl Panel {
                     14.0,
                     open,
                     match (open, hovered) {
-                        (true, _) => color::GOLD_BRIGHT,
-                        (false, true) => color::TEXT,
-                        (false, false) => color::MUTED,
+                        (true, _) => color::gold_bright(),
+                        (false, true) => color::text(),
+                        (false, false) => color::muted(),
                     },
                 );
                 text(
@@ -545,9 +545,9 @@ impl Panel {
                     c.rect(rect.x + INDENT, rect.y, 600.0, rect.height),
                     24.0 * s,
                     match (open, hovered) {
-                        (true, _) => color::GOLD_BRIGHT,
+                        (true, _) => color::gold_bright(),
                         (false, true) => Color::new(1.0, 1.0, 1.0, 1.0),
-                        (false, false) => color::TEXT,
+                        (false, false) => color::text(),
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -558,7 +558,7 @@ impl Panel {
                     format_args!("{count}"),
                     c.rect(rect.x, rect.y, rect.width - 20.0, rect.height),
                     22.0 * s,
-                    if open { color::GOLD } else { color::MUTED },
+                    if open { color::gold() } else { color::muted() },
                     FontWeight::Regular,
                     TextAlign::End,
                 );
@@ -582,7 +582,7 @@ impl Panel {
                         &c,
                         [rect.x + INDENT - 16.0, rect.y + rect.height * 0.5],
                         6.0,
-                        color::GOLD,
+                        color::gold(),
                     );
                 }
                 text(
@@ -596,7 +596,7 @@ impl Panel {
                         rect.height,
                     ),
                     HIGHLIGHT * s,
-                    color::alpha(color::TEXT, 0.92),
+                    color::alpha(color::text(), 0.92),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
@@ -612,7 +612,7 @@ impl Panel {
                     &c,
                     [rect.x + THREAD, middle],
                     9.0,
-                    color::alpha(color::HOLO, 0.75),
+                    color::alpha(color::holo(), 0.75),
                 );
                 text(
                     canvas,
@@ -620,14 +620,14 @@ impl Panel {
                     format_args!("{date}"),
                     c.rect(rect.x + INDENT, middle - 14.0, 140.0, 28.0),
                     19.0 * s,
-                    color::MUTED,
+                    color::muted(),
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
                 let rule = rect.x + INDENT + 112.0;
                 let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
                     rect: c.rect(rule, middle, rect.right() - rule, 1.0),
-                    color: color::alpha(color::HOLO, 0.16),
+                    color: color::alpha(color::holo(), 0.16),
                 });
             }
             Piece::Work {
@@ -651,15 +651,15 @@ impl Panel {
                     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: c.rect(row[0], row[1], row[2], row[3]),
                         radius: 10.0 * s,
-                        color: color::alpha(color::HOLO, 0.05),
+                        color: color::alpha(color::holo(), 0.05),
                     });
                 }
                 let first = rect.y + 5.0 + WORK_LINE * 0.5;
                 if piece.is_single() {
-                    dot(canvas, &c, [rect.x + THREAD, first], 8.0, color::GOLD);
+                    dot(canvas, &c, [rect.x + THREAD, first], 8.0, color::gold());
                 } else {
                     // A plus to unfold its commits, on the thread's own dark.
-                    dot(canvas, &c, [rect.x + THREAD, first], 16.0, color::SPACE);
+                    dot(canvas, &c, [rect.x + THREAD, first], 16.0, color::space());
                     fold_mark(
                         canvas,
                         &c,
@@ -667,9 +667,9 @@ impl Panel {
                         11.0,
                         open,
                         if open || hovered {
-                            color::GOLD_BRIGHT
+                            color::gold_bright()
                         } else {
-                            color::GOLD
+                            color::gold()
                         },
                     );
                 }
@@ -684,7 +684,7 @@ impl Panel {
                         if hovered {
                             Color::new(1.0, 1.0, 1.0, 1.0)
                         } else {
-                            color::alpha(color::TEXT, 0.92)
+                            color::alpha(color::text(), 0.92)
                         },
                         FontWeight::Regular,
                         TextAlign::Start,
@@ -700,7 +700,7 @@ impl Panel {
                         format_args!("{}", piece.commits[0].hash),
                         tail,
                         17.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -712,7 +712,7 @@ impl Panel {
                         format_args!("{count} commit{}", if count == 1 { "" } else { "s" }),
                         tail,
                         15.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -737,13 +737,13 @@ impl Panel {
                     let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                         rect: tag,
                         radius: tag.height * 0.5,
-                        color: color::alpha(color::GOLD, if tag_hovered { 0.24 } else { 0.08 }),
+                        color: color::alpha(color::gold(), if tag_hovered { 0.24 } else { 0.08 }),
                     });
                     let _ = canvas.draw_list_mut().push(DrawCommand::Border {
                         rect: tag,
                         radius: tag.height * 0.5,
                         width: 1.2 * s,
-                        color: color::alpha(color::GOLD, if tag_hovered { 0.9 } else { 0.55 }),
+                        color: color::alpha(color::gold(), if tag_hovered { 0.9 } else { 0.55 }),
                     });
                     text(
                         canvas,
@@ -752,9 +752,9 @@ impl Panel {
                         tag,
                         TAG * s,
                         if tag_hovered {
-                            color::GOLD_BRIGHT
+                            color::gold_bright()
                         } else {
-                            color::GOLD
+                            color::gold()
                         },
                         FontWeight::Regular,
                         TextAlign::Center,
@@ -778,7 +778,7 @@ impl Panel {
                 thread(canvas, &c, rect.x, rect.y, rect.height);
                 let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
                     rect: c.rect(rect.x + BRANCH - 0.5, rect.y, 1.0, rect.height),
-                    color: color::alpha(color::HOLO, 0.3),
+                    color: color::alpha(color::holo(), 0.3),
                 });
                 let row = [
                     rect.x + BRANCH + 8.0,
@@ -796,9 +796,9 @@ impl Panel {
                     [rect.x + BRANCH, first],
                     6.0,
                     if hovered {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::GOLD
+                        color::gold()
                     },
                 );
                 text(
@@ -813,9 +813,9 @@ impl Panel {
                     ),
                     COMMIT * s,
                     if hovered {
-                        color::GOLD_BRIGHT
+                        color::gold_bright()
                     } else {
-                        color::GOLD
+                        color::gold()
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -834,7 +834,11 @@ impl Panel {
                             COMMIT_LINE,
                         ),
                         COMMIT * s,
-                        if hovered { color::TEXT } else { color::MUTED },
+                        if hovered {
+                            color::text()
+                        } else {
+                            color::muted()
+                        },
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -847,7 +851,7 @@ impl Panel {
                         format_args!("by {}", entry.by),
                         c.rect(rect.right() - by - 12.0, rect.y + 2.0, by, COMMIT_LINE),
                         14.0 * s,
-                        color::QUIET,
+                        color::quiet(),
                         FontWeight::Regular,
                         TextAlign::End,
                     );
@@ -874,7 +878,7 @@ impl Panel {
                 let (x, y, width) = (rect.x, rect.y, rect.width);
                 let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
                     rect: c.rect(x, y, width, 1.0),
-                    color: color::alpha(color::HOLO, 0.25),
+                    color: color::alpha(color::holo(), 0.25),
                 });
                 text(
                     canvas,
@@ -882,7 +886,7 @@ impl Panel {
                     format_args!("{}", person.name),
                     c.rect(x, y + 14.0, width, 40.0),
                     CARD_NAME * s,
-                    color::TEXT,
+                    color::text(),
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
@@ -906,7 +910,7 @@ impl Panel {
                         format_args!("{part}"),
                         c.rect(x, ty, width, CARD_ROLE_LINE),
                         CARD_ROLE * s,
-                        color::MUTED,
+                        color::muted(),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -934,7 +938,7 @@ impl Panel {
                             &c,
                             [x + 5.0, ty + CARD_LINE * 0.5],
                             6.0,
-                            color::GOLD,
+                            color::gold(),
                         );
                     }
                     text(
@@ -943,7 +947,7 @@ impl Panel {
                         format_args!("{line}"),
                         c.rect(x + 18.0, ty, width - 18.0, CARD_LINE),
                         CARD_TEXT * s,
-                        color::alpha(color::TEXT, 0.9),
+                        color::alpha(color::text(), 0.9),
                         FontWeight::Regular,
                         TextAlign::Start,
                     );
@@ -958,7 +962,7 @@ impl Panel {
                         &c,
                         [x + 5.0, ty + CARD_LINE * 0.5],
                         5.0,
-                        color::HOLO,
+                        color::holo(),
                     );
                     let place = [x + 18.0, ty, link_width, CARD_LINE];
                     link(
@@ -997,7 +1001,7 @@ impl Panel {
             centre,
             reach,
             turn * 0.021,
-            color::alpha(color::GOLD, 0.34 + 0.08 * breathe),
+            color::alpha(color::gold(), 0.34 + 0.08 * breathe),
         );
         emblem::rays(
             canvas,
@@ -1005,15 +1009,15 @@ impl Panel {
             centre,
             reach * 0.9,
             -turn * 0.013 + 2.1,
-            color::alpha(color::GOLD, 0.24 - 0.06 * breathe),
+            color::alpha(color::gold(), 0.24 - 0.06 * breathe),
         );
-        let shade = color::alpha(color::SPACE, 0.5);
+        let shade = color::alpha(color::space(), 0.5);
         let [start, _] = frame.point(COLUMN_X - 140.0, 0.0);
         let [full, _] = frame.point(COLUMN_X - 20.0, 0.0);
         fade_across(
             canvas,
             Rect::new(start, 0.0, full - start, viewport[1]),
-            color::alpha(color::SPACE, 0.0),
+            color::alpha(color::space(), 0.0),
             shade,
         );
         let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
@@ -1024,7 +1028,7 @@ impl Panel {
             canvas,
             Rect::new(0.0, 0.0, start, viewport[1]),
             seconds,
-            [color::GOLD_BRIGHT, color::GOLD],
+            [color::gold_bright(), color::gold()],
             (28, 0.5),
             s,
         );
@@ -1035,7 +1039,7 @@ impl Panel {
             centre,
             side * 1.9,
             turn * 0.05,
-            color::alpha(color::GOLD_BRIGHT, 0.30 + 0.08 * swell),
+            color::alpha(color::gold_bright(), 0.30 + 0.08 * swell),
         );
         emblem::rays(
             canvas,
@@ -1043,7 +1047,7 @@ impl Panel {
             centre,
             side * 1.35,
             -turn * 0.08 + 0.2,
-            color::alpha(color::GOLD_BRIGHT, 0.16 + 0.06 * swell),
+            color::alpha(color::gold_bright(), 0.16 + 0.06 * swell),
         );
         emblem::draw(
             canvas,
@@ -1056,7 +1060,7 @@ impl Panel {
             format_args!("The people who make SJK"),
             frame.rect(SUN[0] - 240.0, CAPTION_Y, 480.0, 30.0),
             19.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Center,
         );
@@ -1092,9 +1096,9 @@ impl Panel {
                     frame.rect(RAIL_X + 28.0, top, RAIL_WIDTH - 28.0, rows.height),
                     rows.size * s,
                     match (index == current, hovered) {
-                        (true, _) => color::GOLD_BRIGHT,
-                        (false, true) => color::TEXT,
-                        (false, false) => color::MUTED,
+                        (true, _) => color::gold_bright(),
+                        (false, true) => color::text(),
+                        (false, false) => color::muted(),
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -1110,7 +1114,7 @@ impl Panel {
             for (_, y) in hidden.into_iter().filter(|(hidden, _)| *hidden) {
                 for step in 0..3 {
                     let x = RAIL_X + 32.0 + step as f32 * 10.0;
-                    dot(&mut self.ui, frame, [x, y], 4.0, color::MUTED);
+                    dot(&mut self.ui, frame, [x, y], 4.0, color::muted());
                 }
             }
         }
@@ -1147,7 +1151,7 @@ impl Panel {
         let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: track,
             radius: track.width * 0.5,
-            color: color::alpha(color::HOLO, 0.12),
+            color: color::alpha(color::holo(), 0.12),
         });
         let shown = self.page / (self.max_scroll + self.page);
         let height = (track.height * shown).max(40.0 * s);
@@ -1156,9 +1160,9 @@ impl Panel {
             rect: Rect::new(track.x, y, track.width, height),
             radius: track.width * 0.5,
             color: if active {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::alpha(color::HOLO, 0.6)
+                color::alpha(color::holo(), 0.6)
             },
         });
         // A wider grip than the bar drawn, so it is easy to catch.
@@ -1440,7 +1444,7 @@ impl Layout<'_> {
 fn thread(canvas: &mut MenuCanvas, frame: &Frame, x: f32, y: f32, height: f32) {
     let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
         rect: frame.rect(x + THREAD - 0.5, y, 1.0, height),
-        color: color::alpha(color::HOLO, 0.25),
+        color: color::alpha(color::holo(), 0.25),
     });
 }
 
@@ -1472,7 +1476,7 @@ fn medal_name(canvas: &mut MenuCanvas, rect: Rect, medal: Medal, count: u32, siz
             args,
             rect,
             size,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1556,7 +1560,7 @@ fn medal_beside(
             format_args!("{part}"),
             frame.rect(text_x, line_y, width, MEDAL_LINE),
             15.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1599,7 +1603,7 @@ fn counts(
             format_args!("{number}"),
             frame.rect(at, y, number_width + 12.0, COUNT_LINE),
             30.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
@@ -1616,7 +1620,7 @@ fn counts(
                 COUNT_LINE,
             ),
             17.0 * s,
-            color::MUTED,
+            color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1645,9 +1649,9 @@ fn link(
         frame.rect(x, y, width + 16.0, height),
         size * frame.s,
         if hovered {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::GOLD
+            color::gold()
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -1655,7 +1659,7 @@ fn link(
     if hovered {
         let _ = canvas.draw_list_mut().push(DrawCommand::SolidRect {
             rect: frame.rect(x, y + height * 0.5 + size * 0.6, width, 1.2),
-            color: color::GOLD_BRIGHT,
+            color: color::gold_bright(),
         });
     }
     region(

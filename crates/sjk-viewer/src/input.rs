@@ -95,36 +95,8 @@ pub(crate) enum InputAction {
     /// `toy_illuminate` (or its old name `force_illuminate`): turn Illuminate's holocron
     /// on or off ([`crate::illuminate`]).
     Illuminate,
-    /// `toy_box`: put the cardboard box on or take it off ([`crate::cardboard_box`]).
-    CardboardBox,
-    /// `toy_fishing`: get the fishing rod out or put it away ([`crate::fishing`]).
-    Fishing,
     /// `toy_wheelofdoom`: show the WHEEL OF DOOM's price, or spin it ([`crate::wheel_of_doom`]).
     WheelOfDoom,
-    /// `toy_mining`: take the pickaxe in hand or put it away ([`crate::mining`]).
-    Mining,
-    /// `fishing_sell`: sell the fished junk to the hub ([`crate::fishing_sell`]).
-    FishingSell,
-    /// `fishing_log`: print the fish log in full to the console.
-    FishingLog,
-    /// `fishing_sellfish`: sell the fish held at the catch market.
-    FishingSellFish,
-    /// `mining_sellore`: sell the ore held at the catch market.
-    MiningSellOre,
-    /// `mining_sell`: sell the dug rubble to the hub ([`crate::mining_sell`]).
-    MiningSell,
-    /// `mining_log`: print the mining log in full to the console.
-    MiningLog,
-    /// `fishing_brag`: share the last rare catch in the SJK chat ([`crate::catch_book`]).
-    FishingBrag,
-    /// `mining_brag`: share the last rare find in the SJK chat.
-    MiningBrag,
-    /// `toy_order66`: turn the Order 66 toy on or off ([`crate::order66`]).
-    Order66,
-    /// `order66`: execute Order 66 for every player who has the toy on.
-    ExecuteOrder66,
-    /// `toy_hax`: turn the Hax toy on or off ([`crate::hax`]).
-    Hax,
     /// `toy_ragdoll`: go limp, or get up ([`crate::ragdoll`]).
     Ragdoll,
     /// `toy_drone`: let drones follow the player, or not ([`crate::drone`]).
@@ -143,12 +115,6 @@ pub(crate) enum InputAction {
     BoxHunt,
     /// `toy_quests`: take part in quests, or not ([`crate::quests`]).
     Quests,
-    /// `toy_banana`: drop banana peels and slip on them, or not ([`crate::banana`]).
-    Banana,
-    /// `banana_drop`: drop a banana peel ([`crate::banana`]).
-    DropBanana,
-    /// `toy_propgun`: hold the chosen prop gun and fire it, or not ([`crate::propgun`]).
-    PropGun,
     /// `toy_tag`: stick the chosen tag where the crosshair meets the world
     /// ([`crate::tags`]).
     StickTag,
@@ -382,21 +348,7 @@ impl GameplayInput {
                     | crate::world_ping::COMMAND
                     | "toy_illuminate"
                     | "force_illuminate"
-                    | crate::cardboard_box::COMMAND
-                    | crate::fishing::COMMAND
                     | crate::wheel_of_doom::COMMAND
-                    | crate::mining::COMMAND
-                    | crate::fishing_sell::COMMAND
-                    | crate::fishing_sell::LOG_COMMAND
-                    | crate::fishing_sell::FISH_COMMAND
-                    | crate::mining_sell::ORE_COMMAND
-                    | crate::mining_sell::COMMAND
-                    | crate::mining_sell::LOG_COMMAND
-                    | crate::fishing_sell::BRAG_COMMAND
-                    | crate::mining_sell::BRAG_COMMAND
-                    | crate::order66::COMMAND
-                    | crate::order66::EXECUTE_COMMAND
-                    | crate::hax::COMMAND
                     | crate::ragdoll::COMMAND
                     | crate::drone::COMMAND
                     | crate::boombox::COMMAND
@@ -407,9 +359,6 @@ impl GameplayInput {
                     | crate::monitor::CHARGE_RELEASE
                     | crate::box_hunt::COMMAND
                     | crate::quests::COMMAND
-                    | crate::banana::COMMAND
-                    | crate::banana::DROP_COMMAND
-                    | crate::propgun::COMMAND
                     | crate::tags::COMMAND
                     | "cameracontrol"
             )
@@ -576,21 +525,7 @@ impl GameplayInput {
             }
             // The old name still runs the toy, but is not listed (`selection_commands`).
             "toy_illuminate" | "force_illuminate" => Some(InputAction::Illuminate),
-            crate::cardboard_box::COMMAND => Some(InputAction::CardboardBox),
-            crate::fishing::COMMAND => Some(InputAction::Fishing),
             crate::wheel_of_doom::COMMAND => Some(InputAction::WheelOfDoom),
-            crate::mining::COMMAND => Some(InputAction::Mining),
-            crate::fishing_sell::COMMAND => Some(InputAction::FishingSell),
-            crate::fishing_sell::LOG_COMMAND => Some(InputAction::FishingLog),
-            crate::fishing_sell::FISH_COMMAND => Some(InputAction::FishingSellFish),
-            crate::mining_sell::ORE_COMMAND => Some(InputAction::MiningSellOre),
-            crate::mining_sell::COMMAND => Some(InputAction::MiningSell),
-            crate::mining_sell::LOG_COMMAND => Some(InputAction::MiningLog),
-            crate::fishing_sell::BRAG_COMMAND => Some(InputAction::FishingBrag),
-            crate::mining_sell::BRAG_COMMAND => Some(InputAction::MiningBrag),
-            crate::order66::COMMAND => Some(InputAction::Order66),
-            crate::order66::EXECUTE_COMMAND => Some(InputAction::ExecuteOrder66),
-            crate::hax::COMMAND => Some(InputAction::Hax),
             crate::ragdoll::COMMAND => Some(InputAction::Ragdoll),
             crate::drone::COMMAND => Some(InputAction::Drone),
             crate::boombox::COMMAND => Some(InputAction::Boombox),
@@ -601,9 +536,6 @@ impl GameplayInput {
             crate::monitor::CHARGE_RELEASE => Some(InputAction::ChargeMonitor(false)),
             crate::box_hunt::COMMAND => Some(InputAction::BoxHunt),
             crate::quests::COMMAND => Some(InputAction::Quests),
-            crate::banana::COMMAND => Some(InputAction::Banana),
-            crate::banana::DROP_COMMAND => Some(InputAction::DropBanana),
-            crate::propgun::COMMAND => Some(InputAction::PropGun),
             crate::tags::COMMAND => match words.next().map(str::to_ascii_lowercase).as_deref() {
                 Some("clear" | "off") => Some(InputAction::ClearTag),
                 _ => Some(InputAction::StickTag),
@@ -786,21 +718,7 @@ impl super::GpuState {
             Some(InputAction::WorldNote) => self.world_note_press(),
             Some(InputAction::WorldPing) => self.world_ping_press(),
             Some(InputAction::Illuminate) => self.toggle_illuminate(),
-            Some(InputAction::CardboardBox) => self.toggle_cardboard_box(),
-            Some(InputAction::Fishing) => self.toggle_fishing(),
             Some(InputAction::WheelOfDoom) => self.wheel_of_doom_command(),
-            Some(InputAction::Mining) => self.toggle_mining(),
-            Some(InputAction::FishingSell) => self.sell_fishing_junk(),
-            Some(InputAction::FishingLog) => self.print_fishing_log(),
-            Some(InputAction::FishingSellFish) => self.sell_fishing_catch(),
-            Some(InputAction::MiningSellOre) => self.sell_mining_ore(),
-            Some(InputAction::MiningSell) => self.sell_mining_rubble(),
-            Some(InputAction::MiningLog) => self.print_mining_log(),
-            Some(InputAction::FishingBrag) => self.brag_fishing(),
-            Some(InputAction::MiningBrag) => self.brag_mining(),
-            Some(InputAction::Order66) => self.toggle_order66(),
-            Some(InputAction::ExecuteOrder66) => self.execute_order66(),
-            Some(InputAction::Hax) => self.toggle_hax(),
             Some(InputAction::Ragdoll) => self.toggle_ragdoll(),
             Some(InputAction::Drone) => self.toggle_drone(),
             Some(InputAction::Boombox) => self.toggle_boombox(),
@@ -812,9 +730,6 @@ impl super::GpuState {
             Some(InputAction::ChargeMonitor(pressed)) => self.charge_monitor(pressed),
             Some(InputAction::BoxHunt) => self.toggle_box_hunt(),
             Some(InputAction::Quests) => self.toggle_quests(),
-            Some(InputAction::Banana) => self.toggle_banana(),
-            Some(InputAction::DropBanana) => self.drop_banana(),
-            Some(InputAction::PropGun) => self.toggle_propgun(),
             Some(InputAction::FlipKick) => {
                 let restricted = self.live_session.as_ref().is_some_and(|session| {
                     session
@@ -827,16 +742,8 @@ impl super::GpuState {
                     self.gameplay_input.flip_kick.start();
                 }
             }
-            Some(InputAction::Weapon(weapon)) => {
-                // A weapon chosen (the saber's 1 among them) puts the pickaxe away
-                // (`mining`), and is taken out as ever.
-                self.mining.weapon_chosen();
-                self.select_weapon(weapon);
-            }
-            Some(InputAction::WeaponCycle(direction)) => {
-                self.mining.weapon_chosen();
-                self.cycle_weapon(direction);
-            }
+            Some(InputAction::Weapon(weapon)) => self.select_weapon(weapon),
+            Some(InputAction::WeaponCycle(direction)) => self.cycle_weapon(direction),
             Some(InputAction::WeaponMelee) => self.select_melee(),
             Some(InputAction::SelectionCycle(inventory, direction)) => {
                 let snapshot = self
@@ -1058,9 +965,6 @@ mod tests {
             ("toy_tag", InputAction::StickTag),
             ("toy_tag clear", InputAction::ClearTag),
             ("toy_tag OFF", InputAction::ClearTag),
-            ("toy_banana", InputAction::Banana),
-            ("banana_drop", InputAction::DropBanana),
-            ("toy_propgun", InputAction::PropGun),
             ("boombox_place", InputAction::PlaceBoombox),
         ] {
             assert!(GameplayInput::recognizes(command), "{command}");

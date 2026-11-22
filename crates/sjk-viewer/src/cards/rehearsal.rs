@@ -62,10 +62,10 @@ pub(crate) fn listing() -> Vec<String> {
         ));
     }
     for tier in &kyber::TIERS {
-        lines.push(format!("  {:<16} {}: a saber shader", tier.id, tier.name));
+        lines.push(format!("  {:<16} {}: a kyber", tier.id, tier.name));
     }
     lines.push(format!("  {ALL:<12} one of every holocron tier"));
-    lines.push(format!("  {KYBER:<12} one kyber crystal of every tier"));
+    lines.push(format!("  {KYBER:<12} one dormant kyber of every tier"));
     lines
 }
 

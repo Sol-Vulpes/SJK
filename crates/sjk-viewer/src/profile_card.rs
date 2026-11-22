@@ -306,7 +306,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: area,
                 radius: 18.0 * s,
-                color: color::alpha(color::SPACE, 0.6),
+                color: color::alpha(color::space(), 0.6),
             });
         }
     } else {
@@ -322,7 +322,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
             rect: area,
             radius: 18.0 * s,
             width: 1.5 * s,
-            color: color::alpha(color::GOLD, 0.6),
+            color: color::alpha(color::gold(), 0.6),
         });
     }
     let radius = PICTURE_SIZE * 0.5;
@@ -352,7 +352,7 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
         ),
         frame.rect(TEXT_X, PICTURE[1] - 4.0, TEXT_WIDTH, 34.0),
         27.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Semibold,
         TextAlign::Start,
     );
@@ -363,9 +363,9 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
         frame.rect(TEXT_X, PICTURE[1] + 30.0, TEXT_WIDTH, 22.0),
         16.0 * s,
         if card.summary.verified {
-            color::GOLD_BRIGHT
+            color::gold_bright()
         } else {
-            color::MUTED
+            color::muted()
         },
         FontWeight::Regular,
         TextAlign::Start,
@@ -373,10 +373,10 @@ pub(crate) fn draw(canvas: &mut MenuCanvas, frame: &Frame, card: &Card<'_>, toke
     let (detail, tone) = if card.lit {
         (
             Detail::Line("Open your profile: picture, bio and record"),
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
         )
     } else {
-        (card.detail, color::QUIET)
+        (card.detail, color::quiet())
     };
     text(
         canvas,
@@ -445,18 +445,18 @@ pub(crate) fn avatar(canvas: &mut MenuCanvas, centre: [f32; 2], radius: f32, ava
                 format_args!("{}", initial(avatar.name)),
                 square,
                 radius * 1.1,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Center,
             );
         }
     }
     let ring = if avatar.lit {
-        color::GOLD_BRIGHT
+        color::gold_bright()
     } else if avatar.verified {
-        color::alpha(color::GOLD, 0.9)
+        color::alpha(color::gold(), 0.9)
     } else {
-        color::alpha(color::HOLO, 0.55)
+        color::alpha(color::holo(), 0.55)
     };
     let width = (radius * 0.055).max(1.5);
     let _ = canvas.draw_list_mut().push(DrawCommand::Arc {
@@ -477,7 +477,7 @@ pub(crate) fn avatar(canvas: &mut MenuCanvas, centre: [f32; 2], radius: f32, ava
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: Rect::new(at[0] - badge, at[1] - badge, badge * 2.0, badge * 2.0),
             radius: badge,
-            color: color::alpha(color::SPACE, 0.92),
+            color: color::alpha(color::space(), 0.92),
         });
         let mark = badge * 0.82;
         let _ = canvas.draw_list_mut().push(DrawCommand::TexturedQuad {
@@ -551,6 +551,7 @@ mod tests {
             staff: false,
             creator: false,
             jkr_creator: false,
+            all_access: false,
             trust: None,
             emoji: String::new(),
             created: 0,
@@ -614,6 +615,7 @@ mod tests {
             wheel_of_doom: None,
             wheel_of_doom_revision: 0,
             wheel_of_doom_spin: None,
+            mystery_box_doom: None,
             box_hunt: None,
             quests: None,
             secrets: None,
@@ -667,8 +669,8 @@ mod tests {
     #[test]
     fn the_line_says_what_the_hub_knows() {
         let standings = standings();
-        // The retired Surveyor, not held, is not counted.
-        let total = standings.len() - 1;
+        // The retired ones, none held, are not counted.
+        let total = crate::achievements::OBTAINABLE;
         let online = snapshot(Status::Online, Some(me()));
         let summary = summarise(
             "^1Sol",

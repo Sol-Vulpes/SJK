@@ -151,6 +151,17 @@ pub enum DrawCommand {
     /// renderer ([`crate::card_shine_shade`]) and cut to the card's rounded corners
     /// itself. A clip cuts it like any rectangle, keeping its pattern in place.
     CardShine { rect: Rect, shine: crate::CardShine },
+    /// Acrylic glass over `rect`, its corners rounded by `radius`: what the frame holds
+    /// behind it under the 2D layer (the world and its effects), blurred, its brightness
+    /// held under a ceiling, `tint` over it at the tint's alpha, a faint grain and a light
+    /// top edge ([`crate::acrylic`]). It covers what the 2D layer drew under it, as frosted
+    /// glass covers what stands behind. Where the renderer cannot blur, it draws `tint`
+    /// alone, opaquer ([`crate::acrylic::fallback`]).
+    Backdrop {
+        rect: Rect,
+        radius: f32,
+        tint: Color,
+    },
     /// Straight stroke from `from` to `to` with square ends, anti-aliased along its
     /// sides by the renderer. `width` is the stroke thickness in pixels.
     Line {
@@ -210,6 +221,7 @@ impl DrawCommand {
             | Self::TexturedQuad { rect, .. }
             | Self::TexturedQuadUv { rect, .. }
             | Self::CardShine { rect, .. }
+            | Self::Backdrop { rect, .. }
             | Self::PushClip(rect)
             | Self::PushRoundedClip { rect, .. } => *rect = rect.translated(dx, dy),
             Self::TexturedQuadTurned { rect, pivot, .. } => {
@@ -249,7 +261,8 @@ impl DrawCommand {
             | Self::TexturedQuad { rect, .. }
             | Self::TexturedQuadUv { rect, .. }
             | Self::TexturedQuadTurned { rect, .. }
-            | Self::CardShine { rect, .. } => Some(rect),
+            | Self::CardShine { rect, .. }
+            | Self::Backdrop { rect, .. } => Some(rect),
             Self::Arc {
                 center,
                 radius,
@@ -402,6 +415,32 @@ impl DrawList {
         }
     }
 
+    /// Move each command from index `start` on down by the pixels `shift` gives for its
+    /// own box ([`DrawCommand::bounds`]); a command without one (a clip, an opacity)
+    /// moves with the next command that has one. For a part of a screen that draws
+    /// pieces near different edges in one go, each to be moved by its own edge.
+    pub fn translate_each_from(&mut self, start: usize, mut shift: impl FnMut(Rect) -> f32) {
+        let len = self.commands.len();
+        let mut index = start;
+        while index < len {
+            let mut end = index;
+            while end < len && self.commands[end].bounds().is_none() {
+                end += 1;
+            }
+            let dy = self
+                .commands
+                .get(end)
+                .and_then(DrawCommand::bounds)
+                .map_or(0.0, &mut shift);
+            if dy != 0.0 {
+                for command in &mut self.commands[index..=end.min(len - 1)] {
+                    command.translate(0.0, dy);
+                }
+            }
+            index = end + 1;
+        }
+    }
+
     /// The box round what the commands from index `start` on draw
     /// ([`DrawCommand::bounds`]), `None` when they draw nothing.
     pub fn bounds_from(&self, start: usize) -> Option<Rect> {
@@ -505,6 +544,35 @@ mod tests {
         assert_eq!(
             map(moved, [8.0, 10.0]),
             [original[0] + 3.0, original[1] + 4.0]
+        );
+    }
+
+    /// Each command moves by its own box's shift; one without a box (a clip) moves with
+    /// the command after it.
+    #[test]
+    fn translating_each_command_follows_its_own_box() {
+        let mut list = DrawList::new(8);
+        let top = Rect::new(0.0, 10.0, 10.0, 10.0);
+        let bottom = Rect::new(0.0, 900.0, 10.0, 10.0);
+        list.push(DrawCommand::SolidRect {
+            rect: top,
+            color: WHITE,
+        });
+        list.push(DrawCommand::PushClip(bottom));
+        list.push(DrawCommand::SolidRect {
+            rect: bottom,
+            color: WHITE,
+        });
+        list.push(DrawCommand::PopClip);
+        list.translate_each_from(0, |rect| if rect.y < 500.0 { 20.0 } else { -30.0 });
+        assert_eq!(list.bounds_between(0, 1), Some(top.translated(0.0, 20.0)));
+        assert_eq!(
+            list.commands()[1],
+            DrawCommand::PushClip(bottom.translated(0.0, -30.0))
+        );
+        assert_eq!(
+            list.bounds_between(2, 3),
+            Some(bottom.translated(0.0, -30.0))
         );
     }
 }

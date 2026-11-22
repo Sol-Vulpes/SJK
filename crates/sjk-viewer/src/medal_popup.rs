@@ -5,9 +5,9 @@
 //! `medals/rank.rs`). Several new medals show one after another.
 //!
 //! When: on the main menu, or when the game menu opens in a match, never over play.
-//! A medal that arrives during a match is announced once by a card at the top of the
+//! A medal that arrives during a match is announced once by a banner at the top of the
 //! screen, as an achievement is ([`crate::unlock_toast`]), saying where to see it; the
-//! pop-up waits for the game menu and takes the card back as it opens. While it shows,
+//! pop-up waits for the game menu and takes the banner back as it opens. While it shows,
 //! the menu under it is not drawn and takes no input. What was shown is kept in
 //! `medals_seen.txt` (`medals/seen.rs`), so each medal (and each new count) shows once
 //! per identity.
@@ -34,7 +34,7 @@ use crate::medals::{self, Award};
 use crate::menu::art::ArtSet;
 use crate::menu::style::MenuStyle;
 use crate::menu_widgets::MenuCanvas;
-use crate::unlock_toast::{self, Unlock};
+use crate::unlock_toast::Unlock;
 use award::{ENTRANCE, EXIT};
 use sjk_ui::{InputEvent, UiEventKind};
 use std::collections::VecDeque;
@@ -57,7 +57,7 @@ struct Queued {
     award: Award,
     /// Made up by `debug_medal`: shown like any other, never counted as seen.
     rehearsal: bool,
-    /// Its card was given in a match ([`MedalPopup::announce`]).
+    /// Its banner was given in a match ([`MedalPopup::announce`]).
     announced: bool,
     /// It was shown before and its rank rose: a promotion.
     promoted: bool,
@@ -327,20 +327,17 @@ impl MedalPopup {
         }
     }
 
-    /// The cards for a match, once per new medal (or new count): each waiting medal
-    /// not announced yet goes to `show`, at most [`unlock_toast::AT_ONCE`] at a time.
+    /// The banners for a match, once per new medal (or new count): each waiting medal
+    /// not announced yet goes to `show` (several waiting fold into one banner,
+    /// [`crate::unlock_toast::GROUP_AT`]).
     pub(crate) fn announce(&mut self, mut show: impl FnMut(Unlock)) {
-        let mut shown = 0;
         for waiting in self.queue.iter_mut().filter(|waiting| !waiting.announced) {
             waiting.announced = true;
-            if shown < unlock_toast::AT_ONCE {
-                shown += 1;
-                show(Unlock::Medal {
-                    medal: waiting.award.medal,
-                    count: waiting.award.count,
-                    promoted: waiting.promoted.then_some(waiting.award.rank),
-                });
-            }
+            show(Unlock::Medal {
+                medal: waiting.award.medal,
+                count: waiting.award.count,
+                promoted: waiting.promoted.then_some(waiting.award.rank),
+            });
         }
     }
 
@@ -553,7 +550,7 @@ impl crate::GpuState {
     }
 
     /// Open the pop-up when a medal waits and the main menu or the game menu is up (its
-    /// cards go), or announce it once with a card during a match, and move its ceremony
+    /// banners go), or announce it once with a banner during a match, and move its ceremony
     /// on (it begins once the window is not away). Returns whether the pop-up draws this
     /// frame (not under the console).
     pub(crate) fn prepare_medal_popup(&mut self, console_covers_frame: bool) -> bool {
@@ -571,8 +568,7 @@ impl crate::GpuState {
             let menu = self.game_menu || main_menu;
             if menu && !console_open && !self.text_dialog.is_open() {
                 self.medal_popup.open_next(now);
-                self.unlock_toast
-                    .withdraw(now, |unlock| matches!(unlock, Unlock::Medal { .. }));
+                self.unlock_toast.withdraw(now, Unlock::is_medal);
             } else if !menu && self.live_session.is_some() {
                 let toast = &mut self.unlock_toast;
                 self.medal_popup.announce(|unlock| toast.push(unlock));

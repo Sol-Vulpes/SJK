@@ -92,7 +92,7 @@ impl Panel {
                 format_args!("{line}"),
                 frame.rect(x, y, width, 24.0),
                 17.0 * frame.s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -146,7 +146,7 @@ impl Panel {
             ),
             frame.rect(x, y, width, 38.0),
             16.0 * frame.s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -218,7 +218,7 @@ impl Panel {
             ),
             frame.rect(x + 360.0, y, width - 360.0, 44.0),
             15.0 * frame.s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );

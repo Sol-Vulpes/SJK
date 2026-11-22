@@ -763,13 +763,16 @@ request, 08/10/2026):
   stands right after the name, before the tick, on every line, the dock and the page
   (`sjk_chat_look::emoji_room`); a game line's sender the hub knows in that slot shows
   theirs too.
-- In the game's chat a line starts with SJK's emblem, small (1.35 times the text's
-  height, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
+- In the game's chat a line starts with SJK's emblem, small (1.2 times the text's
+  height since 14/11/2026, 1.35 before, in its own colours, `ui_renderer::LOGO_TEXTURE`; Sol's request, 11/10/2026),
   where it used to read the letters SJK. A holocron drop or grand find starts with the
-  holocron's or crystal's picture instead (01/11/2026,
+  holocron's or dormant kyber's picture instead (01/11/2026,
   [holocrons.md](holocrons.md#chat-lines)). The dock and the page, which show only SJK
   chat, have no mark. A message sent from another client that takes part in SJK chat
-  starts with that client's icon instead, at the same size: the clients are the
+  starts with that client's icon instead, centred in the emblem's place: those icons
+  are full discs, drawn 0.9 times the text's height, as big as the sun disc of SJK's
+  emblem (`ICON_SIDE` in `chat/view/sjk_line.rs`; until 14/11/2026 they had the
+  emblem's own side and looked much bigger, Sol's request): the clients are the
   entries of [chat/client_icons.rs](../crates/sjk-viewer/src/chat/client_icons.rs)
   (`KNOWN`, each with why and its evidence; today JoF EternalJK, `client` `ejk`,
   `ui_renderer::EJK_TEXTURE`, `assets/branding/jof-ejk-icon.png`, 21/10/2026, and the
@@ -788,10 +791,12 @@ request, 08/10/2026):
   have none and Team chat reads TEAM: SJK for a message only in SJK chat, ALL/SJK for
   one also said in the server's All chat ([Said on the game server too](#said-on-the-game-server-too);
   Sol's request, 22/10/2026). A holocron drop has no label.
-- A verified sender has their tick after the name (the nameplates' seal, gold or their
+- A verified sender has their tick (the nameplates' seal, gold or their
   group's, staff's or a creator's: [Ticks](identity.md#ticks),
   `ui_renderer::mark_texture`) and no word: no "SJK VERIFIED" or "Verified" tag. Staff
-  stays written on the page.
+  stays written on the page. In the game's chat it stays after the name (on the
+  emblem's foot for a day, 14/11/2026, then back after the name at Sol's request; the
+  nameplates keep it on a client icon's corner).
 - The line flows as one line and wraps only when it is too long, as a game chat line
   does. In the game it used to break straight away: the feed drew a sender's name and
   its tag on a row of their own and the message under it (`NAME_ADVANCE` in
@@ -1063,8 +1068,7 @@ and plays changes. The code still says "mute" (`chat_mutes.rs`, `muted_players.r
   (`HiltCatalog::is_staff`, from the saber's definition).
 - **Everything else of theirs:** their emotes do not play (one playing when they are
   blocked ends; `emotes_frame.rs`, beside `sjkemote mute`'s emote-only list), their
-  Order 66 orders and cardboard box spots are ignored (`order66.rs`,
-  `cardboard_box.rs`), no player card shows when you aim at them and a card pinned
+  no player card shows when you aim at them and a card pinned
   before loses their hub profile (`hud_runtime.rs`), their world pings are not shown
   (`world_ping_frame.rs`), their toys and looks are not drawn (`looks.rs`), their GIFs
   are never fetched (`chat_gifs.rs`) and their holocron lines go with their chat. Their
@@ -1200,6 +1204,18 @@ The second gap is `s_muteSounds` ([client.md](client.md#muted-sounds)).
   players can be muted, as only they send emotes. `<player>` is a slot number, part of
   the name shown (a whole name wins when several match), or `target`, the player under
   the crosshair.
+- Emotes by kind, on this screen only (since 17/11/2026, mg.perso's idea;
+  [emote_filters.rs](../crates/sjk-viewer/src/emote_filters.rs), Settings > Sound >
+  Emotes, all off or empty by default; nothing is sent): Hide others' emotes
+  (`cg_hideOthersEmotes`) drops every other player's emote, its animation, sound and
+  console line, and ends the ones playing; the player's own still play, and the others
+  still see them. Hidden emotes (`cg_hiddenEmotes`, emote ids separated by spaces or
+  commas; `emote_hide <id>` adds one and again takes it out) does the same for those
+  emotes alone. Muted emotes (`s_mutedEmotes`, `emote_mute <id>`) plays those emotes
+  without their sound, the player's own too: the dance shows and its music keeps time
+  silently (`ActiveEmote::muted`, beside the away emote's `quiet`), so unmuting one
+  that plays brings its music back where it is. Both commands alone list their ids and
+  complete the installed ones on Tab.
 - `sjkemote sync [player]` (since 15/10/2026; the quick wheel's Sync emote) joins
   another player's emote in step: the named player (a slot number or part of the name
   shown), else the one under the crosshair, else the nearest emoting player within 512
@@ -1333,8 +1349,8 @@ a modified client could read every ping of its server. Only a server that tells 
 ## Toy events
 
 A toy event is something one SJK player's toy did to another (since 16/10/2026): the
-first is the [cardboard box](client.md#cardboard-box)'s `spotted`, a box lifted with
-`+use`. It rides the pings' path: the sender's client sends the toy, the event and the
+first was the cardboard box's `spotted`, a box lifted with `+use` (the box was removed
+on 20/11/2026). It rides the pings' path: the sender's client sends the toy, the event and the
 target's slot (`Service::toy_event`, through the identity worker), the hub relays it in
 the feed of that game server's readers (`toys`), and the feed thread queues it with the
 server it was read for (`Service::take_toy_events`). A reader applies it only when the
@@ -1344,7 +1360,7 @@ box: the readers decide, so a modified client could lift anyone's box, which tak
 a toy and nothing else. Without the hub's change (before 16/10/2026) the event is
 refused and only the lifter's screen hides the box, for at most 15 seconds.
 
-The second (since 17/10/2026, no hub change) is [Order 66](client.md#order-66)'s order:
+The second (17/10/2026 to 20/11/2026, no hub change) was Order 66's order:
 toy `order66`, event `execute_<moment>`, the game server time (milliseconds) at which
 every player with the toy on dies, 3 seconds after it was given. It concerns everyone
 with the toy on, not one player: the hub wants a target other than the sender, so the
@@ -1365,15 +1381,14 @@ raised it (any other slot would do; the readers ignore the target).
 The toy relay (since 21/10/2026, Sol-Vulpes/SJK-hub, `PROTOCOL.md`, "Toy relay")
 carries toy events that must reach one player at once, many times a
 second, which the feed's toy events (one a second, read by a poll every few seconds)
-cannot: the [Hax](client.md#hax)'s hacker steering the hacked player, the
+cannot: the Hax's hacker steering the hacked player (until 20/11/2026), the
 [Ragdoll](client.md#ragdoll)'s falls, told to every SJK player on the server, the
 [Drone](client.md#drone)'s place, told to each in turn, the
 [Boombox](client.md#boombox)'s track, told to each player within reach, and its box on
 the floor, told to every SJK player (since 03/11/2026), and the
 [Monitor](client.md#monitor)'s throws, told to every SJK player, the nearest first (its
-hits ride the Ragdoll's falls), and the [Banana peel](client.md#banana-peel)'s peels, told
-the same way, and their slips (since 29/10/2026), and the [Prop gun](client.md#prop-gun)'s
-guns held and shots fired (since 01/11/2026), and the
+hits ride the Ragdoll's falls), and (29/10/2026 to 20/11/2026) the Banana peel's peels and
+slips, and the Prop gun's guns held and shots fired (01/11/2026 to 20/11/2026), and the
 [status balloons](client.md#status-balloons)' reasons, told to every SJK player when they
 change (since 08/11/2026). Two threads of
 the identity service of their own ([relay.rs](../crates/sjk-identity/src/relay.rs),
@@ -1590,9 +1605,9 @@ never in a game server's chat.
   box and ends it with ": /rewards". A click (or `rewards`) opens the round list.
 - A reward waiting for the player opens the claim window as the medal pop-up opens: on
   the main menu, or when the game menu opens in a match, never over play; in a match an
-  unlock card says "Contributor reward waiting" / "Open the game menu to claim it" once
-  per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the profile
-  (its new gift holocrons then arrive through the holocron pop-up) and the rewards, and
+  notification banner says "Contributor reward waiting" / "Open the game menu to claim
+  it" once per reward. Claim calls `POST /v1/rewards/claim`; the hub's answer brings the
+  profile (its new gift holocrons then arrive with their banner) and the rewards, and
   the window shows the next reward or closes. A refusal says why in the window
   ("This reward was claimed already.", "This reward is not waiting for you any more.",
   else the hub's words). Later puts the window away until the menus close and open again.

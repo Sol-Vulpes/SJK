@@ -157,6 +157,7 @@ pub(crate) enum Style {
 
 impl Style {
     /// Every style, in `cg_nameplateStyle`'s order.
+    #[cfg(test)]
     pub(crate) const ALL: [Self; 3] = [Self::Holo, Self::Capsule, Self::Classic];
 
     /// The style `cg_nameplateStyle` names.
@@ -165,24 +166,6 @@ impl Style {
             1 => Self::Capsule,
             2 => Self::Classic,
             _ => Self::Holo,
-        }
-    }
-
-    /// Its `cg_nameplateStyle` value.
-    pub(crate) fn value(self) -> i64 {
-        match self {
-            Self::Holo => 0,
-            Self::Capsule => 1,
-            Self::Classic => 2,
-        }
-    }
-
-    /// Its name in Settings and the Collection.
-    pub(crate) fn label(self) -> &'static str {
-        match self {
-            Self::Holo => "Holo",
-            Self::Capsule => "Capsule",
-            Self::Classic => "Classic",
         }
     }
 }
@@ -231,9 +214,15 @@ const MAX_ICONS: usize = 4;
 const ICON_POWERS: [u8; 11] = [7, 6, 13, 8, 9, 10, 2, 0, 12, 5, 14];
 /// The colour of players who follow no team: no team tints their frame.
 const NEUTRAL_ACCENT: Color = Color::new(0.78, 0.82, 0.9, 0.9);
-/// The holo frame of an SJK player out of team games: its hexagon and its edge.
-pub(crate) const HOLO_HEX: Color = Color::new(110.0 / 255.0, 210.0 / 255.0, 1.0, 0.85);
-pub(crate) const HOLO_EDGE: Color = Color::new(110.0 / 255.0, 210.0 / 255.0, 1.0, 0.75);
+/// The holo frame of an SJK player out of team games: its hexagon and its edge, in the
+/// SJK UI theme's line-work (`menu::sjk::theme`; holo blue was its colour before the
+/// themes, 18/11/2026).
+pub(crate) fn holo_hex() -> Color {
+    crate::menu::sjk::color::alpha(crate::menu::sjk::color::holo(), 0.85)
+}
+pub(crate) fn holo_edge() -> Color {
+    crate::menu::sjk::color::alpha(crate::menu::sjk::color::holo(), 0.75)
+}
 /// The grey frame of a player without SJK, and their far plate's hairline.
 const GREY_HEX: Color = Color::new(170.0 / 255.0, 178.0 / 255.0, 190.0 / 255.0, 0.7);
 const GREY_EDGE: Color = Color::new(170.0 / 255.0, 178.0 / 255.0, 190.0 / 255.0, 0.6);
@@ -503,15 +492,6 @@ pub(super) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
     Ok(())
 }
 
-/// See and share nameplates is one setting, `cg_nameplate` (17/10/2026): seeing other
-/// players' nameplates shares the player's own health, shield and Force, and turning
-/// the nameplates off stops both. It replaces `cg_nameplateShare` and the hold that kept
-/// it on while the plates showed bars (Sol's rule, 15/10/2026: seeing bars means
-/// sharing).
-pub(crate) fn see_and_share(console: &ViewerConsole) -> bool {
-    console.bool_cvar("cg_nameplate") == Some(true)
-}
-
 /// Settings, sampled once per frame.
 #[derive(Clone, Copy)]
 struct Settings {
@@ -603,8 +583,8 @@ struct Entry {
     /// The mark after the name: the gold badge of a player the SJK hub's operator vouches
     /// for, or their trust mark (`ui_renderer::mark_texture`).
     mark: Option<sjk_ui::TextureId>,
-    /// The icon of another client they play on, small after the mark
-    /// (`player_identity::slot_clients`): none for SJK.
+    /// The icon of another client they play on, in the mark's place with the mark on
+    /// its foot (`player_identity::slot_clients`): none for SJK.
     client: Option<sjk_ui::TextureId>,
     /// They share their bars, of their own will or because they see everyone's: a
     /// gold contour.
@@ -871,7 +851,13 @@ impl State {
     }
 
     /// What the player shares this frame: their own health, shield and Force while
-    /// alive in a match, whenever their nameplates are on ([`see_and_share`]).
+    /// alive in a match, whenever their nameplates are on (`cg_nameplate`).
+    ///
+    /// See and share nameplates is one setting, `cg_nameplate` (17/10/2026): seeing
+    /// other players' nameplates shares the player's own health, shield and Force, and
+    /// turning the nameplates off stops both. It replaces `cg_nameplateShare` and the
+    /// hold that kept it on while the plates showed bars (Sol's rule, 15/10/2026:
+    /// seeing bars means sharing).
     pub(crate) fn sharing(&self, snapshot: Option<&Snapshot>) -> sjk_identity::Sharing {
         let settings = &self.settings;
         let share = settings.enabled;
@@ -1850,9 +1836,10 @@ impl State {
         });
     }
 
-    /// The mark after the name and the client icon after it in `[mark, client]`, and
-    /// the duel badge in `badge`, at the name's `opacity` (the badge never under
-    /// [`DUEL_BADGE_OPACITY`]). The client icon keeps its own colours.
+    /// The mark after the name, or another client's icon in its place with the mark
+    /// small on its foot, in `[mark, client]`, and the duel badge in `badge`, at the
+    /// name's `opacity` (the badge never under [`DUEL_BADGE_OPACITY`]). The client icon
+    /// keeps its own colours and goes first, under the mark.
     fn badges(
         &mut self,
         entry: &Entry,
@@ -1860,7 +1847,7 @@ impl State {
         badge: Option<Rect>,
         opacity: f32,
     ) {
-        for (rect, texture) in [(mark, entry.mark), (client, entry.client)] {
+        for (rect, texture) in [(client, entry.client), (mark, entry.mark)] {
             if let (Some(rect), Some(texture)) = (rect, texture) {
                 let _ = self.list.push(DrawCommand::TexturedQuad {
                     rect,
@@ -2586,7 +2573,7 @@ struct Frame {
 
 impl Frame {
     /// The frame of `entry`'s plate (design C): a duel's pair's colour, a team's, an
-    /// NPC's pale gold, grey for a player without SJK, else the holo blue.
+    /// NPC's pale gold, grey for a player without SJK, else the theme's line-work.
     fn of(entry: &Entry, duel: bool) -> Self {
         let with = |colour: Color, alpha: f32| Color::new(colour.r, colour.g, colour.b, alpha);
         if duel {
@@ -2608,7 +2595,7 @@ impl Frame {
         } else if !entry.sjk {
             (GREY_HEX, GREY_EDGE, false)
         } else {
-            (HOLO_HEX, HOLO_EDGE, true)
+            (holo_hex(), holo_edge(), true)
         };
         Self {
             hex,
@@ -2698,7 +2685,7 @@ pub(crate) struct PreviewPlate {
     /// The Force powers on (`forcePowersActive` bits), shown over the plate.
     pub(crate) powers: u32,
     pub(crate) verified: bool,
-    /// Another client's icon, small after the mark.
+    /// Another client's icon, in the mark's place with the mark on its foot.
     pub(crate) client: Option<TextureId>,
     /// In a private duel: the duel badge before the name.
     pub(crate) duelling: bool,
@@ -2852,7 +2839,6 @@ mod tests {
         let mut console = ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
         let mut state = State::default();
         // Off by default: a new player sees no nameplates and shares nothing.
-        assert!(!see_and_share(&console));
         state.sample(Some(&console));
         assert!(!state.sharing(None).share);
         for (enabled, bars, shares) in [("1", "2", true), ("1", "0", true), ("0", "2", false)] {
@@ -2860,7 +2846,6 @@ mod tests {
             console.set_cvar("cg_nameplateBars", bars);
             state.sample(Some(&console));
             assert_eq!(state.sharing(None).share, shares, "{enabled} {bars}");
-            assert_eq!(see_and_share(&console), shares, "{enabled} {bars}");
         }
     }
 
@@ -3022,8 +3007,8 @@ mod tests {
     /// `cg_nameplateStyle` names the three looks, and any other value is the holo frame.
     #[test]
     fn the_style_setting_names_the_three_looks() {
-        for style in Style::ALL {
-            assert_eq!(Style::of(style.value()), style);
+        for (value, style) in Style::ALL.into_iter().enumerate() {
+            assert_eq!(Style::of(value as i64), style);
         }
         assert_eq!(Style::of(7), Style::Holo);
         assert_eq!(Style::of(-1), Style::Holo);
@@ -3228,7 +3213,7 @@ mod tests {
         assert_eq!(health(&duel), 0);
     }
 
-    /// A player without SJK wears a grey frame, an SJK player the holo blue, a team its
+    /// A player without SJK wears a grey frame, an SJK player the theme's line-work, a team its
     /// colour.
     #[test]
     fn the_frame_tells_sjk_players_and_teams() {
@@ -3243,7 +3228,7 @@ mod tests {
             duelling: false,
             ..plate()
         };
-        assert_eq!(hex(with), HOLO_HEX);
+        assert_eq!(hex(with), holo_hex());
         let blue = hex(PreviewPlate {
             duelling: false,
             team: Some(false),

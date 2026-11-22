@@ -122,7 +122,7 @@ impl Panel {
             format_args!("{}", self.summary),
             frame.rect(RIGHT - 600.0, 62.0, 600.0, 30.0),
             24.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -132,7 +132,7 @@ impl Panel {
             format_args!("Sol's build only"),
             frame.rect(RIGHT - 600.0, 94.0, 600.0, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -154,7 +154,7 @@ impl Panel {
                 format_args!("{message}"),
                 frame.rect(LIST_X, LIST_TOP + 8.0, LIST_WIDTH, 28.0),
                 BODY_SIZE * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -165,7 +165,7 @@ impl Panel {
             self.row_view(frame, measure, slot, position);
         }
         if self.visible.len() > self.rows {
-            self.ui.scrollbar(
+            self.ui.sjk_scrollbar(
                 SCROLLBAR_TOKEN,
                 frame.rect(
                     LIST_X + LIST_WIDTH + 16.0,
@@ -196,7 +196,7 @@ impl Panel {
             let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(LIST_X, top, LIST_WIDTH, ROW_BAND),
                 radius: 10.0 * s,
-                color: color::alpha(color::HOLO, 0.045),
+                color: color::alpha(color::holo(), 0.045),
             });
         }
         self.ui
@@ -214,10 +214,10 @@ impl Panel {
         let title = entry.title.as_str();
         let cut = measure.fitting(title, room * s, ROW_TITLE_SIZE * s, TextFace::Regular);
         let colour = match (chosen, hovered, ticked) {
-            (true, _, _) => color::GOLD_BRIGHT,
-            (false, true, _) => color::TEXT,
-            (false, false, true) => color::QUIET,
-            (false, false, false) => color::alpha(color::TEXT, 0.9),
+            (true, _, _) => color::gold_bright(),
+            (false, true, _) => color::text(),
+            (false, false, true) => color::quiet(),
+            (false, false, false) => color::alpha(color::text(), 0.9),
         };
         let title_rect = frame.rect(LIST_X + ROW_TEXT, top + 5.0, room, 26.0);
         if cut < title.len() {
@@ -256,7 +256,11 @@ impl Panel {
             format_args!("{}", entry.area),
             frame.rect(LIST_X + ROW_TEXT, top + 31.0, room, 20.0),
             ROW_AREA_SIZE * s,
-            if chosen { color::GOLD } else { color::QUIET },
+            if chosen {
+                color::gold()
+            } else {
+                color::quiet()
+            },
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -276,7 +280,7 @@ impl Panel {
             format_args!("{}", self.entries[index].area),
             frame.rect(DETAIL_X, y, DETAIL_WIDTH, 24.0),
             19.0 * s,
-            color::GOLD,
+            color::gold(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -312,7 +316,7 @@ impl Panel {
                 format_args!("{}{}", &title[range.clone()], if last { "..." } else { "" }),
                 rect,
                 TITLE_SIZE * s,
-                color::TEXT,
+                color::text(),
                 FontWeight::Semibold,
                 TextAlign::Start,
             );
@@ -330,9 +334,9 @@ impl Panel {
             frame.rect(end + 14.0, middle - 15.0, 140.0, 30.0),
             22.0 * s,
             if ticked {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -348,7 +352,7 @@ impl Panel {
             format_args!("{hint}"),
             frame.rect(end + 150.0, middle - 13.0, 420.0, 26.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -380,12 +384,12 @@ impl Panel {
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: band,
                     radius: 12.0 * s,
-                    color: color::alpha(color::GOLD, 0.08),
+                    color: color::alpha(color::gold(), 0.08),
                 });
                 let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
                     rect: frame.rect(DETAIL_X - 16.0, y - 8.0, 4.0, height - 24.0),
                     radius: 2.0 * s,
-                    color: color::GOLD_BRIGHT,
+                    color: color::gold_bright(),
                 });
                 kit::heading_in(
                     &mut self.ui,
@@ -394,7 +398,7 @@ impl Panel {
                     y,
                     DETAIL_WIDTH,
                     heading,
-                    color::GOLD_BRIGHT,
+                    color::gold_bright(),
                 );
             } else {
                 kit::heading(&mut self.ui, frame, DETAIL_X, y, DETAIL_WIDTH, heading);
@@ -427,9 +431,9 @@ impl Panel {
                     rect,
                     BODY_SIZE * s,
                     match section {
-                        Section::Changes => color::alpha(color::TEXT, 0.88),
-                        Section::Tests => color::TEXT,
-                        Section::Notes => color::GOLD_BRIGHT,
+                        Section::Changes => color::alpha(color::text(), 0.88),
+                        Section::Tests => color::text(),
+                        Section::Notes => color::gold_bright(),
                     },
                     FontWeight::Regular,
                     TextAlign::Start,
@@ -441,7 +445,7 @@ impl Panel {
                         format_args!("{}", item + 1),
                         frame.rect(DETAIL_X, y, INDENT - 6.0, line),
                         19.0 * s,
-                        color::GOLD,
+                        color::gold(),
                         FontWeight::Semibold,
                         TextAlign::Start,
                     );
@@ -543,9 +547,9 @@ impl Panel {
             Rect::new(x, y, room, 24.0 * s),
             15.0 * s,
             if self.status_error {
-                color::EMBER
+                color::ember()
             } else {
-                color::MUTED
+                color::muted()
             },
             FontWeight::Regular,
             TextAlign::Start,

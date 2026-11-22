@@ -168,7 +168,7 @@ const MAIN: [Entry; 6] = [
     ),
     entry(
         "Collection",
-        "Your medals, achievements, shaders and toys",
+        "Your medals, achievements, kybers and toys",
         open(MainDestination::Collection),
     ),
     entry(
@@ -611,7 +611,7 @@ pub(crate) fn build(
         centre,
         420.0 * s,
         -turn * 0.6,
-        color::alpha(color::GOLD, 0.18),
+        color::alpha(color::gold(), 0.18),
     );
     emblem::rays(
         canvas,
@@ -619,15 +619,16 @@ pub(crate) fn build(
         centre,
         RING_RADIUS * s,
         turn,
-        color::alpha(color::HOLO, 0.9),
+        color::alpha(color::holo(), 0.9),
     );
+    // The steel fills three quarters of the emblem's square, its sun the rest.
     emblem::draw(
         canvas,
         Rect::new(
-            centre[0] - 190.0 * s,
-            centre[1] - 190.0 * s,
-            380.0 * s,
-            380.0 * s,
+            centre[0] - 215.0 * s,
+            centre[1] - 215.0 * s,
+            430.0 * s,
+            430.0 * s,
         ),
         seconds,
     );
@@ -661,7 +662,7 @@ pub(crate) fn build(
         width: 6.0 * s,
         start: arc - sweep * 0.5,
         sweep,
-        color: color::GOLD_BRIGHT,
+        color: color::gold_bright(),
         knockout: None,
     });
     // A short beam from the arc towards its entry.
@@ -680,7 +681,7 @@ pub(crate) fn build(
                     2.4 * s,
                 ),
                 radius: 1.2 * s,
-                color: color::alpha(color::GOLD_BRIGHT, 0.85 * (1.0 - t)),
+                color: color::alpha(color::gold_bright(), 0.85 * (1.0 - t)),
             });
         }
     }
@@ -691,12 +692,12 @@ pub(crate) fn build(
         let size = if chosen { 68.0 } else { 44.0 };
         let colour = match (lit, chosen, entry.step) {
             // Leaving is the one thing in ember.
-            (true, _, Step::Act(Action::Quit)) => color::EMBER,
-            (true, _, _) => color::GOLD_BRIGHT,
-            (false, true, _) => color::TEXT,
-            (false, false, Step::Back) => color::QUIET,
-            (false, false, Step::Page(Page::Quit)) => color::QUIET,
-            (false, false, _) => color::MUTED,
+            (true, _, Step::Act(Action::Quit)) => color::ember(),
+            (true, _, _) => color::gold_bright(),
+            (false, true, _) => color::text(),
+            (false, false, Step::Back) => color::quiet(),
+            (false, false, Step::Page(Page::Quit)) => color::quiet(),
+            (false, false, _) => color::muted(),
         };
         let [x, y] = entry_point(index, entries.len());
         text(
@@ -716,7 +717,7 @@ pub(crate) fn build(
                 format_args!("{}", crate::terms::say(entry.hint)),
                 frame.rect(x + 2.0, y + 32.0, 520.0, 24.0),
                 18.0 * s,
-                color::MUTED,
+                color::muted(),
                 FontWeight::Regular,
                 TextAlign::Start,
             );
@@ -785,7 +786,7 @@ pub(crate) fn build(
 /// the top and bottom.
 fn scrims(canvas: &mut MenuCanvas, viewport: [f32; 2], frame: &Frame) {
     let [width, height] = viewport;
-    let space = |alpha| color::alpha(color::SPACE, alpha);
+    let space = |alpha| color::alpha(color::space(), alpha);
     // The frame's stops, stretched to the window's edges.
     let x = |frame_x: f32| frame.point(frame_x, 0.0)[0];
     let stops = [
@@ -829,8 +830,8 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
         .first()
         .is_some_and(|server| server.played.is_none());
     let bottom = COLUMN_TOP + 64.0 + count.max(1) as f32 * SERVER_HEIGHT;
-    let rule = color::alpha(color::HOLO, 0.6);
-    let clear = color::alpha(color::HOLO, 0.0);
+    let rule = color::alpha(color::holo(), 0.6);
+    let clear = color::alpha(color::holo(), 0.0);
     let rule_top = COLUMN_TOP - 10.0;
     let height = bottom - rule_top;
     fade(
@@ -862,7 +863,7 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
         ),
         frame.rect(COLUMN_X, COLUMN_TOP, COLUMN_WIDTH, 34.0),
         28.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -880,12 +881,12 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: target,
                 radius: 10.0 * s,
-                color: color::alpha(color::HOLO, 0.1),
+                color: color::alpha(color::holo(), 0.1),
             });
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(COLUMN_X - 14.0, top - 2.0, 3.0, SERVER_HEIGHT - 20.0),
                 radius: 1.5 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
         text(
@@ -895,9 +896,9 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
             frame.rect(COLUMN_X, top, COLUMN_WIDTH, 32.0),
             27.0 * s,
             if focused {
-                color::GOLD_BRIGHT
+                color::gold_bright()
             } else {
-                color::TEXT
+                color::text()
             },
             FontWeight::Regular,
             TextAlign::Start,
@@ -920,25 +921,30 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
             Some((players, capacity, ping)) => body(
                 canvas,
                 detail,
-                color::MUTED,
+                color::muted(),
                 format_args!("{players} of {capacity} on {}, {ping} ms", server.map),
             ),
             None if server.map.is_empty() => {
                 body(
                     canvas,
                     detail,
-                    color::MUTED,
+                    color::muted(),
                     format_args!("Not in the server list"),
                 );
             }
-            None => body(canvas, detail, color::MUTED, format_args!("{}", server.map)),
+            None => body(
+                canvas,
+                detail,
+                color::muted(),
+                format_args!("{}", server.map),
+            ),
         }
         match server.played {
-            Some(ago) => body(canvas, quiet, color::QUIET, format_args!("Played {ago}")),
+            Some(ago) => body(canvas, quiet, color::quiet(), format_args!("Played {ago}")),
             None => body(
                 canvas,
                 quiet,
-                color::QUIET,
+                color::quiet(),
                 format_args!("The JoF community's server"),
             ),
         }
@@ -965,7 +971,7 @@ fn support(canvas: &mut MenuCanvas, frame: &Frame) {
         format_args!("Support SJK"),
         frame.rect(left, top + (height - 30.0) * 0.5, 110.0, 30.0),
         22.0 * s,
-        color::MUTED,
+        color::muted(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1000,7 +1006,7 @@ fn support(canvas: &mut MenuCanvas, frame: &Frame) {
             format_args!("Hides it for good: Settings > Interface > Support SJK brings it back"),
             frame.rect(left, top + height + 10.0, 720.0, 22.0),
             15.0 * s,
-            color::QUIET,
+            color::quiet(),
             FontWeight::Regular,
             TextAlign::Start,
         );
@@ -1024,7 +1030,7 @@ fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
         format_args!("The SJK Launcher is out"),
         frame.rect(left, top + (height - 30.0) * 0.5, LAUNCHER_WORDS, 30.0),
         22.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1052,7 +1058,7 @@ fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
     let hint = if canvas.token_hovered(HIDE_LAUNCHER_TOKEN) {
         "Hides it for good: Settings > Interface > SJK Launcher notice brings it back"
     } else {
-        "It installs and updates Sol JK for you, and helps when the game won't start"
+        "It installs and updates Sun JK for you, and helps when the game won't start"
     };
     text(
         canvas,
@@ -1060,7 +1066,7 @@ fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
         format_args!("{hint}"),
         frame.rect(left, top + height + 10.0, 720.0, 22.0),
         15.0 * s,
-        color::QUIET,
+        color::quiet(),
         FontWeight::Regular,
         TextAlign::Start,
     );
@@ -1135,7 +1141,7 @@ fn version(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
         format_args!("SJK {}", view.version),
         frame.rect(1224.0, 962.0, 600.0, 28.0),
         22.0 * s,
-        color::TEXT,
+        color::text(),
         FontWeight::Regular,
         TextAlign::End,
     );
@@ -1174,7 +1180,7 @@ fn version(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
             value,
             frame.rect(line_right - 600.0, UPDATE_TOP + 7.0, 600.0, 22.0),
             16.0 * s,
-            color::GOLD_BRIGHT,
+            color::gold_bright(),
             FontWeight::Regular,
             TextAlign::End,
         );
@@ -1205,14 +1211,14 @@ fn version(canvas: &mut MenuCanvas, frame: &Frame, view: &HomeView<'_>) {
         let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
             rect: frame.rect(right - width, top, width, 6.0),
             radius: 3.0 * s,
-            color: color::alpha(color::HOLO, 0.16),
+            color: color::alpha(color::holo(), 0.16),
         });
         if percent > 0 {
             let fill = width * f32::from(percent) / 100.0;
             let _ = canvas.draw_list_mut().push(DrawCommand::RoundedRect {
                 rect: frame.rect(right - width, top, fill.max(6.0), 6.0),
                 radius: 3.0 * s,
-                color: color::GOLD_BRIGHT,
+                color: color::gold_bright(),
             });
         }
     }

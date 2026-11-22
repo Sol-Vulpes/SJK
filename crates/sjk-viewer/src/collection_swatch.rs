@@ -10,6 +10,14 @@
 //! hues, and the later sections' looks ([`effects`]). A locked one is drawn grey and
 //! still, under a padlock; an owned one whose pack has not come yet is drawn still in
 //! neutral grey.
+//!
+//! Since 15/11/2026 a swatch plays the blade's loop ([`crate::blade_stills`]: the real
+//! blade drawn once at eight moments, its glow added, kept on disk, crossfaded from one
+//! picture to the next), a kyber not held its loop greyed and dimmed under a small
+//! padlock; only the chosen one's large swatch ([`crate::blade_pictures::focus`]) is live,
+//! once its own pipelines are built. The wall's tiles draw the blade large and straight
+//! across the tile ([`tile_blade`]; Sol, 15/11/2026: "the sabers on the UI should be
+//! straight").
 
 use crate::blade_skin_file::{Arcs, BladeSkinDef, Motes, Rgb};
 use crate::menu::sjk::{Frame, color};
@@ -147,15 +155,29 @@ pub(crate) fn blade(
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: Color::new(0.016, 0.024, 0.05, 0.94),
+            color: color::alpha(color::space(), 0.94),
         },
     );
     let centre = y + height * 0.5;
     let hilt = 84.0;
     let start = x + 26.0 + hilt;
     let length = width - (start - x) - 34.0;
+    let focused = owned && skin.is_some_and(|skin| crate::blade_pictures::focused(skin.id));
     let shown = match (owned, skin) {
-        (true, Some(skin)) if real_picture(canvas, frame, skin, rect, [start, centre, length]) => {
+        (true, Some(skin))
+            if focused
+                && real_picture(canvas, frame, skin, rect, [start, centre, length], true) =>
+        {
+            Shown::Skin
+        }
+        (_, Some(skin))
+            if still_picture(canvas, frame, skin, owned, rect, [start, centre, length]) =>
+        {
+            if owned { Shown::Skin } else { Shown::Locked }
+        }
+        (true, Some(skin))
+            if real_picture(canvas, frame, skin, rect, [start, centre, length], false) =>
+        {
             Shown::Skin
         }
         (true, Some(skin)) => {
@@ -202,7 +224,7 @@ pub(crate) fn blade(
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, if owned { 0.22 } else { 0.14 }),
+            color: color::alpha(color::holo(), if owned { 0.22 } else { 0.14 }),
         },
     );
     if !owned {
@@ -213,13 +235,15 @@ pub(crate) fn blade(
 
 /// Draw `skin`'s live picture from the game's blade renderer ([`crate::blade_pictures`]) on
 /// the swatch `rect`, its blade from `start` along `length` at `centre` (frame pixels):
-/// false while it has none yet (the drawing stands in).
+/// false while it has none yet, or, with `own`, none drawn with its own pipelines (its
+/// still or the drawing stands in).
 fn real_picture(
     canvas: &mut DrawList,
     frame: &Frame,
     skin: &LoadedSkin,
     rect: [f32; 4],
     [start, centre, length]: [f32; 3],
+    own: bool,
 ) -> bool {
     let [x, _, width, height] = rect;
     let unit = length / crate::blade_pictures::BLADE_LENGTH;
@@ -227,9 +251,12 @@ fn real_picture(
         return false;
     }
     let shown = (height / unit).min(26.0);
-    let Some([u0, v0, u1, v1]) = crate::blade_pictures::picture(skin.id, shown) else {
+    let Some(([u0, v0, u1, v1], drawn_own)) = crate::blade_pictures::picture(skin.id, shown) else {
         return false;
     };
+    if own && !drawn_own {
+        return false;
+    }
     // The picture runs from its cell's left edge, faded under the hilt, to its cell's end
     // (`blade_pictures.wgsl` softens them); it stops short of the swatch's edge.
     let left = start - crate::blade_pictures::BLADE_START * unit;
@@ -250,6 +277,102 @@ fn real_picture(
         },
     );
     true
+}
+
+/// How a still not held is drawn over the greying ([`crate::blade_stills::texture`]'s
+/// dimmed look): about two thirds of its light.
+const DIMMED: Color = Color::new(0.85, 0.85, 0.85, 0.9);
+
+/// Play `skin`'s loop ([`crate::blade_stills`]) on the swatch `rect`, its blade from
+/// `start` along `length` at `centre` (frame pixels), greyed and dimmed when not `owned`:
+/// false while it has none yet. The loop shows [`crate::blade_stills::UNITS`] round the
+/// blade.
+fn still_picture(
+    canvas: &mut DrawList,
+    frame: &Frame,
+    skin: &LoadedSkin,
+    owned: bool,
+    rect: [f32; 4],
+    [start, centre, length]: [f32; 3],
+) -> bool {
+    let unit = length / crate::blade_pictures::BLADE_LENGTH;
+    if unit <= 0.0 {
+        return false;
+    }
+    let Some(shown) = crate::blade_stills::still(skin.id, !owned) else {
+        return false;
+    };
+    upright_picture(
+        canvas,
+        frame,
+        shown,
+        owned,
+        rect,
+        [start, centre, unit, STRIP_SPILL],
+    );
+    true
+}
+
+/// The loop a strip or a tile plays for skin `id` (dimmed when not `owned`); none until it
+/// comes. Strips and tiles are never live: a wall of them stays as cheap as one picture.
+fn shown_picture(id: &'static str, owned: bool) -> Option<crate::blade_stills::Shown> {
+    crate::blade_stills::still(id, !owned)
+}
+
+/// How much taller than a thin strip its picture is drawn, spilling over it, so the
+/// still's own soft edge shows rather than a cut through its glow.
+const STRIP_SPILL: f32 = 1.8;
+
+/// A loop's pictures (`shown`, crossfaded) laid upright on `rect`, its blade from `start`
+/// at `centre`, `unit` frame pixels a world unit, from
+/// [`crate::blade_pictures::BLADE_START`] units before the blade to short of `rect`'s right
+/// edge; whole, at most `spill` times `rect`'s height (pressed flatter in a thin
+/// strip, so its glow fades out instead of being cut).
+fn upright_picture(
+    canvas: &mut DrawList,
+    frame: &Frame,
+    shown: crate::blade_stills::Shown,
+    owned: bool,
+    rect: [f32; 4],
+    [start, centre, unit, spill]: [f32; 4],
+) {
+    let [x, _, width, height] = rect;
+    let [across, high] = crate::blade_stills::UNITS;
+    let tall = (height * spill).min(high * unit);
+    let left = start - crate::blade_pictures::BLADE_START * unit;
+    let full = across * unit;
+    let wide = full.min(x + width - 6.0 - left);
+    if wide <= 0.0 {
+        return;
+    }
+    let (u1, v0, v1) = (wide / full, 0.0, 1.0);
+    let light = if owned {
+        Color::new(1.0, 1.0, 1.0, 1.0)
+    } else {
+        DIMMED
+    };
+    // The picture fading out as the next fades in. The UI adds loops as light, so their
+    // shares sum to one (16/11/2026: the first drawn whole under the next made every blade
+    // swell to twice its light and drop back ten times a second, a flicker).
+    let mix = if shown.to == shown.from {
+        0.0
+    } else {
+        shown.mix.clamp(0.0, 1.0)
+    };
+    for (texture, share) in [(shown.from, 1.0 - mix), (shown.to, mix)] {
+        if share <= 0.004 {
+            continue;
+        }
+        push(
+            canvas,
+            DrawCommand::TexturedQuadUv {
+                rect: frame.rect(left, centre - tall * 0.5, wide, tall),
+                texture,
+                color: Color::new(light.r, light.g, light.b, light.a * share),
+                uv: [[0.0, v0], [u1, v0], [u1, v1], [0.0, v1]],
+            },
+        );
+    }
 }
 
 /// The height [`blade`] draws a swatch at (frame pixels); a small one is that swatch
@@ -330,7 +453,7 @@ pub(crate) fn chroma_mark(
         x + radius,
         y + radius,
         radius + 1.2,
-        Color::new(0.02, 0.03, 0.06, 0.75 * alpha),
+        color::alpha(color::space(), 0.75 * alpha),
     );
     for segment in 0..WHEEL_SEGMENTS {
         let hue = segment as f32 / WHEEL_SEGMENTS as f32;
@@ -380,7 +503,7 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
         DrawCommand::RoundedRect {
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
-            color: Color::new(0.016, 0.024, 0.05, 0.94),
+            color: color::alpha(color::space(), 0.94),
         },
     );
     let centre = y + height * 0.5;
@@ -415,7 +538,7 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
             rect: frame.rect(x, y, width, height),
             radius: 14.0 * s,
             width: 1.2 * s,
-            color: color::alpha(color::HOLO, 0.22),
+            color: color::alpha(color::holo(), 0.22),
         },
     );
 }
@@ -423,12 +546,13 @@ pub(crate) fn small_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], 
 /// How bright a strip draws a shader the player does not hold: a ghost of its colours.
 const GHOST: f32 = 0.42;
 
-/// A blade skin as a thin strip, for the Shaders tab's wall of tiles and its list's rows
-/// (`rect`, frame pixels): a short hilt and the blade along the rest. Owned, its live
-/// picture from the blade renderer when it has one, else a still blade in the skin's own
-/// colours; not held, that still blade dimmed, a ghost of it, so a wall of locked shaders
-/// still tells them apart (25/10/2026); grey while its pack has not come. A handful of
-/// shapes each, so a wall of thirty stays cheap. `turn` turns a chroma's colours.
+/// A blade skin as a thin strip, for the Kybers list's rows, the hall's and the Forge's
+/// (`rect`, frame pixels): a short hilt and the blade along the rest. Its still
+/// ([`crate::blade_stills`]), greyed and dimmed under a small padlock when not held, or,
+/// owned and looked at, its live picture; until its still comes a still blade in the
+/// skin's own colours (dimmed, a ghost of it, when not held: 25/10/2026); grey while its
+/// pack has not come. A handful of shapes each, so a wall of thirty stays cheap. `turn`
+/// turns a chroma's colours.
 pub(crate) fn strip(
     canvas: &mut DrawList,
     frame: &Frame,
@@ -442,9 +566,19 @@ pub(crate) fn strip(
     let hilt = (height * 1.2).min(width * 0.25);
     let start = x + hilt;
     let length = (width - hilt - height * 0.25).max(1.0);
+    let picture = skin.and_then(|skin| shown_picture(skin.id, owned));
+    let unit = length / crate::blade_pictures::BLADE_LENGTH;
     let shown = match (owned, skin) {
-        (true, Some(skin)) if real_picture(canvas, frame, skin, rect, [start, centre, length]) => {
-            Shown::Skin
+        (_, Some(_)) if let Some(texture) = picture => {
+            upright_picture(
+                canvas,
+                frame,
+                texture,
+                owned,
+                rect,
+                [start, centre, unit, STRIP_SPILL],
+            );
+            if owned { Shown::Skin } else { Shown::Locked }
         }
         (_, Some(skin)) => {
             let light = if owned { 1.0 } else { GHOST };
@@ -501,7 +635,240 @@ pub(crate) fn strip(
             color: steel(0.7),
         },
     );
+    if !owned {
+        small_padlock(canvas, frame, x + hilt * 0.45, centre, height / 60.0);
+    }
     shown
+}
+
+/// How far a wall tile's blade is turned from the level (degrees, its tip up): none since
+/// Sol's "the sabers on the UI should be straight" (15/11/2026).
+const TILE_TILT: f32 = 0.0;
+/// A tile's hilt, in world units before the blade.
+const TILE_HILT: f32 = 6.5;
+/// Room across the blade a tile keeps for its glow, in world units.
+const TILE_GLOW: f32 = 3.0;
+
+/// Where a wall tile's blade lies: its start (frame pixels), its direction along the
+/// screen (y down) and frame pixels a world unit.
+#[derive(Clone, Copy, Debug)]
+struct TileAxis {
+    start: [f32; 2],
+    along: [f32; 2],
+    unit: f32,
+}
+
+impl TileAxis {
+    /// The blade across `rect` (frame pixels), tilted [`TILE_TILT`], from its hilt's end to
+    /// its tip as wide as it fits.
+    fn of(rect: [f32; 4]) -> Self {
+        let [x, y, width, height] = rect;
+        let (sin, cos) = TILE_TILT.to_radians().sin_cos();
+        let tip = crate::blade_pictures::BLADE_LENGTH + 1.5;
+        let span = TILE_HILT + tip;
+        let unit = (width / (span * cos + TILE_GLOW * sin))
+            .min(height / (span * sin + TILE_GLOW * cos))
+            .max(0.1);
+        let along = [cos, -sin];
+        let middle = (tip - TILE_HILT) * 0.5;
+        let centre = [x + width * 0.5, y + height * 0.5];
+        Self {
+            start: [
+                centre[0] - along[0] * middle * unit,
+                centre[1] - along[1] * middle * unit,
+            ],
+            along,
+            unit,
+        }
+    }
+
+    /// The point `units` along the blade from its start (frame pixels).
+    fn at(&self, units: f32) -> [f32; 2] {
+        [
+            self.start[0] + self.along[0] * units * self.unit,
+            self.start[1] + self.along[1] * units * self.unit,
+        ]
+    }
+}
+
+/// A blade skin large and straight across a wall tile's blade room `rect` (frame pixels),
+/// its glow round it (Sol, 15/11/2026): its loop, greyed and dimmed when not held with a
+/// small padlock on the hilt; until its loop comes, the blade drawn in its own colours,
+/// grey while its pack has not come. `turn` turns a chroma's colours.
+pub(crate) fn tile_blade(
+    canvas: &mut DrawList,
+    frame: &Frame,
+    rect: [f32; 4],
+    skin: Option<&LoadedSkin>,
+    owned: bool,
+    turn: f32,
+) -> Shown {
+    let axis = TileAxis::of(rect);
+    let picture = skin.and_then(|skin| shown_picture(skin.id, owned));
+    let shown = match (picture, skin) {
+        (Some(shown), Some(_)) => {
+            let [x, y] = axis.start;
+            let [_, top, _, height] = rect;
+            // The loop's middle on the blade, kept inside the room (the name is under it).
+            upright_picture(
+                canvas,
+                frame,
+                shown,
+                owned,
+                [
+                    x - TILE_HILT * axis.unit,
+                    top,
+                    rect[2] - (x - rect[0]) + TILE_HILT * axis.unit,
+                    height,
+                ],
+                [x, y, axis.unit, 1.0],
+            );
+            if owned { Shown::Skin } else { Shown::Locked }
+        }
+        (None, Some(skin)) => {
+            let light = if owned { 1.0 } else { GHOST };
+            let colour = |u: f32, alpha: f32| {
+                let rgb = crate::saber_skins::wear_chroma(gradient(&skin.def, u), turn);
+                ui(rgb, alpha * light)
+            };
+            tilted_blade(
+                canvas,
+                frame,
+                &axis,
+                [colour(0.1, 0.2), colour(0.45, 0.6), colour(1.0, 0.95)],
+            );
+            if owned { Shown::Skin } else { Shown::Locked }
+        }
+        (_, None) => {
+            let light = if owned { 1.6 } else { 1.0 };
+            tilted_blade(
+                canvas,
+                frame,
+                &axis,
+                [
+                    color::alpha(color::quiet(), 0.08 * light),
+                    color::alpha(color::quiet(), 0.3 * light),
+                    color::alpha(color::muted(), (0.45 * light).min(1.0)),
+                ],
+            );
+            if owned { Shown::Waiting } else { Shown::Locked }
+        }
+    };
+    tile_hilt(canvas, frame, &axis, owned);
+    if !owned {
+        let [x, y] = axis.at(-TILE_HILT * 0.5);
+        small_padlock(canvas, frame, x, y, axis.unit * 0.12);
+    }
+    shown
+}
+
+/// The stock blade large across a wall tile's blade room `rect`, tilted as [`tile_blade`]'s:
+/// its glow in `colour` round a white core.
+pub(crate) fn tile_stock(canvas: &mut DrawList, frame: &Frame, rect: [f32; 4], colour: Color) {
+    let axis = TileAxis::of(rect);
+    let tint = |alpha: f32| Color::new(colour.r, colour.g, colour.b, alpha);
+    tilted_blade(
+        canvas,
+        frame,
+        &axis,
+        [tint(0.16), tint(0.6), Color::new(1.0, 1.0, 1.0, 1.0)],
+    );
+    tile_hilt(canvas, frame, &axis, true);
+}
+
+/// A blade drawn along a tile's `axis` in three strokes: its haze, corona and core colours.
+fn tilted_blade(
+    canvas: &mut DrawList,
+    frame: &Frame,
+    axis: &TileAxis,
+    [haze, corona, core]: [Color; 3],
+) {
+    let length = crate::blade_pictures::BLADE_LENGTH;
+    let unit = axis.unit;
+    stroke(
+        canvas,
+        frame,
+        axis.at(-0.5),
+        axis.at(length + 1.0),
+        6.5 * unit,
+        haze,
+    );
+    stroke(
+        canvas,
+        frame,
+        axis.at(0.0),
+        axis.at(length + 0.4),
+        3.4 * unit,
+        corona,
+    );
+    stroke(
+        canvas,
+        frame,
+        axis.at(0.3),
+        axis.at(length),
+        1.3 * unit,
+        core,
+    );
+}
+
+/// A tile's hilt along its `axis`, before the blade: the grip, the emitter's shroud, the
+/// pommel and the gold activator (grey when not held).
+fn tile_hilt(canvas: &mut DrawList, frame: &Frame, axis: &TileAxis, lit: bool) {
+    let shade = if lit { 1.0 } else { 0.55 };
+    let steel = |level: f32| {
+        Color::new(
+            level * shade,
+            (level + 0.02) * shade,
+            (level + 0.06) * shade,
+            1.0,
+        )
+    };
+    let unit = axis.unit;
+    stroke(
+        canvas,
+        frame,
+        axis.at(-TILE_HILT + 0.6),
+        axis.at(-1.6),
+        2.3 * unit,
+        steel(0.62),
+    );
+    stroke(
+        canvas,
+        frame,
+        axis.at(-TILE_HILT + 0.6),
+        axis.at(-1.6),
+        1.0 * unit,
+        steel(0.85),
+    );
+    stroke(
+        canvas,
+        frame,
+        axis.at(-2.2),
+        axis.at(-0.2),
+        3.0 * unit,
+        steel(0.78),
+    );
+    stroke(
+        canvas,
+        frame,
+        axis.at(-TILE_HILT),
+        axis.at(-TILE_HILT + 0.8),
+        2.8 * unit,
+        steel(0.4),
+    );
+    let [x, y] = axis.at(-TILE_HILT * 0.32);
+    disc(
+        canvas,
+        frame,
+        x,
+        y,
+        0.7 * unit,
+        if lit {
+            color::gold()
+        } else {
+            color::alpha(color::quiet(), 0.8)
+        },
+    );
 }
 
 /// The stock blade as a [`strip`], in `colour`: its glow round a white core, from the
@@ -613,13 +980,13 @@ fn grey_strip(
         canvas,
         frame,
         [start, centre - height * 0.25, length, height * 0.5],
-        color::alpha(color::QUIET, 0.25 * light),
+        color::alpha(color::quiet(), 0.25 * light),
     );
     capsule(
         canvas,
         frame,
         [start, centre - height * 0.1, length, height * 0.2],
-        color::alpha(color::MUTED, (0.45 * light).min(1.0)),
+        color::alpha(color::muted(), (0.45 * light).min(1.0)),
     );
 }
 
@@ -1016,19 +1383,19 @@ fn grey_blade(
         canvas,
         frame,
         [start - 4.0, centre - 15.0, length + 12.0, 30.0],
-        color::alpha(color::QUIET, 0.08 * light),
+        color::alpha(color::quiet(), 0.08 * light),
     );
     capsule(
         canvas,
         frame,
         [start, centre - 6.0, length, 12.0],
-        color::alpha(color::QUIET, 0.3 * light),
+        color::alpha(color::quiet(), 0.3 * light),
     );
     capsule(
         canvas,
         frame,
         [start + 1.0, centre - 2.5, length - 2.0, 5.0],
-        color::alpha(color::MUTED, (0.45 * light).min(1.0)),
+        color::alpha(color::muted(), (0.45 * light).min(1.0)),
     );
 }
 
@@ -1089,9 +1456,9 @@ fn hilt_at(canvas: &mut DrawList, frame: &Frame, start: f32, centre: f32, length
             rect: frame.rect(x + 66.0, centre - 10.5, 7.0, 4.0),
             radius: 1.5 * s,
             color: if lit {
-                color::GOLD
+                color::gold()
             } else {
-                color::alpha(color::QUIET, 0.8)
+                color::alpha(color::quiet(), 0.8)
             },
         },
     );
@@ -1105,10 +1472,27 @@ fn hilt_at(canvas: &mut DrawList, frame: &Frame, start: f32, centre: f32, length
     );
 }
 
+/// The [`padlock`] `scale` times its size, centred on (`x`, `y`): a kyber not held, on its
+/// strip's or tile's hilt.
+fn small_padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32, scale: f32) {
+    let small = Frame {
+        s: frame.s * scale,
+        origin: frame.point(x, y),
+    };
+    padlock(canvas, &small, 0.0, 0.0);
+}
+
 /// A padlock centred on (`x`, `y`).
 fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
     let s = frame.s;
-    disc(canvas, frame, x, y, 30.0, color::alpha(color::SPACE, 0.82));
+    disc(
+        canvas,
+        frame,
+        x,
+        y,
+        30.0,
+        color::alpha(color::space(), 0.82),
+    );
     push(
         canvas,
         DrawCommand::Arc {
@@ -1117,7 +1501,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
             width: 3.0 * s,
             start: std::f32::consts::PI,
             sweep: std::f32::consts::PI,
-            color: color::MUTED,
+            color: color::muted(),
             knockout: None,
         },
     );
@@ -1126,7 +1510,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
             canvas,
             DrawCommand::SolidRect {
                 rect: frame.rect(x + side - 1.5, y - 5.0, 3.0, 5.0),
-                color: color::MUTED,
+                color: color::muted(),
             },
         );
     }
@@ -1135,7 +1519,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x - 11.0, y - 1.0, 22.0, 17.0),
             radius: 3.0 * s,
-            color: color::MUTED,
+            color: color::muted(),
         },
     );
     push(
@@ -1143,7 +1527,7 @@ fn padlock(canvas: &mut DrawList, frame: &Frame, x: f32, y: f32) {
         DrawCommand::RoundedRect {
             rect: frame.rect(x - 2.0, y + 4.0, 4.0, 7.0),
             radius: 2.0 * s,
-            color: color::SPACE,
+            color: color::space(),
         },
     );
 }
@@ -1165,6 +1549,36 @@ mod tests {
             0.0,
         );
         (shown, canvas.commands().to_vec())
+    }
+
+    /// The UI adds a loop's pictures as light: crossfading, their shares sum to one at every
+    /// moment, so a blade never swells as one picture fades into the next (16/11/2026).
+    #[test]
+    fn a_loop_crossfades_with_its_light_kept_whole() {
+        let from = crate::blade_stills::texture(3, false);
+        let to = crate::blade_stills::texture(4, false);
+        for mix in [0.0, 0.001, 0.25, 0.5, 0.75, 0.999] {
+            let mut canvas = DrawList::new(8);
+            let frame = Frame::new([1920.0, 1080.0]);
+            let shown = crate::blade_stills::Shown { from, to, mix };
+            upright_picture(
+                &mut canvas,
+                &frame,
+                shown,
+                true,
+                [100.0, 100.0, 380.0, 40.0],
+                [180.0, 120.0, 4.0, 1.8],
+            );
+            let light: f32 = canvas
+                .commands()
+                .iter()
+                .map(|command| match command {
+                    DrawCommand::TexturedQuadUv { color, .. } => color.a,
+                    _ => 0.0,
+                })
+                .sum();
+            assert!((light - 1.0).abs() < 0.005, "{mix}: {light}");
+        }
     }
 
     #[test]

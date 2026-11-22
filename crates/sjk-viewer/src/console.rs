@@ -198,6 +198,16 @@ const ARGUMENT_SOURCES: &[sjk_shell::ArgumentSource] = &[
         label: "Emote",
     },
     sjk_shell::ArgumentSource {
+        command: crate::emote_filters::HIDE_COMMAND,
+        list: crate::emote_filters::ARGUMENTS,
+        label: "Emote",
+    },
+    sjk_shell::ArgumentSource {
+        command: crate::emote_filters::MUTE_COMMAND,
+        list: crate::emote_filters::ARGUMENTS,
+        label: "Emote",
+    },
+    sjk_shell::ArgumentSource {
         command: "vid_restart",
         list: VID_RESTART_ARGUMENTS,
         label: "Option",
@@ -270,73 +280,41 @@ pub(crate) struct ViewerConsole {
     illuminate_lit: bool,
     /// The Toys tab asked to light the holocron (`true`) or put it out, not yet taken.
     pending_illuminate: Option<bool>,
-    /// The player is in the cardboard box: the viewer's state, mirrored as
-    /// [`Self::illuminate_lit`] is.
-    cardboard_box_on: bool,
-    /// The Toys tab asked to get in the box (`true`) or out, not yet taken.
-    pending_cardboard_box: Option<bool>,
-    /// The Order 66 toy is on: the viewer's state, mirrored as
-    /// [`Self::illuminate_lit`] is.
-    order66_on: bool,
-    /// The Toys tab asked to turn Order 66 on (`true`) or off, not yet taken.
-    pending_order66: Option<bool>,
-    /// The Hax toy is on, mirrored as [`Self::order66_on`] is.
-    hax_on: bool,
-    /// The Toys tab asked to turn the Hax on (`true`) or off, not yet taken.
-    pending_hax: Option<bool>,
-    /// The player is limp (the Ragdoll), mirrored as [`Self::order66_on`] is.
+    /// The player is limp (the Ragdoll), mirrored as [`Self::illuminate_lit`] is.
     ragdoll_on: bool,
     /// The Toys tab asked to go limp (`true`) or get up, not yet taken.
     pending_ragdoll: Option<bool>,
-    /// The Drone is on, mirrored as [`Self::order66_on`] is.
+    /// The Drone is on, mirrored as [`Self::illuminate_lit`] is.
     drone_on: bool,
     /// The Toys tab asked to turn the Drone on (`true`) or off, not yet taken.
     pending_drone: Option<bool>,
-    /// The Boombox is carried, mirrored as [`Self::order66_on`] is.
+    /// The Boombox is carried, mirrored as [`Self::illuminate_lit`] is.
     boombox_on: bool,
     /// The Toys tab asked to carry the Boombox (`true`) or put it away, not yet taken.
     pending_boombox: Option<bool>,
-    /// Quests are on, mirrored as [`Self::order66_on`] is.
+    /// Quests are on, mirrored as [`Self::illuminate_lit`] is.
     quests_on: bool,
     /// The Toys tab asked to turn Quests on (`true`) or off, not yet taken.
     pending_quests: Option<bool>,
-    /// The fishing rod is out, mirrored as [`Self::order66_on`] is.
-    fishing_on: bool,
-    /// The Toys tab asked to get the rod out (`true`) or put it away, not yet taken.
-    pending_fishing: Option<bool>,
-    /// The pickaxe is in hand, mirrored as [`Self::order66_on`] is.
-    mining_on: bool,
-    /// The Toys tab asked to take the pickaxe (`true`) or put it away, not yet taken.
-    pending_mining: Option<bool>,
-    /// The Fishing card's catches and sale, as the viewer last gave them.
-    fishing_card: crate::fishing_sell::Card,
-    /// The Fishing card's Sell junk button was pressed.
-    pending_fishing_sell: bool,
-    /// The Fishing or Mining card's Sell fish / Sell ore button (the catch market,
-    /// 15/11/2026) was pressed: `Some(true)` fish, `Some(false)` ore.
-    pending_catch_sell: Option<bool>,
-    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::order66_on`] is.
+    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::illuminate_lit`] is.
     wheel_of_doom_on: bool,
     /// The Toys tab pressed the WHEEL OF DOOM's switch, not yet taken.
     pending_wheel_of_doom: bool,
-    /// The Mining card's finds and sale, as the viewer last gave them.
-    mining_card: crate::fishing_sell::Card,
-    /// The Mining card's Sell rubble button was pressed.
-    pending_mining_sell: bool,
-    /// The log book's Share button was pressed: Mining's (`true`) or Fishing's.
+    /// The Fishing and Mining log books, read as the Collection opened
+    /// ([`crate::catch_book::load`]).
+    log_books: crate::catch_book::Books,
+    /// An empty Collection page asked for the server list (15/11/2026).
+    pending_servers: bool,
+    /// The Log book's Share button was pressed: Mining's (`true`) or Fishing's.
     pending_brag: Option<bool>,
-    /// The Monitor toy is on, mirrored as [`Self::order66_on`] is.
+    /// The Monitor toy is on, mirrored as [`Self::illuminate_lit`] is.
     monitor_on: bool,
     /// The Toys tab asked to turn the Monitor on (`true`) or off, not yet taken.
     pending_monitor: Option<bool>,
-    /// Box hunt is on, mirrored as [`Self::order66_on`] is.
+    /// Box hunt is on, mirrored as [`Self::illuminate_lit`] is.
     box_hunt_on: bool,
     /// The Toys tab asked to turn Box hunt on (`true`) or off, not yet taken.
     pending_box_hunt: Option<bool>,
-    /// The Banana peel toy is on, mirrored as [`Self::order66_on`] is.
-    banana_on: bool,
-    /// The Toys tab asked to turn the Banana peel on (`true`) or off, not yet taken.
-    pending_banana: Option<bool>,
     /// A chip naming a setting was clicked (`console_changelog.rs`): the cvar to search
     /// Settings for, not yet taken.
     pending_settings_search: Option<String>,
@@ -354,6 +332,8 @@ pub(crate) struct ViewerConsole {
     hide_pickups_in_duel: console_cvars::IntegerSetting,
     /// `cg_duelHideOthers`.
     duel_hide_others: console_cvars::IntegerSetting,
+    /// `cg_duelGhost`: 2 hides the duellists of others' duels.
+    duel_ghost: console_cvars::IntegerSetting,
     /// `cp_pluginDisable`, read by `cg_duelHideOthers`'s Auto on JA+.
     plugin_disable: console_cvars::IntegerSetting,
     draw_fog: console_cvars::IntegerSetting,
@@ -488,6 +468,8 @@ impl ViewerConsole {
             mode: sjk_client::DuelHideMode::from_cvar(self.duel_hide_others.value()),
             plugin_disable: u32::try_from(self.plugin_disable.value())
                 .unwrap_or(sjk_client::PLUGIN_DISABLE_DEFAULT),
+            hide_duellists: crate::duel_ghost::Look::from_cvar(self.duel_ghost.value())
+                == crate::duel_ghost::Look::Hidden,
         }
     }
 
@@ -920,6 +902,14 @@ impl ViewerConsole {
             if name.eq_ignore_ascii_case("r_resolution") {
                 self.sync_custom_resolution(value);
             }
+            // The hue and the saturation are the custom theme's: moving one picks it.
+            if crate::menu::sjk::theme::follows_custom(name) {
+                let custom = crate::menu::sjk::theme::Theme::NAMES[2];
+                let _ = self
+                    .shell
+                    .cvars
+                    .set_text(crate::menu::sjk::theme::CVAR, custom);
+            }
             self.persist();
         }
         Ok(())
@@ -1292,6 +1282,7 @@ impl ViewerConsole {
             self.holocrons_panel.close();
             self.sjk_chat_panel.close();
             self.config_import.close();
+            self.classic.find.close();
         }
     }
 
@@ -1313,12 +1304,20 @@ impl ViewerConsole {
         self.rebuild_prompt();
     }
 
+    /// The emote ids installed in the game data, as `emote_hide`/`emote_mute` complete.
+    pub(crate) fn installed_emote_ids(&self) -> Vec<String> {
+        crate::emotes::installed_ids(self.script_vfs.as_deref())
+    }
+
     fn complete_command(&mut self, key: CompletionKey) {
         let resolver =
             console_scripting::Resolver::new(&self.config_directory, self.script_vfs.as_deref());
         let lists = |list: &str| match list {
             sjk_shell::MAP_EXTENSION => resolver.map_names(),
             EMOTE_ARGUMENTS => crate::emotes::argument_words(self.script_vfs.as_deref()),
+            crate::emote_filters::ARGUMENTS => {
+                crate::emotes::installed_ids(self.script_vfs.as_deref())
+            }
             VID_RESTART_ARGUMENTS => vec![console_client::VID_RESTART_FORCE.to_owned()],
             extension => resolver.root_files(extension),
         };
