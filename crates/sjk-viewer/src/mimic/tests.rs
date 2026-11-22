@@ -467,3 +467,110 @@ fn walking_always_copies_a_walking_choreography_attacks_and_all() {
         );
     }
 }
+
+/// The server's side of the view for one command: `PM_UpdateViewAngles` (the command's
+/// angles plus `delta_angles`, the pitch clamped at 16000 by rewriting its delta), or a
+/// held view (`PM_SetPMViewAngle`: the delta cancels the command's angles).
+fn serve_view(state: &mut MovementState, angles: [i32; 3], held: bool) {
+    for axis in 0..2 {
+        if held {
+            state.delta_angles[axis] =
+                angle_short(state.view_angles[axis]).wrapping_sub(angles[axis]) & 0xFFFF;
+            continue;
+        }
+        let mut short = angles[axis].wrapping_add(state.delta_angles[axis]) as i16;
+        if axis == 0 && short.unsigned_abs() > 16_000 {
+            short = 16_000 * short.signum();
+            state.delta_angles[0] = i32::from(short).wrapping_sub(angles[0]) & 0xFFFF;
+        }
+        state.view_angles[axis] = f32::from(short) * (360.0 / 65_536.0);
+    }
+}
+
+#[test]
+fn the_view_turns_to_the_wanted_one_and_stays_put_through_a_held_view() {
+    let mut state = MovementState {
+        view_angles: [0.0, 90.0, 0.0],
+        delta_angles: [1_234, 40_000, 0],
+        ..MovementState::default()
+    };
+    // Free: there within a few commands, six degrees at a time, and exactly.
+    let wanted = [20.0, 120.0];
+    let mut last = None;
+    for step in 0..6 {
+        let (angles, asked) = steer(last, &state, wanted);
+        let before = state.view_angles;
+        serve_view(&mut state, angles, false);
+        last = Some(angles);
+        for ((now, before), asked) in state.view_angles.iter().zip(before).zip(asked) {
+            assert!(
+                angle_delta(*now, before).abs() <= MAX_TURN + 0.01,
+                "step {step}"
+            );
+            assert!(angle_delta(*now, asked).abs() < 0.01);
+        }
+    }
+    assert!(angle_delta(state.view_angles[0], 20.0).abs() < 0.01);
+    assert!(angle_delta(state.view_angles[1], 120.0).abs() < 0.01);
+
+    // Held for a second while the leader looks elsewhere, and the mimic knows a
+    // `delta_angles` three commands old (a prediction the server's hold got ahead of):
+    // the view stays through the hold and, released, goes on from where it was held, a
+    // turn at a time, never thrown down or round.
+    let wanted = [-30.0, -100.0];
+    let mut known = std::collections::VecDeque::from([state.delta_angles; 3]);
+    for step in 0..250 {
+        let held = step < 125;
+        let stale = MovementState {
+            delta_angles: known.pop_front().unwrap(),
+            ..state.clone()
+        };
+        let (angles, _) = steer(last, &stale, wanted);
+        let before = state.view_angles;
+        serve_view(&mut state, angles, held);
+        known.push_back(state.delta_angles);
+        last = Some(angles);
+        for (now, before) in state.view_angles.iter().zip(before).take(2) {
+            let turned = angle_delta(*now, before).abs();
+            assert!(
+                turned <= if held { 0.01 } else { MAX_TURN + 0.01 },
+                "step {step}: turned {turned}"
+            );
+        }
+    }
+    assert!(angle_delta(state.view_angles[0], -30.0).abs() < 0.01);
+    assert!(angle_delta(state.view_angles[1], -100.0).abs() < 0.01);
+}
+
+#[test]
+fn a_steep_look_stays_short_of_the_pitch_clamp() {
+    let mut mimic = Mimic::default();
+    mimic.start(1, "Leader".into(), 0, false, false);
+    mimic.push(Sample {
+        time: 10,
+        on_ground: true,
+        ..Sample::default()
+    });
+    let mut follower = duelist([128.0, 0.0, 24.0], 180.0);
+    for stamp in (8..2_000).step_by(8) {
+        if stamp % 24 == 0 {
+            // The leader looks straight down.
+            mimic.push(Sample {
+                time: stamp,
+                on_ground: true,
+                angles: [89.0, 0.0, 0.0],
+                ..Sample::default()
+            });
+        }
+        let input = UserCommand {
+            server_time: stamp,
+            weapon: WP_SABER,
+            ..UserCommand::default()
+        };
+        let drive = mimic.drive(&input, follower.state()).unwrap();
+        follower.predict_command(drive.command, &Floor);
+    }
+    let pitch = angle_delta(follower.state().view_angles[0], 0.0);
+    assert!((pitch - PITCH_LIMIT).abs() < 0.1, "pitch {pitch}");
+    assert!(angle_delta(follower.state().view_angles[1], 180.0).abs() < 0.1);
+}

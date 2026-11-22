@@ -8362,6 +8362,16 @@ or 333 (jump heights and strafes against an EJK client at that FPS on a server w
 
 ## Mimic
 
+Branch `personal/mimic-direction` (22/11/2026, Windows 11). Sol tried `mimic vin 3 copy`
+on a JA+ server: the saber moves were copied, but the walk went the wrong way and the
+view to the ground at times. A leader walking backward or standing while attacking was
+ruled out in the Pmove tests (within 5 units). The command angles were `wanted -
+delta_angles` from the predicted state, which a held view rewrites every command; they
+are now the last command's plus a turn of 6 degrees at most, the keys are read in the
+view the command gets, the pitch stays within 85 degrees, and a held view is said in
+the client log ([client.md](client.md#mimic)). The cause is inferred from the symptoms
+and the code, not reproduced from that session; not yet tried in a game.
+
 Since branch `personal/experimental-showcase` (11/10/2026) `ghost` and `mimic` are
 experimental, off by default behind Settings > Gameplay > "Experimental: showcase
 tools" (`cl_experimentalShowcase`), at Sol's request: they drive the player on live
