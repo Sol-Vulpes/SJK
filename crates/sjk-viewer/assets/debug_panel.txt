@@ -5669,6 +5669,7 @@ change: 22/11: view turns like a mouse (held views are safe); staff and duals ke
 test: mimic <name> 3 copy through lunges, katas, back attacks: no look at the ground.
 test: Same run: you walk the way they did, also right after a special move.
 note: If the view still goes off, the client log has lines starting mimic: view held.
+test: 22/11: they turn, then strafe left: you turn the same and strafe (not walk forward).
 test: With a staff, then duals, mimic a single-saber player's swings: your blades stay.
 note: A 0.2-0.3 s delay or more keeps it tight; with 0 it reacts after your pings.
 

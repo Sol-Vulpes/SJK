@@ -1744,7 +1744,8 @@ Like `ghost`, it is experimental and off until Settings > Mods > "Experimental:
 showcase tools" turns it on ([Ghost replay](#ghost-replay)).
 
 The client never sees another player's keys, only what they lead to: each snapshot
-carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`),
+carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`;
+`entityState_t::angles` is a player's spawn or teleport facing, not their view),
 ground entity, linked box (`solid`'s top tells a crouch, 16, from standing, 40), saber
 move, stance (`fireflag`), holster and weapon. The mimic keeps these samples, plays them
 back on its own timeline after the delay (interpolated, extrapolated at most 100 ms past
