@@ -3823,7 +3823,11 @@ Built 27/10/2026 for the Moon blade (Creyon, after Sol's Sun trails: the Sun's n
   (`SJK_TEST_PACKS` naming the hub's packs): the same swing held still with the extra off and
   on; the brush (its drop, point, smoothed pressure and late lift) by the unit test
   `the_ink_brush_is_set_down_presses_and_lifts_with_the_tip`, the arc by
-  `a_curved_slice_follows_the_arc_the_tip_swept`.
+  `a_curved_slice_follows_the_arc_the_tip_swept`. A curved slice takes up to 8 quads, so many
+  inked blades at once could outgrow the trail's vertex buffer (`MAX_SEGMENTS` quads, 22/11/2026):
+  once it is full, `append_vertices` skips the remaining slices that frame (they stay alive
+  and draw again when there is room) rather than writing past it; the test
+  `a_full_pool_of_curved_slices_fits_the_gpu_buffer` fills the pool with curved slices.
 
 The plasma, flare, moonlight, eclipse, starfall and a wake live three times as long as the blur (`LONG_LIFE`: 90 to 120 ms
 for most moves): the cooling and the shimmer need that time to be seen. Each slice's age

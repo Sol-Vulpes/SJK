@@ -100,10 +100,15 @@ fn shoot(kind: Option<crate::saber_petals::PetalKind>, edge: bool, name: &'stati
         let first = frame(&mut gpu, 1);
         let spawned = gpu.particles.len() - before;
         println!("{queued} queued, {spawned} spawned");
-        assert!(
-            spawned >= queued.min(10),
-            "every queued petal is a particle"
-        );
+        if spec.kind == crate::saber_petals::PetalKind::BlossomMist {
+            // The mist's puffs may be held back by `effect_fits`: some, at least.
+            assert!(
+                spawned >= queued.min(10),
+                "the mist breathes out some puffs"
+            );
+        } else {
+            assert!(spawned >= queued, "every queued petal is a particle");
+        }
         // The particles age by the clock; a shot each about 0.6 and 1.3 seconds on.
         let at = |gpu: &mut GpuState, seconds: f32| {
             while start.elapsed().as_secs_f32() < seconds {

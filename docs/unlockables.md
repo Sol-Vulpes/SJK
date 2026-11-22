@@ -1748,7 +1748,7 @@ rooted at the emitter, running up the blade for their span, instead of anywhere 
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
-| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack; optional `replace` (`true`): heard in place of the stock saber sounds with `s_saberSkinSounds 1` too, as `2` makes every skin's (for sounds too soft to be heard over the stock hum: the Varykino Blossom's breeze, 21/11/2026). A client from before refuses a file with `replace`, so only a signature's built-in file names it | 1-63 characters, relative, no `..` |
+| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack; optional `replace` (`true`): heard in place of the stock saber sounds with `s_saberSkinSounds 1` too, as `2` makes every skin's (for sounds too soft to be heard over the stock hum: the Varykino Blossom's breeze, 21/11/2026). A client from before refuses a file with `replace`, so only a signature's built-in file names it: a pack's or the Saber Lab's file that sets it is refused by name (`blade_skin_file::read`). A stock on/off sound heard with no owner (`G_Sound`, guessed by the nearest player) is replaced only when no other player stands within reach; otherwise the set's sound plays over the stock one, so a bystander's ignition is never silenced | 1-63 characters, relative, no `..` |
 
 Other coefficients are any number from -1000 to 1000.
 

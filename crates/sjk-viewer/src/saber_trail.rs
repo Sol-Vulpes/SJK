@@ -421,6 +421,12 @@ impl SegmentPool {
             // toward `destST = ST + 1` (clamped at 1) over the lifetime, so the
             // clamp-mapped glow texture's dark edge sweeps across the slice.
             // The shader derives that scroll from `1 - color.a`.
+            // The GPU buffer holds `MAX_SEGMENTS * 6` vertices. Curved ink slices take
+            // several quads each, so a crowd of them can fill it: past that, skip the
+            // slice this frame (it stays alive) instead of writing past the buffer.
+            if output.len() + 6 > MAX_SEGMENTS * 6 {
+                continue;
+            }
             let fade = 1.0 - age as f32 / f32::from(segment.quad.lifetime_millis);
             let vertices = segment.quad.vertices.map(|mut vertex| {
                 vertex.color[3] = fade;
@@ -890,5 +896,28 @@ mod tests {
         assert_eq!(pool.append_vertices(1_047, &mut output), 1);
         output.clear();
         assert_eq!(pool.append_vertices(1_048, &mut output), 0);
+    }
+
+    #[test]
+    fn a_full_pool_of_curved_slices_fits_the_gpu_buffer() {
+        let mut trail = Trail::default();
+        trail.update(edge(0.0), 1_000, 200, 0, color(), true);
+        let mut quad = trail
+            .update(edge(2.0), 1_008, 200, 0, color(), true)
+            .expect("a fresh slice");
+        // A quarter turn about the muzzle: the most pieces `curve` cuts a slice into.
+        quad.curved = true;
+        quad.vertices[0].position = [0.0, 0.0, 0.0];
+        quad.vertices[1].position = [4.0, 0.0, 0.0];
+        quad.vertices[2].position = [0.0, 0.0, 4.0];
+        quad.vertices[3].position = [0.0, 0.0, 0.0];
+        let mut pool = SegmentPool::default();
+        for _ in 0..MAX_SEGMENTS {
+            assert!(pool.insert(quad, 1_008));
+        }
+        pool.add_still(std::iter::repeat_n(quad.vertices[0], 60));
+        let mut output = Vec::new();
+        assert_eq!(pool.append_vertices(1_008, &mut output), MAX_SEGMENTS);
+        assert_eq!(output.len(), MAX_SEGMENTS * 6);
     }
 }

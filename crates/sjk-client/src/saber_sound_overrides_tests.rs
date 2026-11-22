@@ -495,6 +495,39 @@ fn a_set_that_replaces_the_stock_sounds_plays_alone_in_either_mode() {
     assert_the_set_alone(&mut adapter);
 }
 
+#[test]
+fn a_replacing_set_never_silences_a_bystanders_general_toggle() {
+    // A general sound's owner is guessed by distance: with another player in reach,
+    // the replacing set is layered over the stock toggle rather than dropping it.
+    let mut adapter = adapter_with(SaberSoundSet {
+        replace: true,
+        ..SET
+    });
+    wear(&mut adapter, SKINNED);
+    let close = [20.0, 0.0, 0.0];
+    let crowded = played(
+        &mut adapter,
+        vec![
+            player_entity(SKINNED, AT_SKINNED),
+            player_entity(STOCK, close),
+            general_sound(100, 1, [5.0, 0.0, 0.0]),
+        ],
+    );
+    let paths: Vec<&str> = crowded.iter().map(|(_, path)| path.as_str()).collect();
+    assert_eq!(paths, ["sound/weapons/saber/saberon.wav", SET.on]);
+    // Alone in reach, the wearer's toggle is the set's alone.
+    let alone = played(
+        &mut adapter,
+        vec![
+            player_entity(SKINNED, AT_SKINNED),
+            player_entity(STOCK, AT_STOCK),
+            general_sound(101, 2, [5.0, 0.0, 0.0]),
+        ],
+    );
+    let paths: Vec<&str> = alone.iter().map(|(_, path)| path.as_str()).collect();
+    assert_eq!(paths, [SET.off]);
+}
+
 /// The wearer `SKINNED` hears the set alone, the other player the stock sounds.
 fn assert_the_set_alone(adapter: &mut LegacySoundAdapter) {
     // Ignition: the wearer hears the set's alone, the other player the stock one.

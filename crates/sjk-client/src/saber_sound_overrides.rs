@@ -209,12 +209,16 @@ impl SaberSoundOverrides {
         let Some(toggle) = self.toggle(&path.path) else {
             return GeneralSkin::Stock;
         };
-        let Some(client) = nearest_player(snapshot, origin) else {
+        let Some((client, sure)) = nearest_player_and_whether_alone(snapshot, origin) else {
             return GeneralSkin::Stock;
         };
         let Some(set) = self.for_source(client) else {
             return GeneralSkin::Stock;
         };
+        // The owner of a general sound is a guess by distance: a set's `replace` drops
+        // the stock sound only when no other player stands within reach, so a
+        // bystander's own ignition is never silenced in mode 1.
+        let alone = self.only || (set.replace && sure);
         let skin = match toggle {
             Toggle::On => set.on,
             Toggle::Off => set.off,
@@ -225,15 +229,10 @@ impl SaberSoundOverrides {
         let voiced = &mut self.voiced[usize::from(client)];
         let key = (snapshot.server_time, toggle);
         if *voiced == Some(key) {
-            return GeneralSkin::Voiced {
-                alone: self.only || set.replace,
-            };
+            return GeneralSkin::Voiced { alone };
         }
         *voiced = Some(key);
-        GeneralSkin::Skin {
-            sound: skin,
-            alone: self.only || set.replace,
-        }
+        GeneralSkin::Skin { sound: skin, alone }
     }
 
     fn toggle(&self, path: &str) -> Option<Toggle> {
@@ -276,6 +275,11 @@ fn stem(path: &str) -> &str {
 /// The client whose body is nearest `origin`, within [`TOGGLE_REACH`]: the local
 /// player from its own state, others from their entities.
 fn nearest_player(snapshot: &Snapshot, origin: [f32; 3]) -> Option<u16> {
+    nearest_player_and_whether_alone(snapshot, origin).map(|(client, _)| client)
+}
+
+/// [`nearest_player`], and whether it is the only player within [`TOGGLE_REACH`].
+fn nearest_player_and_whether_alone(snapshot: &Snapshot, origin: [f32; 3]) -> Option<(u16, bool)> {
     let distance = |at: [f32; 3]| {
         (0..3)
             .map(|axis| (at[axis] - origin[axis]).powi(2))
@@ -294,8 +298,14 @@ fn nearest_player(snapshot: &Snapshot, origin: [f32; 3]) -> Option<u16> {
         .map(|state| (state.number(), distance(state.trajectory_base())))
         .chain(std::iter::once(local))
         .filter(|(_, squared)| *squared <= TOGGLE_REACH * TOGGLE_REACH)
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(client, _)| client)
+        .fold(None, |nearest: Option<((u16, f32), usize)>, candidate| {
+            Some(match nearest {
+                None => (candidate, 1),
+                Some((best, count)) if candidate.1 < best.1 => (candidate, count + 1),
+                Some((best, count)) => (best, count + 1),
+            })
+        })
+        .map(|((client, _), count)| (client, count == 1))
 }
 
 impl LegacySoundAdapter {
