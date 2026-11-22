@@ -1,3 +1,16 @@
+## Classic menus' own look: the menu's proportions, the logo, Aurebesh (22/11/2026)
+
+Third step (Sol: "you extended the menu so it fits 16:9, I'm not sure it is a good
+idea; imagine the rest of the background instead", "can we get the logo", "can we use
+the letters"), branch `personal/classic-hd-art-2`. The windows and ring are back at
+retail's proportions; a wide window shows an imagined room beside the page
+(`own_art::beyond`: plates, conduits, the page's lines carried out). The logo is the
+player's own, cut clean of its blue plate at start (`art::own_logo`): there is no
+official Star Wars font to license, and the fan imitations do not cover the logo. The
+side columns are written in Aurebesh with Aurebesh AF (CC0, bundled, 19 KB) into a
+picture made at start (`own_writing.rs`). `ArtPiece` now has 64 pieces, all its
+`u64` set holds. Not yet run in the game.
+
 ## Classic menus: the artwork redrawn, to 16:9 (22/11/2026)
 
 Second step of the classic menus' own look (Sol, on seeing the first: "the background

@@ -268,9 +268,9 @@ pub(crate) fn page_backdrop(
     } else if super::own_look::on() {
         // The own look: retail's artwork redrawn, to the window's edges.
         if page == Page::Main {
-            super::own_art::main_page(canvas, viewport, place);
+            super::own_art::main_page(canvas, viewport, place, art_set);
         } else {
-            super::own_art::sub_page(canvas, viewport, place);
+            super::own_art::sub_page(canvas, viewport, place, art_set);
         }
     } else {
         backdrop(canvas, viewport, place);
@@ -468,6 +468,11 @@ fn backdrop(canvas: &mut MenuCanvas, viewport: [f32; 2], place: &Placement) {
 /// then the picture again, so the reflection moves through its
 /// translucent letters.
 fn logo(canvas: &mut MenuCanvas, place: &Placement, art_set: ArtSet) {
+    // The own look: the logo's letters alone, on the theme's ground.
+    if art_set.has(ArtPiece::OwnLogo) {
+        art(canvas, ArtPiece::OwnLogo, place.rect(LOGO));
+        return;
+    }
     if art_set.has(ArtPiece::Logo) {
         let rect = place.rect(LOGO);
         if art_set.has(ArtPiece::LogoBase) && art_set.has(ArtPiece::EnvLogo) {

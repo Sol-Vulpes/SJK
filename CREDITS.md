@@ -1422,7 +1422,8 @@ not include their code. The Jedi Knight II HUD's pictures
 used with Sol's approval. The settings icons' symbols
 (`crates/sjk-viewer/assets/settings`) are glyphs of Phosphor Icons, by the Phosphor Icons
 authors, under the [MIT License](crates/sjk-viewer/assets/settings/Phosphor-LICENSE.txt),
-drawn on SJK's own discs by `scripts/settings_icons_draw.py`. The bundled Inter fonts keep their
+drawn on SJK's own discs by `scripts/settings_icons_draw.py`. The classic menus' own look writes its side columns in Aurebesh AF, by AurekFonts,
+[public domain (CC0)](crates/sjk-viewer/assets/fonts/AurebeshAF-LICENSE.txt). The bundled Inter fonts keep their
 [license](crates/sjk-viewer/assets/fonts/LICENSE.txt), the console font, JetBrains
 Mono by The JetBrains Mono Project Authors, keeps its
 [SIL Open Font License](crates/sjk-viewer/assets/fonts/JetBrainsMono-OFL.txt), the SJK UI's

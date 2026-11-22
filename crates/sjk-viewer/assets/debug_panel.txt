@@ -38,7 +38,10 @@ test: Look for a leftover retail blue anywhere and note where (it is one table e
 test: ui_classicLook retail: the retail pictures and colours are back, unchanged.
 test: With ui_menuStyle sjk the row is dimmed and says it needs Menu style on Classic.
 test: Main page: frame lines from the corners, a window each side of the ring, the ring.
-test: On 16:9 the windows and lines reach the screen's sides; nothing is a 4:3 picture.
+test: The windows and ring keep the original menu's proportions, centred, on 16:9 too.
+test: On 16:9: a plate with studs and a conduit each side; nothing is a stretched picture.
+test: Title: the game's Star Wars / Jedi Academy logo, letters only, no blue box behind.
+test: Sides: columns of Aurebesh letters, climbing slowly; four of them on 16:9.
 test: Other pages: the page bar is a band from edge to edge between two rules.
 note: Entries and panels are still placed on the 4:3 canvas; moving them out is next.
 

@@ -174,6 +174,13 @@ pub(crate) enum ArtPiece {
     RedFlag,
     /// `gfx/hud/mpi_bflag`: the blue team's flag, beside Team Blue.
     BlueFlag,
+    /// Not retail's: the columns of Aurebesh writing the classic menus' own look
+    /// draws at the sides ([`super::classic::own_writing`]), made at start, white on
+    /// nothing, to be tinted with the theme's line-work.
+    OwnWriting,
+    /// Not retail's as it is: the game's logo for any ground, its letters alone,
+    /// cut from retail's two logo pictures at start ([`own_logo`]).
+    OwnLogo,
 }
 
 /// The stars of [`ArtPiece::force_level`], by cost.
@@ -210,7 +217,7 @@ impl ArtPiece {
     }
 
     /// Every piece, in [`ArtPiece`] order.
-    pub(crate) const ALL: [Self; 62] = [
+    pub(crate) const ALL: [Self; 64] = [
         Self::Background,
         Self::SideLeft,
         Self::SideRight,
@@ -273,6 +280,8 @@ impl ArtPiece {
         Self::ForceCircle8,
         Self::RedFlag,
         Self::BlueFlag,
+        Self::OwnWriting,
+        Self::OwnLogo,
     ];
     pub(crate) const COUNT: usize = Self::ALL.len();
 
@@ -340,13 +349,18 @@ impl ArtPiece {
             Self::ForceCircle8 => "gfx/menus/forcecircle8",
             Self::RedFlag => "gfx/hud/mpi_rflag",
             Self::BlueFlag => "gfx/hud/mpi_bflag",
+            // Made by the client, not read from game data ([`decode_all`]).
+            Self::OwnWriting | Self::OwnLogo => "",
         }
     }
 
     /// Whether the piece's texture repeats: retail scrolls its texture
     /// coordinates (`tcMod scroll`), so the image wraps around.
     pub(crate) fn wraps(self) -> bool {
-        matches!(self, Self::SideLeft | Self::SideRight | Self::EnvLogo)
+        matches!(
+            self,
+            Self::SideLeft | Self::SideRight | Self::EnvLogo | Self::OwnWriting
+        )
     }
 
     /// Whether the renderer rewrites the piece's texture as it animates:
@@ -468,7 +482,15 @@ pub(crate) fn decoded() -> Option<&'static Decoded> {
 }
 
 fn decode_all(vfs: &VirtualFileSystem) -> Decoded {
-    let raw = ArtPiece::ALL.map(|piece| read_image(vfs, piece.path()));
+    let mut raw = ArtPiece::ALL.map(|piece| match piece {
+        ArtPiece::OwnWriting => super::classic::own_writing::image(),
+        ArtPiece::OwnLogo => None,
+        _ => read_image(vfs, piece.path()),
+    });
+    raw[ArtPiece::OwnLogo.index()] = own_logo(
+        raw[ArtPiece::Logo.index()].as_ref(),
+        raw[ArtPiece::LogoBase.index()].as_ref(),
+    );
     let flicker_bases = std::array::from_fn(|index| {
         motion::flicker(ArtPiece::ALL[index])?;
         raw[index]
@@ -486,6 +508,32 @@ fn decode_all(vfs: &VirtualFileSystem) -> Decoded {
         flicker_bases,
         noise: read_image(vfs, STATIC_PATH),
     }
+}
+
+/// The game's logo for any ground. Retail's logo is two pictures: `plate`, a plate of
+/// the menu's blue with the letters cut out of it, over `letters`, the metal the
+/// letters show; on another ground that is a blue box. This keeps the metal only
+/// where the plate is cut: the letters alone, their edges as soft as the plate's.
+fn own_logo(plate: Option<&RgbaImage>, letters: Option<&RgbaImage>) -> Option<RgbaImage> {
+    let (plate, letters) = (plate?, letters?);
+    let (width, height) = plate.dimensions();
+    let letters = if letters.dimensions() == (width, height) {
+        letters.clone()
+    } else {
+        image::imageops::resize(
+            letters,
+            width,
+            height,
+            image::imageops::FilterType::Triangle,
+        )
+    };
+    let mut logo = RgbaImage::new(width, height);
+    for (x, y, pixel) in logo.enumerate_pixels_mut() {
+        let metal = letters.get_pixel(x, y).0;
+        let cut = 255 - plate.get_pixel(x, y).0[3];
+        *pixel = image::Rgba([metal[0], metal[1], metal[2], cut]);
+    }
+    Some(logo)
 }
 
 /// Read and decode the image at `path`, trying the extensions retail
