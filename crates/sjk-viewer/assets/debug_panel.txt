@@ -5665,10 +5665,11 @@ test: Try mimic <name> 0, then mimic <name> 2 copy: no delay, then sides kept af
 test: Press any key: it stops. mimic off also stops it.
 test: mimic <name> 0.3 walk, both walking the choreography: you walk the whole time.
 test: Without walk, while they walk slowly: you walk too, not run (no catch-up run).
-change: 22/11: the view turns like a mouse, 6 degrees a command, and survives held views.
+change: 22/11: view turns like a mouse (held views are safe); staff and duals keep their stance.
 test: mimic <name> 3 copy through lunges, katas, back attacks: no look at the ground.
 test: Same run: you walk the way they did, also right after a special move.
 note: If the view still goes off, the client log has lines starting mimic: view held.
+test: With a staff, then duals, mimic a single-saber player's swings: your blades stay.
 note: A 0.2-0.3 s delay or more keeps it tight; with 0 it reacts after your pings.
 
 [ghost-replay]

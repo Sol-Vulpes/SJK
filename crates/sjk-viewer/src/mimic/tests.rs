@@ -234,7 +234,7 @@ fn sample_of(time: i32, state: &MovementState) -> Sample {
         crouched: state.movement_flags & 1 != 0, // PMF_DUCKED
         saber_move: state.saber_move,
         style: state.saber_anim_level,
-        holstered: state.saber_holstered != 0,
+        holstered: state.saber_holstered == ALL_BLADES_OFF,
         weapon: state.weapon,
     }
 }
@@ -573,4 +573,60 @@ fn a_steep_look_stays_short_of_the_pitch_clamp() {
     let pitch = angle_delta(follower.state().view_angles[0], 0.0);
     assert!((pitch - PITCH_LIMIT).abs() < 0.1, "pitch {pitch}");
     assert!(angle_delta(follower.state().view_angles[1], 180.0).abs() < 0.1);
+}
+
+#[test]
+fn the_stance_is_cycled_only_between_a_single_sabers_stances_and_never_in_a_swing() {
+    let mut mimic = Mimic::default();
+    mimic.start(1, "Leader".into(), 0, false, false);
+    let following = mimic.following.as_mut().unwrap();
+    let leader = |style: u8, saber_move: u32| Sample {
+        style,
+        saber_move,
+        weapon: WP_SABER,
+        ..Sample::default()
+    };
+    let own = |style: u8, saber_move: u32, holstered: u8| MovementState {
+        weapon: WP_SABER,
+        saber_anim_level: style,
+        saber_move,
+        saber_holstered: holstered,
+        ..MovementState::default()
+    };
+    // A staff (7) or two sabers (6) copying a single saber's strong stance: no press,
+    // which would put a blade away.
+    for held in [6, 7] {
+        assert_eq!(
+            following.saber_upkeep(&leader(3, 1), &own(held, 1, 0), 1_000),
+            0
+        );
+    }
+    // A single saber copying a staff: no press either.
+    assert_eq!(
+        following.saber_upkeep(&leader(7, 1), &own(2, 1, 0), 2_000),
+        0
+    );
+    // One blade of the staff off is not a holstered saber.
+    assert_eq!(
+        following.saber_upkeep(&leader(7, 1), &own(7, 1, 1), 3_000),
+        0
+    );
+    // Single to single: a press, but not while either swings (move 10, the overhead).
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 10), &own(2, 1, 0), 4_000),
+        0
+    );
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(2, 10, 0), 5_000),
+        0
+    );
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(2, 1, 0), 6_000),
+        GENCMD_SABER_ATTACK_CYCLE
+    );
+    // Every blade off on one side only: the switch.
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(3, 1, 2), 7_000),
+        GENCMD_SABER_SWITCH
+    );
 }
