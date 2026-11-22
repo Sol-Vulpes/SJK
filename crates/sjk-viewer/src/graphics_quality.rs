@@ -420,9 +420,7 @@ pub(crate) fn toggle_vanilla(console: &mut ViewerConsole) {
             .cvar(RESTORE_CVAR)
             .map(sjk_shell::CvarValue::as_text)
             .unwrap_or_default();
-        let restored: Vec<(&str, &str)> = kept
-            .split(';')
-            .filter_map(|pair| pair.split_once('='))
+        let restored: Vec<(&str, &str)> = crate::cvar_restore::pairs(&kept)
             .filter(|(cvar, _)| VALUES.iter().any(|(known, _)| known == cvar))
             .chain([(RESTORE_CVAR, "")])
             .collect();
@@ -431,11 +429,7 @@ pub(crate) fn toggle_vanilla(console: &mut ViewerConsole) {
         }
         console.set_cvars(restored);
     } else {
-        let kept = VALUES
-            .iter()
-            .filter_map(|(cvar, _)| Some(format!("{cvar}={}", console.cvar(cvar)?.as_text())))
-            .collect::<Vec<_>>()
-            .join(";");
+        let kept = crate::cvar_restore::kept(console, VALUES.iter().map(|(cvar, _)| *cvar));
         console.set_cvar(RESTORE_CVAR, &kept);
         Level::Vanilla.apply(console);
     }

@@ -19,7 +19,10 @@ dialog (Report a bug), the new medal pop-up and Create game with its map list
 screen opens in its classic+ version, which
 covers the map as the classic style does.
 The other style: First setup's Menu style row, Settings > Interface > Menu style, or
-`ui_menuStyle classic`; restart for the style's map behind the main page.
+`ui_menuStyle classic`; restart for the style's map behind the main page. EJK mode
+(`ui_ejkMode`, the row before Menu style in both, [client.md](client.md#ejk-mode)) picks the
+classic style in retail's look together with everything else that makes SJK look like JoF
+EJK, and gives the player's settings back when turned off.
 
 **Every feature has its SJK UI (Sol's rule, 11/10/2026).** Anything a player
 sees or uses that a change adds (a screen, page, pop-up, overlay, setting row or

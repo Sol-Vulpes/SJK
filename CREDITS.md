@@ -531,6 +531,8 @@ includes:
 - the classic menus' own look (21/11/2026): `ui_classicLook sjk` draws the classic pages
   without retail artwork and in the theme's colours, by one colour table and a pass over
   each finished page;
+- EJK mode (22/11/2026): `ui_ejkMode`, one switch that sets JoF EJK's look from one
+  table of settings and gives the player's own back, and `cg_finishers`;
 - the named themes and First setup's look (21/11/2026): Solar, Sith (a new red palette),
   Jedi and Custom, shown as four tiles in their own colours at the top of First setup,
   which opens on the look (theme, hue, saturation, menu style);

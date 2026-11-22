@@ -1060,6 +1060,67 @@ foliage. Textures uploaded without mips (`nomipmaps` shaders, the sky) keep thei
 Models, effects and the HUD are untouched. JA+ emotes are the server's animations and still
 show.
 
+## EJK mode
+
+`ui_ejkMode` (Sol, 22/11/2026; [ejk_mode.rs](../crates/sjk-viewer/src/ejk_mode.rs)) is one
+switch that makes SJK look and feel like JoF EJK (EternalJK, of OpenJK's lineage), as close
+as SJK's own settings get. It is archived and off by default; the EJK mode row leads
+Settings > Interface > Menus (SJK UI, Advanced and Simple's General, and the classic+
+Interface group), stands in First setup's Look after Menu style, and the Settings search
+finds it by `ejk`, `eternal`, `jof`, `openjk`, `ojk`, `classic` and `retail`. The `ejkmode
+[on|off|list]` console command names or sets it, and `ejkmode list` prints every setting
+it sets with its value and the reason.
+
+It is a preset, not a mode the drawing code knows of. One table (`ejk_mode::TABLE`) names
+each setting and the value JoF EJK's look takes, with why; the renderer's settings are the
+[Vanilla graphics preset](rendering.md)'s (`graphics_quality.rs`), which the table does
+not repeat. Nothing else reads `ui_ejkMode`, so every change the switch makes shows on its
+own row in Settings and can be changed again there.
+
+| Subject | Settings set |
+| --- | --- |
+| Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_classicLook retail`, `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
+| Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
+| HUD | `cg_hudStyle game`, `cg_hudFiles 3` (JoF EJK's default, its own HUD; the retail HUD where its files are not installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
+| Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
+| Chat | `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
+| Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
+| Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
+| The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
+| Image and weather | The Vanilla preset, then `r_autoExposure 0` (eye adaptation brightens dark rooms even without HDR), `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
+
+Turning it on puts the player's value of each of those settings aside, as `cvar=value`
+pairs in `ui_ejkModeRestore` (the format `renderer vanilla` and Tactical use,
+[cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs)), and sets the table's. The
+switch writes only as it flips: it is followed each frame (`GpuState::update_ejk_mode`),
+which reads the switch and whether anything is put aside and does nothing when the two
+agree, so the console, the Settings row, the what's-new card and a config all switch it and
+a profile saved with the mode on comes back as it was left. A setting changed by hand while
+the mode is on therefore stays as the player set it. Turning the mode off gives back what
+was put aside, but for the settings changed by hand since (they no longer hold the mode's
+value): those are the player's later choice and stay. The graphics settings read only at
+the graphics' start wait for a reload, which the reload card offers; the menu style's map
+behind the main page changes at the next start, as with the Menu style row.
+
+What it leaves alone: the SJK hub's features (the SJK chat and its buttons, the identity,
+the Collection, trading, notifications), gameplay and the network, other players' emotes,
+the player's own numbers (field of view, sensitivity, HUD scale, brightness, text sizes
+other than the chat's) and whatever has no setting of its own. Tactical mode and
+`renderer vanilla` put the same graphics settings aside in their own cvars: switching two
+of them on and then off in another order can give back the other's values rather than the
+player's, which the Graphics preset row sets right.
+
+Finishers gained their viewer's switch with it: `cg_finishers` (archived, on by default;
+Settings > Gameplay > Finishers) plays them on this PC; off, a saber kill leaves the body
+as the game does, while the finisher the player wears still goes to the hub
+([unlockables.md](unlockables.md#finishers)).
+
+Unit tests (`ejk_mode.rs`): every setting the mode names is registered, has a Settings row
+that offers its value and is named once; on then off gives a profile's settings back
+exactly; a setting changed by hand while on is left alone, on and off; a restart with the
+mode on writes nothing; a setting an earlier table put aside is given back; the command
+names, sets and lists the mode.
+
 ## Hats and capes
 
 SJK wears JoF EJK's free-choice cosmetics

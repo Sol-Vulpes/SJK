@@ -24,6 +24,26 @@
 
 # ---- Console & chat ----
 
+[ejk-mode]
+area: Menus & settings
+title: EJK mode: one switch for JoF EJK's look (ui_ejkMode)
+change: Settings > Interface > EJK mode (also First setup > Look, Simple > General).
+change: On sets JoF EJK's look from one table and keeps your settings; off gives them back.
+change: New row Gameplay > Finishers (cg_finishers): off, saber kills play no finisher.
+test: Note your menu style, HUD, scoreboard, graphics preset. Turn EJK mode on.
+test: Menus go classic in the retail look; accept the graphics reload card.
+test: In a match: JoF EJK HUD (or retail), no status bar, kill feed, version line, timer.
+test: Console is the classic one; kills and joins print at the top left.
+test: Scoreboard is the retail one, no IDs, no head icons.
+test: Chat is in the game's font at JoF EJK's size; no nameplates, kybers, toys, tags.
+test: Graphics preset reads Vanilla; compare the picture with JoF EJK side by side.
+test: Change one setting by hand (HUD look): it stays, also after a restart.
+test: Turn EJK mode off: everything you noted is back, but the one you changed by hand.
+test: Search Settings for ejk, eternal, jof, openjk, classic, retail: the row is found.
+test: Console: ejkmode, ejkmode on, ejkmode off, ejkmode list (each setting and why).
+test: What's new card: EJK mode shows with its switch.
+note: The chat composer, chat place and emotes are not covered; see docs/status.md.
+
 [classic-own-look]
 area: Menus & settings
 title: Classic menus' own look: no retail art, the theme's colours (ui_classicLook sjk)

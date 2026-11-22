@@ -2298,6 +2298,11 @@ catalogue is `crate::finishers` (`finishers.rs`), the hub's the unlocks of kind 
   only while the own profile lists it. Collection > Kybers has a Finishers pill beside
   Saber (and Body, to come): its page lists each finisher as a card, Equip or Unequip
   while held, how to get it otherwise.
+- **Seeing them:** `cg_finishers` (archived, on by default; Settings > Gameplay >
+  Finishers, 22/11/2026) plays finishers on this PC, the player's own and others'. Off,
+  `observe_saber_kills` counts the kills as seen and starts none, so a saber kill leaves the
+  body as the game does; what the player wears still goes to the hub. EJK mode turns it off
+  ([client.md](client.md#ejk-mode)).
 - **The look:** the finisher goes to the hub as the look's `finisher` (hub PROTOCOL.md,
   Looks) and comes back to other players in presence and look events. A hub before
   04/11/2026 refuses the field (`bad_body`): the look goes again without it. A finisher the

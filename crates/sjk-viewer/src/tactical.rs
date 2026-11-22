@@ -216,9 +216,7 @@ fn set(console: &mut ViewerConsole, level: Level) {
         .cvar(RESTORE_CVAR)
         .map(sjk_shell::CvarValue::as_text)
         .unwrap_or_default();
-    let restored: Vec<(&str, &str)> = kept
-        .split(';')
-        .filter_map(|pair| pair.split_once('='))
+    let restored: Vec<(&str, &str)> = crate::cvar_restore::pairs(&kept)
         .filter(|(cvar, _)| console.cvar(cvar).is_some())
         .collect();
     console.set_cvars(restored);
@@ -226,11 +224,7 @@ fn set(console: &mut ViewerConsole, level: Level) {
         .into_iter()
         .filter(|(cvar, _)| console.cvar(cvar).is_some())
         .collect();
-    let kept = values
-        .iter()
-        .filter_map(|(cvar, _)| Some(format!("{cvar}={}", console.cvar(cvar)?.as_text())))
-        .collect::<Vec<_>>()
-        .join(";");
+    let kept = crate::cvar_restore::kept(console, values.iter().map(|(cvar, _)| *cvar));
     console.set_cvars(values.into_iter().chain([(RESTORE_CVAR, kept.as_str())]));
 }
 
@@ -257,9 +251,7 @@ fn holds(console: &ViewerConsole, level: Level) -> bool {
         .filter(|(cvar, _)| console.cvar(cvar).is_some())
         .all(|(cvar, value)| {
             crate::graphics_quality::holds(console, cvar, value)
-                && kept
-                    .split(';')
-                    .any(|pair| pair.split_once('=').is_some_and(|(name, _)| name == cvar))
+                && crate::cvar_restore::pairs(&kept).any(|(name, _)| name == cvar)
         })
 }
 

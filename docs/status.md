@@ -1,3 +1,24 @@
+## EJK mode (22/11/2026)
+
+Sol's request before the release: one switch that makes SJK look and feel like JoF EJK.
+Branch `personal/ejk-mode`, based on `main` `37882e0bc`. `ui_ejkMode` (off by default) is a
+preset: `ejk_mode::TABLE` names 53 settings with JoF EJK's value and why, after the Vanilla
+graphics preset's 28; turning it on puts the player's values aside in `ui_ejkModeRestore`
+and sets them, turning it off gives them back, and a setting changed by hand while on is
+left alone both ways ([client.md](client.md#ejk-mode)). No drawing code reads the switch;
+the `ejkmode [on|off|list]` command sets it and lists the table.
+New with it: `cg_finishers` (whether finishers play on this PC) and `cvar_restore.rs`, the
+put-aside text's one format, which `renderer vanilla` and Tactical now use too. The row
+leads Settings > Interface > Menus in the SJK UI (Advanced, Simple's General) and
+classic+, and stands in First setup's Look. Verified on Windows x64: `cargo test -p
+sjk-viewer` (the table against the cvars and the Settings rows, the round trip, the hand
+change, the restart; the settings groups, sections, help and search tests). Not verified:
+nothing was run in the client, so the look with the mode on has not been compared with JoF
+EJK on screen. Known differences left: the chat composer and its channel buttons are
+SJK's, the chat box keeps SJK's place and line spacing, the SJK scoreboard extras without
+a setting stay, other players' emotes still play, and `cg_hudFiles 3` shows JoF EJK's HUD
+only where its files are installed.
+
 ## Classic menus' own look: the menu's proportions, the logo, Aurebesh (22/11/2026)
 
 Third step (Sol: "you extended the menu so it fits 16:9, I'm not sure it is a good

@@ -63,6 +63,7 @@ migrated, except where the table says so. Where each is documented:
 | Setting | Default | See |
 | --- | --- | --- |
 | `ui_menuStyle` | `sjk` (the SJK UI), saved `classic` moved to `sjk` once, saved `modern` reset | [Menu style](client.md#menu-style) |
+| `ui_ejkMode` | off; on sets JoF EJK's look from one table and puts the player's settings aside | [EJK mode](client.md#ejk-mode) |
 | `ui_theme` | `warm` (the sun's colours, Sol, 17/11/2026); `cold` and `custom` (`ui_themeHue` 22, `ui_themeSaturation` 100) by choice | [Theme](sjk-ui.md#theme) |
 | `ui_gameFont` | on | [UI ownership](rendering.md#ui-ownership) |
 | `cg_scoreboardStyle` | `auto` (SJK UI's with its menus, else `classic`), saved `modern` reset | [Scoreboard styles](client.md#scoreboard-styles) |

@@ -1,5 +1,5 @@
 //! The FIRST SETUP tab of Settings: the few settings worth choosing once on a first
-//! start (first the look: the theme, its colour and the menu style; then bringing the
+//! start (first the look: the theme, its colour, the menu style and EJK mode; then bringing the
 //! setup from another client and the gameplay FPS it moved at; then the graphics
 //! preset, display, camera and aim, sound, the HUD, nameplates, the Force shells and
 //! the network opt-ins). The rows are the catalogue's own, looked up by cvar, so a
@@ -28,12 +28,14 @@ const IMPORT_ROW: Setting = Setting {
 };
 
 /// The look, which the tab opens on: the SJK UI's theme (the pop-up shows its
-/// choices as tiles too, `sjk_popup.rs`), the custom theme's colour, the menu style.
+/// choices as tiles too, `sjk_popup.rs`), the custom theme's colour, the menu style, and
+/// EJK mode (`ejk_mode.rs`) for a player who wants JoF EJK's look at once.
 const LOOK: &[&str] = &[
     crate::menu::sjk::theme::CVAR,
     crate::menu::sjk::theme::HUE_CVAR,
     crate::menu::sjk::theme::SATURATION_CVAR,
     crate::menu::style::CVAR,
+    crate::ejk_mode::CVAR,
 ];
 
 /// The tab's cvars, in order, after the look and the import row.
@@ -98,7 +100,7 @@ mod tests {
 
     #[test]
     fn the_look_comes_first_then_the_import_and_graphics() {
-        let cvars: Vec<_> = rows().iter().take(7).map(|row| row.cvar).collect();
+        let cvars: Vec<_> = rows().iter().take(8).map(|row| row.cvar).collect();
         assert_eq!(
             cvars,
             [
@@ -106,24 +108,26 @@ mod tests {
                 crate::menu::sjk::theme::HUE_CVAR,
                 crate::menu::sjk::theme::SATURATION_CVAR,
                 crate::menu::style::CVAR,
+                crate::ejk_mode::CVAR,
                 super::super::catalog::IMPORT_ROW,
                 crate::gameplay_fps::CVAR,
                 crate::graphics_quality::ROW_NAME,
             ]
         );
         assert_eq!(
-            super::super::Group::Quick.lines()[..10],
+            super::super::Group::Quick.lines()[..11],
             [
                 super::super::Line::Heading("Look"),
                 super::super::Line::Row(0),
                 super::super::Line::Row(1),
                 super::super::Line::Row(2),
                 super::super::Line::Row(3),
-                super::super::Line::Heading("From another client"),
                 super::super::Line::Row(4),
+                super::super::Line::Heading("From another client"),
                 super::super::Line::Row(5),
-                super::super::Line::Heading("Graphics"),
                 super::super::Line::Row(6),
+                super::super::Line::Heading("Graphics"),
+                super::super::Line::Row(7),
             ]
         );
     }
