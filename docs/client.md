@@ -1754,7 +1754,20 @@ the newest) and rebuilds commands:
   leader's motion since then, in their own frame, becomes the mimic's in its frame: the
   leader stepping toward the mimic makes the mimic step toward them. `mirror` swaps
   left and right, so a step to the leader's left is a step to the mimic's right and both
-  stay face to face; their yaw turns mirror too. Pitch is copied.
+  stay face to face; their yaw turns mirror too. Pitch is copied, within 85 degrees
+  (Pmove's own clamp, 87.9, rewrites `delta_angles` when reached).
+- **View.** Each command's angles are the last command's plus a turn toward the wanted
+  view from the one the player has, 6 degrees at most (750 a second), as a mouse adds to
+  `cl.viewangles`. They are not `wanted - delta_angles`: a move that holds the view (the
+  lunge, the DFA, the back attacks, a kata, a knockdown, a saber lock, a JA+ emote)
+  rewrites `delta_angles` every command to cancel the command's angles
+  (`PM_SetPMViewAngle`), so angles worked back from a `delta_angles` a command late or
+  mispredicted threw the view anywhere, the pitch into its clamp (looking straight down),
+  and the keys, read in the wanted view, walked the wrong way (seen in a game on
+  22/11/2026). Adding the turn needs no `delta_angles`: a held view stays and a released
+  one goes on from where it was. The movement keys are read in the view the command
+  gets, not the wanted one. A view held more than 2 degrees from the asked one is said
+  in the client log, once a second at most, with the saber moves (`mimic: view held`).
 - **Movement.** On the ground the keys aim for the leader's velocity, read 80 ms ahead
   where the delay leaves samples there (so a turn starts when theirs did, not an
   acceleration later), plus a return toward their mapped position at 4 units a second
@@ -1806,7 +1819,13 @@ with none (a full-speed leader cannot be caught up). `copy` keeps the sides. Wit
 and a leader doing the same choreography at walking pace (keys of 46, walk held,
 attacks included) every command holds the walk with no key past 64, the attacks come
 mirrored 4-24 ms late, it crouches, tracks within 8 units with no delay and 5 with 0.3
-seconds, and ends within 2. Not yet tried in a game.
+seconds, and ends within 2. The view has its own tests against the server's side of it
+(`PM_UpdateViewAngles` and a held view): free, it reaches the wanted view exactly, 6
+degrees a command; held for a second with a `delta_angles` three commands old, it does
+not move, then goes on from where it was held; a leader looking straight down gives 85
+degrees. Tried in a game on 22/11/2026 (`mimic vin 3 copy`): the saber moves were
+copied, the walk went the wrong way and the view to the ground at times, which the
+view's turn above answers; that fix is not yet tried in a game.
 
 ## Sound memory
 
