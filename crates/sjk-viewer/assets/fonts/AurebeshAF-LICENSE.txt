@@ -1,0 +1,5 @@
+Aurebesh AF (AurebeshAF-Canon.otf), by AurekFonts (https://aurekfonts.github.io).
+
+The font file's own copyright field reads: "CC-0 public domain, created by AurekFonts".
+It is used unchanged, to draw the columns of writing at the sides of the classic menus'
+own look (crates/sjk-viewer/src/menu/classic/own_writing.rs).

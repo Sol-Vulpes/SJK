@@ -6,9 +6,10 @@
 //! other SJK screen has. The own look keeps the pages and the flow and changes only
 //! what is drawn:
 //!
-//! - no retail picture is used: every piece is drawn ([`art`] answers with none, so
-//!   each page takes the drawn version it always had for a player without the game's
-//!   art), sharp at any size;
+//! - retail's pictures are not used, but for the game's logo: every other piece is
+//!   drawn ([`art`] leaves the pages only the logo, so each takes its drawn version,
+//!   and [`super::own_art`] redraws the ground, the frames and the ring), sharp at
+//!   any size;
 //! - retail's colours become the theme's ([`crate::menu::sjk::theme`]): Solar, Sith,
 //!   Jedi or a custom one, as in the SJK UI. One table ([`COLOURS`]) says which token
 //!   each retail colour takes; the pages go on naming retail's constants, and the
@@ -17,7 +18,7 @@
 //! `ui_classicLook retail` (the default: the stock look is the default look, Sol's
 //! rule of 30/10/2026) keeps the retail pictures and colours.
 
-use crate::menu::art::ArtSet;
+use crate::menu::art::{ArtPiece, ArtSet};
 use crate::menu::sjk::theme::Token;
 use sjk_ui::Color;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -46,10 +47,21 @@ pub(crate) fn on() -> bool {
     OWN.load(Ordering::Relaxed)
 }
 
-/// The retail art the classic pages may draw: `ready`, what the game data gave, or
-/// none of it in the own look.
+/// The pictures the own look still draws: the game's logo, its letters alone
+/// ([`ArtPiece::OwnLogo`], cut at start from the player's own game data: it is the
+/// game's name, and no drawing of ours stands for it), and the columns of writing
+/// the client makes ([`super::own_writing`]).
+const KEPT: [ArtPiece; 2] = [ArtPiece::OwnLogo, ArtPiece::OwnWriting];
+
+/// The art the classic pages may draw: `ready`, what the game data gave, or in the
+/// own look only [`KEPT`] of it.
 pub(crate) fn art(ready: ArtSet) -> ArtSet {
-    if on() { ArtSet::default() } else { ready }
+    if !on() {
+        return ready;
+    }
+    KEPT.into_iter()
+        .filter(|piece| ready.has(*piece))
+        .fold(ArtSet::default(), ArtSet::with)
 }
 
 /// How a retail colour is taken from the theme.

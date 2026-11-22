@@ -83,24 +83,37 @@ drawn ([own_look.rs](../crates/sjk-viewer/src/menu/classic/own_look.rs)):
 - **Retail's artwork, redrawn**
   ([own_art.rs](../crates/sjk-viewer/src/menu/classic/own_art.rs), since 22/11/2026: the
   first own look left the ground plain, which was not the point). The pieces retail has
-  as 640x480 pictures are drawn as shapes in the theme's colours, from the window's own
-  size, so a line is one weight at any resolution: the ground over the map, the angular
-  frame lines from each corner, the columns of small writing down the sides (as dashes;
-  no alphabet is drawn), and on the main page a framed glass window either side of the
-  ring, each with the slot between its two entries, and the ring round the emblem (a
-  dark disc, three rings, two shoulder arcs, the run of ticks under it, cross hairs
-  behind the emblem); on the other pages the page bar's band between two rules. The
-  title stays type: the game's logo is not redrawn.
-- **16:9.** What retail's pictures ended at the 4:3 page's edge reaches the window's
-  edge instead: the frame lines start at the corners, the side windows run from the
-  ring to a margin from each side, the bar's band and the columns sit at the edges. On
-  a 4:3 window the same code gives retail's proportions.
+  as 640x480 pictures are drawn as shapes in the theme's colours, so a line is one
+  weight at any resolution: the ground over the map, the angular frame lines of the
+  page, and on the main page a framed glass window either side of the ring, each with
+  the slot between its two entries, and the ring round the emblem (a dark disc, three
+  rings, two shoulder arcs, the run of ticks under it, cross hairs behind the emblem);
+  on the other pages the page bar's band between two rules.
+- **The menu keeps its proportions.** The windows, the ring and the bar stand where
+  they stood on retail's 640x480 page, centred. A first version stretched the windows
+  out to a wide window's sides; Sol found the menu no longer looked like itself
+  (22/11/2026). What a 16:9 window shows beside the page is more of the room the page
+  stands in, imagined (`own_art::beyond`): the page's top and foot lines carried to the
+  screen's edges, a bulkhead plate each side with cut corners, ribs and studs, a
+  conduit with a node from each window to the edge, and the ground falling into shadow
+  towards the sides. On a 4:3 window none of it is drawn.
+- **The logo is the game's.** No drawing of ours stands for the game's name, and there
+  is no font to license for it. The player's own logo is used, from their game data,
+  but retail's is two pictures, a plate of the menu's blue with the letters cut out
+  over the metal they show, which on another ground is a blue box: at start the client
+  keeps the metal only where the plate is cut (`art::own_logo`, `ArtPiece::OwnLogo`),
+  the letters alone. Without the game's logo the title is set in type.
+- **The side writing is Aurebesh.** The columns down the sides are written by the
+  client ([own_writing.rs](../crates/sjk-viewer/src/menu/classic/own_writing.rs)) with
+  Aurebesh AF by AurekFonts (public domain, CC0, as the font file says; bundled,
+  `assets/fonts/AurebeshAF-Canon.otf`): SJK's own words in ragged lines, into one tall
+  picture made at start (`ArtPiece::OwnWriting`), tinted with the line-work and
+  climbing slowly as retail's columns do. One stands at each side of the page; a wide
+  window has one more at each edge.
 
-What it does not change yet: the entries and panels themselves are still placed on
-retail's 640x480 canvas, fitted and centred, so on a wide window a page's content is a
-4:3 block inside artwork that fills the screen. Moving each page's content out to the
-width is page-by-page work, not started. The in-game window and the dialogs keep
-their plain drawn boxes.
+What it does not change yet: the entries and panels of the other pages are still as
+they were (settings lists, profile, Force page), on the same centred page. The in-game
+window and the dialogs keep their plain drawn boxes.
 
 ## What the plus adds
 
