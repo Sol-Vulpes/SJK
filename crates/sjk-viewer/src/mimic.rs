@@ -89,6 +89,11 @@ const ROLL_SPEED: f32 = 200.0;
 /// up on a stance this player lacks.
 const PRESS_SPACING: i32 = 400;
 const STANCE_TRIES: u8 = 8;
+/// The single saber's stances run from `SS_FAST` (1) to `SS_TAVION` (5); `SS_DUAL` (6)
+/// and `SS_STAFF` (7) belong to the sabers held, not to a choice.
+const LAST_SINGLE_STANCE: u8 = 5;
+/// `saberHolstered` with every blade off (1 is one blade of a staff or one saber of two).
+const ALL_BLADES_OFF: u8 = 2;
 /// The most the view turns in one command, in degrees (750 a second at 125 commands).
 const MAX_TURN: f32 = 6.0;
 /// The steepest pitch asked for, in degrees: short of Pmove's own clamp (16000 of
@@ -133,7 +138,7 @@ impl Sample {
             crouched: solid != 0 && solid != 0x00FF_FFFF && top < 30,
             saber_move: entity.saber_move(),
             style: entity.fire_flag(),
-            holstered: entity.saber_holstered() != 0,
+            holstered: entity.saber_holstered() == ALL_BLADES_OFF,
             weapon: entity.weapon(),
         }
     }
@@ -524,7 +529,12 @@ impl Following {
         if leader.weapon != WP_SABER || state.weapon != WP_SABER {
             return 0;
         }
-        let holstered = state.saber_holstered != 0;
+        // A press during a swing is kept by the server and lands after it, by when the
+        // leader may show something else: both wait for the swing's end.
+        if saber::in_chain(leader.saber_move) || saber::in_chain(state.saber_move) {
+            return 0;
+        }
+        let holstered = state.saber_holstered == ALL_BLADES_OFF;
         if leader.holstered != holstered {
             if time - self.last_holster_press >= PRESS_SPACING {
                 self.last_holster_press = time;
@@ -536,7 +546,11 @@ impl Following {
             self.stance_wanted = leader.style;
             self.stance_tries = 0;
         }
-        if leader.style != 0
+        // Only between a single saber's stances: the cycle of a staff or of two sabers
+        // puts a blade away instead, and no press gives a single saber their stance.
+        let single = |style: u8| (1..=LAST_SINGLE_STANCE).contains(&style);
+        if single(leader.style)
+            && single(state.saber_anim_level)
             && leader.style != state.saber_anim_level
             && self.stance_tries < STANCE_TRIES
             && time - self.last_stance_press >= PRESS_SPACING

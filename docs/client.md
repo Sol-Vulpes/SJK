@@ -1799,7 +1799,12 @@ the newest) and rebuilds commands:
   kicks (alternate attack and a direction), the katas (both buttons); the others hold
   attack. A bounce keeps the buttons; parries, knockaways and locks, the fight's and not
   inputs, let go. A different stance presses `saberAttackCycle` (every 400 ms, eight
-  tries for a stance this player lacks) and a different holster `sv_saberswitch`.
+  tries for a stance this player lacks), only between a single saber's stances (1 to
+  5): with a staff or two sabers the cycle puts a blade away instead, which in a game
+  on 22/11/2026 changed the stance at each swing. A different holster presses
+  `sv_saberswitch`, holstered meaning every blade off (`saberHolstered` 2; 1 is one
+  blade of a staff or one saber of two). Neither is pressed while the leader or the
+  player swings: the server keeps a press made in a swing for its end.
 
 With no delay the copy runs as soon as the leader is seen, which is after their ping,
 the snapshot interval and this client's ping, and nothing ahead is known. It stops on any
