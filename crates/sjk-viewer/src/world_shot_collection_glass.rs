@@ -163,3 +163,46 @@ fn duel6_collection_glass() {
         crate::blade_stills::set_folder(None);
     });
 }
+
+/// The notice the Collection shows while the kybers' loops are baked for the first time
+/// (23/11/2026): the hall over duel6 at 1080p and 4K, with a progress pretended.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn duel6_collection_bake_notice() {
+    on_big_stack(|| {
+        super::saber_skins::mount_test_packs();
+        *crate::blade_stills::PRETEND_PROGRESS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Some((132, 299));
+        for size in [[1920, 1080], [3840, 2160]] {
+            let cvars = [
+                ("ui_menuStyle", "sjk"),
+                (crate::settings::quick::HIDE_CVAR, "1"),
+                ("name", "^1Sol^7Vulpes"),
+                (crate::discord_presence::CVAR, "0"),
+            ];
+            let Some((mut gpu, _profile)) = open(
+                "maps/mp/duel6.bsp",
+                size,
+                Some(menu::ClientMenu::new(true, String::new())),
+                &cvars,
+            ) else {
+                return;
+            };
+            let _ = frame(&mut gpu, 10);
+            if let Some(console) = gpu.console.as_mut() {
+                console.preview_profile(super::collection::preview());
+                console.preview_collection(Some(Vec::new()), 0.0);
+                console.open_profile_hub_page(Tab::Hall, ReturnTarget::MainMenu);
+            }
+            gpu.profile_hub_show_for_shot(Tab::Hall);
+            let _ = frame(&mut gpu, 90);
+            let tag = if size[0] > 2_000 { "4k" } else { "1080" };
+            let shot = format!("duel6-collection-bake-notice-{tag}");
+            println!("{}", shoot(&mut gpu, 2, &shot).display());
+        }
+        *crate::blade_stills::PRETEND_PROGRESS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = None;
+    });
+}
