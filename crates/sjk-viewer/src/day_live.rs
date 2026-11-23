@@ -318,11 +318,21 @@ mod tests {
             (dark - 0.2_f32.powf(2.2)).abs() < 1e-6,
             "sunlit ground goes dark: {dark}"
         );
-        assert!(red < dark && dark < blue, "under a moonlit blue: {red} {blue}");
+        assert!(
+            red < dark && dark < blue,
+            "under a moonlit blue: {red} {blue}"
+        );
         let lamp = night_factor(night, 1.);
         assert!(lamp[1] > dark * 3., "lamp spots keep light");
-        assert!(lamp[2] / lamp[0] < blue / red, "and more of their own colour");
-        assert_eq!(night_factor([1., 0.], 0.5), [1.; 3], "level 1 leaves the bake");
+        assert!(
+            lamp[2] / lamp[0] < blue / red,
+            "and more of their own colour"
+        );
+        assert_eq!(
+            night_factor([1., 0.], 0.5),
+            [1.; 3],
+            "level 1 leaves the bake"
+        );
         clock.store(13, &CvarValue::Float(0.));
         assert_eq!(clock.night().expect("on")[0], 0.05, "never pitch black");
         clock.store(12, &CvarValue::Integer(0));
