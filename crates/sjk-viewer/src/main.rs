@@ -372,6 +372,7 @@ mod session_transition;
 mod settings;
 mod settings_icons;
 mod settings_usage;
+mod setup_pictures;
 mod shared_geometry;
 mod sjk_chat_field;
 mod sjk_chat_frame;

@@ -67,17 +67,20 @@ impl ClientMenu {
         if style != self.menu_style {
             let sjk_settings = self.sjk_settings_on_show();
             let first_setup = self.first_setup_on_show();
+            // First setup's pop-up is the SJK UI's in every menu style: a look picked
+            // on it (EJK mode turns the classic menus on) leaves it open on its step.
+            let popup = sjk_settings && self.settings.popup();
             self.menu_style = style;
             self.classic.reset();
             self.home.reset();
             // An open option panel stays as it is: the classic style and the
             // SJK UI share the panels, but for the SJK UI's own Settings,
             // which hands over to the classic panel.
-            if sjk_settings {
+            if sjk_settings && !popup {
                 self.sjk_settings_to_classic(console);
             }
             // First setup picked to the SJK UI goes on as its pop-up.
-            if style == MenuStyle::Sjk && first_setup {
+            if style == MenuStyle::Sjk && first_setup && !popup {
                 self.open_sjk_first_setup(console, crate::player_menu::ReturnTarget::MainMenu);
             }
         }
@@ -139,6 +142,10 @@ impl crate::GpuState {
         if let Some(menu) = &mut self.client_menu {
             menu.set_menu_style(style, console);
             menu.set_menu_art(art);
+            // First setup's pop-up draws the classic menus small from the artwork the
+            // files gave, whatever look is worn, and reads settings changed elsewhere.
+            menu.settings.set_retail_art(self.ui_shapes.menu_art());
+            menu.settings.follow_console(console);
         }
         self.in_game_menu.set_style(style, art);
         let sjk = style == MenuStyle::Sjk;

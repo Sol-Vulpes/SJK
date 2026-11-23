@@ -1,66 +1,607 @@
-//! First setup as the SJK UI's pop-up (`docs/sjk-ui.md`, First setup): a card
-//! over the darkened map with its name and what it is for, the themes as four
-//! tiles, each in its own colours (a click wears it at once), First setup's rows
-//! scrolling inside it as Settings draws them ([`super::sjk_view`]), the
-//! focused row's help under them, and at its foot, always in view, the "Don't
-//! show at start" tick beside All settings and Done.
+//! First setup as the SJK UI's pop-up (`docs/sjk-ui.md`, First setup): a card over
+//! the darkened map that asks one thing at a time. Across its top the steps, the one on
+//! show lit; then what the step asks, its picture buttons side by side (the two looks,
+//! the themes, the graphics presets, each with a picture of what it gives), the few
+//! rows that belong with them as Settings draws them ([`super::sjk_view`]), and at its
+//! foot, always in view, the "Don't show at start" tick beside All settings, Back and
+//! Next (Done on the last step).
 //!
-//! The tick is First setup's own last row, pinned out of the scrolling lines
-//! ([`super::ClassicRows`]): the keyboard reaches it after the last row, a
-//! click flips it, and Backspace returns it to its default, as on any row.
+//! What the steps are is a table ([`super::setup_steps`]); this file draws whatever it
+//! holds and knows no step by name. The rows are still First setup's own
+//! ([`super::ClassicRows`]), a step's worth at a time, so lists, defaults and typed
+//! numbers work as in Settings. The tick is First setup's last row, pinned out of the
+//! lines: the keyboard reaches it after a step's last row.
+//!
+//! The keyboard is on a picture button ([`Wizard::target`]) or on a row. On the
+//! buttons Left and Right (or Tab) move, Enter chooses, and Enter on the one in use goes
+//! on to the next step; Down goes to the rows, Up to the tick. Page Up and Page Down
+//! change step from anywhere, F2 opens all settings, Escape closes.
 //! Positions are pixels of the SJK UI's 16:9 frame ([`Frame`]).
 
 use super::classic_view::switch_text_on;
 use super::help;
+use super::setup_steps::{Act, Art, Button, STEPS, Step, Words};
 use super::sjk_view::{CONTROL_LEFT, KEYS_Y, LINE, ROWS_TOP, ROWS_WIDTH, ROWS_X};
 use super::*;
+use crate::graphics_quality;
+use crate::menu::art::ArtSet;
+use crate::menu::sjk::theme::{self, Palette};
 use crate::menu::sjk::{Frame, TextTarget, color, kit, text, wrap};
 use crate::menu_widgets::TextFamily;
-use sjk_ui::{DrawCommand, FontWeight, TextAlign};
+use crate::setup_pictures;
+use sjk_ui::{Color, DrawCommand, FontWeight, TextAlign, UiEventKind};
 
 /// The card.
-const CARD: [f32; 4] = [480.0, 56.0, 960.0, 948.0];
+const CARD: [f32; 4] = [340.0, 40.0, 1240.0, 950.0];
 /// The card's inner margin, and where its text starts.
 const MARGIN: f32 = 48.0;
 const TEXT_X: f32 = CARD[0] + MARGIN;
 const TEXT_WIDTH: f32 = CARD[2] - MARGIN * 2.0;
-/// The themes' tiles, under the header: their top, height and the gap between two.
-const TILES_TOP: f32 = CARD[1] + 150.0;
-const TILE_HEIGHT: f32 = 104.0;
-const TILE_GAP: f32 = 14.0;
-/// Where Settings' rows column moves to sit in the card, under the tiles.
-const SHIFT: [f32; 2] = [
-    CARD[0] + 80.0 - ROWS_X,
-    TILES_TOP + TILE_HEIGHT + 14.0 - ROWS_TOP,
-];
-/// Lines the card shows before its rows scroll.
-const VISIBLE: usize = 9;
-/// The focused row's help, under the rows.
-const HELP_TOP: f32 = ROWS_TOP + SHIFT[1] + VISIBLE as f32 * LINE + 12.0;
+/// The steps' strip: its middle line, and a step's disc.
+const STRIP_Y: f32 = CARD[1] + 42.0;
+const DISC: f32 = 28.0;
+/// What the step asks and its sentence.
+const TITLE_TOP: f32 = CARD[1] + 70.0;
+const SENTENCE_TOP: f32 = CARD[1] + 124.0;
+/// Where a step's buttons (or its rows, when it has none) begin, and the lowest its
+/// rows and their help reach.
+const CONTENT_TOP: f32 = CARD[1] + 166.0;
 /// The foot: its rule, and the middle of its tick and buttons.
 const FOOT_RULE: f32 = CARD[1] + CARD[3] - 94.0;
 const FOOT_MIDDLE: f32 = CARD[1] + CARD[3] - 47.0;
+const CONTENT_BOTTOM: f32 = FOOT_RULE - 10.0;
 const BUTTON_HEIGHT: f32 = 46.0;
-/// An open list reaches no lower than the help's first line.
-const LIST_BOTTOM: f32 = FOOT_RULE - 10.0 - SHIFT[1];
-/// The keys' line, under the card.
-const KEYS_SHIFT: f32 = CARD[1] + CARD[3] + 28.0 - KEYS_Y;
+/// The rows' column, centred in the card.
+const ROWS_LEFT: f32 = CARD[0] + (CARD[2] - ROWS_WIDTH) * 0.5;
+/// A picture button: the room round its words, its corner, and the room under its row.
+const PAD: f32 = 20.0;
+const RADIUS: f32 = 14.0;
+const UNDER_BUTTONS: f32 = 12.0;
+/// A preset choice under a button, and the mark that says how a preset should run.
+const CHIP_HEIGHT: f32 = 32.0;
+const RATING_HEIGHT: f32 = 24.0;
+/// A line of an aside or of the focused row's help.
+const NOTE_LINE: f32 = 24.0;
+const NOTE_CHARS: usize = 132;
+/// The furthest a step that does not fill the card is lowered.
+const MOST_LOWERED: f32 = 96.0;
+/// Most steps the strip has room to name.
+const MOST_STEPS: usize = 8;
 
 /// The All settings button's target; Done is the way back's (900).
 pub(super) const ALL_SETTINGS_TOKEN: u16 = 914;
 const DONE_TOKEN: u16 = 900;
-/// Theme tile `i` answers to `THEME_TOKEN + i`, clear of the rows (0-499), the
-/// panel's own tokens (500 to 915) and a list's choices (1000 on).
-pub(super) const THEME_TOKEN: u16 = 930;
+/// Choice `i` of a step's picture buttons answers to `TARGET_TOKEN + i`, step `i` of
+/// the strip to `STEP_TOKEN + i`, and the foot's Next and Back to theirs: all clear of
+/// the rows (0-499), the panel's own tokens (500 to 915) and a list's choices (1000 on).
+const TARGET_TOKEN: u16 = 920;
+const MOST_TARGETS: u16 = 16;
+const STEP_TOKEN: u16 = 940;
+const NEXT_TOKEN: u16 = 950;
+const PREVIOUS_TOKEN: u16 = 951;
+/// No row has the keyboard: it is on a picture button.
+const NO_ROW: usize = usize::MAX;
 
-/// The theme the tile answering to `token` wears, if it is one.
-pub(super) fn theme_of(token: u16) -> Option<crate::menu::sjk::theme::Theme> {
-    crate::menu::sjk::theme::Theme::ALL
-        .get(usize::from(token.checked_sub(THEME_TOKEN)?))
-        .copied()
+/// The dark ink on gold.
+const INK: Color = Color::new(0.078, 0.063, 0.02, 1.0);
+
+/// The pop-up's own state.
+#[derive(Default)]
+pub(super) struct Wizard {
+    /// The step on show.
+    step: usize,
+    /// The choice among the step's picture buttons the keyboard is on; `None` while
+    /// a row or the tick has it.
+    target: Option<usize>,
+    /// Which of the step's choices are in use, read with the rows' values.
+    used: Vec<bool>,
+    /// The step's aside, when it is shown.
+    aside: Option<String>,
+    /// The archived settings as last read ([`ViewerConsole::archive_revision`]): a
+    /// change made elsewhere (EJK mode applying, a console command) is read again.
+    revision: u64,
+    /// The game's menu artwork the player's files gave, for the classic menus'
+    /// picture.
+    art: ArtSet,
+    /// The classic menus' main page laid out small, to be drawn on its button.
+    page: Option<Box<MenuCanvas>>,
+}
+
+/// How a step's picture buttons are laid out: every button of a step has the same
+/// size, set by what the widest and wordiest of them needs.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Plan {
+    width: f32,
+    gap: f32,
+    /// Height of the picture at the top of a button.
+    art: f32,
+    /// Size of a button's name, of its lines, and how many characters fit a line.
+    name: f32,
+    words: f32,
+    chars: usize,
+    /// Lines of words the wordiest button has.
+    lines: usize,
+    /// The buttons carry a rating, and choices under their words.
+    rating: bool,
+    chips: bool,
+}
+
+impl Plan {
+    fn of(step: &Step) -> Option<Self> {
+        let count = step.buttons.len();
+        if count == 0 {
+            return None;
+        }
+        let gap = if count > 2 { 20.0 } else { 24.0 };
+        let width = (TEXT_WIDTH - gap * (count - 1) as f32) / count as f32;
+        let wide = width >= 480.0;
+        let words = if wide { 16.0 } else { 15.0 };
+        // Exo 2 runs about 0.42 of its size a character.
+        let chars = ((width - PAD * 2.0) / (words * 0.44)) as usize;
+        let art = step
+            .buttons
+            .iter()
+            .map(|button| match button.art {
+                Art::Picture(_) | Art::Preset | Art::ClassicMenu => width * 9.0 / 16.0,
+                Art::Theme(_) => 176.0,
+                Art::Icon(_) => 210.0,
+            })
+            .fold(0.0, f32::max);
+        let lines = step
+            .buttons
+            .iter()
+            .map(|button| {
+                button
+                    .lines
+                    .iter()
+                    .map(|line| wrap(line, chars).count())
+                    .sum::<usize>()
+            })
+            .max()
+            .unwrap_or(0)
+            .min(3);
+        Some(Self {
+            width,
+            gap,
+            art,
+            name: if wide { 30.0 } else { 25.0 },
+            words,
+            chars,
+            lines,
+            rating: step
+                .buttons
+                .iter()
+                .any(|button| matches!(button.act, Act::Preset(_))),
+            chips: step.buttons.iter().any(|button| button.act.options() > 1),
+        })
+    }
+
+    fn x(&self, button: usize) -> f32 {
+        TEXT_X + button as f32 * (self.width + self.gap)
+    }
+
+    fn line(&self) -> f32 {
+        self.words + 6.0
+    }
+
+    /// Tops, from a button's own top: its name, its rating, its lines, its choices.
+    fn name_top(&self) -> f32 {
+        self.art + 10.0
+    }
+
+    fn rating_top(&self) -> f32 {
+        self.name_top() + self.name + 8.0
+    }
+
+    fn lines_top(&self) -> f32 {
+        self.rating_top() + if self.rating { RATING_HEIGHT } else { 0.0 }
+    }
+
+    fn chips_top(&self) -> f32 {
+        self.lines_top() + self.lines as f32 * self.line() + 8.0
+    }
+
+    fn height(&self) -> f32 {
+        self.chips_top() + if self.chips { CHIP_HEIGHT + 14.0 } else { 8.0 }
+    }
+}
+
+/// Where the parts of the step on show go, top to bottom.
+struct Layout {
+    /// Where the step's buttons begin, or its rows when it has none: a step that
+    /// does not fill the card sits a little lower, so the room left is shared.
+    top: f32,
+    plan: Option<Plan>,
+    /// The aside's top and how many lines it takes (none: no aside).
+    aside: (f32, usize),
+    rows_top: f32,
+    /// Where the focused row's help goes.
+    help_top: f32,
 }
 
 impl SettingsMenu {
+    /// The step on show.
+    fn step(&self) -> &'static Step {
+        &STEPS[self.setup.step.min(STEPS.len() - 1)]
+    }
+
+    /// Lines the step's rows take.
+    fn step_lines(&self) -> usize {
+        self.classic
+            .as_ref()
+            .map_or(0, |classic| classic.lines.len())
+    }
+
+    fn layout(&self) -> Layout {
+        let step = self.step();
+        let plan = Plan::of(step);
+        let lines = self
+            .setup
+            .aside
+            .as_deref()
+            .map_or(0, |aside| wrap(aside, NOTE_CHARS).count().min(2));
+        let aside_height = if lines > 0 {
+            lines as f32 * NOTE_LINE + 10.0
+        } else {
+            0.0
+        };
+        let rows = self.step_lines() as f32 * LINE;
+        // The focused row's two lines of help, where the step shows them.
+        let help = if rows > 0.0 && !step.explained {
+            8.0 + 2.0 * NOTE_LINE
+        } else {
+            0.0
+        };
+        let buttons = plan.map_or(0.0, |plan| plan.height() + UNDER_BUTTONS);
+        let taken = buttons + aside_height + rows + help;
+        let spare = (CONTENT_BOTTOM - CONTENT_TOP - taken).max(0.0);
+        let top = CONTENT_TOP + (spare * 0.4).min(MOST_LOWERED);
+        let mut y = top;
+        match plan {
+            // The aside belongs with the buttons: under them, over the rows.
+            Some(plan) => {
+                y += plan.height() + UNDER_BUTTONS;
+                let aside = (y, lines);
+                y += aside_height;
+                Layout {
+                    top,
+                    plan: Some(plan),
+                    aside,
+                    rows_top: y,
+                    help_top: y + rows + 8.0,
+                }
+            }
+            // A step of rows closes on its aside.
+            None => Layout {
+                top,
+                plan: None,
+                aside: (y + rows + 18.0, lines),
+                rows_top: y,
+                help_top: y + rows + 18.0 + aside_height,
+            },
+        }
+    }
+
+    /// Show step `step` (kept within the steps): its rows, and the keyboard on its
+    /// picture button in use, or on its first row when it has no buttons.
+    pub(super) fn show_step(&mut self, console: &ViewerConsole, step: usize) {
+        let step = step.min(STEPS.len() - 1);
+        self.setup.step = step;
+        let table = &STEPS[step];
+        let rows = self.rows();
+        let mut lines = Vec::with_capacity(table.rows.len() * 2);
+        for cvar in table.rows {
+            let Some(row) = rows
+                .iter()
+                .position(|setting| setting.cvar.eq_ignore_ascii_case(cvar))
+            else {
+                continue;
+            };
+            lines.push(Line::Row(row));
+            if table.explained
+                && let Some(words) = help::help(cvar)
+            {
+                lines.push(Line::Note(words));
+            }
+        }
+        if let Some(classic) = &mut self.classic {
+            classic.lines = lines;
+            classic.first = 0;
+        }
+        self.dropdown = None;
+        self.editing = None;
+        self.numeric = None;
+        self.refresh(console);
+        if table.buttons.is_empty() {
+            self.focus_rows(1);
+        } else {
+            self.focus_buttons();
+        }
+    }
+
+    /// The step on show (tests and shots).
+    #[cfg(test)]
+    pub(crate) fn setup_step(&self) -> usize {
+        self.setup.step
+    }
+
+    /// Show step `step` with the keyboard on its choice `target`, or on its rows
+    /// (shots).
+    #[cfg(test)]
+    pub(crate) fn setup_step_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        step: usize,
+        target: Option<usize>,
+    ) {
+        self.show_step(console, step);
+        match target {
+            Some(target) if !self.step().buttons.is_empty() => {
+                self.setup.target = Some(target);
+                self.selected = NO_ROW;
+            }
+            Some(_) => {}
+            None => self.focus_rows(1),
+        }
+    }
+
+    /// Read what the buttons show of `console`: which choices are in use, and the
+    /// step's aside. Called with every read of the rows' values.
+    pub(super) fn read_setup(&mut self, console: &ViewerConsole) {
+        if !self.popup() {
+            return;
+        }
+        self.setup.revision = console.archive_revision();
+        let step = self.step();
+        self.setup.used.clear();
+        self.setup.used.extend(step.targets().iter().map(|target| {
+            step.buttons[target.button]
+                .act
+                .in_use(target.option, console)
+        }));
+        self.setup.aside = step
+            .aside
+            .as_ref()
+            .filter(|aside| {
+                aside
+                    .when
+                    .is_none_or(|cvar| console.cvar(cvar).is_some_and(switch_on))
+            })
+            .map(|aside| match aside.text {
+                Words::Fixed(words) => words.to_owned(),
+                Words::Made(make) => make(),
+            });
+    }
+
+    /// Once a frame while the pop-up is up: read the settings again when one changed
+    /// elsewhere since they were read (EJK mode applies a moment after its button, and
+    /// sets many), so the buttons and rows never show a stale value.
+    pub(crate) fn follow_console(&mut self, console: &ViewerConsole) {
+        if self.popup() && self.setup.revision != console.archive_revision() {
+            self.refresh(console);
+        }
+    }
+
+    /// The game's menu artwork the player's files gave, which the classic menus'
+    /// picture is drawn from.
+    pub(crate) fn set_retail_art(&mut self, art: ArtSet) {
+        self.setup.art = art;
+    }
+
+    /// The choice a click on button `button` of the step takes: the one in use among
+    /// its choices, else its usual one.
+    fn body_target(&self, button: usize) -> usize {
+        let step = self.step();
+        let first = step.first_target(button);
+        let act = step.buttons[button].act;
+        let used =
+            (0..act.options()).find(|option| self.setup.used.get(first + option) == Some(&true));
+        first + used.unwrap_or_else(|| act.usual_option(graphics_quality::card_mib()))
+    }
+
+    /// Give the keyboard to the picture buttons: the choice in use, else the first
+    /// button's.
+    fn focus_buttons(&mut self) {
+        if self.step().buttons.is_empty() {
+            return;
+        }
+        let used = self.setup.used.iter().position(|used| *used);
+        self.setup.target = Some(used.unwrap_or_else(|| self.body_target(0)));
+        self.selected = NO_ROW;
+    }
+
+    /// Give the keyboard to the rows: the step's first (`direction` 1) or the tick
+    /// at the foot (-1).
+    fn focus_rows(&mut self, direction: i32) {
+        self.setup.target = None;
+        let Some(classic) = &self.classic else {
+            return;
+        };
+        let row = if direction >= 0 {
+            classic.rows().next()
+        } else {
+            classic.rows().last()
+        };
+        if let Some(row) = row {
+            self.selected = row;
+        }
+    }
+
+    /// Whether the keyboard is on a picture button, and whether that one is in use.
+    pub(super) fn popup_on_button(&self) -> Option<bool> {
+        let target = self.setup.target.filter(|_| self.popup())?;
+        Some(self.setup.used.get(target) == Some(&true))
+    }
+
+    /// What the pop-up does with `key` before its rows see it: its steps' keys, the
+    /// picture buttons' while the keyboard is on them, and the ways between the
+    /// buttons and the rows. `None` for a key the rows take.
+    pub(super) fn popup_key(
+        &mut self,
+        key: KeyCode,
+        console: &mut ViewerConsole,
+    ) -> Option<SettingsResult> {
+        let step = self.setup.step;
+        match key {
+            KeyCode::PageDown => {
+                self.show_step(console, step + 1);
+                return Some(SettingsResult::None);
+            }
+            KeyCode::PageUp => {
+                self.show_step(console, step.saturating_sub(1));
+                return Some(SettingsResult::None);
+            }
+            KeyCode::F2 => return Some(SettingsResult::AllSettings),
+            // It has no search and no groups.
+            KeyCode::Slash
+            | KeyCode::NumpadDivide
+            | KeyCode::F3
+            | KeyCode::BracketLeft
+            | KeyCode::BracketRight => return Some(SettingsResult::None),
+            _ => {}
+        }
+        let count = self.step().targets().len();
+        if let Some(at) = self.setup.target.filter(|_| count > 0) {
+            match key {
+                KeyCode::ArrowLeft | KeyCode::KeyA => {
+                    self.setup.target = Some((at + count - 1) % count);
+                }
+                KeyCode::ArrowRight | KeyCode::KeyD | KeyCode::Tab => {
+                    self.setup.target = Some((at + 1) % count);
+                }
+                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                    return Some(self.pick(console, at, true));
+                }
+                KeyCode::ArrowDown | KeyCode::KeyS => self.focus_rows(1),
+                KeyCode::ArrowUp | KeyCode::KeyW => self.focus_rows(-1),
+                KeyCode::Escape => return Some(self.back()),
+                _ => {}
+            }
+            return Some(SettingsResult::None);
+        }
+        if count == 0 {
+            // Tab has nothing to move between.
+            return (key == KeyCode::Tab).then_some(SettingsResult::None);
+        }
+        // Past either end of the rows are the buttons.
+        let rows = self.classic.as_ref()?;
+        let first = rows.rows().next() == Some(self.selected);
+        let last = rows.rows().last() == Some(self.selected);
+        match key {
+            KeyCode::ArrowUp | KeyCode::KeyW if first => self.focus_buttons(),
+            KeyCode::ArrowDown | KeyCode::KeyS if last => self.focus_buttons(),
+            KeyCode::Tab => self.focus_buttons(),
+            _ => return None,
+        }
+        Some(SettingsResult::None)
+    }
+
+    /// Choose choice `at` of the step's picture buttons. From the keyboard, the one
+    /// already in use goes on to the next step instead: Enter chooses, Enter again
+    /// continues.
+    fn pick(&mut self, console: &mut ViewerConsole, at: usize, keyboard: bool) -> SettingsResult {
+        let step = self.setup.step;
+        let table = self.step();
+        let Some(target) = table.targets().get(at).copied() else {
+            return SettingsResult::None;
+        };
+        let act = table.buttons[target.button].act;
+        self.setup.target = Some(at);
+        self.selected = NO_ROW;
+        if keyboard && self.setup.used.get(at) == Some(&true) {
+            self.show_step(console, step + 1);
+            return SettingsResult::None;
+        }
+        match act {
+            Act::Set { cvar, value } => {
+                console.set_cvar(cvar, value);
+            }
+            Act::Theme(theme) => {
+                self.wear_theme(console, theme);
+                self.setup.target = Some(at);
+                self.selected = NO_ROW;
+                return SettingsResult::None;
+            }
+            Act::Preset(_) => {
+                if let Some(level) = act.level(target.option) {
+                    level.apply(console);
+                }
+            }
+            Act::Import => return SettingsResult::OpenImport,
+            Act::Next => {
+                self.show_step(console, step + 1);
+                return SettingsResult::None;
+            }
+        }
+        self.refresh(console);
+        SettingsResult::None
+    }
+
+    /// Wear theme `theme`, as its button does.
+    pub(super) fn wear_theme(&mut self, console: &mut ViewerConsole, theme: theme::Theme) {
+        console.set_cvar(theme::CVAR, theme.name());
+        theme::sync(console);
+        self.refresh(console);
+    }
+
+    /// What the pop-up does with the pointer on `token` before its rows see it: a
+    /// picture button under the pointer takes the keyboard, a click chooses it; the
+    /// strip's steps and the foot's Next and Back change step. `None` for the rest.
+    pub(super) fn popup_pointer(
+        &mut self,
+        token: u16,
+        kind: UiEventKind,
+        console: &mut ViewerConsole,
+    ) -> Option<SettingsResult> {
+        let count = self.step().targets().len() as u16;
+        let target = token
+            .checked_sub(TARGET_TOKEN)
+            .filter(|target| *target < count.min(MOST_TARGETS))
+            .map(usize::from);
+        let step = token
+            .checked_sub(STEP_TOKEN)
+            .filter(|step| usize::from(*step) < STEPS.len().min(MOST_STEPS))
+            .map(usize::from);
+        match kind {
+            UiEventKind::HoverEnter | UiEventKind::Hover => {
+                if self.drafting() {
+                    return None;
+                }
+                if let Some(target) = target {
+                    self.setup.target = Some(target);
+                    self.selected = NO_ROW;
+                    return Some(SettingsResult::None);
+                }
+                // A row under the pointer takes the keyboard back.
+                if self.setting_row(token).is_some() {
+                    self.setup.target = None;
+                }
+                None
+            }
+            UiEventKind::Activate => {
+                if let Some(target) = target {
+                    return Some(self.pick(console, target, false));
+                }
+                if let Some(step) = step {
+                    self.show_step(console, step);
+                    return Some(SettingsResult::None);
+                }
+                match token {
+                    NEXT_TOKEN => self.show_step(console, self.setup.step + 1),
+                    PREVIOUS_TOKEN => self.show_step(console, self.setup.step.saturating_sub(1)),
+                    _ => {
+                        if self.setting_row(token).is_some() {
+                            self.setup.target = None;
+                        }
+                        return None;
+                    }
+                }
+                Some(SettingsResult::None)
+            }
+            _ => None,
+        }
+    }
+
     /// Draw First setup's pop-up at `reveal` opacity.
     pub(crate) fn append_sjk_popup(
         &mut self,
@@ -69,36 +610,146 @@ impl SettingsMenu {
         reveal: f32,
     ) {
         let frame = Frame::new(viewport);
-        let rows = frame.shifted(SHIFT[0], SHIFT[1]);
+        let layout = self.layout();
+        let shift = [ROWS_LEFT - ROWS_X, layout.rows_top - ROWS_TOP];
+        let rows = frame.shifted(shift[0], shift[1]);
+        // An open list reaches no lower than the foot's rule.
+        let list_bottom = CONTENT_BOTTOM - shift[1];
+        let visible = self.step_lines().max(1);
         self.ui.begin_transparent(viewport);
         self.ui.push_opacity(reveal);
         kit::scrim(&mut self.ui, viewport);
         kit::card(&mut self.ui, &frame, CARD);
+        self.popup_strip(&frame);
         self.popup_header(&frame);
-        self.popup_themes(&frame);
+        if let Some(plan) = layout.plan {
+            self.popup_buttons(&frame, &plan, layout.top);
+        }
+        self.popup_aside(&frame, layout.aside, layout.plan.is_some());
         let measure = target.body_measure();
-        let slots = self.sjk_rows(&rows, &measure, VISIBLE, LIST_BOTTOM);
-        if self.dropdown.is_none() {
-            self.popup_help(&frame);
+        let slots = self.sjk_rows(&rows, &measure, visible, list_bottom);
+        if self.dropdown.is_none() && !self.step().explained {
+            self.popup_help(&frame, layout.help_top);
         }
         self.popup_foot(&frame);
-        self.sjk_keys(&frame.shifted(0.0, KEYS_SHIFT));
-        self.sjk_dropdown(&rows, &slots, VISIBLE, LIST_BOTTOM);
+        self.sjk_keys(&frame.shifted(
+            CARD[0] + CARD[2] - MARGIN - 1824.0,
+            CARD[1] + CARD[3] + 22.0 - KEYS_Y,
+        ));
+        self.sjk_dropdown(&rows, &slots, visible, list_bottom);
         self.ui.pop_opacity();
-        self.ui.finish(self.selected as u16);
+        let focus = match self.setup.target {
+            Some(target) => TARGET_TOKEN + target as u16,
+            None => self.selected as u16,
+        };
+        // The classic menus' picture keeps the retail colours it shows: the own look's
+        // pass over a finished page finds no other retail colour on this one.
+        let own = crate::menu::classic::own_look::on();
+        crate::menu::classic::own_look::set(false);
+        self.ui.finish(focus);
+        crate::menu::classic::own_look::set(own);
         target.append(&self.ui, viewport);
         self.sjk_controls = Some(rows.point(CONTROL_LEFT, 0.0)[0]);
     }
 
-    /// The card's name, what it is for and how to bring another client's
-    /// settings over.
+    /// The steps across the top of the card: each a numbered disc and its name, a
+    /// line running on to the next; the one on show in gold, those before it lit. A
+    /// click shows a step.
+    fn popup_strip(&mut self, frame: &Frame) {
+        let s = frame.s;
+        let count = STEPS.len().min(MOST_STEPS);
+        let width = TEXT_WIDTH / count as f32;
+        let current = self.setup.step;
+        for (index, step) in STEPS.iter().take(count).enumerate() {
+            let x = TEXT_X + index as f32 * width;
+            let token = STEP_TOKEN + index as u16;
+            let lit = self.ui.token_hovered(token);
+            let disc = frame.rect(x, STRIP_Y - DISC * 0.5, DISC, DISC);
+            let list = self.ui.draw_list_mut();
+            if index == current {
+                let _ = list.push(DrawCommand::RoundedRect {
+                    rect: disc,
+                    radius: DISC * 0.5 * s,
+                    color: color::gold(),
+                });
+            } else {
+                if index < current {
+                    let _ = list.push(DrawCommand::RoundedRect {
+                        rect: disc,
+                        radius: DISC * 0.5 * s,
+                        color: color::alpha(color::holo(), 0.2),
+                    });
+                }
+                let _ = list.push(DrawCommand::Border {
+                    rect: disc,
+                    radius: DISC * 0.5 * s,
+                    width: 1.5 * s,
+                    color: color::alpha(color::holo(), if lit { 0.9 } else { 0.4 }),
+                });
+            }
+            // Rajdhani at 19 is about 9.4 pixels a character.
+            let name_width = 9.4 * step.name.len() as f32 + 8.0;
+            let from = x + DISC + 10.0 + name_width + 8.0;
+            let to = x + width - 10.0;
+            if index + 1 < count && to > from {
+                // A whole pixel at least, on a small screen too.
+                let mut line = frame.rect(from, STRIP_Y, to - from, 1.0);
+                line.height = line.height.max(1.0);
+                let _ = list.push(DrawCommand::SolidRect {
+                    rect: line,
+                    color: color::alpha(color::holo(), if index < current { 0.5 } else { 0.18 }),
+                });
+            }
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", index + 1),
+                disc,
+                17.0 * s,
+                match index.cmp(&current) {
+                    std::cmp::Ordering::Equal => INK,
+                    std::cmp::Ordering::Less => color::text(),
+                    std::cmp::Ordering::Greater => color::muted(),
+                },
+                FontWeight::Semibold,
+                TextAlign::Center,
+            );
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{}", step.name),
+                frame.rect(x + DISC + 10.0, STRIP_Y - 14.0, name_width + 20.0, 28.0),
+                19.0 * s,
+                if index == current || lit {
+                    color::text()
+                } else if index < current {
+                    color::alpha(color::text(), 0.78)
+                } else {
+                    color::muted()
+                },
+                if index == current {
+                    FontWeight::Semibold
+                } else {
+                    FontWeight::Regular
+                },
+                TextAlign::Start,
+            );
+            self.ui.hit_region(
+                token,
+                frame.rect(x - 6.0, STRIP_Y - 20.0, DISC + 16.0 + name_width, 40.0),
+            );
+        }
+    }
+
+    /// What the step asks, and its sentence.
     fn popup_header(&mut self, frame: &Frame) {
         let s = frame.s;
+        let step = self.step();
         text(
             &mut self.ui,
             TextFamily::Display,
-            format_args!("First setup"),
-            frame.rect(TEXT_X, CARD[1] + 30.0, TEXT_WIDTH, 52.0),
+            format_args!("{}", step.title),
+            frame.rect(TEXT_X, TITLE_TOP, TEXT_WIDTH, 50.0),
             40.0 * s,
             color::text(),
             FontWeight::Semibold,
@@ -107,116 +758,448 @@ impl SettingsMenu {
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!(
-                "Pick a look, then the few settings worth choosing first. Settings has them all."
-            ),
-            frame.rect(TEXT_X, CARD[1] + 88.0, TEXT_WIDTH, 26.0),
+            format_args!("{}", step.sentence),
+            frame.rect(TEXT_X, SENTENCE_TOP, TEXT_WIDTH, 26.0),
             18.0 * s,
             color::muted(),
             FontWeight::Regular,
             TextAlign::Start,
         );
+    }
+
+    /// The step's aside, in up to two lines from `top`: across the card under its
+    /// buttons (`wide`), else in the rows' column under them.
+    fn popup_aside(&mut self, frame: &Frame, (top, lines): (f32, usize), wide: bool) {
+        let Some(aside) = self.setup.aside.clone().filter(|_| lines > 0) else {
+            return;
+        };
+        let (x, width) = if wide {
+            (TEXT_X, TEXT_WIDTH)
+        } else {
+            (ROWS_LEFT + 22.0, TEXT_X + TEXT_WIDTH - ROWS_LEFT - 22.0)
+        };
+        for (index, line) in wrap(&aside, NOTE_CHARS).take(lines).enumerate() {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{line}"),
+                frame.rect(x, top + index as f32 * NOTE_LINE, width, NOTE_LINE),
+                16.0 * frame.s,
+                color::alpha(color::gold_bright(), 0.92),
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+    }
+
+    /// The step's picture buttons, side by side from `top`.
+    fn popup_buttons(&mut self, frame: &Frame, plan: &Plan, top: f32) {
+        let step = self.step();
+        let recommended = graphics_quality::recommended();
+        let mib = graphics_quality::card_mib();
+        let mut pictures = false;
+        for (index, button) in step.buttons.iter().enumerate() {
+            let first = step.first_target(index);
+            let options = button.act.options();
+            let body = self.body_target(index);
+            // The choice the button speaks for now: the one the keyboard is on, else
+            // the one a click would take.
+            let on = self
+                .setup
+                .target
+                .filter(|target| (first..first + options).contains(target));
+            let shown = on.unwrap_or(body);
+            let used = (first..first + options).any(|target| self.used(target));
+            let token = TARGET_TOKEN + body as u16;
+            let lit = on.is_some()
+                || (first..first + options)
+                    .any(|target| self.ui.token_hovered(TARGET_TOKEN + target as u16));
+            let level = button.act.level(shown - first);
+            let palette = match button.art {
+                Art::Theme(theme) => Some(theme::preview(theme)),
+                _ => None,
+            };
+            let x = plan.x(index);
+            let tile = frame.rect(x, top, plan.width, plan.height());
+            let radius = RADIUS * frame.s;
+            let s = frame.s;
+            let list = self.ui.draw_list_mut();
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: tile,
+                radius,
+                color: match &palette {
+                    Some(palette) => palette.space,
+                    None => color::alpha(color::space(), if lit { 0.72 } else { 0.55 }),
+                },
+            });
+            // The picture, cut to the button's corners.
+            let art = frame.rect(x, top, plan.width, plan.art);
+            let _ = list.push(DrawCommand::PushRoundedClip { rect: tile, radius });
+            match button.art {
+                Art::Picture(picture) => {
+                    pictures = true;
+                    self.popup_picture(art, picture);
+                }
+                Art::Preset => {
+                    pictures = true;
+                    if let Some(level) = level {
+                        self.popup_picture(art, setup_pictures::Picture::of_level(level));
+                    }
+                }
+                Art::ClassicMenu => self.popup_classic_menu(art),
+                Art::Theme(_) => {
+                    if let Some(palette) = &palette {
+                        self.popup_theme(frame, [x, top, plan.width, plan.art], palette);
+                    }
+                }
+                Art::Icon(name) => self.popup_icon(frame, [x, top, plan.width, plan.art], name),
+            }
+            let _ = self.ui.draw_list_mut().push(DrawCommand::PopClip);
+            self.popup_button_words(frame, plan, button, [x, top], palette.as_ref());
+            if let Some(level) = level {
+                let rating = level.rating(mib);
+                self.popup_rating(frame, x + PAD, top + plan.rating_top(), rating);
+                if (0..options).any(|option| button.act.level(option) == Some(recommended)) {
+                    self.popup_mark(frame, [x + 10.0, top + 10.0], "Recommended", false);
+                }
+            }
+            if used {
+                self.popup_mark(frame, [x + plan.width - 10.0, top + 10.0], "In use", true);
+            }
+            // Its edge: gold in use, bright under the keyboard or the pointer.
+            let gold = palette
+                .as_ref()
+                .map_or(color::gold(), |palette| palette.gold);
+            let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                rect: tile,
+                radius,
+                width: if used || lit { 2.5 } else { 1.5 } * s,
+                color: match (used, lit) {
+                    (true, _) => gold,
+                    (false, true) => Color::new(1.0, 1.0, 1.0, 0.75),
+                    (false, false) => color::alpha(
+                        palette
+                            .as_ref()
+                            .map_or(color::holo(), |palette| palette.holo),
+                        0.4,
+                    ),
+                },
+            });
+            // The keyboard's ring, outside the edge, so it shows on the one in use too.
+            if on.is_some() {
+                let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
+                    rect: frame.rect(x - 5.0, top - 5.0, plan.width + 10.0, plan.height() + 10.0),
+                    radius: (RADIUS + 5.0) * s,
+                    width: 1.5 * s,
+                    color: Color::new(1.0, 1.0, 1.0, 0.55),
+                });
+            }
+            self.ui.hit_region(token, tile);
+            if options > 1 {
+                self.popup_chips(frame, plan, button, index, [x, top + plan.chips_top()]);
+            }
+        }
+        if pictures {
+            setup_pictures::request();
+        }
+    }
+
+    /// Whether choice `target` of the step is in use.
+    fn used(&self, target: usize) -> bool {
+        self.setup.used.get(target) == Some(&true)
+    }
+
+    /// A bundled picture over `rect`, on a dark ground until it is uploaded.
+    fn popup_picture(&mut self, rect: Rect, picture: setup_pictures::Picture) {
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::SolidRect {
+            rect,
+            color: Color::new(0.0, 0.0, 0.0, 0.55),
+        });
+        let _ = list.push(DrawCommand::TexturedQuad {
+            rect,
+            texture: picture.texture(),
+            color: Color::new(1.0, 1.0, 1.0, 1.0),
+        });
+    }
+
+    /// The classic menus' main page over `rect`: the page itself, laid out for a
+    /// screen `rect`'s size by the code that draws it full size, in the game's own
+    /// look with the player's artwork, then moved onto the button. Its text is drawn
+    /// in the pop-up's type.
+    fn popup_classic_menu(&mut self, rect: Rect) {
+        use crate::menu::classic::{ClassicMain, own_look, view};
+        let mut page = self
+            .setup
+            .page
+            .take()
+            .unwrap_or_else(|| Box::new(MenuCanvas::new()));
+        // The picture is of the retail look, whichever the classic menus wear now.
+        let own = own_look::on();
+        own_look::set(false);
+        view::build(
+            &mut page,
+            [rect.width, rect.height],
+            &ClassicMain::new(),
+            1.0,
+            self.setup.art,
+        );
+        own_look::set(own);
+        let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
+            rect,
+            color: Color::new(0.0, 0.0, 0.0, 1.0),
+        });
+        self.ui.set_family(TextFamily::Display);
+        self.ui.draw_canvas(&page, [rect.x, rect.y], 5.0);
+        self.ui.set_family(TextFamily::Body);
+        self.setup.page = Some(page);
+    }
+
+    /// A theme's picture over `rect` (frame pixels): a panel of its lit glass on its
+    /// ground, strokes of its text and line-work, a pill of its gold.
+    fn popup_theme(&mut self, frame: &Frame, rect: [f32; 4], palette: &Palette) {
+        let [x, y, width, height] = rect;
+        let s = frame.s;
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect: frame.rect(x + 14.0, y + 14.0, width - 28.0, height - 20.0),
+            radius: 10.0 * s,
+            color: palette.glass_lit,
+        });
+        let _ = list.push(DrawCommand::Border {
+            rect: frame.rect(x + 14.0, y + 14.0, width - 28.0, height - 20.0),
+            radius: 10.0 * s,
+            width: s,
+            color: color::alpha(palette.holo, 0.5),
+        });
+        let inner = x + 32.0;
+        let room = width - 64.0;
+        // A title, three lines of a page, and the page's one gold button.
+        for (down, share, colour, thick) in [
+            (0.2, 0.46, palette.text, 8.0),
+            (0.38, 0.8, color::alpha(palette.holo, 0.85), 4.0),
+            (0.48, 0.62, color::alpha(palette.holo, 0.6), 4.0),
+            (0.58, 0.7, color::alpha(palette.muted, 0.6), 4.0),
+        ] {
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: frame.rect(inner, y + height * down, room * share, thick),
+                radius: thick * 0.5 * s,
+                color: colour,
+            });
+        }
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect: frame.rect(x + width - 32.0 - 66.0, y + height - 44.0, 66.0, 24.0),
+            radius: 12.0 * s,
+            color: palette.gold,
+        });
+    }
+
+    /// A settings picture, large, in the middle of `rect` (frame pixels) on a disc.
+    fn popup_icon(&mut self, frame: &Frame, rect: [f32; 4], name: &str) {
+        const DISC: f32 = 118.0;
+        const ICON: f32 = 76.0;
+        let [x, y, width, height] = rect;
+        let (cx, cy) = (x + width * 0.5, y + height * 0.5 + 4.0);
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect: frame.rect(x, y, width, height),
+            radius: 0.0,
+            color: color::alpha(color::holo(), 0.05),
+        });
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect: frame.rect(cx - DISC * 0.5, cy - DISC * 0.5, DISC, DISC),
+            radius: DISC * 0.5 * frame.s,
+            color: color::alpha(color::holo(), 0.1),
+        });
+        let _ = list.push(DrawCommand::Border {
+            rect: frame.rect(cx - DISC * 0.5, cy - DISC * 0.5, DISC, DISC),
+            radius: DISC * 0.5 * frame.s,
+            width: 1.5 * frame.s,
+            color: color::alpha(color::holo(), 0.45),
+        });
+        if let Some(picture) = crate::settings_icons::picture(name) {
+            let _ =
+                list.push(picture.quad(frame.rect(cx - ICON * 0.5, cy - ICON * 0.5, ICON, ICON)));
+        }
+    }
+
+    /// A button's name and its lines, under its picture; a theme's in its own colours.
+    fn popup_button_words(
+        &mut self,
+        frame: &Frame,
+        plan: &Plan,
+        button: &Button,
+        [x, top]: [f32; 2],
+        palette: Option<&Palette>,
+    ) {
+        let s = frame.s;
+        let room = plan.width - PAD * 2.0;
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("{}", button.name),
+            frame.rect(x + PAD, top + plan.name_top(), room, plan.name + 8.0),
+            plan.name * s,
+            palette.map_or(color::text(), |palette| palette.text),
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        let lines = button
+            .lines
+            .iter()
+            .flat_map(|line| wrap(line, plan.chars))
+            .take(plan.lines);
+        for (index, line) in lines.enumerate() {
+            text(
+                &mut self.ui,
+                TextFamily::Body,
+                format_args!("{line}"),
+                frame.rect(
+                    x + PAD,
+                    top + plan.lines_top() + index as f32 * plan.line(),
+                    room,
+                    plan.line(),
+                ),
+                plan.words * s,
+                palette.map_or(color::alpha(color::text(), 0.8), |palette| palette.muted),
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+    }
+
+    /// How a preset should run on this PC: its colour's dot and the words.
+    fn popup_rating(&mut self, frame: &Frame, x: f32, top: f32, rating: graphics_quality::Rating) {
+        let s = frame.s;
+        let _ = self.ui.draw_list_mut().push(DrawCommand::RoundedRect {
+            rect: frame.rect(x, top + 7.0, 10.0, 10.0),
+            radius: 5.0 * s,
+            color: rating.color(),
+        });
+        let words = rating.words();
+        let (head, rest) = words.split_at(words.chars().next().map_or(0, char::len_utf8));
         text(
             &mut self.ui,
             TextFamily::Body,
-            format_args!(
-                "Coming from another client? Import from a client brings your setup, and the FPS your movement felt like."
-            ),
-            frame.rect(TEXT_X, CARD[1] + 116.0, TEXT_WIDTH, 24.0),
+            format_args!("{}{rest}", head.to_uppercase()),
+            frame.rect(x + 18.0, top, 320.0, RATING_HEIGHT),
             15.0 * s,
-            color::quiet(),
+            rating.color(),
             FontWeight::Regular,
             TextAlign::Start,
         );
     }
 
-    /// The themes, a tile each in the theme's own colours whatever the one worn: its
-    /// ground and glass, a stroke of its line-work, a dot of its gold, its name in its
-    /// text colour. The one in use has a gold edge and "In use"; a click wears one at
-    /// once. The Theme row under them is the same choice for the keyboard.
-    fn popup_themes(&mut self, frame: &Frame) {
-        use crate::menu::sjk::theme::{self, Theme};
+    /// A small mark over a button's picture, at `at` (its top left corner, or its top
+    /// right when `gold`): "In use" in gold, or a note on dark glass.
+    fn popup_mark(&mut self, frame: &Frame, [x, y]: [f32; 2], label: &str, gold: bool) {
         let s = frame.s;
-        let width = (TEXT_WIDTH - TILE_GAP * 3.0) / 4.0;
-        let worn = theme::current();
-        for (index, choice) in Theme::ALL.into_iter().enumerate() {
-            let palette = theme::preview(choice);
-            let x = TEXT_X + index as f32 * (width + TILE_GAP);
-            let tile = frame.rect(x, TILES_TOP, width, TILE_HEIGHT);
-            let radius = 14.0 * s;
+        // Exo 2 at 14 is about 7 pixels a character.
+        let width = 7.2 * label.len() as f32 + 24.0;
+        let left = if gold { x - width } else { x };
+        let rect = frame.rect(left, y, width, 26.0);
+        let list = self.ui.draw_list_mut();
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect,
+            radius: 13.0 * s,
+            color: if gold {
+                color::gold()
+            } else {
+                Color::new(0.0, 0.0, 0.0, 0.72)
+            },
+        });
+        if !gold {
+            let _ = list.push(DrawCommand::Border {
+                rect,
+                radius: 13.0 * s,
+                width: s,
+                color: color::alpha(color::gold_bright(), 0.8),
+            });
+        }
+        text(
+            &mut self.ui,
+            TextFamily::Body,
+            format_args!("{label}"),
+            rect,
+            14.0 * s,
+            if gold { INK } else { color::gold_bright() },
+            FontWeight::Semibold,
+            TextAlign::Center,
+        );
+    }
+
+    /// The choices under button `index` (its presets), each a chip with its rating's
+    /// dot: gold when in use, ringed under the keyboard or the pointer.
+    fn popup_chips(
+        &mut self,
+        frame: &Frame,
+        plan: &Plan,
+        button: &Button,
+        index: usize,
+        [x, top]: [f32; 2],
+    ) {
+        let Act::Preset(levels) = button.act else {
+            return;
+        };
+        let s = frame.s;
+        let first = self.step().first_target(index);
+        let gap = 8.0;
+        let room = plan.width - PAD * 2.0;
+        let width = (room - gap * (levels.len() - 1) as f32) / levels.len() as f32;
+        let mib = graphics_quality::card_mib();
+        for (option, (level, name)) in levels.iter().enumerate() {
+            let target = first + option;
+            let token = TARGET_TOKEN + target as u16;
+            let used = self.used(target);
+            let lit = self.setup.target == Some(target) || self.ui.token_hovered(token);
+            let left = x + PAD + option as f32 * (width + gap);
+            let rect = frame.rect(left, top, width, CHIP_HEIGHT);
             let list = self.ui.draw_list_mut();
             let _ = list.push(DrawCommand::RoundedRect {
-                rect: tile,
-                radius,
-                color: palette.space,
-            });
-            // A band of the theme's glass across the foot, as its panels are.
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + 8.0, TILES_TOP + 58.0, width - 16.0, 38.0),
-                radius: 9.0 * s,
-                color: palette.glass_lit,
-            });
-            // Its line-work and its gold.
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + 20.0, TILES_TOP + 74.0, width - 86.0, 6.0),
-                radius: 3.0 * s,
-                color: palette.holo,
-            });
-            let _ = list.push(DrawCommand::RoundedRect {
-                rect: frame.rect(x + width - 52.0, TILES_TOP + 66.0, 34.0, 22.0),
-                radius: 11.0 * s,
-                color: palette.gold,
+                rect,
+                radius: CHIP_HEIGHT * 0.5 * s,
+                color: if used {
+                    color::gold()
+                } else {
+                    color::alpha(color::holo(), if lit { 0.16 } else { 0.06 })
+                },
             });
             let _ = list.push(DrawCommand::Border {
-                rect: tile,
-                radius,
-                width: if choice == worn { 2.5 } else { 1.5 } * s,
-                color: if choice == worn {
-                    palette.gold
+                rect,
+                radius: CHIP_HEIGHT * 0.5 * s,
+                width: if lit { 2.0 } else { 1.0 } * s,
+                color: if lit {
+                    Color::new(1.0, 1.0, 1.0, 0.8)
                 } else {
-                    color::alpha(palette.holo, 0.45)
+                    color::alpha(color::holo(), 0.4)
                 },
+            });
+            let _ = list.push(DrawCommand::RoundedRect {
+                rect: frame.rect(left + 9.0, top + CHIP_HEIGHT * 0.5 - 4.0, 8.0, 8.0),
+                radius: 4.0 * s,
+                color: if used { INK } else { level.rating(mib).color() },
             });
             text(
                 &mut self.ui,
                 TextFamily::Display,
-                format_args!("{}", choice.label()),
-                frame.rect(x + 18.0, TILES_TOP + 12.0, width - 36.0, 34.0),
-                26.0 * s,
-                palette.text,
+                format_args!("{name}"),
+                frame.rect(left + 18.0, top, width - 24.0, CHIP_HEIGHT),
+                16.0 * s,
+                if used { INK } else { color::text() },
                 FontWeight::Semibold,
-                TextAlign::Start,
+                TextAlign::Center,
             );
-            if choice == worn {
-                text(
-                    &mut self.ui,
-                    TextFamily::Body,
-                    format_args!("In use"),
-                    frame.rect(x + 18.0, TILES_TOP + 18.0, width - 36.0, 24.0),
-                    14.0 * s,
-                    palette.gold,
-                    FontWeight::Regular,
-                    TextAlign::End,
-                );
-            }
-            self.ui.hit_region(THEME_TOKEN + index as u16, tile);
+            self.ui.hit_region(token, rect);
         }
     }
 
-    /// Wear theme `theme`, as a click on its tile does.
-    pub(super) fn wear_theme(
-        &mut self,
-        console: &mut ViewerConsole,
-        theme: crate::menu::sjk::theme::Theme,
-    ) {
-        console.set_cvar(crate::menu::sjk::theme::CVAR, theme.name());
-        crate::menu::sjk::theme::sync(console);
-        self.refresh(console);
-    }
-
-    /// What the focused row does, in up to two lines under the rows.
-    fn popup_help(&mut self, frame: &Frame) {
+    /// What the focused row does, in up to two lines from `top`, while a row has the
+    /// keyboard.
+    fn popup_help(&mut self, frame: &Frame, top: f32) {
         let s = frame.s;
+        if self.setup.target.is_some() || top + NOTE_LINE * 2.0 > CONTENT_BOTTOM + 2.0 {
+            return;
+        }
         let Some(help) = self
             .rows()
             .get(self.selected)
@@ -231,10 +1214,10 @@ impl SettingsMenu {
                 TextFamily::Body,
                 format_args!("{line}"),
                 frame.rect(
-                    ROWS_X + SHIFT[0],
-                    HELP_TOP + index as f32 * 24.0,
+                    ROWS_LEFT,
+                    top + index as f32 * NOTE_LINE,
                     ROWS_WIDTH,
-                    24.0,
+                    NOTE_LINE,
                 ),
                 16.0 * s,
                 color::alpha(color::text(), 0.72),
@@ -244,9 +1227,9 @@ impl SettingsMenu {
         }
     }
 
-    /// The foot under its rule: the pinned "Don't show at start" tick on the
-    /// left, focused with the row's band, then All settings and Done on the
-    /// right.
+    /// The foot under its rule: the pinned "Don't show at start" tick on the left,
+    /// focused with the row's band, then All settings, Back and Next on the right
+    /// (Done on the last step).
     fn popup_foot(&mut self, frame: &Frame) {
         let s = frame.s;
         let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
@@ -288,20 +1271,36 @@ impl SettingsMenu {
         }
         let right = CARD[0] + CARD[2] - MARGIN;
         let top = FOOT_MIDDLE - BUTTON_HEIGHT * 0.5;
+        let last = self.setup.step + 1 >= STEPS.len();
         kit::button(
             &mut self.ui,
             frame,
             [right - 160.0, top, 160.0, BUTTON_HEIGHT],
-            "Done",
+            if last { "Done" } else { "Next" },
             true,
             true,
             false,
-            DONE_TOKEN,
+            if last { DONE_TOKEN } else { NEXT_TOKEN },
         );
         kit::button(
             &mut self.ui,
             frame,
-            [right - 160.0 - 14.0 - 170.0, top, 170.0, BUTTON_HEIGHT],
+            [right - 160.0 - 12.0 - 120.0, top, 120.0, BUTTON_HEIGHT],
+            "Back",
+            false,
+            self.setup.step > 0,
+            false,
+            PREVIOUS_TOKEN,
+        );
+        kit::button(
+            &mut self.ui,
+            frame,
+            [
+                right - 160.0 - 12.0 - 120.0 - 12.0 - 160.0,
+                top,
+                160.0,
+                BUTTON_HEIGHT,
+            ],
             "All settings",
             false,
             true,
@@ -311,20 +1310,24 @@ impl SettingsMenu {
     }
 }
 
-// The tiles under the header's last line, the rows under the tiles.
-const _: () = assert!(TILES_TOP >= CARD[1] + 116.0 + 24.0);
-const _: () = assert!(ROWS_TOP + SHIFT[1] >= TILES_TOP + TILE_HEIGHT);
-// The rows, their scrollbar, the help and the foot inside the card, in order.
-const _: () = assert!(ROWS_X + SHIFT[0] >= CARD[0] + MARGIN);
-const _: () = assert!(ROWS_X + SHIFT[0] + ROWS_WIDTH + 18.0 <= CARD[0] + CARD[2] - 24.0);
-const _: () = assert!(HELP_TOP + 2.0 * 24.0 <= FOOT_RULE - 8.0);
+// The strip, the title and the sentence in order over the content.
+const _: () = assert!(STRIP_Y + 20.0 <= TITLE_TOP && TITLE_TOP + 50.0 <= SENTENCE_TOP);
+const _: () = assert!(SENTENCE_TOP + 26.0 <= CONTENT_TOP - 8.0);
+// The rows' column inside the card, the foot under the content.
+const _: () = assert!(ROWS_LEFT >= CARD[0] + MARGIN);
+const _: () = assert!(ROWS_LEFT + ROWS_WIDTH + 18.0 <= CARD[0] + CARD[2] - 24.0);
 const _: () = assert!(FOOT_MIDDLE + BUTTON_HEIGHT * 0.5 < CARD[1] + CARD[3]);
 // The card and the keys under it inside the frame.
-const _: () = assert!(CARD[0] + CARD[2] <= 1824.0 && CARD[1] + CARD[3] + 48.0 <= 1080.0);
+const _: () = assert!(CARD[0] + CARD[2] <= 1824.0 && CARD[1] + CARD[3] + 22.0 + 28.0 <= 1080.0);
+// The steps fit the strip, the choices their tokens.
+const _: () = assert!(STEPS.len() <= MOST_STEPS);
+const _: () = assert!(TARGET_TOKEN + MOST_TARGETS <= STEP_TOKEN);
+const _: () = assert!(STEP_TOKEN + (MOST_STEPS as u16) <= NEXT_TOKEN);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graphics_quality::Level;
 
     fn popup() -> (tempfile::TempDir, ViewerConsole, SettingsMenu) {
         let directory = tempfile::tempdir().unwrap();
@@ -341,31 +1344,370 @@ mod tests {
             .unwrap()
     }
 
-    /// "Don't show at start" leaves the scrolling lines for the foot, and the
-    /// keyboard still reaches it: up from the first row, and back down.
-    #[test]
-    fn the_hide_row_is_pinned_at_the_foot_and_the_keyboard_reaches_it() {
-        let (_directory, _console, mut menu) = popup();
-        assert!(menu.popup() && menu.on_first_setup());
-        let hide = hide_row(&menu);
-        let classic = menu.classic.as_ref().unwrap();
-        assert!(!classic.lines.contains(&Line::Row(hide)));
-        assert_eq!(classic.rows().last(), Some(hide));
-        assert!(menu.shows(hide));
-        assert_eq!(menu.selected, 0);
-        menu.step_selection(-1);
-        assert_eq!(menu.selected, hide);
-        menu.step_selection(1);
-        assert_eq!(menu.selected, 0);
+    fn row_of(menu: &SettingsMenu, cvar: &str) -> usize {
+        menu.rows()
+            .iter()
+            .position(|setting| setting.cvar.eq_ignore_ascii_case(cvar))
+            .unwrap()
     }
 
-    /// The tick is the row: stepping it hides First setup at start, and
-    /// Backspace's reset shows it again.
+    /// The step whose buttons do `wanted`.
+    fn step_with(wanted: impl Fn(&Act) -> bool) -> usize {
+        STEPS
+            .iter()
+            .position(|step| step.buttons.iter().any(|button| wanted(&button.act)))
+            .unwrap()
+    }
+
+    /// The pop-up opens on its first step, the keyboard on the look in use, and shows
+    /// only that step's rows; the tick stays pinned at the foot.
+    #[test]
+    fn the_popup_opens_on_its_first_step_with_only_its_rows() {
+        let (_directory, _console, menu) = popup();
+        assert!(menu.popup() && menu.on_first_setup());
+        assert_eq!(menu.setup_step(), 0);
+        assert_eq!(menu.setup.target, Some(0), "a new profile wears SJK");
+        assert_eq!(menu.popup_on_button(), Some(true));
+        let hide = hide_row(&menu);
+        let classic = menu.classic.as_ref().unwrap();
+        assert_eq!(classic.pinned, Some(hide));
+        let rows: Vec<usize> = classic.rows().collect();
+        let wanted: Vec<usize> = STEPS[0]
+            .rows
+            .iter()
+            .map(|cvar| row_of(&menu, cvar))
+            .chain([hide])
+            .collect();
+        assert_eq!(rows, wanted);
+        // No row looks focused while a button has the keyboard.
+        assert!(!menu.shows(menu.selected));
+    }
+
+    /// Every step shows its rows without scrolling, inside the card over the foot.
+    #[test]
+    fn every_step_fits_the_card() {
+        let (_directory, console, mut menu) = popup();
+        for (index, step) in STEPS.iter().enumerate() {
+            menu.show_step(&console, index);
+            let layout = menu.layout();
+            let lines = menu.step_lines();
+            assert_eq!(
+                lines,
+                step.rows.len() * if step.explained { 2 } else { 1 },
+                "{}: a row of the step is not a First setup row",
+                step.title
+            );
+            let rows_bottom = layout.rows_top + lines as f32 * LINE;
+            assert!(
+                rows_bottom <= CONTENT_BOTTOM,
+                "{}: {rows_bottom}",
+                step.title
+            );
+            let (aside_top, aside_lines) = layout.aside;
+            assert!(
+                aside_top + aside_lines as f32 * NOTE_LINE <= CONTENT_BOTTOM,
+                "{}",
+                step.title
+            );
+            // The focused row's two lines of help have room where a step shows them.
+            if !step.explained && !step.rows.is_empty() {
+                assert!(
+                    layout.help_top + 2.0 * NOTE_LINE <= CONTENT_BOTTOM + 2.0,
+                    "{}: {}",
+                    step.title,
+                    layout.help_top
+                );
+            }
+            if let Some(plan) = layout.plan {
+                assert!(plan.x(step.buttons.len() - 1) + plan.width <= TEXT_X + TEXT_WIDTH + 0.5);
+                assert!(step.targets().len() <= usize::from(MOST_TARGETS));
+            }
+        }
+        // Worst case: the aside a step shows only under EJK mode.
+        let mut console = console;
+        console.set_cvar(crate::ejk_mode::CVAR, "1");
+        for (index, step) in STEPS.iter().enumerate() {
+            menu.show_step(&console, index);
+            let layout = menu.layout();
+            let bottom = layout.rows_top + menu.step_lines() as f32 * LINE;
+            assert!(bottom <= CONTENT_BOTTOM, "{}", step.title);
+        }
+    }
+
+    /// Page Down and Page Up change step and stop at the ends; the foot's Next and
+    /// Back and the strip's steps do the same for the pointer.
+    #[test]
+    fn the_steps_change_by_key_and_by_pointer() {
+        let (_directory, mut console, mut menu) = popup();
+        assert!(matches!(
+            menu.popup_key(KeyCode::PageUp, &mut console),
+            Some(SettingsResult::None)
+        ));
+        assert_eq!(menu.setup_step(), 0);
+        for step in 1..STEPS.len() {
+            menu.popup_key(KeyCode::PageDown, &mut console);
+            assert_eq!(menu.setup_step(), step);
+        }
+        menu.popup_key(KeyCode::PageDown, &mut console);
+        assert_eq!(menu.setup_step(), STEPS.len() - 1);
+        // A step of rows opens with the keyboard on its first row.
+        assert_eq!(menu.setup.target, None);
+        assert_eq!(menu.selected, row_of(&menu, STEPS[STEPS.len() - 1].rows[0]));
+        menu.popup_pointer(PREVIOUS_TOKEN, UiEventKind::Activate, &mut console);
+        assert_eq!(menu.setup_step(), STEPS.len() - 2);
+        menu.popup_pointer(NEXT_TOKEN, UiEventKind::Activate, &mut console);
+        assert_eq!(menu.setup_step(), STEPS.len() - 1);
+        menu.popup_pointer(STEP_TOKEN + 2, UiEventKind::Activate, &mut console);
+        assert_eq!(menu.setup_step(), 2);
+        assert!(
+            menu.popup_pointer(
+                STEP_TOKEN + STEPS.len() as u16,
+                UiEventKind::Activate,
+                &mut console
+            )
+            .is_none()
+        );
+        // F2 leaves for all settings; the search's and the groups' keys do nothing.
+        assert!(matches!(
+            menu.popup_key(KeyCode::F2, &mut console),
+            Some(SettingsResult::AllSettings)
+        ));
+        for key in [KeyCode::Slash, KeyCode::BracketLeft, KeyCode::BracketRight] {
+            assert!(matches!(
+                menu.popup_key(key, &mut console),
+                Some(SettingsResult::None)
+            ));
+        }
+    }
+
+    /// The keyboard's order on a step with buttons: Left and Right (and Tab) through
+    /// the buttons, Down to the first row, on down the rows to the tick, Down again
+    /// back to the buttons; Up from the buttons to the tick.
+    #[test]
+    fn the_keyboard_goes_round_the_buttons_the_rows_and_the_tick() {
+        let (_directory, mut console, mut menu) = popup();
+        let hide = hide_row(&menu);
+        assert_eq!(menu.setup.target, Some(0));
+        menu.popup_key(KeyCode::ArrowRight, &mut console);
+        assert_eq!(menu.setup.target, Some(1));
+        menu.popup_key(KeyCode::ArrowRight, &mut console);
+        assert_eq!(menu.setup.target, Some(0), "it wraps");
+        menu.popup_key(KeyCode::Tab, &mut console);
+        assert_eq!(menu.setup.target, Some(1));
+        menu.popup_key(KeyCode::ArrowLeft, &mut console);
+        assert_eq!(menu.setup.target, Some(0));
+        // Down: the step's first row; the rows take their own keys from there.
+        menu.popup_key(KeyCode::ArrowDown, &mut console);
+        assert_eq!(menu.setup.target, None);
+        let rows: Vec<usize> = STEPS[0]
+            .rows
+            .iter()
+            .map(|cvar| row_of(&menu, cvar))
+            .collect();
+        assert_eq!(menu.selected, rows[0]);
+        assert_eq!(menu.popup_on_button(), None);
+        assert!(menu.popup_key(KeyCode::ArrowDown, &mut console).is_none());
+        menu.step_selection(1);
+        assert_eq!(menu.selected, rows[1]);
+        menu.step_selection(1);
+        assert_eq!(menu.selected, hide);
+        // Down from the tick, and Up from the first row, are the buttons.
+        assert!(menu.popup_key(KeyCode::ArrowDown, &mut console).is_some());
+        assert_eq!(menu.setup.target, Some(0));
+        menu.popup_key(KeyCode::ArrowUp, &mut console);
+        assert_eq!((menu.setup.target, menu.selected), (None, hide));
+        menu.selected = rows[0];
+        assert!(menu.popup_key(KeyCode::ArrowUp, &mut console).is_some());
+        assert_eq!(menu.setup.target, Some(0));
+        // A step of rows only: Up from its first row wraps to the tick, as before.
+        let plain = STEPS
+            .iter()
+            .position(|step| step.buttons.is_empty())
+            .unwrap();
+        menu.show_step(&console, plain);
+        assert!(menu.popup_key(KeyCode::ArrowUp, &mut console).is_none());
+        menu.step_selection(-1);
+        assert_eq!(menu.selected, hide);
+        assert!(matches!(
+            menu.popup_key(KeyCode::Tab, &mut console),
+            Some(SettingsResult::None)
+        ));
+    }
+
+    /// Choosing EJK turns `ui_ejkMode` on and the pop-up stays on its step; choosing
+    /// SJK turns it off. Enter on the look in use goes on to the next step.
+    #[test]
+    fn picking_a_look_sets_ejk_mode_and_the_popup_stays() {
+        let (_directory, mut console, mut menu) = popup();
+        let cvar = crate::ejk_mode::CVAR;
+        assert_eq!(console.bool_cvar(cvar), Some(false));
+        menu.popup_key(KeyCode::ArrowRight, &mut console);
+        assert_eq!(menu.popup_on_button(), Some(false));
+        menu.popup_key(KeyCode::Enter, &mut console);
+        assert_eq!(console.bool_cvar(cvar), Some(true));
+        assert!(menu.popup() && menu.setup_step() == 0);
+        assert_eq!(menu.setup.used, [false, true]);
+        // The mode applies a moment later and sets many settings: they are read again.
+        crate::ejk_mode::follow(&mut console);
+        assert_eq!(
+            console.text_value(crate::menu::style::CVAR),
+            Some("classic")
+        );
+        let style = row_of(&menu, crate::menu::style::CVAR);
+        assert_ne!(menu.values[style].to_ascii_lowercase(), "classic");
+        menu.follow_console(&console);
+        assert_eq!(menu.values[style].to_ascii_lowercase(), "classic");
+        assert!(menu.popup() && menu.setup_step() == 0);
+        // The pointer on SJK turns it off again.
+        menu.popup_pointer(TARGET_TOKEN, UiEventKind::Activate, &mut console);
+        assert_eq!(console.bool_cvar(cvar), Some(false));
+        assert_eq!(menu.setup.used, [true, false]);
+        assert_eq!(menu.setup_step(), 0, "a click on the one in use stays");
+        menu.popup_pointer(TARGET_TOKEN, UiEventKind::Activate, &mut console);
+        assert_eq!(menu.setup_step(), 0);
+        // Enter on the one in use: the next step.
+        menu.popup_key(KeyCode::Enter, &mut console);
+        assert_eq!(console.bool_cvar(cvar), Some(false));
+        assert_eq!(menu.setup_step(), 1);
+    }
+
+    /// A theme's button wears its theme at once.
+    #[test]
+    fn a_theme_button_wears_its_theme() {
+        use crate::menu::sjk::theme::Theme;
+        let (_directory, mut console, mut menu) = popup();
+        let step = step_with(|act| matches!(act, Act::Theme(_)));
+        menu.show_step(&console, step);
+        assert_eq!(menu.setup.target, Some(0), "Solar is worn");
+        let sith = STEPS[step]
+            .buttons
+            .iter()
+            .position(|button| button.act == Act::Theme(Theme::Sith))
+            .unwrap();
+        menu.popup_pointer(
+            TARGET_TOKEN + sith as u16,
+            UiEventKind::Activate,
+            &mut console,
+        );
+        assert_eq!(console.text_value(theme::CVAR), Some("sith"));
+        assert_eq!(theme::current(), Theme::Sith);
+        assert!(menu.setup.used[sith]);
+        assert_eq!(menu.setup.target, Some(sith));
+        menu.wear_theme(&mut console, Theme::Warm);
+        assert_eq!(console.text_value(theme::CVAR), Some("warm"));
+        assert!(menu.setup.used[0]);
+    }
+
+    /// The presets' buttons set their preset; the Solar Renderer's sets the level of
+    /// the chip chosen, and a click on the button itself one of its levels.
+    #[test]
+    fn a_preset_button_sets_its_preset() {
+        let (_directory, mut console, mut menu) = popup();
+        let step = step_with(|act| matches!(act, Act::Preset(_)));
+        menu.show_step(&console, step);
+        let targets = STEPS[step].targets();
+        assert_eq!(targets.len(), Level::ALL.len());
+        for (target, level) in Level::ALL.into_iter().enumerate() {
+            menu.popup_pointer(
+                TARGET_TOKEN + target as u16,
+                UiEventKind::Activate,
+                &mut console,
+            );
+            assert_eq!(Level::current(&console), Some(level));
+            let used: Vec<usize> = (0..targets.len()).filter(|at| menu.used(*at)).collect();
+            assert_eq!(used, [target]);
+            // A click on the button it belongs to keeps the level in use.
+            assert_eq!(menu.body_target(targets[target].button), target);
+        }
+        // With another button's preset in use, the Solar Renderer's own click is one of
+        // its levels.
+        Level::Vanilla.apply(&mut console);
+        menu.follow_console(&console);
+        let solar = STEPS[step]
+            .buttons
+            .iter()
+            .position(|button| button.act.options() > 1)
+            .unwrap();
+        let body = menu.body_target(solar);
+        assert_eq!(targets[body].button, solar);
+        menu.popup_pointer(
+            TARGET_TOKEN + body as u16,
+            UiEventKind::Activate,
+            &mut console,
+        );
+        assert_eq!(
+            Level::current(&console).map(Level::family),
+            Some(graphics_quality::Family::Solar)
+        );
+    }
+
+    /// Import opens the Import page, and Start fresh goes on to the next step.
+    #[test]
+    fn import_opens_its_page_and_start_fresh_goes_on() {
+        let (_directory, mut console, mut menu) = popup();
+        let step = step_with(|act| *act == Act::Import);
+        menu.show_step(&console, step);
+        let import = STEPS[step]
+            .buttons
+            .iter()
+            .position(|button| button.act == Act::Import)
+            .unwrap();
+        let fresh = STEPS[step]
+            .buttons
+            .iter()
+            .position(|button| button.act == Act::Next)
+            .unwrap();
+        assert!(matches!(
+            menu.popup_pointer(
+                TARGET_TOKEN + import as u16,
+                UiEventKind::Activate,
+                &mut console
+            ),
+            Some(SettingsResult::OpenImport)
+        ));
+        assert_eq!(menu.setup_step(), step);
+        menu.popup_pointer(
+            TARGET_TOKEN + fresh as u16,
+            UiEventKind::Activate,
+            &mut console,
+        );
+        assert_eq!(menu.setup_step(), step + 1);
+    }
+
+    /// The pointer on a button takes the keyboard there; on a row, gives it back.
+    #[test]
+    fn the_pointer_moves_the_keyboard_between_buttons_and_rows() {
+        let (_directory, mut console, mut menu) = popup();
+        let row = row_of(&menu, STEPS[0].rows[0]);
+        menu.popup_pointer(TARGET_TOKEN + 1, UiEventKind::Hover, &mut console);
+        assert_eq!(menu.setup.target, Some(1));
+        assert!(
+            menu.popup_pointer(row as u16, UiEventKind::Hover, &mut console)
+                .is_none()
+        );
+        assert_eq!(menu.setup.target, None);
+        // A token of no button and no row changes nothing.
+        menu.popup_pointer(TARGET_TOKEN + 1, UiEventKind::Hover, &mut console);
+        assert!(
+            menu.popup_pointer(TARGET_TOKEN + 9, UiEventKind::Hover, &mut console)
+                .is_none()
+        );
+        assert_eq!(menu.setup.target, Some(1));
+    }
+
+    /// The tick is the row: stepping it hides First setup at start, and Backspace's
+    /// reset shows it again; it is reached from every step.
     #[test]
     fn the_tick_hides_first_setup_at_start() {
         let (_directory, mut console, mut menu) = popup();
         let hide = hide_row(&menu);
-        menu.step_selection(-1);
+        for (index, step) in STEPS.iter().enumerate() {
+            menu.show_step(&console, index);
+            assert!(menu.shows(hide), "{}", step.title);
+        }
+        menu.show_step(&console, 0);
+        menu.popup_key(KeyCode::ArrowUp, &mut console);
+        assert_eq!(menu.selected, hide);
         menu.adjust(&mut console, 1);
         assert_eq!(console.bool_cvar(quick::HIDE_CVAR), Some(true));
         assert!(switch_text_on(&menu.values[hide]));
@@ -373,45 +1715,18 @@ mod tests {
         assert_eq!(console.bool_cvar(quick::HIDE_CVAR), Some(false));
     }
 
-    /// A tile wears its theme at once, and the Theme row under them says the same.
+    /// First setup's other views pin nothing and keep every row in one list.
     #[test]
-    fn a_theme_tile_wears_its_theme() {
-        use crate::menu::sjk::theme::{self, Theme};
-        let (_directory, mut console, mut menu) = popup();
-        assert_eq!(theme_of(THEME_TOKEN), Some(Theme::Warm));
-        assert_eq!(theme_of(THEME_TOKEN + 1), Some(Theme::Sith));
-        assert_eq!(theme_of(THEME_TOKEN + 4), None);
-        assert_eq!(theme_of(THEME_TOKEN - 1), None);
-        menu.wear_theme(&mut console, Theme::Sith);
-        assert_eq!(console.text_value(theme::CVAR), Some("sith"));
-        let row = menu
-            .rows()
-            .iter()
-            .position(|setting| setting.cvar == theme::CVAR)
-            .unwrap();
-        assert_eq!(row, 0, "the look comes first");
-        assert_eq!(menu.values[row], "sith");
-        menu.wear_theme(&mut console, Theme::Warm);
-        assert_eq!(console.text_value(theme::CVAR), Some("warm"));
-    }
-
-    #[test]
-    fn tab_leaves_for_all_settings_and_the_search_keys_do_nothing() {
-        assert!(matches!(
-            popup_key(KeyCode::Tab),
-            Some(SettingsResult::AllSettings)
-        ));
-        for key in [KeyCode::Slash, KeyCode::BracketLeft, KeyCode::BracketRight] {
-            assert!(matches!(popup_key(key), Some(SettingsResult::None)));
-        }
-        assert!(popup_key(KeyCode::ArrowUp).is_none());
-        // First setup's other views pin nothing.
+    fn the_other_views_of_first_setup_keep_the_whole_list() {
         let (_directory, console, mut menu) = popup();
+        menu.show_step(&console, 3);
         menu.open_classic_group(
             &console,
             Group::Quick,
             crate::menu::classic::panel::Frame::Main,
         );
         assert!(!menu.popup() && menu.on_first_setup());
+        let rows = menu.classic.as_ref().unwrap().rows().count();
+        assert_eq!(rows, quick::rows().len());
     }
 }

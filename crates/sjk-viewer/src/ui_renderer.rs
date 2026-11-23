@@ -336,6 +336,9 @@ pub(crate) fn texture_switches(lists: &[&DrawList]) -> usize {
             None if news_slot_of(texture).is_some() => {
                 Source::News(news_slot_of(texture).unwrap_or_default())
             }
+            None if crate::setup_pictures::Picture::of_texture(texture).is_some() => Source::Setup(
+                crate::setup_pictures::Picture::of_texture(texture).map_or(0, |p| p.index() as u8),
+            ),
             None if texture == PREVIEW_TEXTURE => Source::Preview,
             None if texture == BLADE_PICTURES_TEXTURE => Source::BladePictures,
             None if crate::blade_stills::cell_of(texture).is_some() => Source::BladeStills,
@@ -415,6 +418,8 @@ pub(crate) struct ShapeRenderer {
     hud_preview: LevelshotTexture,
     /// The News panel's pictures on show.
     news: Vec<LevelshotTexture>,
+    /// First setup's pictures ([`crate::setup_pictures`]), each made when uploaded.
+    setup: [Option<LevelshotTexture>; crate::setup_pictures::Picture::COUNT],
     /// The model preview's display texture, once one exists.
     preview: Option<wgpu::BindGroup>,
     blade_pictures: Option<wgpu::BindGroup>,
@@ -638,6 +643,7 @@ impl ShapeRenderer {
             levelshot,
             hud_preview,
             news,
+            setup: std::array::from_fn(|_| None),
             preview: None,
             blade_pictures: None,
             blade_stills: None,
@@ -901,6 +907,7 @@ impl ShapeRenderer {
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::News(_)
+                        | Source::Setup(_)
                         | Source::MapEditPreview
                         | Source::Preview
                         | Source::BladePictures
@@ -981,6 +988,7 @@ impl ShapeRenderer {
                         | Source::Levelshot
                         | Source::HudPreview
                         | Source::News(_)
+                        | Source::Setup(_)
                         | Source::MapEditPreview
                         | Source::Preview
                         | Source::Backdrop => uv,
@@ -1235,6 +1243,13 @@ impl ShapeRenderer {
             None if news_slot_of(texture).is_some() => {
                 Source::News(news_slot_of(texture).unwrap_or_default())
             }
+            None if crate::setup_pictures::Picture::of_texture(texture).is_some() => {
+                let index = crate::setup_pictures::Picture::of_texture(texture)
+                    .map_or(0, crate::setup_pictures::Picture::index);
+                // Not uploaded yet: the button shows its ground until it is.
+                self.setup.get(index)?.as_ref()?;
+                Source::Setup(index as u8)
+            }
             None if texture == PREVIEW_TEXTURE => match self.preview {
                 Some(_) => Source::Preview,
                 None => return None,
@@ -1327,6 +1342,11 @@ impl ShapeRenderer {
                 Source::News(slot) => self
                     .news
                     .get(usize::from(slot))
+                    .map(LevelshotTexture::bind_group),
+                Source::Setup(index) => self
+                    .setup
+                    .get(usize::from(index))
+                    .and_then(Option::as_ref)
                     .map(LevelshotTexture::bind_group),
                 Source::Preview => self.preview.as_ref(),
                 Source::BladePictures => self.blade_pictures.as_ref(),
@@ -1898,6 +1918,19 @@ impl ShapeRenderer {
         if let Some(texture) = self.news.get_mut(slot) {
             texture.upload(device, queue, &self.texture_layout, image);
         }
+    }
+
+    /// Put First setup's picture `picture` ([`crate::setup_pictures::Picture::texture`]).
+    pub(crate) fn upload_setup_picture(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &crate::frame_queue::FrameQueue,
+        picture: crate::setup_pictures::Picture,
+        image: &crate::menu::levelshot::LevelshotImage,
+    ) {
+        let texture = self.setup[picture.index()]
+            .get_or_insert_with(|| LevelshotTexture::new(device, &self.texture_layout));
+        texture.upload(device, queue, &self.texture_layout, image);
     }
 
     /// Put the map editor's thumbnail `cell` ([`map_edit_pictures::cell_texture`]).

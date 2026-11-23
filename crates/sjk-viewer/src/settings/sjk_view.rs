@@ -91,6 +91,8 @@ const IDLE_OPACITY: f32 = 0.4;
 /// A sub-heading's picture, across.
 const HEADING_ICON: f32 = 32.0;
 const NAME_SIZE: f32 = 19.0;
+/// How many characters of a sentence under a row fit a line of the rows' column.
+const NOTE_CHARS: usize = 104;
 const DOT_GAP: f32 = 8.0;
 
 /// Where the changed dot's centre goes after a row's name, `label`, drawn from
@@ -312,6 +314,21 @@ impl SettingsMenu {
                         ROWS_WIDTH - indent,
                         heading,
                     );
+                }
+                Line::Note(note) => {
+                    // What the row above does, in up to two lines under its name.
+                    for (index, words) in wrap(note, NOTE_CHARS).take(2).enumerate() {
+                        text(
+                            &mut self.ui,
+                            TextFamily::Body,
+                            format_args!("{words}"),
+                            frame.rect(LABEL_X, top + index as f32 * 22.0, ROWS_WIDTH - 44.0, 22.0),
+                            15.0 * s,
+                            color::muted(),
+                            FontWeight::Regular,
+                            TextAlign::Start,
+                        );
+                    }
                 }
                 Line::Row(row) => {
                     slots.push((row, top));
@@ -991,7 +1008,11 @@ impl SettingsMenu {
         } else if self.searching {
             keys.extend([(&["Enter"][..], "results"), (&["Esc"][..], "clear")]);
         } else {
-            if let Some(setting) = self
+            // First setup's pop-up with the keyboard on a picture button.
+            if let Some(used) = self.popup_on_button() {
+                keys.push((&["Left", "Right"][..], "choose"));
+                keys.push((&["Enter"][..], if used { "next step" } else { "use" }));
+            } else if let Some(setting) = self
                 .rows()
                 .get(self.selected)
                 .filter(|_| self.shows(self.selected))
@@ -1028,8 +1049,9 @@ impl SettingsMenu {
                 keys.push((&["Backspace"][..], "default"));
             }
             if self.popup() {
-                keys.push((&["Tab"][..], "all settings"));
-                keys.push((&["Esc"][..], "done"));
+                keys.push((&["PgUp", "PgDn"][..], "step"));
+                keys.push((&["F2"][..], "all settings"));
+                keys.push((&["Esc"][..], "close"));
             } else if self.section == Section::Search {
                 keys.push((&["Esc"][..], "clear the search"));
             } else {

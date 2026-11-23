@@ -24,6 +24,28 @@
 
 # ---- Console & chat ----
 
+[first-setup-steps]
+area: Menus & settings
+title: First setup in steps with pictures (SJK UI pop-up)
+change: Six steps across the top: Look, Colours, Import, Graphics, Play, Online. No scrolling.
+change: Picture buttons: SJK / EJK (ui_ejkMode), the themes, Import, the graphics presets.
+change: Picking EJK keeps the pop-up open; the classic style still gets its list panel.
+test: New profile (or firstsetup): step 1 shows SJK and EJK with pictures, SJK in use.
+test: The EJK picture is your game's classic main menu, small. The SJK one is SJK's menu.
+test: Click EJK: In use moves, the pop-up stays, Menu style and HUD rows follow in a moment.
+test: Click SJK again: your settings come back. Enter on the one in use goes to step 2.
+test: Step 2: click each theme, the whole card changes colour. With EJK on, a gold note shows.
+test: Step 3: Import my setup opens the Import page; Start fresh goes to step 4.
+test: Step 4: three pictures of the same spot; ratings and Recommended fit your card.
+test: Step 4: Low/Medium/High/Ultra chips under Solar Renderer set that level and its picture.
+test: Left/Right/Tab move over buttons and chips, Down reaches the rows, then the tick.
+test: PgUp/PgDn, Back/Next and a click on a step's name change step. Done on step 6.
+test: F2 or All settings opens Settings > First setup with the whole list. Esc closes.
+test: Tick Don't show at start on any step, restart: First setup does not open.
+test: ui_menuStyle classic, then firstsetup: the classic panel with the whole list opens.
+test: At 4:3, ultrawide and 4K nothing is cut, overlaps or leaves the card.
+note: Not in the steps any more: nameplate range/bars/icons/duel, Force shells, duel ghost.
+
 [ejk-mode]
 area: Menus & settings
 title: EJK mode: one switch for JoF EJK's look (ui_ejkMode)

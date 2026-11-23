@@ -1285,7 +1285,7 @@ mod tests {
             .iter()
             .filter_map(|line| match line {
                 super::super::Line::Heading(heading) => Some(*heading),
-                super::super::Line::Row(_) => None,
+                super::super::Line::Row(_) | super::super::Line::Note(_) => None,
             })
             .collect();
         assert_eq!(
@@ -1310,7 +1310,7 @@ mod tests {
             .iter()
             .filter_map(|line| match line {
                 super::super::Line::Row(row) => Some(*row),
-                super::super::Line::Heading(_) => None,
+                super::super::Line::Heading(_) | super::super::Line::Note(_) => None,
             })
             .collect();
         assert_eq!(shown, (0..rows.len()).collect::<Vec<_>>());

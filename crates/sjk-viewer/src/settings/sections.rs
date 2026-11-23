@@ -575,7 +575,7 @@ mod tests {
                 match line {
                     Line::Heading(heading) => under_more = heading == MORE,
                     Line::Row(row) if under_more => left.push(rows[row].cvar),
-                    Line::Row(_) => {}
+                    Line::Row(_) | Line::Note(_) => {}
                 }
             }
             assert!(left.is_empty(), "{advanced:?}: no section for {left:?}");

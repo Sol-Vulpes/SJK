@@ -606,9 +606,15 @@ impl ClientMenu {
                 Some(MenuAction::None)
             }
             // The pop-up's All settings: its rows on the whole screen, among
-            // every setting (Advanced, for the visit).
+            // every setting (Advanced, for the visit). Under the classic style
+            // (a look picked on the pop-up turned it on) that screen is the
+            // classic Setup panel's First setup.
             SettingsResult::AllSettings => {
-                self.open_sjk_settings(console, FIRST_SETUP, target);
+                if self.menu_style == super::super::MenuStyle::Sjk {
+                    self.open_sjk_settings(console, FIRST_SETUP, target);
+                } else {
+                    self.open_first_setup(console, target);
+                }
                 Some(MenuAction::None)
             }
             // Interface's "Quick wheel pages" row: the Quick wheel category.

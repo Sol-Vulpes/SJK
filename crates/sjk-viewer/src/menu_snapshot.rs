@@ -2685,14 +2685,17 @@ fn sjk_theme_snapshot() {
     theme::sync(&console);
 }
 
-/// First setup's pop-up over the duel6 levelshot, wearing each theme: the themes'
-/// tiles, the look's rows first.
+/// First setup's pop-up over the duel6 levelshot: every step in the Solar theme (its
+/// picture buttons under the keyboard, then its rows), the first step wearing each
+/// theme and with EJK chosen, the graphics step on a Solar level, and the first and
+/// fourth steps on a 4:3 and an ultrawide screen.
 #[test]
 #[ignore = "reads the installed game data named by JKA_GAME_DATA"]
 fn sjk_first_setup_snapshot() {
     use crate::game_font::SjkFonts;
+    use crate::graphics_quality::Level;
     use crate::menu::sjk::{TextTarget, theme};
-    let (_, vfs) = art();
+    let (art, vfs) = art();
     let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
     let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
     let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
@@ -2707,22 +2710,100 @@ fn sjk_first_setup_snapshot() {
     for (texture, cell) in crate::settings_icons::small_cells() {
         icons.insert(texture.0, cell);
     }
+    for picture in crate::setup_pictures::Picture::ALL {
+        icons.insert(picture.texture().0, picture.decoded());
+    }
     let directory = tempfile::tempdir().unwrap();
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
-    for (name, value, hue) in [
-        ("sjk-first-setup-solar", "warm", None),
-        ("sjk-first-setup-sith", "sith", None),
-        ("sjk-first-setup-jedi", "cold", None),
-        ("sjk-first-setup-custom", "custom", Some("150")),
-    ] {
-        if let Some(hue) = hue {
-            console.set_cvar(theme::HUE_CVAR, hue);
-        }
-        console.set_cvar(theme::CVAR, value);
+    // What a shot shows: its name, the step, the choice the keyboard is on (none: its
+    // first row), the theme, EJK mode, a graphics preset to wear, and the screen.
+    struct Shot {
+        name: &'static str,
+        step: usize,
+        target: Option<usize>,
+        theme: &'static str,
+        ejk: bool,
+        level: Option<Level>,
+        viewport: [f32; 2],
+    }
+    let shot = |name, step, target| Shot {
+        name,
+        step,
+        target,
+        theme: "warm",
+        ejk: false,
+        level: None,
+        viewport: VIEWPORT_WIDE,
+    };
+    let shots = [
+        shot("sjk-first-setup-1-look", 0, Some(0)),
+        shot("sjk-first-setup-1-look-rows", 0, None),
+        Shot {
+            ejk: true,
+            ..shot("sjk-first-setup-1-look-ejk", 0, Some(1))
+        },
+        Shot {
+            theme: "sith",
+            ..shot("sjk-first-setup-1-look-sith", 0, Some(0))
+        },
+        Shot {
+            theme: "cold",
+            ..shot("sjk-first-setup-1-look-jedi", 0, Some(0))
+        },
+        Shot {
+            theme: "custom",
+            ..shot("sjk-first-setup-1-look-custom", 0, Some(0))
+        },
+        shot("sjk-first-setup-2-colours", 1, Some(0)),
+        Shot {
+            ejk: true,
+            theme: "cold",
+            ..shot("sjk-first-setup-2-colours-ejk", 1, None)
+        },
+        shot("sjk-first-setup-3-import", 2, Some(0)),
+        shot("sjk-first-setup-3-import-rows", 2, None),
+        shot("sjk-first-setup-4-graphics", 3, Some(1)),
+        Shot {
+            level: Some(Level::SolarHigh),
+            ..shot("sjk-first-setup-4-graphics-solar", 3, Some(4))
+        },
+        shot("sjk-first-setup-4-graphics-rows", 3, None),
+        Shot {
+            ejk: true,
+            theme: "sith",
+            ..shot("sjk-first-setup-4-graphics-ejk", 3, Some(0))
+        },
+        shot("sjk-first-setup-5-play", 4, None),
+        shot("sjk-first-setup-6-online", 5, None),
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-1-look-4x3", 0, Some(0))
+        },
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-4-graphics-4x3", 3, Some(1))
+        },
+        Shot {
+            viewport: [2560.0, 1080.0],
+            ..shot("sjk-first-setup-1-look-ultrawide", 0, Some(0))
+        },
+    ];
+    for shot in shots {
+        console.set_cvar(theme::HUE_CVAR, "150");
+        console.set_cvar(theme::CVAR, shot.theme);
         theme::sync(&console);
+        console.set_cvar(crate::ejk_mode::CVAR, if shot.ejk { "1" } else { "0" });
+        crate::ejk_mode::follow(&mut console);
+        if let Some(level) = shot.level {
+            level.apply(&mut console);
+        } else if !shot.ejk {
+            Level::DEFAULT.apply(&mut console);
+        }
         let mut settings = crate::settings::SettingsMenu::new();
+        settings.set_retail_art(art);
         settings.open_first_setup_popup(&console);
+        settings.setup_step_for_shot(&console, shot.step, shot.target);
         let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
         settings.append_sjk_popup(
             TextTarget::Families(
@@ -2733,7 +2814,7 @@ fn sjk_first_setup_snapshot() {
                 },
                 crate::text::TextStyle::NEUTRAL,
             ),
-            VIEWPORT_WIDE,
+            shot.viewport,
             1.0,
         );
         let fonts = SjkShotFonts {
@@ -2741,14 +2822,16 @@ fn sjk_first_setup_snapshot() {
             body: (&body_text, &body.image),
         };
         save_sjk_shot(
-            name,
-            VIEWPORT_WIDE,
+            shot.name,
+            shot.viewport,
             &backdrop,
             settings.draw_list(),
             &icons,
             fonts,
         );
     }
+    console.set_cvar(crate::ejk_mode::CVAR, "0");
+    crate::ejk_mode::follow(&mut console);
     console.set_cvar(theme::HUE_CVAR, "22");
     console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
     theme::sync(&console);

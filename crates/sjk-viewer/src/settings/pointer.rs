@@ -78,6 +78,12 @@ impl SettingsMenu {
         let Some(token) = event.token else {
             return SettingsResult::None;
         };
+        // First setup's pop-up: its picture buttons, its steps.
+        if self.popup()
+            && let Some(result) = self.popup_pointer(token, event.kind, console)
+        {
+            return result;
+        }
         if token == crate::menu::classic::panel::SEARCH_TOKEN {
             if event.kind == UiEventKind::Activate {
                 self.settle_numeric(console);
@@ -184,12 +190,6 @@ impl SettingsMenu {
             super::sjk_popup::ALL_SETTINGS_TOKEN if self.popup() => {
                 return SettingsResult::AllSettings;
             }
-            // First setup's theme tiles.
-            _ if self.popup() && super::sjk_popup::theme_of(token).is_some() => {
-                if let Some(theme) = super::sjk_popup::theme_of(token) {
-                    self.wear_theme(console, theme);
-                }
-            }
             _ => {
                 let Some(row) = self.setting_row(token) else {
                     return SettingsResult::None;
@@ -286,7 +286,7 @@ impl SettingsMenu {
         }
     }
 
-    fn setting_row(&self, token: u16) -> Option<usize> {
+    pub(super) fn setting_row(&self, token: u16) -> Option<usize> {
         let row = crate::menu_widgets::numeric::value_row(token)
             .or_else(|| super::classic_view::RowControl::of(token).map(|control| control.row()))
             .unwrap_or(usize::from(token));

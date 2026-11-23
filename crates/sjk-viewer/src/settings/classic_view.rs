@@ -186,6 +186,8 @@ impl SettingsMenu {
             classic.lines.retain(|line| *line != Line::Row(hide));
             classic.pinned = Some(hide);
         }
+        // The pop-up shows its rows a step at a time, the first step first.
+        self.show_step(console, 0);
     }
 
     /// Whether First setup's pop-up is on show (its rows pin one at its foot).
@@ -628,6 +630,8 @@ impl SettingsMenu {
                     place.heading(&mut self.ui, slot, text);
                     continue;
                 }
+                // Only the SJK UI's pop-up writes sentences under its rows.
+                Line::Note(_) => continue,
                 Line::Row(row) => row,
             };
             slots.push((row, slot));
