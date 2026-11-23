@@ -9,6 +9,38 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 23/11/2026 | - | Force box: an ancient Sith tomb, red glyphs, a lid in two slabs that grind apart
+- 92b585c |  | Force box: an ancient Sith tomb, red glyphs, a lid in two slabs that grind apart
++ 23/11/2026 | - | Status: the Sith tomb is merged into main
+- 60cde6b |  | Status: the Sith tomb is merged into main
++ 23/11/2026 | - | First setup in steps with pictures: one question a step, picture buttons for the looks, themes and presets
+- c70d960 |  | First setup in steps with pictures: one question a step, picture buttons for the looks, themes and presets
++ 23/11/2026 | - | EJK mode: the HUD files and a HUD pack stay the player's
+- c61cd2f |  | EJK mode: the HUD files and a HUD pack stay the player's
++ 22/11/2026 | - | EJK mode: one switch for JoF EJK's look, the player's settings kept
+- 87ba8b8 |  | EJK mode: one switch for JoF EJK's look, the player's settings kept
++ 22/11/2026 | - | Mimic: read the leader's view from apos.trBase; build stamp follows packed refs
+- 01151d0 |  | Mimic: read the leader's view from apos.trBase; build stamp follows packed refs
++ 22/11/2026 | - | Mimic: a staff or two sabers keep their stance
+- 7c77326 |  | Mimic: a staff or two sabers keep their stance
++ 22/11/2026 | - | Mimic: turn the view like a mouse, so a held view cannot throw it
+- d5dc14b |  | Mimic: turn the view like a mouse, so a held view cannot throw it
++ 22/11/2026 | - | Mimic view tests: iterate instead of indexing
+- 6c2ae18 |  | Mimic view tests: iterate instead of indexing
++ 22/11/2026 | - | Classic menus' own look: original proportions, the game's logo, Aurebesh columns
+- 673c03d |  | Classic menus' own look: original proportions, the game's logo, Aurebesh columns
++ 22/11/2026 | - | Classic menus' own look: the original artwork redrawn, to 16:9
+- 8102706 |  | Classic menus' own look: the original artwork redrawn, to 16:9
++ 22/11/2026 | - | Classic menus: a look of their own (ui_classicLook sjk)
+- 826e35b |  | Classic menus: a look of their own (ui_classicLook sjk)
++ 21/11/2026 | - | Themes named Solar, Sith, Jedi and Custom; First setup opens on the look
+- 0e4247c |  | Themes named Solar, Sith, Jedi and Custom; First setup opens on the look
++ 21/11/2026 | - | Settings: icons drawn by one script, long categories cut into pictured sections
+- 79764b2 |  | Settings: icons drawn by one script, long categories cut into pictured sections
++ 21/11/2026 | - | Settings: smarter controls, shaped by what players set and search for
+- 6d2a6ab |  | Settings: smarter controls, shaped by what players set and search for
++ 21/11/2026 | - | Smarter settings: credits, debug panel entry and status note
+- 7b43af4 |  | Smarter settings: credits, debug panel entry and status note
 + 21/11/2026 | - | Sol JK is now Sun JK: the name players and visitors read
 - afc3dcb |  | Sol JK is now Sun JK: the name players and visitors read
 + 21/11/2026 | - | One status bar: the top bar's parts merged into the bottom bar

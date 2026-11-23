@@ -5550,6 +5550,21 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[sith-tomb]
+area: Gameplay
+title: Force box: an ancient Sith tomb, red glyphs, a lid that grinds apart
+change: The box is a black basalt sarcophagus on two steps, a horn at each corner, red glyphs.
+change: Its lid is two slabs: they lift, slide apart and tip; red fire rises while it is open.
+change: JA's stone door sounds: seal, grind (2.4 s), a thud as the slabs rest; again to shut.
+test: A box on a map: dark stone, a red sigil each side, glyphs, slits down the horns, a halo.
+test: From afar the halo is a soft red light, never a flat red pane or a hard edge.
+test: Tap Use: the slabs grind apart over 2.3 s, a thud, embers and red fire inside.
+test: The roll waits inside ~1 s then rises above the horns; the words stand clear over it.
+test: Take it (or wait 10 s): the slabs grind shut, a thud, the fire sinks back.
+test: Walk round it: no texture stretched or mirrored badly, the lid meets the rim when shut.
+test: mapedit web editor: the box shows with both lid slabs shut.
+note: Bigger than the chest (80 x 41 on the floor, 47 tall): check each placed box still fits.
+
 [force-box]
 area: Gameplay
 title: Force box: stone, gold, blue runes, JA sounds; hold Use to roll a DOOM coin

@@ -61,7 +61,7 @@ did: Charged Force throws (hold the key) and a hit marker with a hit sound
 did: The Tag toy: stick a premade tag on walls and floors, TF2 style
 did: Force boxes on maps (mystery boxes): credits or a DOOM coin roll, and maybe win big
 did: The Force box's roll (a music box tune until 20/11/2026)
-did: The Force box's stone chest and the words over it
+did: The Force box's Sith tomb (a stone chest until 23/11/2026) and the words over it
 did: The Box hunt toy: kill the mark for a free mystery box roll
 did: The Banana peel toy (29/10 to 20/11/2026): peels opted-in players slip on as ragdolls
 did: The Prop gun toy (01/11 to 20/11/2026): a fake gun from your pk3, its bolts knock down
