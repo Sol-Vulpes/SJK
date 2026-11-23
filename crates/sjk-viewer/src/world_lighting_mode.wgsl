@@ -21,7 +21,7 @@ fn night_level() -> f32 {
 // Moonlight: the darkened bake leans cool blue at about the same brightness (Rec. 709
 // luma 0.99), the more the darker the night; green is 1, so it carries the plain factor.
 // Twin of `day_live::NIGHT_MOON`.
-const NIGHT_MOON: vec3<f32> = vec3<f32>(0.85, 1.0, 1.3);
+const NIGHT_MOON: vec3<f32> = vec3<f32>(0.7, 1.0, 1.8);
 
 // Baked light `light` (linear) at night: darkened to the level under a moonlit blue, the
 // brightest bake (lamp hot spots) keeping more of its own colour by the lamps.

@@ -4670,7 +4670,7 @@ shadow cascades being drawn every frame even with the sun below the horizon.
   sees. The brightest bake (linear peak 0.45 to 1, lamp hot spots) keeps up to
   `r_lowFpsNightLamps` (default 0.1) more. Textures, emission, additive stages and glow
   are untouched, so lamp fixtures and signs still shine.
-- Moonlight (23/11/2026): the darkened bake leans cool blue (`NIGHT_MOON` 0.85, 1, 1.3,
+- Moonlight (23/11/2026): the darkened bake leans cool blue (`NIGHT_MOON` 0.7, 1, 1.8,
   Rec. 709 luma 0.99, so about as bright), the more the darker the level (none at 1);
   the lamps' kept light keeps the bake's own colour, so lamp pools stay warm. Models'
   grid light takes the same per-channel factor.

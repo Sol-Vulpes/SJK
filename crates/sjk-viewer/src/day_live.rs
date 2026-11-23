@@ -24,7 +24,7 @@ pub(crate) const LOW_FPS_NIGHT_HOUR: f32 = 22.;
 /// brightness (Rec. 709 luma 0.99), leaning in as the night darkens. Green is 1, so the
 /// green channel of [`night_factor`] is the plain darkening. The shaders' twin is
 /// `NIGHT_MOON` in `world_lighting_mode.wgsl`.
-pub(crate) const NIGHT_MOON: [f32; 3] = [0.85, 1., 1.3];
+pub(crate) const NIGHT_MOON: [f32; 3] = [0.7, 1., 1.8];
 
 /// Low FPS Night's factor, per channel, on baked light whose brightest linear channel is
 /// `peak`: `level` (as seen: the linear factor is its 2.2 power) under the
