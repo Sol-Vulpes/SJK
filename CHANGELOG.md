@@ -30,9 +30,9 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1123.1 (Beta) | 23/11/2026
 
-A new name, Sun JK, a new emblem, a new Collection with kybers and an Inventory, a status bar along the bottom of the screen, banner notifications, feats and the Creyon werewolf.
+The first Sun JK beta. A new name, Sun JK, a new emblem, a new Collection with kybers and an Inventory, a status bar along the bottom of the screen, banner notifications, feats and the Creyon werewolf.
 
 > New emblem: SJK wears Sol's new emblem, a steel monogram before a burning sun, as its icon and in the menus, where the sun is alive.
 > Collection hall: The Collection opens on a hall of tiles, one to each kind, with an Inventory of all you own; Enter opens a kind and Esc comes back.

@@ -1,5 +1,5 @@
 //! The alpha notice (`docs/sjk-ui.md`, "Alpha notice"): the first time the game starts,
-//! an SJK pop-up card over the darkened screen says SJK is an alpha build of a free and
+//! an SJK pop-up card over the darkened screen says SJK is a beta build of a free and
 //! open-source project, that bugs and unfinished parts are to be expected, how to report
 //! them (the SJK Discord, or Report a bug, the game menu's icon, whose dialog the card
 //! opens too), and that SJK comes with no warranty and owes the player nothing. Continue
@@ -63,7 +63,7 @@ const KEYS_RIGHT: f32 = 1824.0;
 
 /// What the card says above the report row.
 const PARAGRAPHS: [&str; 2] = [
-    "This is an alpha build of Sun JK, a free and open-source Jedi Academy client. Expect \
+    "This is a beta build of Sun JK, a free and open-source Jedi Academy client. Expect \
      bugs, and parts that are not finished yet. Some collectibles show in the game but \
      cannot be unlocked yet: they are a work in progress, so there is no need to ask Sol \
      about them.",
@@ -249,7 +249,7 @@ impl Card {
         text(
             ui,
             TextFamily::Display,
-            format_args!("Alpha build"),
+            format_args!("Beta build"),
             frame.rect(TEXT_X, top + 30.0, TEXT_WIDTH, 30.0),
             22.0 * s,
             color::gold_bright(),

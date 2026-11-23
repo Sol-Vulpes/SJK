@@ -3083,7 +3083,7 @@ are not drawn and take no input. The same look in every menu style, on the 16:9 
 ## Alpha notice
 
 [alpha_notice_card.rs](../crates/sjk-viewer/src/alpha_notice_card.rs): the pop-up a
-player gets at the first start (Sol's request, 16/10/2026). It says SJK is an alpha
+player gets at the first start (Sol's request, 16/10/2026). It says SJK is a beta
 build of a free and open-source project with bugs and unfinished parts, how to report
 them, and that it comes with no warranty and owes the player nothing. There is no way
 past it but ticking "I understand" and Continue, or Quit. `ui_alphaNotice` (archived)
@@ -3095,7 +3095,7 @@ same look in every menu style, on the 16:9 frame:
 
 - **Card:** the kit's card over its scrim, 900 wide from x 510, centred, as tall as its
   words.
-- **Words:** "Alpha build" in gold (Rajdhani 22), "Welcome to Sun JK" (Rajdhani 36),
+- **Words:** "Beta build" in gold (Rajdhani 22), "Welcome to Sun JK" (Rajdhani 36),
   then Exo 2 18 (muted): an alpha of a free and open-source client, expect bugs and
   unfinished parts, some collectibles shown but not unlockable yet (a work in
   progress, no need to ask Sol); report on the SJK Discord or with Report a bug, this icon in the
