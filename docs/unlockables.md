@@ -73,7 +73,7 @@ Display up to Uncommon), and after his adjustments of 21/10/2026, which moved 38
 108 133 136 to Common; 11 mythicals left, 12 with the Varykino Blossom of 21/10/2026). The rounds' notes below keep the tiers the blades
 came in.
 
-Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), do not drop yet ("Coming to holocrons soon.", `COMING_TO_HOLOCRONS`): Sol tests them first, given by hand, then turns `droppable` on in the hub's catalogue and the client's together.
+Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), are the Beta edition: kept out of drops until Sol's tests were done, they drop from Beta holocrons since the Beta season opened on 23/11/2026 (`droppable` on in the hub's catalogue and the client's).
 
 | No. | Id | Name | Tier | Smith | Drops |
 | --- | --- | --- | --- | --- | --- |
@@ -2522,14 +2522,12 @@ newest client meets that release (SJK development builds pass, as for the other
 minimum-client switches): an older client keeps getting Alpha ones, so nobody gets a blade their game
 cannot show. Until it is set, every holocron and dormant kyber is Alpha.
 
-**Opening Beta** (when Sol's tests are done):
-
-1. `droppable: true` on the 130 blades in the hub's catalogue and the client's
-   `unlockables.rs` together, and both `COMING_TO_HOLOCRONS` constants go (they make
-   "Coming to holocrons soon." and keep the blades out of drops, crafting, the shop and
-   trades).
-2. A client release with it.
-3. The hub deployed with it, `SJK_HUB_BETA_MIN_CLIENT` set to that release.
+**Beta opened** on 23/11/2026 (Sol's call): the hub's switch names 2026.1123.1, the
+first beta, and the 130 blades are droppable on both sides. A 2026.1123.1 client still
+calls them "Coming to holocrons soon." and keeps them out of its own crafting, shop and
+trade views until the release after it; the hub gives them all the same. Every
+holocron and dormant kyber given before the switch stays Alpha and opens by the Alpha
+tables.
 
 ## Saber smiths
 

@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Creyon's 130 Beta blades now say "Found in holocrons.": Beta holocrons drop them since the Beta season opened, and they can be crafted, bought and traded like the others. Holocrons you held before the Beta season stay Alpha _(Sol; the blades are Creyon's, PR #370)_
+
 ## 2026.1123.1 (Beta) | 23/11/2026
 
 The first Sun JK beta. A new name, Sun JK, a new emblem, a new Collection with kybers and an Inventory, a status bar along the bottom of the screen, banner notifications, feats and the Creyon werewolf.
