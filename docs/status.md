@@ -19,7 +19,7 @@ Verified on Windows x64: `cargo fmt --all --check`, `cargo clippy -p sjk-viewer
 (38 passed) and `things`; the world shot `duel6_mystery_box_tomb` (shut, parting, open;
 its boxes hang over duel6's lawn, as the other box shots' do). Not run in the client: the
 sounds were chosen by name and length, not heard; the size on the maps where boxes stand
-is not checked. Not merged.
+is not checked. Merged into `main` on Sol's word ("epic, merge it into main I love it").
 
 ## First setup in steps with pictures (23/11/2026)
 
