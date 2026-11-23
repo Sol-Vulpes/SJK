@@ -1063,7 +1063,8 @@ that mode for the visit and leaves the player's choice as it was.
     category's and Sound's); HUD its classic rows without the chat box, the FPS
     readout opening its Readouts (moved there from Video, as the first-person
     weapon moved to Gameplay's camera rows), and the scoreboard's rows under a
-    Scoreboard heading; Chat the chat box (Chat box: visibility, text size,
+    Scoreboard heading; Chat the chat box (Chat box: visibility, the chat's style
+    (`cg_chatStyle`, sjk or classic, since 23/11/2026, [client.md](client.md#chat-style)), text size,
     emojis, remembered channel, letter spacing and sender card size) and the SJK chat (SJK
     chat, its game-feed and console visibility, its GIFs, its video clips opt-in and
     the GIPHY key); Mods the asset browser (Packs), JA+ and
@@ -1146,7 +1147,9 @@ that mode for the visit and leaves the player's choice as it was.
     away settings came from Sound); Interface is Menus, Theme, Console; HUD is Layout,
     Crosshair, Names and cards, Nameplates, Playstyle, Readouts, Match, Movement,
     Status bar, Scoreboard; Chat is Chat box, Chat look, Chat tabs, Do not disturb,
-    Duel lines, SJK chat, Translation, Privacy and blocks. A setting no section names
+    Duel lines, SJK chat, Translation, Privacy and blocks (Chat look opens with Chat
+    style, `cg_chatStyle`; the classic+ views list it with the chat box's rows under
+    HUD). A setting no section names
     would show last under "More"; a test keeps that empty. Every sub-heading of the
     screen (these, Display's, Graphics', Mods', Network's, First setup's, Simple's and
     a search's groups) has its settings icon, 32 pixels, before its name

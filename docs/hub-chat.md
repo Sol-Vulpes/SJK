@@ -749,6 +749,12 @@ falls back as above without it.
 
 ## How a line looks
 
+With `cg_chatStyle classic` ([client.md](client.md#chat-style), 23/11/2026) the game's chat
+box draws an SJK chat line as JoF EJK draws one instead (its `CG_SJKChatBoxPaint`): the
+client's icon, the name with a green `+` for a verified sender, `SJK` (`ALL/SJK`, a clan
+chat's label) in `#E8B84A`, the text in `#F5C756`, and the field reaches it with Tab or its
+key, `All Team SJK:` with SJK lit. The dock and the page keep the look below.
+
 Every SJK chat line looks the same wherever it shows, in the game's chat, on the dock
 and on the page ([sjk_chat_look.rs](../crates/sjk-viewer/src/sjk_chat_look.rs), Sol's
 request, 08/10/2026):

@@ -1086,7 +1086,7 @@ own row in Settings and can be changed again there.
 | Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
 | HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
 | Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
-| Chat | `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
+| Chat | `cg_chatStyle classic` (JoF EJK's message field and chat box, [Chat style](#chat-style)), `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
 | Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
 | Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
 | The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
@@ -1105,7 +1105,8 @@ value): those are the player's later choice and stay. The graphics settings read
 the graphics' start wait for a reload, which the reload card offers; the menu style's map
 behind the main page changes at the next start, as with the Menu style row.
 
-What it leaves alone: the SJK hub's features (the SJK chat and its buttons, the identity,
+What it leaves alone: the SJK hub's features (the SJK chat, which the classic chat still
+shows and types to; the identity,
 the Collection, trading, notifications), gameplay and the network, other players' emotes,
 the player's own numbers (field of view, sensitivity, HUD scale, brightness, text sizes
 other than the chat's) and whatever has no setting of its own.
@@ -3614,6 +3615,54 @@ map changes. Missing snapshot data pauses the view; it resumes if data returns
 before expiry. Players outside the
 received snapshot cannot be watched. Player input and server authority remain
 unchanged. The command is bindable under Settings > Key bindings > Other.
+
+### Chat style
+
+`cg_chatStyle` (Sol, 23/11/2026; archived, `sjk` by default; Settings > Chat > **Chat
+style**, HUD in the classic+ views; [chat/style.rs](../crates/sjk-viewer/src/chat/style.rs))
+picks how the chat box and the chat field are drawn and behave. `sjk` is SJK's chat as the
+sections below describe it. `classic` is JoF EJK's (EternalJK's), from its source, read at
+JediofFreedom/JoF_EJK `beta` 10b940314; [EJK mode](#ejk-mode) sets it. The chat code
+branches on the style and on nothing else, and the SJK style draws what it drew before.
+The Settings search finds the row by `classic`, `composer`, `messagemode` and `say`.
+
+Lengths below are the game's virtual 640x480 units. With `cl_ratioFix` (on by default)
+JoF EJK multiplies every horizontal one by `widthRatioCoef`, so a unit is a 480th of the
+frame's height both ways (2.25 px at 1080 lines); the classic style does the same
+(`chat::style::classic`, each number with its source line and a test).
+
+| | JoF EJK | Classic style |
+| --- | --- | --- |
+| The field's place | `Con_DrawNotify` (`client/cl_console.cpp:1096-1160`): at x 8, under the notify lines (`v`), one `BIGCHAR_HEIGHT` (16) line | The same: x 8, under the notify lines drawn this frame (`ViewerConsole::notify_bottom`; under the top status bar while it shows), a 16-unit line |
+| The field's prompt | `Con_ChatChannels` (`cl_console.cpp:985-992`): `All Team SJK:`, the channel in use white, cyan or yellow, the others grey; a whisper `Whisper to <name>:` on its own line, the text on the next at x 16 | The same words and colours, for the channels the row offers (`cg_chatTab*`; JoF, S and Admin after SJK where they exist, in SJK's colours for them); `Whisper to <name>:` above the text at x 16, with ` (encrypted)` when the whisper goes encrypted |
+| The field's letters | The console character set in 16x16 cells (`SCR_DrawStringExt2`), a black shadow 2 units right and down, cursor character 10 blinking 256 ms on and off (`cl_keys.cpp:565`) | The console's characters (JetBrains Mono with `ui_gameFont`, else Inter) 16 units tall, a black shadow 1 unit right and down (`text::Edge::RetailChars`: half of JoF EJK's, as the vector letters' strokes are half as thick as the bitmap's and 2 units read as doubled text), `_` blinking 256 ms on and off |
+| Tab, Enter, Escape | Tab: All, Team, SJK, All; a whisper back to All; the text kept (`Message_Key`, `cl_keys.cpp:1053-1065`). Enter sends, Escape drops | Tab walks SJK's cycle (All, Team, SJK, then the clan chats and Admin where offered, the last whisperer), the text kept; Enter sends where SJK's field sends (`say`, `say_team`, `tell <slot>`, `amsay`, the hub); Escape drops |
+| The pointer | `KEYCATCH_MESSAGE` catches keys only: the mouse still turns the view | The pointer stays captured (`ChatOverlay::takes_keys_only`, `sync_cursor_policy`); clicks, the wheel and the mouse's extra buttons do nothing while the field is open |
+| The box's place | `CG_ChatBox_DrawStrings` (`cgame/cg_draw.c:11116-11117`): x `cg_chatBoxX` 30 times `widthRatioCoef`, bottom `cg_chatBoxHeight` 350 | The same from the same cvars: 67.5 px and 787.5 px at 1920x1080 (SJK's style puts x at 30/640 of the width, 90 px) |
+| Text size | `ocr_a` at `0.65 * cg_chatBoxFontSize` (default 1): a 21-unit line box, the baseline 19 x 0.65 under the row's y (`rd-common/tr_font.cpp:1608`) | SJK Chat in the same box, its baseline put where retail's is (2 x 0.65 units lower than SJK's style draws it). `cg_chatBoxFontSize` keeps SJK's default 0.85 outside EJK mode, which sets 1 |
+| Rows | A message takes `CHATBOX_FONT_HEIGHT` 20 x 0.65 a row (`cg_draw.c:11167`, `11215`); its wrapped rows are a line feed apart, `ocr_a`'s point size 18 x 0.65 (`tr_font.cpp:1621`); nothing between messages | The same: 29.25 px a row and 26.3 px between a message's rows at 1080 lines. `cg_chatBoxLineSpacing` and `cg_chatBoxLetterSpacing`, which JoF EJK has not, are not read |
+| Wrapping | Letters are added at scale 0.65, whatever the size, until `cg_chatBoxCutOffLength` (350, in 640ths of the width) is reached, then the row breaks at the last space (`cg_draw.c:10507`) | The same width and measure (a row holds the same letters at every size); at most four rows, the last ending in `...` (JoF EJK draws every row) |
+| Time | A message shows until `cg_chatBox` (10000) ms passed (`cg_draw.c:10476`, `11140`); `cg_chatBoxLines` 5 messages; no fade, no slide; an open field changes nothing | The same. The field does not bring expired messages back, filter the box by channel or scroll it, as SJK's does |
+| Names | The line as the server wrote it, name first (`^7Fox^7: ^2hi`, `(Fox^7): ^5hi`, `[Fox^7]: ^6hi`), white under its codes | The same (`ChatLine::lead`): no emblem, tick, clan emblem, TEAM or WHISPER label, name emoji or sender card. An encrypted whisper reads as a tell, `[Fox]: ` in a tell's magenta (its own is `[To Fox]: `) |
+| Shadow | `ITEM_TEXTSTYLE_OUTLINED` is retail's drop shadow: the text in grey 0.15, `Round(18 * scale * 0.075)` units right and down (`tr_font.cpp:1560-1596`), 1 unit at size 1 | The same (`text::Edge::RetailFont`): 3 px right and 2.25 px down at 1920x1080. `cg_chatBoxOutline` and `cg_darkTextOutline` still replace it when on |
+| SJK chat | `CG_SJKChatBoxPaint` (`cg_draw.c:11008-11035`): the client's icon (17 x 0.65 units, the text 3 x 0.65 after it), the name in its colours with a green `+` for a verified sender, `SJK` or `ALL/SJK` in `#E8B84A`, `: `, the text in `#F5C756`, later rows lined up after the icon | The same; a clan chat's line wears its label and colour, a holocron drop its tier's colour, and neither it nor the SJK team's lines an icon. `cl_sjkChatClientIcons 0` gives every message SJK's emblem, as in SJK's style |
+| Emojis, GIFs | `cg_chatBoxEmojis`; `<GIF>` on `beta` | `cg_chatBoxEmojis` and `cl_sjkChatGifs` as in SJK's style (a GIF plays under its SJK line) |
+
+What the classic field keeps of SJK's: the draft's editing (Ctrl+A/C/X/V, Ctrl+Insert,
+Shift+Insert, word motions, a held Backspace, dead keys; the same `Editor`), a selection
+shown as a pale band, the draft of up to four messages (JoF EJK's field stops at 151
+characters), `/tr`, and the note why a message cannot go (in yellow under the field).
+Colour codes typed in the draft colour it and are not shown, as in SJK's field (JoF EJK
+shows them). It has no row of buttons, no placeholder, no red notes, no "Latest", no link
+copy and no translation on a click. The scoreboard's own chat places and `cg_chatBox 0`
+work as in SJK's style.
+
+Not the same as JoF EJK: its big characters fill square 16x16 cells, SJK's console font
+(SJK draws no bitmap fonts) keeps its own narrower advance, so the same line is about
+half as wide.
+
+Pictures: `world_shot_classic_chat.rs` renders both styles from one camera at 1080p and
+4K (`classic_chat_shots`).
 
 ### Chat logs
 

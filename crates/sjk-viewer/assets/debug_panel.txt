@@ -44,6 +44,22 @@ test: Chat: rest on a name: the sender card's head is the same dark blue as befo
 test: Open holocrons (one, then a batch): prizes, then Done; no "Bonus banners" step.
 test: Holocrons > loot odds: six notes, none about banners; History shows no error.
 
+[classic-chat]
+area: Console & chat
+title: Classic chat style: JoF EJK's field and chat box (cg_chatStyle classic)
+change: Settings > Chat > Chat style: sjk (the default, as before) or classic. EJK mode sets it.
+change: Classic: the field at the top left (All Team SJK:), plain names, no pointer.
+test: cg_chatStyle classic. Y: "All Team SJK:" at the top left, All lit; the mouse still looks.
+test: Tab: Team lit in cyan, then SJK in yellow, then All; what you typed stays. Enter sends.
+test: T opens it on Team, I on SJK, U on a player: "Whisper to <name>:" with the text under it.
+test: Ctrl+A then a letter replaces the text; Ctrl+V pastes; hold Backspace: it keeps deleting.
+test: Chat lines: name as the server sends it, no emblem, tick, label or card; gone after 10 s.
+test: An SJK chat line: icon, name, SJK in gold, text in gold. A long one wraps under the icon.
+test: Beside JoF EJK at the same resolution: box position, text size and row spacing match.
+test: Console lines at the top left push the field down, as in JoF EJK.
+test: cg_chatStyle sjk: SJK's chat exactly as before. EJK mode off gives your style back.
+note: The field's letters are narrower than JoF EJK's big characters (no bitmap fonts).
+
 [first-setup-steps]
 area: Menus & settings
 title: First setup in steps with pictures (the pop-up, in every menu style)

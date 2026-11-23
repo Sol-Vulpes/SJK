@@ -54,6 +54,7 @@ impl ChatOverlay {
         }
         self.lines.push_back(ChatLine {
             name,
+            lead: String::new(),
             body,
             sender: None,
             channel: Channel::of_hub(message.channel),

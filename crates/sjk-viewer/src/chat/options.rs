@@ -43,6 +43,8 @@ fn center_size(value: f32) -> f32 {
 #[derive(Clone, Copy, PartialEq)]
 /// Bounded presentation settings read from the archived cvars.
 pub(super) struct Options {
+    /// SJK's chat or JoF EJK's ([`super::style::CVAR`]).
+    pub(super) style: super::style::Style,
     pub(super) pm_only: bool,
     /// Quiet mode ([`super::quiet::CVAR`]).
     pub(super) quiet: bool,
@@ -107,6 +109,7 @@ impl Options {
                 .unwrap_or(default)
         };
         Self {
+            style: super::style::Style::read(console),
             pm_only: console
                 .and_then(|c| c.bool_cvar("cg_pmonlychat"))
                 .unwrap_or(false),
@@ -145,6 +148,9 @@ impl Options {
 
     /// Transform legacy coordinate controls into the retained modern layout.
     pub(super) fn geometry(self, viewport: [f32; 2]) -> layout::Geometry {
+        if self.style == super::style::Style::Classic {
+            return self.classic_geometry(viewport);
+        }
         let mut g = layout::Geometry::new(viewport);
         g.left = self.x / 640.0 * viewport[0];
         g.bottom = self.height / 480.0 * viewport[1];
@@ -161,6 +167,36 @@ impl Options {
     }
 }
 
+impl Options {
+    /// JoF EJK's chat box (`CG_ChatBox_DrawStrings`, [`super::style::classic`]) from the
+    /// same cvars, which are its own: `cg_chatBoxX` and `cg_chatBoxHeight` in virtual
+    /// units that are a 480th of the frame's height both ways (its `widthRatioCoef`),
+    /// `cg_chatBoxCutOffLength` in 640ths of the frame's width, as its text widths
+    /// are. `row` is what a wrapped message's rows are apart; a message takes
+    /// [`layout::Geometry::item_row`] a row. No room between messages and none between
+    /// letters: JoF EJK has neither setting.
+    fn classic_geometry(self, viewport: [f32; 2]) -> layout::Geometry {
+        use super::style::classic;
+        let unit = classic::unit(viewport[1]);
+        let font = classic::LINE * classic::FONT_SCALE * unit * self.font;
+        let left = self.x * unit;
+        layout::Geometry {
+            // 1 at 1080 lines and text size 1, as SJK's.
+            scale: unit / classic::unit(1080.0) * self.font,
+            left,
+            top: 0.0,
+            bottom: self.height * unit,
+            width: (self.width / 640.0 * viewport[0])
+                .min(viewport[0] - left)
+                .max(1.0),
+            row: font * classic::ROW / classic::LINE,
+            font,
+            spacing: 0.0,
+            gap: 0.0,
+        }
+    }
+}
+
 /// Where the chat's messages show, in pixels, with as many lines as `cg_chatBoxLines`
 /// keeps: the box the HUD edit mode drags ([`crate::hud_edit`]) whether messages show
 /// or not, inside the room the status bars keep (`edges`).
@@ -173,7 +209,11 @@ pub(crate) fn box_rect(
     let mut geometry = options.geometry(viewport);
     geometry.bottom = geometry.bottom.min(viewport[1] - edges.bottom);
     let lines = options.lines.max(1) as f32;
-    let height = geometry.row * lines + geometry.gap * (lines - 1.0);
+    let height = if options.style == super::style::Style::Classic {
+        geometry.item_row() * lines
+    } else {
+        geometry.row * lines + geometry.gap * (lines - 1.0)
+    };
     sjk_ui::Rect::new(
         geometry.left,
         geometry.bottom - height,

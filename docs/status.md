@@ -1,3 +1,39 @@
+## The chat has a classic style, JoF EJK's (23/11/2026)
+
+Sol's request ahead of v1: with EJK mode on, the chat was the largest thing still SJK's.
+Branch `personal/classic-chat`, based on `main` `482f891dd`.
+[client.md](client.md#chat-style) has the comparison with JoF EJK's source, element by
+element.
+
+`cg_chatStyle sjk|classic` (archived, `sjk` by default; Settings > Chat > Chat style, HUD in
+the classic+ views; `chat/style.rs`). `classic` draws JoF EJK's message field
+(`All Team SJK:` at the top left under the notify lines, Tab changing channel,
+`Whisper to <name>:`, no buttons, the pointer left to the game) and its chat box
+(`CG_ChatBox_DrawStrings`' place, rows and time, each line as the server wrote it, retail's
+drop shadow, SJK chat lines as its `CG_SJKChatBoxPaint` draws them), in
+`chat/view/classic.rs`; the numbers and their source lines (JediofFreedom/JoF_EJK `beta`
+10b940314) are `chat::style::classic`. `ejk_mode::TABLE` gained `cg_chatStyle classic`;
+no other chat cvar needed an entry (JoF EJK's `cg_chatBox*` defaults are SJK's already but
+the text size, which the table set before). The chat code reads the style only, never
+`ui_ejkMode`. Two retail drop shadows joined the text renderer (`text::Edge::RetailFont`,
+`RetailChars`), used by the classic chat alone.
+
+Verified on Windows x64: `cargo fmt --all --check`, `cargo build --locked --workspace` (no
+warning), `cargo clippy --locked --workspace --all-targets` (nothing in the touched
+files), `cargo test --locked --workspace`, the startup stack check, and unit tests of the
+style's parsing, the box's numbers against JoF EJK's defaults, the stacking, wrapping and
+expiry, the SJK chat line, the whispers, the field's prompt, place, Tab, Enter and
+text-field keys, and EJK mode's round trip with the new entry. Looked at: the world shots
+`classic_chat_shots` (both styles from one camera, 1920x1080 and 3840x2160, the classic
+field on All, Team and a whisper).
+
+Limits: not run in the client (no key was pressed in a window, so the pointer staying
+captured while the classic field is open, the field under real notify lines and the look
+beside a running JoF EJK are unverified). The field's letters are the console font's
+(JetBrains Mono), narrower than JoF EJK's bitmap characters, over a shadow of 1 unit
+instead of 2; a message longer than four rows ends in `...`; colour codes typed in the
+field are not shown; the scoreboard's chat places are SJK's as before.
+
 ## Box hunt: the tomb's look, and nobody away is tagged (23/11/2026)
 
 Sol's request ("give a new look to the hunt, the alert, avoid ever getting someone afk or

@@ -135,8 +135,12 @@ const SYNONYMS: &[(&str, &[&str])] = &[
     ("jof", &["ejk mode"]),
     ("openjk", &["ejk mode"]),
     ("ojk", &["ejk mode"]),
-    ("classic", &["ejk mode"]),
+    ("classic", &["ejk mode", "chat style"]),
     ("retail", &["ejk mode"]),
+    // The chat's style (`chat/style.rs`), by what players call the field they type in.
+    ("composer", &["chat style"]),
+    ("messagemode", &["chat style"]),
+    ("say", &["chat style"]),
     ("cel", &["toon"]),
     ("cartoon", &["toon"]),
 ];

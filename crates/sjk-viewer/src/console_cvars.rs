@@ -1755,6 +1755,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Display the bound scoreboard",
         ),
         CvarDefinition::new(
+            crate::chat::style::CVAR,
+            crate::chat::style::Style::DEFAULT_NAME,
+            archive,
+            "Chat style: sjk (SJK's chat field with its channel buttons, sender cards and marks), or classic (JoF EJK's: the message field at the top left, the chat box as EternalJK draws it)",
+        ),
+        CvarDefinition::new(
             crate::scoreboard::style::CVAR,
             crate::scoreboard::style::ScoreboardStyle::DEFAULT_NAME,
             archive,
