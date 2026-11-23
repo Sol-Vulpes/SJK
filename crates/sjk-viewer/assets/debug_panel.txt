@@ -24,6 +24,16 @@
 
 # ---- Console & chat ----
 
+[wheel-of-doom-removed]
+area: Gameplay
+title: WHEEL OF DOOM: the placed wheels' code and assets removed (v1 clean-up)
+change: No wheel model, spin, music, ticks or words in the client; the outcomes stay for the box.
+change: wheelofdoom_place and wheelofdoom_list are gone; wheelofdoom_remove <id> stays (creator).
+test: toy_wheelofdoom (bind, quick wheel, Collection > Toys): your coins, Hold Use at a Force box.
+test: A DOOM coin roll at a Force box (local hub, branch force-box): an effect strikes, HUD line.
+test: Quack effect: every swing quacks; WHEEL OF DOOM sounds off in Settings silences it.
+test: A map where a wheel stood: nothing stands there; no error in the console at map load.
+
 [banners-removed]
 area: Menus & settings
 title: Profile banners removed from the client (v1 clean-up)
@@ -708,22 +718,9 @@ note: Needs the hub's box-rework branch deployed.
 
 [drop-odds]
 area: Gameplay
-title: Possible drops panel at boxes and wheels; louder WHEEL OF DOOM music
-change: Facing a box or wheel, a panel under the Use prompt lists drops with their %.
-change: WHEEL OF DOOM music at twice the gain, heard to 1400 units.
+title: Possible drops panel at boxes
+change: Facing a box, a panel under the Use prompt lists drops with their %.
 test: Face a mystery box: after a moment the panel fades in, holocron 45.5 % first.
-test: Face a wheel: holocron tiers in colour, "A bad effect (12 kinds)" in red.
-test: A spin: the music is clearly louder, still heard across the room.
-
-[wheel-placed]
-area: Gameplay
-title: WHEEL OF DOOM placed on maps, spun for a DOOM coin
-change: wheelofdoom_place/remove/list (creator); Use at a wheel spins it for a coin.
-change: 20 segments with a holocron of every tier and the coin back; 34 s spin to music.
-test: wheelofdoom_place on a server: the wheel stands, words over it, Use prompt.
-test: Without a coin: "No DOOM coin". With one: it spins to the music, lands at its end.
-test: A friend at the same wheel during a spin: "Someone is spinning it".
-note: Music from zz_sjk_wheel_of_doom_sounds_local.pk3; hub box-rework branch needed.
 
 [spawn-panel]
 area: Console & chat
@@ -5563,7 +5560,7 @@ area: Gameplay
 title: Force box: stone, gold, blue runes, JA sounds; hold Use to roll a DOOM coin
 change: The mystery box looks like an ancient Jedi box (placeholder) and plays JA Force sounds.
 change: Tap Use: the credits roll. Hold Use 1 s with a DOOM coin: the WHEEL's outcomes instead.
-change: No WHEEL OF DOOM stands on a map; wheelofdoom_place refuses.
+change: No WHEEL OF DOOM stands on a map; the wheel's model, spin and sounds are removed.
 test: A box on duel6: stone chest, gold bands, two glowing blue runes a side, a blue halo.
 test: Tap Use: Force pull opens it, a hum through the roll, a push as the lid shuts.
 test: With a coin: prompt says Tap: 100 credits and Hold Use: DOOM coin roll (N coins).
@@ -10207,20 +10204,6 @@ test: rcon jp_DuelAlpha -1: duellists collide again, still no pulling back.
 test: /engage_FullForceDuel on a second client, accept: push and lightning work in the duel.
 test: Win: centre print with health and armour; console line for everyone.
 note: Not run with a client yet. No 3 s pass-through after a duel (no JA+ client predicts it).
-
-[wheel-of-doom]
-area: Gameplay
-title: WHEEL OF DOOM toy: spin for credits, a Mythical holocron or doom (needs hub wheel-of-doom)
-change: toy_wheelofdoom (Collection > Toys, a bind, quick wheel): first press shows the price.
-change: A second within 5 s spins a wheel before you; others see it; 16 outcomes, 5 min cooldown.
-change: Effects on your own keys, mouse, view for 15-30 s; HUD line; end on new map or death.
-test: Join a server, toy_wheelofdoom: price card by the crosshair; again: wheel spins, ticks, stops.
-test: Wait out an effect: HUD line counts down, the effect ends; die or change map: it ends.
-test: Press again at once: "Your next spin in N s"; in a duel: refused in the centre.
-test: Second SJK client nearby: sees the wheel spin and stop on the same segment.
-test: Over several spins: mirror, blind, upside down, no saber, quack look and feel right.
-test: Settings > Sound > Toys, WHEEL OF DOOM sounds off: the wheel spins silently.
-note: Placeholder model (Sol's to come). Mirror flips the whole picture, HUD included.
 
 [status-balloons]
 area: Rendering & effects

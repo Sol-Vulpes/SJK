@@ -873,31 +873,6 @@ pub trait Hub: Send {
         ))
     }
 
-    /// Spin placed WHEEL OF DOOM `wheel`, the player on `server`
-    /// (`POST /v1/wheel-of-doom/spin`; a DOOM coin since 11/11/2026).
-    fn spin_wheel_of_doom(
-        &mut self,
-        _identity: &Identity,
-        _wheel: i64,
-        _server: &str,
-    ) -> Result<crate::wheel_of_doom::SpinAnswer, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not spin the wheel of doom".to_owned(),
-        ))
-    }
-
-    /// SJK's creator: place a WHEEL OF DOOM (`POST /v1/creator/wheel-of-doom`, a box's
-    /// body); answers its id.
-    fn place_wheel_of_doom(
-        &mut self,
-        _identity: &Identity,
-        _placed: &crate::mystery_box::MysteryBox,
-    ) -> Result<i64, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not place wheels of doom".to_owned(),
-        ))
-    }
-
     /// SJK's creator: remove WHEEL OF DOOM `id` (`POST /v1/creator/wheel-of-doom/remove`).
     fn remove_wheel_of_doom(&mut self, _identity: &Identity, _id: i64) -> Result<(), HubError> {
         Err(HubError::Protocol(
@@ -2397,42 +2372,6 @@ impl Hub for HttpHub {
         identity: &Identity,
     ) -> Result<crate::wheel_of_doom::Wheel, HubError> {
         parse(self.send(Some(identity), "GET", "/v1/wheel-of-doom", None)?)
-    }
-
-    fn spin_wheel_of_doom(
-        &mut self,
-        identity: &Identity,
-        wheel: i64,
-        server: &str,
-    ) -> Result<crate::wheel_of_doom::SpinAnswer, HubError> {
-        parse(self.send(
-            Some(identity),
-            "POST",
-            "/v1/wheel-of-doom/spin",
-            Some(json!({ "wheel": wheel, "server": server })),
-        )?)
-    }
-
-    fn place_wheel_of_doom(
-        &mut self,
-        identity: &Identity,
-        placed: &crate::mystery_box::MysteryBox,
-    ) -> Result<i64, HubError> {
-        let answer = self.send(
-            Some(identity),
-            "POST",
-            "/v1/creator/wheel-of-doom",
-            Some(json!({
-                "map": placed.map,
-                "checksum": placed.checksum,
-                "server": placed.server,
-                "origin": placed.origin,
-                "yaw": placed.yaw,
-            })),
-        )?;
-        answer["id"]
-            .as_i64()
-            .ok_or_else(|| HubError::Protocol("a placed wheel without its id".to_owned()))
     }
 
     fn remove_wheel_of_doom(&mut self, identity: &Identity, id: i64) -> Result<(), HubError> {

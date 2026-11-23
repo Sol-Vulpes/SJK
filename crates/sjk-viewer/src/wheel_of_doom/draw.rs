@@ -1,33 +1,23 @@
-//! What the WHEEL OF DOOM draws on the screen: the words over each wheel (hidden behind
-//! walls and far away, as the mystery boxes' are), the effect running and its seconds on
-//! a small line of the HUD, and the Blind effect's darkness with its pinhole. The words are kept in a fixed set of strings
-//! written in place, so a frame allocates nothing once they have grown.
+//! What the WHEEL OF DOOM's effects draw on the screen: the effect running and its
+//! seconds on a small line of the HUD, and the Blind effect's darkness with its pinhole.
+//! The line's words are kept in one string written in place, so a frame allocates nothing
+//! once it has grown.
 
-use super::{AXLE, MOST, RADIUS};
 use crate::GpuState;
-use glam::Vec3;
 use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId, TextOverflow};
 use std::fmt::Write as _;
 use std::time::Instant;
 
-/// How high over the floor a wheel's words stand.
-const RISE: f32 = AXLE + RADIUS + 28.0;
-/// Farthest a wheel's words are read from, and where they start to fade.
-const RANGE: f32 = 1_600.0;
-const FADE_FROM: f32 = 1_100.0;
-/// The words' slots: two spare (the price card's, before 11/11/2026), the HUD's line,
-/// then two a wheel.
-const HUD_LINE: usize = 2;
-const WHEEL_BASE: usize = 3;
-const TEXTS: usize = WHEEL_BASE + MOST * 2;
+/// The words' slots: the HUD's line.
+const HUD_LINE: usize = 0;
+const TEXTS: usize = 1;
 /// The HUD line's top, in pixels at 1080 lines (under the box hunt's card).
 const HUD_TOP: f32 = 132.0;
 /// The Blind pinhole's radius and its soft edge, in pixels at 1080 lines.
 const PINHOLE: f32 = 46.0;
 const PINHOLE_EDGE: f32 = 26.0;
-/// The wheel's red, the gold and the darkness.
+/// The wheel's red.
 const RED: Color = Color::new(0.95, 0.22, 0.18, 1.0);
-const GOLD: Color = Color::new(1.0, 0.8, 0.32, 1.0);
 
 /// The draw list and its words.
 pub(crate) struct Draw {
@@ -38,9 +28,8 @@ pub(crate) struct Draw {
 impl Default for Draw {
     fn default() -> Self {
         Self {
-            // The darkness's five shapes, the card's four, the HUD line's two, and each
-            // wheel's two lines over their shadows.
-            list: DrawList::new(16 + MOST * 4),
+            // The darkness's six shapes and the HUD line's two.
+            list: DrawList::new(16),
             texts: std::array::from_fn(|_| String::with_capacity(48)),
         }
     }
@@ -173,7 +162,6 @@ impl GpuState {
             toy.draw
                 .line(rect, text, size, RED, unit, FontWeight::Semibold);
         }
-        self.append_wheel_of_doom_words(viewport, unit);
         let draw = &self.wheel_of_doom.draw;
         if draw.list.commands().is_empty() {
             return;
@@ -193,79 +181,5 @@ impl GpuState {
             crate::text::TextStyle::NEUTRAL,
             crate::text::CodePalette::Legible,
         );
-    }
-
-    /// The words over each wheel seen: "WHEEL OF DOOM" and what a spin costs, "Spinning..."
-    /// while it spins, then what it landed on.
-    fn append_wheel_of_doom_words(&mut self, viewport: [f32; 2], unit: f32) {
-        let Some(camera) = self.frame_view else {
-            return;
-        };
-        let width = (440.0 * unit).min(viewport[0]);
-        for index in 0..self.wheel_of_doom.placed.len().min(MOST) {
-            let placed = &self.wheel_of_doom.placed[index];
-            let point = placed.at + Vec3::Z * RISE;
-            let sight = placed.at + Vec3::Z * AXLE;
-            let distance = point.distance(camera.eye);
-            if distance > RANGE {
-                continue;
-            }
-            let Some(at) = camera.project(point) else {
-                continue;
-            };
-            let trace = self.bsp.trace_box_with(
-                &mut self.trace_scratch,
-                camera.eye.to_array(),
-                sight.to_array(),
-                sjk_bsp::Aabb::new([0.0; 3], [0.0; 3]).expect("a point is a box"),
-                1,
-            );
-            if trace.fraction < 1.0 || trace.start_solid || trace.all_solid {
-                continue;
-            }
-            let alpha = (1.0 - (distance - FADE_FROM) / (RANGE - FADE_FROM)).clamp(0.0, 1.0);
-            let near = (1.0 - distance / RANGE).clamp(0.45, 1.0);
-            let head = 28.0 * unit * near;
-            let small = 18.0 * unit * near;
-            let x = (at[0] - width * 0.5).clamp(0.0, (viewport[0] - width).max(0.0));
-            let slot = WHEEL_BASE + index * 2;
-            let placed = &self.wheel_of_doom.placed[index];
-            let stopped = placed.spin.as_ref().map(|spin| spin.stopped);
-            let draw = &mut self.wheel_of_doom.draw;
-            let (first, second) = match (stopped, &placed.spin) {
-                (Some(true), Some(spin)) => {
-                    draw.texts[slot].clear();
-                    draw.texts[slot].push_str(&spin.title);
-                    draw.texts[slot + 1].clear();
-                    draw.texts[slot + 1].push_str(&spin.line);
-                    (TextId(slot as u32), TextId(slot as u32 + 1))
-                }
-                (Some(false), _) => (
-                    draw.set(slot, format_args!("WHEEL OF DOOM")),
-                    draw.set(slot + 1, format_args!("Spinning...")),
-                ),
-                _ => (
-                    draw.set(slot, format_args!("WHEEL OF DOOM")),
-                    draw.set(slot + 1, format_args!("A DOOM coin a spin: press Use")),
-                ),
-            };
-            let headline = if stopped == Some(true) { GOLD } else { RED };
-            draw.line(
-                Rect::new(x, at[1] - head * 1.3 - small * 1.4, width, head * 1.3),
-                first,
-                head,
-                Color::new(headline.r, headline.g, headline.b, alpha),
-                unit,
-                FontWeight::Semibold,
-            );
-            draw.line(
-                Rect::new(x, at[1] - small * 1.4, width, small * 1.3),
-                second,
-                small,
-                Color::new(1.0, 1.0, 1.0, alpha),
-                unit,
-                FontWeight::Semibold,
-            );
-        }
     }
 }

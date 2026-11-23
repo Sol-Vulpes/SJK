@@ -742,7 +742,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sounds::Toy::WheelOfDoom.cvar(),
             true,
             archive,
-            "Play the WHEEL OF DOOM's sounds: its ticks, stop, laugh, fanfare and quacks (SJK)",
+            "Play the WHEEL OF DOOM's sounds: the Quack effect's quacks (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::Quests.cvar(),

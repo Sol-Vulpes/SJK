@@ -4072,7 +4072,7 @@ The bottom bar carries what the player has and wears:
 | Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
 | Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
 | To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
-| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub has said them (`toy_wheelofdoom` asks, as a Force box does) |
 | New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
 | Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
@@ -4658,11 +4658,10 @@ are its first user, in place of their centre prints.
 (`Prompt::drops`): once the prompt has stood 0.35 s, a dark panel edged in gold fades in
 under it (0.25 s), titled "Possible drops", one row a thing with its chance on the right
 ("45.5 %"), likeliest first, at most 12 rows, kept on the screen. It goes with the
-prompt. The chances are the hub's, read with the boxes and wheels, so they change when
+prompt. The chances are the hub's, read with the boxes, so they change when
 the hub's odds do. A [mystery box](mystery-boxes.md#opening-one) shows them while nobody
-opens it; a [WHEEL OF DOOM](wheel-of-doom.md#spinning-one) whenever its prompt shows,
-the holocrons in their tier's colour and its bad effects in one red row ("A bad effect
-(12 kinds)").
+opens it (the placed WHEEL OF DOOM, which showed them too, left the client on
+23/11/2026).
 
 ## Capture the flag HUD
 
@@ -7220,7 +7219,7 @@ its Toys page as it was, and gains them from Add a choice, Toys. The page holds 
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
 (`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026), the Tag (`toy_tag`)
 and since 07/11/2026 the [WHEEL OF DOOM](wheel-of-doom.md) (`toy_wheelofdoom`, a press:
-the first shows the price, a second spins).
+it tells the player's DOOM coins, rolled at a Force box).
 
 ### GIF wheel
 

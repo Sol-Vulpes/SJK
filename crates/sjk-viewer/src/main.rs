@@ -754,8 +754,7 @@ struct GpuState {
     map_edits: map_edits::State,
     /// The mystery boxes standing on the loaded map (`mystery_box`).
     mystery_boxes: mystery_box::MysteryBoxes,
-    /// The WHEEL OF DOOM toy (`toy_wheelofdoom`): the wheels spinning and the spinner's
-    /// effects.
+    /// The WHEEL OF DOOM's effects on the player who rolled a DOOM coin (`wheel_of_doom`).
     wheel_of_doom: wheel_of_doom::WheelOfDoom,
     /// What the player's Use key does at what they face, by the crosshair (`use_prompt`).
     use_prompt: use_prompt::UsePrompt,
@@ -3173,7 +3172,6 @@ impl GpuState {
         self.static_models.append_instances(&mut self.object_groups);
         self.append_map_edit_instances();
         self.append_mystery_box_instances();
-        self.append_wheel_of_doom_instances();
         self.append_toy_master_instances();
         pickups::simple::append_frame(self, visual_now);
         // The charge glow on the view gun's muzzle (`cg_weapons.c` charge bits), after

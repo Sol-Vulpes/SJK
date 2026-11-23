@@ -316,8 +316,6 @@ mod petals;
 mod ragdoll_shots;
 #[path = "world_shot_toy_master.rs"]
 mod toy_master_shots;
-#[path = "world_shot_wheel_of_doom.rs"]
-mod wheel_of_doom_shots;
 
 #[path = "world_shot_blade_cards.rs"]
 mod blade_cards;
@@ -1496,8 +1494,6 @@ Found the fog bug, ask me about it!"
             kyber_find: None,
             catch_quests: None,
             wheel_of_doom: None,
-            wheel_of_doom_revision: 0,
-            wheel_of_doom_spin: None,
             mystery_box_doom: None,
             box_hunt: None,
             quests: None,

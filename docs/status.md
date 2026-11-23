@@ -1938,6 +1938,23 @@ is 0.62 MB and the others under 200 KB. Viewer tests and the map change world sh
 pass; offline joins of a local server did not reproduce the crash (their frames are
 not called from `window_event`). Not yet confirmed on the JoF server in the client.
 
+## WHEEL OF DOOM: the placed wheels removed (23/11/2026)
+
+Clean-up ahead of v1 (Sol: "the Wheel of Doom ... was merged with the Mystery Box, so that
+needs cleaning up too"). Since 20/11/2026 the client took no placed wheel
+(`take(&[], ...)`), so everything that drew or spun one was unreachable; it is removed:
+the two models, their two pictures and shader, the tick, stop and fanfare sounds (bundled
+files, 445 KB), the spin and its music cue, the Use prompt and drops panel of a wheel,
+the words over it, the "out of order" path, `POST /v1/wheel-of-doom/spin` and
+`/v1/creator/wheel-of-doom` from the hub client, the `land_` feed event,
+`wheelofdoom_place`, `wheelofdoom_list` and the wheel's world shots. Still there, used
+by the Force box's DOOM coin roll: the outcome table, the effects, Mirror, the HUD line,
+the quack, the coin read, `toy_wheelofdoom` (it tells the coins) with its Toys row, quick
+wheel entry, key and status bar piece, `s_toyWheelOfDoomSound`, and
+`wheelofdoom_remove <id>` for the wheels the hub still stores
+([wheel-of-doom.md](wheel-of-doom.md)). The hub is untouched: its wheel routes and
+switch stay for older clients, and its coin roll route is still on branch `force-box`.
+
 ## Static profile banners (removed 23/11/2026)
 
 Profile banners (#319, Lumaya, 02/11/2026; #359 and #369 after it) were out of the game

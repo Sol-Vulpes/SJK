@@ -149,8 +149,6 @@ pub enum BoxDone {
     Placed(i64),
     /// SJK's creator removed box `id`.
     Removed(i64),
-    /// SJK's creator placed a WHEEL OF DOOM: its id.
-    WheelPlaced(i64),
     /// SJK's creator removed WHEEL OF DOOM `id`.
     WheelRemoved(i64),
 }
@@ -324,17 +322,9 @@ pub struct Snapshot {
     /// The day's catch quests as the last claim's answer said them (`None` from a hub
     /// without them, or before the player fished or mined that day).
     pub catch_quests: Option<crate::catch::CatchQuests>,
-    /// The WHEEL OF DOOM's price, cooldown and segments as the hub last said
+    /// The player's DOOM coins as the hub last said
     /// ([`Service::read_wheel_of_doom`]): `None` until read, or with a hub that has none.
     pub wheel_of_doom: Option<crate::wheel_of_doom::Wheel>,
-    /// Counts the times [`Snapshot::wheel_of_doom`] changed (its wheels, the coins).
-    pub wheel_of_doom_revision: u64,
-    /// The answer to the last [`Service::spin_wheel_of_doom`], by serial, or why it was
-    /// refused (in the player's words, with the cooldown's seconds left).
-    pub wheel_of_doom_spin: Option<(
-        u64,
-        Result<crate::wheel_of_doom::Spin, crate::wheel_of_doom::Refused>,
-    )>,
     /// The answer to the last [`Service::doom_mystery_box`], by serial, or why it was
     /// refused (in the player's words, with the seconds left to wait).
     pub mystery_box_doom: Option<(
@@ -806,8 +796,6 @@ impl Snapshot {
             kyber_find: None,
             catch_quests: None,
             wheel_of_doom: None,
-            wheel_of_doom_revision: 0,
-            wheel_of_doom_spin: None,
             mystery_box_doom: None,
             box_hunt: None,
             quests: None,
@@ -982,15 +970,8 @@ enum Command {
     RemoveMysteryBox(i64),
     /// Ask the hub about junk selling.
     ReadJunk,
-    /// Read the WHEEL OF DOOM's price, cooldown and segments.
+    /// Read the player's DOOM coins.
     ReadWheelOfDoom,
-    /// Spin placed WHEEL OF DOOM `wheel` on `server`.
-    SpinWheelOfDoom {
-        wheel: i64,
-        server: String,
-    },
-    /// SJK's creator: place a WHEEL OF DOOM (its id is ignored).
-    PlaceWheelOfDoom(crate::mystery_box::MysteryBox),
     /// SJK's creator: remove WHEEL OF DOOM `id`.
     RemoveWheelOfDoom(i64),
     /// The player on `server` was struck by the Ray Gun of the player on slot `by`.
@@ -2165,13 +2146,6 @@ impl Worker {
             }),
             Command::ReadJunk => self.read_junk(),
             Command::ReadWheelOfDoom => self.read_wheel_of_doom(),
-            Command::SpinWheelOfDoom { wheel, server } => {
-                self.spin_wheel_of_doom(wheel, &server, now);
-            }
-            Command::PlaceWheelOfDoom(placed) => self.mystery_box(now, |hub, identity| {
-                hub.place_wheel_of_doom(identity, &placed)
-                    .map(|id| (BoxDone::WheelPlaced(id), None))
-            }),
             Command::RemoveWheelOfDoom(id) => self.mystery_box(now, |hub, identity| {
                 hub.remove_wheel_of_doom(identity, id)
                     .map(|_| (BoxDone::WheelRemoved(id), None))
@@ -3688,13 +3662,7 @@ impl Worker {
             _ => Err(self.not_connected()),
         };
         let reread = match &outcome {
-            Ok((
-                BoxDone::Placed(_)
-                | BoxDone::Removed(_)
-                | BoxDone::WheelPlaced(_)
-                | BoxDone::WheelRemoved(_),
-                _,
-            )) => true,
+            Ok((BoxDone::Placed(_) | BoxDone::Removed(_) | BoxDone::WheelRemoved(_), _)) => true,
             Err(HubError::Rejected { code, .. }) => code == "no_such_box",
             _ => false,
         };
@@ -3717,7 +3685,6 @@ impl Worker {
                         && wheel.coins != coins
                     {
                         wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
                     }
                     if let Some(profile) = profile {
                         if let Some(shop) = snapshot.shop.as_mut() {
@@ -3746,7 +3713,6 @@ impl Worker {
             self.update(|snapshot| {
                 if snapshot.wheel_of_doom.as_ref() != Some(&wheel) {
                     snapshot.wheel_of_doom = Some(wheel);
-                    snapshot.wheel_of_doom_revision += 1;
                 }
             });
         }
@@ -3760,41 +3726,6 @@ impl Worker {
             return;
         };
         let _ = hub.raygun_hit(&self.identity, server, by);
-    }
-
-    /// Spin placed wheel `wheel` on `server`: the answer goes in
-    /// [`Snapshot::wheel_of_doom_spin`], the profile after it (a holocron) in
-    /// [`Snapshot::me`] and the DOOM coins left in [`Snapshot::wheel_of_doom`]; a holocron
-    /// won is read at once for the Collection.
-    fn spin_wheel_of_doom(&mut self, wheel: i64, server: &str, now: Instant) {
-        self.wheel_serial += 1;
-        let serial = self.wheel_serial;
-        let outcome = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.spin_wheel_of_doom(&self.identity, wheel, server),
-            _ => Err(self.not_connected()),
-        };
-        if matches!(&outcome, Ok(answer) if answer.spin.holocron.is_some()) {
-            self.due_holocrons = self.due_holocrons.min(now);
-        }
-        self.update(|snapshot| {
-            let outcome = match outcome {
-                Ok(answer) => {
-                    if let Some(shop) = snapshot.shop.as_mut() {
-                        shop.day.credits = answer.profile.credits;
-                    }
-                    if let (Some(coins), Some(wheel)) =
-                        (answer.spin.coins, snapshot.wheel_of_doom.as_mut())
-                    {
-                        wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
-                    }
-                    snapshot.set_me(answer.profile);
-                    Ok(answer.spin)
-                }
-                Err(error) => Err(crate::wheel_of_doom::refusal(&error)),
-            };
-            snapshot.wheel_of_doom_spin = Some((serial, outcome));
-        });
     }
 
     /// Roll a DOOM coin at box `id` on `server`, as a wheel's spin: the answer goes in
@@ -3817,7 +3748,6 @@ impl Worker {
                         (answer.doom.coins, snapshot.wheel_of_doom.as_mut())
                     {
                         wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
                     }
                     snapshot.set_me(answer.profile);
                     Ok(answer.doom)
@@ -4963,24 +4893,10 @@ impl Service {
         let _ = self.commands.send(Command::ReadJunk);
     }
 
-    /// Ask the hub for the WHEEL OF DOOM's price, cooldown and segments: the answer
+    /// Ask the hub for the player's DOOM coins: the answer
     /// arrives in [`Snapshot::wheel_of_doom`].
     pub fn read_wheel_of_doom(&self) {
         let _ = self.commands.send(Command::ReadWheelOfDoom);
-    }
-
-    /// Spin placed WHEEL OF DOOM `wheel`, the player on `server`, for a DOOM coin: what it
-    /// landed on arrives in [`Snapshot::wheel_of_doom_spin`].
-    pub fn spin_wheel_of_doom(&self, wheel: i64, server: String) {
-        let _ = self
-            .commands
-            .send(Command::SpinWheelOfDoom { wheel, server });
-    }
-
-    /// SJK's creator: place a WHEEL OF DOOM at `placed` (its id is ignored); the answer
-    /// arrives in [`Snapshot::mystery_box`] and the wheels are read again.
-    pub fn place_wheel_of_doom(&self, placed: crate::mystery_box::MysteryBox) {
-        let _ = self.commands.send(Command::PlaceWheelOfDoom(placed));
     }
 
     /// SJK's creator: remove WHEEL OF DOOM `id`.

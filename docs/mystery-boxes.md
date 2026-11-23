@@ -203,7 +203,7 @@ hunters in the chat once the roll stops on the bear (the hub's box hunt event
 `laugh_<opener>_<to>_<credits>`, which arrives at the opening, held for the roll).
 
 **The teddy bear brings a DOOM coin** (Sol, 11/11/2026): the opener of a box that blows up
-gets a DOOM coin besides, the only way to spin a [WHEEL OF DOOM](wheel-of-doom.md); the
+gets a DOOM coin besides, to roll at a box for the [WHEEL OF DOOM](wheel-of-doom.md)'s outcomes; the
 centre says "+1 DOOM coin".
 
 **A holocron** (`holocron`, 28/10/2026): the roll stops on the tier's holocron, and the hub

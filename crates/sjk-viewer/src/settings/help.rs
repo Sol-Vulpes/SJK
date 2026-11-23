@@ -789,7 +789,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::toy_sounds::Toy::WheelOfDoom.cvar(),
-        "Off: every WHEEL OF DOOM spins silently on this PC, yours and other players', quacks included.",
+        "Off: the WHEEL OF DOOM's Quack effect is silent on this PC.",
     ),
     (
         crate::toy_sounds::Toy::Quests.cvar(),

@@ -66,7 +66,7 @@ pub(crate) const TOYS: [(&str, &str, &str); 9] = [
     (
         "WHEEL OF DOOM",
         "toy_wheelofdoom",
-        "tells your DOOM coins; spin a wheel standing on the map with Use, for a coin: it may turn your keys, mouse or view against you, or give a holocron",
+        "tells your DOOM coins; hold Use at a Force box to roll one: it may turn your keys, mouse or view against you, or give a holocron",
     ),
 ];
 
