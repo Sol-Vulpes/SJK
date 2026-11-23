@@ -284,6 +284,22 @@ hunt. Among the players of a server with it on and in play (at least 3), the hub
 mark at random for 3 minutes, one mark at most every 10 minutes (Sol, 29/10/2026: from
 one pick to the next; the hunt rests in between, also when the mark is killed or leaves).
 
+**Nobody away is tagged** (Sol, 23/11/2026: "avoid ever getting someone afk or typing
+getting tagged for the hunt"). Three holes let it happen, and each is closed:
+
+- idle meant two minutes without input, so a player who had walked off a minute ago was
+  picked. For the hunt a player is away after 15 seconds without a key or the mouse
+  (`hunt::IDLE`; holocrons keep their two minutes);
+- a player who opened the chat as the hub made its pick was picked on a read a moment
+  old. The mark's client reads the hunt at once on being told and says it is away; the
+  hub (branch `hunt-in-play`) hands a mark found away within 20 seconds of the pick on
+  at once to another hunter in play, for a whole 3 minutes, or calls the mark off when
+  fewer than 3 others are in play and tries again a minute later;
+- a client that had stopped answering was picked on what it said up to a minute before.
+  The hub's pick now wants a read 30 seconds old at most (reads come every 20).
+
+The second and third need the hub's `hunt-in-play`; without it the first alone applies.
+
 **In play** (Sol, 31/10/2026; before, 2 players with the toy on, away or not): every read
 of the hunt says whether the player is away: typing in the chat, in a menu, the console
 or a dialog, spectating or following someone, at the intermission, or idle two minutes
@@ -293,6 +309,20 @@ hunters in play; a hunter whose reads stopped for a minute counts as away. A mar
 a minute since being picked hands it on: another hunter in play becomes the mark at once,
 for a whole 3 minutes, told as any new mark is, when 3 others are in play; else they stay
 the mark.
+
+**The Sith look** (Sol, 23/11/2026: "give a new look to the hunt, the alert ... sith
+themed", the box being a Sith tomb): the tomb marks a player. The card at the top centre
+is a plate of black basalt pointed at both ends, edged in glowing red, a line of light
+along its top and bottom and the tomb's split diamond at each end; it says "THE TOMB'S
+MARK" (with the hunters left) over the name, or, blood red, "THE TOMB HAS CHOSEN" over
+"YOU ARE THE MARK". It arrives as an alert: 1.9 times its size and 120 pixels lower for
+2.6 seconds, then it shrinks up into its place in half a second, its edge flashing for
+the first 2; on the mark's own screen the four edges flush red meanwhile. The alarm is
+Force rage's roar (`sound/weapons/force/rage.mp3`, retail; `mpalarm` before). Over the
+mark's head the word is "MARKED", and the arrow to them is a barbed blade. The centre
+print reads "The tomb has marked you!", the hunters' chat line "the tomb has marked
+<name>". The toy keeps its name, Box hunt. What follows describes the hunt as it was
+first drawn; the rules are unchanged.
 
 The mark is told in the centre of the screen ("You are the mark!"),
 the other hunters by a chat line, and they see "MARK" in red over the mark's head

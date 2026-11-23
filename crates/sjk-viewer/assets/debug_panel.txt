@@ -5550,6 +5550,20 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[sith-hunt]
+area: Gameplay
+title: Box hunt: Sith card and alert; nobody away or typing is ever tagged
+change: The mark's card is a pointed basalt plate edged in red: THE TOMB'S MARK over the name.
+change: It arrives as an alert (big, lower, 2.6 s) then settles; the alarm is Force rage's roar.
+change: Away for the hunt after 15 s off the keys and mouse; a mark found away is handed on.
+test: 3+ hunters, toy_boxhunt on: a mark is picked; the big plate shows, then shrinks to the top.
+test: As the mark: THE TOMB HAS CHOSEN / YOU ARE THE MARK, blood red, screen edges flush red.
+test: Over the mark: MARKED in red, a barbed blade for an arrow; out of view it rides the ring.
+test: Stand still 15 s hands off, or sit in the chat or a menu, at pick time: never the mark.
+test: Open the chat just as you are picked: within seconds another hunter is the mark instead.
+test: With 3 hunters and the picked one away: no mark at all, the hunt tries again a minute on.
+note: The hand-on at the pick needs hub branch hunt-in-play (dfe36aa); merged local, not deployed.
+
 [sith-tomb]
 area: Gameplay
 title: Force box: an ancient Sith tomb, red glyphs, a lid that grinds apart
