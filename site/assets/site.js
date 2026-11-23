@@ -188,7 +188,7 @@ function setUpLauncherShots() {
 }
 
 /** The changelog's releases, newest first, without Unreleased: each with its
- * heading, version, stage ("Alpha"), date (dd/mm/yyyy), introduction, recap lines
+ * heading, version, stage ("Beta"), date (dd/mm/yyyy), introduction, recap lines
  * ({heading, text}) and number of changes. */
 function parseChangelog(source) {
   const releases = [];

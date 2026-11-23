@@ -284,9 +284,12 @@ update the script, replace the vendored file with GoatCounter's current
 Release tags exist only on SJK. They are cut by Sol or, since 03/11/2026, by the
 maintainers Sol gave write access to SJK (Slash and Milamber, Lumaya since
 05/11/2026 and Creyon since 11/11/2026), who may also review pull requests and merge or push to `main`, as
-[reviewing.md](reviewing.md) says. The release title carries the stage, "Sun JK 2026.1005.1 (Alpha)" (`STAGE` in the workflow).
-Alphas are not marked as pre-releases, so the site's download link
-(`releases/latest`) finds them; their name and notes say "Alpha" instead.
+[reviewing.md](reviewing.md) says. The release title carries the stage, "Sun JK 2026.1123.1 (Beta)" (`STAGE` in the workflow):
+Alpha up to 2026.1117.1, Beta from 2026.1123.1 (23/11/2026). The tag stays
+`sjk-v<YYYY.MMDD.N>` with no stage in it, because the client's updater only takes a
+three-number version. No release is marked as a pre-release, so the site's download
+link and the updater (`releases/latest`) find it; its name and notes say the stage
+instead.
 
 Changes to `main` and to release tags only add: GitHub rulesets refuse a force-push
 or deletion of `main` and a deletion or move of any `sjk-v*` tag, for everyone. A
