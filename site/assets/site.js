@@ -1,4 +1,4 @@
-// Sol JK site enhancements. The page works without this script: the download
+// Sun JK site enhancements. The page works without this script: the download
 // button points at the latest release page, What's new links to the changelog,
 // Install lists every platform and the credits link each contributor's pull requests.
 "use strict";
@@ -120,7 +120,7 @@ function enhanceDownload(release, platform) {
   const label = document.getElementById("download-label");
   if (label) label.textContent = asset ? `Download for ${PLATFORMS[platform].system}` : "Download";
   const line = document.getElementById("download-line");
-  if (line) line.textContent = asset ? `Sol JK ${version} · ${PLATFORMS[platform].label}` : `Sol JK ${version}`;
+  if (line) line.textContent = asset ? `Sun JK ${version} · ${PLATFORMS[platform].label}` : `Sun JK ${version}`;
   const others = document.getElementById("download-others");
   if (others) {
     const links = Object.keys(PLATFORMS)

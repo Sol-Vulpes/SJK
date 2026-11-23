@@ -1,3 +1,282 @@
+## Box hunt: the tomb's look, and nobody away is tagged (23/11/2026)
+
+Sol's request ("give a new look to the hunt, the alert, avoid ever getting someone afk or
+typing getting tagged for the hunt, and make this sith themed"). Branch
+`personal/sith-hunt`, based on `main` `c95428c2a`; hub branch `hunt-in-play` (`dfe36aa`).
+[mystery-boxes.md](mystery-boxes.md#box-hunt) has both parts.
+
+The look (`mystery_box/label.rs` `push_card`, `alert`): the hunt's card is drawn from
+polygons, a pointed basalt plate with a glowing red edge, lines of light and the tomb's
+split diamond; it arrives 1.9 times its size and lower, holds 2.6 s and settles in 0.5;
+the mark's screen flushes red at its edges meanwhile. Words: "THE TOMB'S MARK", "THE TOMB
+HAS CHOSEN", "MARKED" over the head, a barbed blade for the arrow; the alarm is Force
+rage (`sound/weapons/force/rage.mp3`), chosen by name, not heard. The quest's plate is
+untouched.
+
+Away: the client calls its player away for the hunt after 15 s without input
+(`hunt::IDLE`; two minutes before). The hub hands a mark found away within 20 s of the
+pick on at once (`FRESH_SWAP`), or calls it off under 3 others in play and tries again
+60 s later, and picks only hunters whose last read is 30 s old at most (`PICK_FRESH`).
+
+Verified on Windows x64: client `cargo fmt --all --check`, `cargo clippy -p sjk-viewer
+--all-targets` (nothing in the touched files), `cargo test -p sjk-viewer mystery_box`
+(38 passed; the card's place, size, alert and red edges, the words, the idle rule), the
+startup stack check; hub `cargo test` (the two new box hunt tests and the 14 before; one
+unrelated holocron test fails now and then in the whole suite and passes alone, on hub
+`main` too). The card was not rendered by the client: the HUD's words are not drawn in
+world shots, so the picture shown to Sol is a mock-up drawn from the same numbers. Not
+run in the client. The hub branch is merged into hub `main` locally, not pushed or
+deployed.
+
+## The Force box is a Sith tomb (23/11/2026)
+
+Sol's request ("update the model of the mystery box to be more of an ancient sith tomb
+thing, dark, and with red effects, stone door sound when it opens ... you can change the
+shape size of it freely"). Branch `personal/sith-tomb`, based on `main` `5f546e8b5`.
+`scripts/mystery_box_model.py` is rewritten: a basalt sarcophagus on two steps with
+leaning walls, four horns, pilasters, a sigil and random glyphs glowing red, a normal map,
+a lid in two slabs and a fire model ([mystery-boxes.md](mystery-boxes.md), the assets'
+README). The client draws the lid's half twice and parts the two (`lid_slabs`, lift, slide
+and tilt over 2.3 s), stretches the fire up with them, plays the retail stone door sounds
+(start, move, and stop once the slabs rest: `Lid::settles`), keeps what the roll shows
+inside for 0.9 s and floats it at 58 units, the words at 84. The halo's and the fire's
+pictures are squared: the client adds them in linear light, where the old fade's faint
+greys showed as a flat pane with a hard top edge (the blue halo had the same fault, less
+visibly).
+
+Verified on Windows x64: `cargo fmt --all --check`, `cargo clippy -p sjk-viewer
+--all-targets` (nothing in the touched files), `cargo test -p sjk-viewer mystery_box`
+(38 passed) and `things`; the world shot `duel6_mystery_box_tomb` (shut, parting, open;
+its boxes hang over duel6's lawn, as the other box shots' do). Not run in the client: the
+sounds were chosen by name and length, not heard; the size on the maps where boxes stand
+is not checked. Merged into `main` on Sol's word ("epic, merge it into main I love it").
+
+## First setup: the name, the finish, every menu style; modes in any order (23/11/2026)
+
+Follow-up to the two entries below, branch `personal/first-setup-polish`, based on
+`main` `5f546e8b5`. Sol's review of the steps and of EJK mode
+([sjk-ui.md](sjk-ui.md#first-setup), [client.md](client.md#modes-that-hold-settings)):
+
+- **The name.** Step 3 is now Player: a name field over Import my setup, Choose a
+  character and Start fresh, since a new player who started fresh stayed "Padawan". The
+  field shows what is typed (colour codes as characters), the name as the game draws it
+  beside it, and a chip for each colour; it writes `name` as it is typed, and uses the
+  menu's one handler for Ctrl+A, Ctrl+C, Ctrl+V and a held Backspace. The Character page
+  comes back to the step. Gameplay FPS moved to Play (ten rows, still no scrolling).
+- **It finishes, in every menu style.** Done on the last step sets `ui_hideFirstSetup`
+  (the tick's setting), so the pop-up no longer comes back at every start; `firstsetup`
+  still opens it. Over the main menu it is the pop-up in every menu style, at start and by
+  the command; the classic list stays for the classic Setup page, the pop-up's All
+  settings under that style, and in a game.
+- **Step 1 shows the game.** Both looks are a frame of the same view of a match on
+  mp/duel6 (a local server, the player alone), under a new profile's settings and under
+  everything EJK mode sets, taken by `setup_look_pictures_generate` with the retail
+  archives only. The classic main page drawn live is gone, with its code.
+- **Modes in any order.** EJK mode, Tactical and `renderer vanilla` shared the Vanilla
+  graphics and each kept "what was there when I came on", so A on, B on, A off, B off
+  could leave the player on a mode's values. `cvar_restore.rs` now tells them of one
+  another: a record holds only the player's own value, a mode going off hands a setting
+  to the mode still holding it, and each keeps its own way of going off. The records
+  keep their format; a profile an older build crossed is set right where the two records
+  tell the player's value from a mode's.
+- **Polish.** The last step closes on a recap of the steps before it (a click goes back
+  to one); drawn pictures (themes, icons) grow into room a step would leave empty; the
+  Vanilla and Vanilla Plus buttons write on where the Solar Renderer has its levels; the
+  level chips have room for "Medium" at 4:3.
+
+Changed outside those: `renderer sjk` typed while EJK mode or Tactical holds the Vanilla
+graphics no longer sets Vanilla Plus under the mode, it lets go of `renderer vanilla`'s
+own claim and says which mode still holds the graphics; `renderer vanilla` typed while
+one of them holds Vanilla is kept, so Vanilla stays when that mode goes off. The SJK
+look's lines say "a status bar, a kill feed" rather than nameplates, which are off on a
+new profile.
+
+Verified on Windows x64 (a 15.6 GB graphics card): `cargo fmt --all --check`, `cargo
+build --locked --workspace`, `cargo clippy --locked --workspace --all-targets`, `cargo
+test --locked --workspace` (every order of on and off of the three modes at each
+Tactical level, any two and each alone, a restart between the steps, each mode's own way
+of going off beside another, records an older build saved and crossed; the name field's
+keys, pointer and colours, Done and the next start in both menu styles, the Character
+page's return, the recap, every step fitting the card) and the startup check;
+`sjk_first_setup_snapshot` (every step, 4:3, 21:9 and 4K layouts) and the world shots
+`first_setup_4k_and_classic_start` (the real renderer at 3840x2160, and a start under
+the classic style) and `duel6_first_setup`, all looked at. The pictures bundled weigh
+690 KiB (706 158 bytes; the cap is 1 MB). Not verified: nothing was run in the client's
+window, so the name field has not been typed in by hand, nor Ctrl+A, Ctrl+C, Ctrl+V and a
+held Backspace through the real key events (they go through the menu's handler that the
+other fields use); the Character page was not looked at when opened from the pop-up.
+Known limits: the looks' pictures show the player alone (no opponent, chat, scoreboard or
+nameplates, which a new profile has off), so the two differ by the status bar, the
+timer, the HUD's type and the image only; the recap has no tile for graphics that match
+no preset; a profile where an older build already gave a mode's values back keeps them.
+Seen while taking the pictures, not looked into: the game's spawn effect is a column
+that whites out a third of the screen under Vanilla Plus, and a player put by
+`setviewpos` on duel6's spawn at 0 -1024 slides some 160 units before standing.
+
+## First setup in steps with pictures (23/11/2026)
+
+Sol's request ("have a button with an image in first step, I think we should have steps
+in the first setup with images"; EJK mode was a small switch in a list of thirty rows).
+Branch `personal/first-setup-steps`, based on `main` `eea8ebba0`. The SJK UI's First setup
+pop-up asks one thing at a time: six steps (Look, Colours, Import, Graphics, Play,
+Online) named across the top of a 1240x950 card, each with picture buttons and the few
+rows that belong with them, none scrolling ([sjk-ui.md](sjk-ui.md#first-setup)). The steps
+are a table (`settings/setup_steps.rs`), drawn by `settings/sjk_popup.rs`, which knows no
+step by name. Step 1 offers SJK and EJK (`ui_ejkMode`) side by side; the pop-up stays open
+when a look changes the menu style under it, and reads settings changed elsewhere the
+frame they change.
+
+Pictures: the SJK look and the six graphics presets are the client's own renders of
+mp/duel6, bundled as JPEGs (`assets/setup_pictures/`, 501 KiB in all, taken by
+`setup_pictures_generate`), as the menu pictures are. The EJK look is not bundled: that
+page is the game's own menu artwork and logo, which SJK never ships, so the pop-up lays
+the classic main page out small with the player's own files at run time.
+
+Seven rows of the old list are left out of the steps on purpose (`setup_steps::LEFT_OUT`:
+the nameplates' range, bars, icons and duel rows, the Force aura and Protect+Absorb shell,
+other duels' players); they stay in Settings and in its First setup category, which keeps
+the whole list, as does the classic style's First setup panel.
+
+Verified on Windows x64 (a 15.6 GB graphics card): `cargo fmt --all --check`, `cargo build
+--locked --workspace`, `cargo clippy --locked --workspace --all-targets` and `cargo test
+--locked --workspace` (the step table against `quick.rs`, every step fitting the card,
+the keyboard's order, the pointer, EJK and the pop-up staying, the tick, the pictures'
+textures, sizes and weight); the startup check; `sjk_first_setup_snapshot` (every step,
+step 1 in the four themes and with EJK chosen, 4:3 and 21:9) and
+`world_shot::tests::duel6_first_setup` (the real renderer: the bundled pictures uploaded,
+the classic page drawn small from the game's artwork, the pop-up over the classic style,
+the classic panel), all looked at. Not verified: nothing was run in the client's window,
+so the pointer, the keys and the graphics reload a preset or EJK asks for have not been
+tried by hand; no 4K frame was rendered; the classic page's picture uses the pop-up's
+type, not the game's fonts.
+
+## EJK mode (22/11/2026)
+
+Sol's request before the release: one switch that makes SJK look and feel like JoF EJK.
+Branch `personal/ejk-mode`, based on `main` `37882e0bc`. `ui_ejkMode` (off by default) is a
+preset: `ejk_mode::TABLE` names 53 settings with JoF EJK's value and why, after the Vanilla
+graphics preset's 28; turning it on puts the player's values aside in `ui_ejkModeRestore`
+and sets them, turning it off gives them back, and a setting changed by hand while on is
+left alone both ways ([client.md](client.md#ejk-mode)). No drawing code reads the switch;
+the `ejkmode [on|off|list]` command sets it and lists the table.
+New with it: `cg_finishers` (whether finishers play on this PC) and `cvar_restore.rs`, the
+put-aside text's one format, which `renderer vanilla` and Tactical now use too. The row
+leads Settings > Interface > Menus in the SJK UI (Advanced, Simple's General) and
+classic+, and stands in First setup's Look. Verified on Windows x64: `cargo test -p
+sjk-viewer` (the table against the cvars and the Settings rows, the round trip, the hand
+change, the restart; the settings groups, sections, help and search tests). Not verified:
+nothing was run in the client, so the look with the mode on has not been compared with JoF
+EJK on screen. Known differences left: the chat composer and its channel buttons are
+SJK's, the chat box keeps SJK's place and line spacing, the SJK scoreboard extras without
+a setting stay, other players' emotes still play, and the HUD files stay the player's (`cg_hudFiles 3`
+is JoF EJK's own HUD where its files are installed; the mode no longer sets it, so a
+HUD pack keeps working, 23/11/2026).
+
+## Classic menus' own look: the menu's proportions, the logo, Aurebesh (22/11/2026)
+
+Third step (Sol: "you extended the menu so it fits 16:9, I'm not sure it is a good
+idea; imagine the rest of the background instead", "can we get the logo", "can we use
+the letters"), branch `personal/classic-hd-art-2`. The windows and ring are back at
+retail's proportions; a wide window shows an imagined room beside the page
+(`own_art::beyond`: plates, conduits, the page's lines carried out). The logo is the
+player's own, cut clean of its blue plate at start (`art::own_logo`): there is no
+official Star Wars font to license, and the fan imitations do not cover the logo. The
+side columns are written in Aurebesh with Aurebesh AF (CC0, bundled, 19 KB) into a
+picture made at start (`own_writing.rs`). `ArtPiece` now has 64 pieces, all its
+`u64` set holds. Not yet run in the game.
+
+## Classic menus: the artwork redrawn, to 16:9 (22/11/2026)
+
+Second step of the classic menus' own look (Sol, on seeing the first: "the background
+looks plain; the idea was to redraw the original UI so it is HD and 16:9"), branch
+`personal/classic-hd-art`. `menu/classic/own_art.rs` draws what retail has as pictures
+(ground, angular frame lines, side columns, the main page's two windows and ring, the
+other pages' bar band) as shapes in the theme's colours from the window's size, reaching
+a wide window's edges. Page content (entries, panels) is still on the centred 4:3
+canvas; the in-game window and dialogs keep their plain boxes. Snapshots
+`main-classic-wide` and `sjk-page-wide`. Not yet run in the game.
+
+## Classic menus' own look (21/11/2026)
+
+Sol's request (21/11: rework classic+ so it has our own UI and is neat on 4K), branch
+`personal/classic-own-look`, first step. `ui_classicLook sjk` (default `retail`) draws
+the classic pages with no retail picture (the art set handed to them is empty, so each
+takes its drawn version) and swaps retail's colours for the theme's as a page is
+finished (`menu/classic/own_look.rs`: one table of 30 retail colours and their tokens,
+`DrawList::recolour` in `sjk-ui`). No page's code changed: 420 uses of the retail
+colour constants stay as they are. Checked on the 91 classic snapshots in Solar, Sith
+and Jedi (`SJK_CLASSIC_LOOK=sjk SJK_THEME=sith` on `menu_snapshot`), not yet in the game.
+Not done: the layout is still retail's 640x480 canvas centred on a wide window; a wide
+layout is the next step. Spec: [classic-plus.md](classic-plus.md#the-own-look).
+
+## Named themes and First setup's look (21/11/2026)
+
+Sol's request (21/11: remake First setup a bit, propose the themes: the current Solar one,
+a red Sith one, a blue Jedi one, and the colour customization), branch
+`personal/first-setup-themes`. `ui_theme` gains `sith` (`theme::SITH`, a hand-tuned
+palette: a first try that only turned the warm palette to red was too close to Solar to
+tell apart, and a purer red line-work failed the contrast test over bright scenes, so the
+lines are rose-red) and the themes are named for players: Solar (`warm`), Sith, Jedi
+(`cold`, unchanged colours) and Custom; `solar` and `jedi` read as `warm` and `cold`, and
+nothing saved is migrated. First setup's pop-up shows the four as tiles in their own
+colours under its title (`sjk_popup.rs`, `theme::preview`), a click wearing one at once,
+and its rows open on Look (theme, hue, saturation, menu style); camera style joins the
+aim rows under "Camera and aim". Spec: [sjk-ui.md](sjk-ui.md#first-setup). Checked by
+unit tests and off-screen snapshots (`sjk_first_setup_snapshot`), not yet in the game.
+
+## Settings pictures and sections (21/11/2026)
+
+Sol's request (21/11: "regen the pictures yourself for all the settings, so we have
+consistent design always, and reorganize if you feel the need"), branch
+`personal/settings-pictures`. Every settings icon is now drawn by
+`scripts/settings_icons_draw.py`: the grey metal disc is computed and the symbol is a
+Phosphor Icons glyph (MIT) embossed on it, so the 64 icons (the 32 there were, redrawn,
+and 32 new for the sub-headings, 64x64 and packed four to an atlas cell, the atlas being
+full) have one look and a new one is a line in the script
+(`crates/sjk-viewer/assets/settings/README.md`). The image service at hand had no credits
+for a new generated board, which is what led to a script; it is also what makes the look
+repeatable. Advanced's long categories are cut into sections by subject
+(`settings/sections.rs`: HUD from 8 headings over 106 rows to 10 sections, Gameplay's
+45-row "Effects" into Sabers, Force, Duels, Maps and remaps, Sound into 7, Chat into 8,
+Interface tidied), the away settings moved from Sound to Gameplay, and every sub-heading
+of the SJK UI's Settings wears a picture (`settings/section_icons.rs`). Page Up and Page
+Down move a section at a time. The classic+ groups keep their own lists. Spec:
+[sjk-ui.md](sjk-ui.md#settings). Checked by unit tests and off-screen snapshots, not yet
+in the game. The quick wheel's icons still come from their boards.
+
+## Smarter Settings controls (21/11/2026)
+
+Sol's request (21/11: remake the settings' controls, smarter, from the hub's settings
+usage), branch `personal/smart-settings`. The rows of both menu styles read four tables,
+one entry per setting, and the cvars and saved values keep their numbers: named stops
+with "Custom..." for numbers players set to a handful of values
+(`settings/stops.rs`); units, loudness volumes, curved tracks and named values on the
+sliders, with a mark at the default (`settings/present.rs`, `kit::slider_mark`); rows
+dimmed while their setting does nothing, each rule checked against the code reading the
+cvars (`settings/requires.rs`, `requires_rules.rs`); and a search with synonyms, typo
+tolerance, a Russian keyboard layout and best matches first (`settings/search.rs`).
+Crosshair, Overhead names, Nameplate bars and Empower glow became named choices; Simple
+gained Emote volume, Prediction and Server remaps. Spec:
+[sjk-ui.md](sjk-ui.md#settings). Checked by unit tests and off-screen snapshots
+(`sjk_settings_snapshot`), not yet in the game. Left for later: a crosshair picker with
+pictures.
+
+## Sun JK (21/11/2026)
+
+Step 6 of the season 2 work (Sol's announcement of 19/11: Sol JK becomes Sun JK; visible
+text only, Sol's choice), branch `personal/sun-jk`. Every place a player or a visitor reads
+the name says Sun JK: the SJK UI's home and welcome card, the classic menus' title, the
+credits roll's heading and `credits.txt`, the Discord presence's text, the server's and
+client's startup line (`notice.rs`, `sjk-dedicated`), the release workflow's titles, the
+README, NOTICE, CREDITS.md, the site (`site/`, its social card redrawn by
+`scripts/sjk_emblem.py build`) and the docs that name it. The exe, crates, cvars, paths,
+the repo, the hub and the short name SJK are unchanged; past changelog entries and this
+page's history keep the old name; the Ko-fi address (`ko-fi.com/soljk`) is an account's.
+Outside the repo, for Sol: the Discord application's name in its developer portal (the
+game name Discord shows), the SJK Launcher's own text, the Ko-fi and GitHub pages. The
+Force box's coin roll refusals no longer speak of the WHEEL OF DOOM
+(`wheel_of_doom::box_refusal`).
+
 ## One status bar (21/11/2026)
 
 Step 5 of the season 2 work (the UI upgrade, Sol: "merge the new top bar we did with the
@@ -8256,6 +8535,28 @@ or 333 (jump heights and strafes against an EJK client at that FPS on a server w
 `pmove_fixed`), prediction at those rates with high ping, and the file dialog.
 
 ## Mimic
+
+Branch `personal/mimic-direction` (22/11/2026, Windows 11). Sol tried `mimic vin 3 copy`
+on a JA+ server: the saber moves were copied, but the walk went the wrong way and the
+view to the ground at times. A leader walking backward or standing while attacking was
+ruled out in the Pmove tests (within 5 units). The command angles were `wanted -
+delta_angles` from the predicted state, which a held view rewrites every command; they
+are now the last command's plus a turn of 6 degrees at most, the keys are read in the
+view the command gets, the pitch stays within 85 degrees, and a held view is said in
+the client log ([client.md](client.md#mimic)). The cause is inferred from the symptoms
+and the code, not reproduced from that session.
+
+Branch `personal/mimic-leader-angles` (22/11/2026). Tried in a game with the above, the
+copy still walked forward while the leader walked left. The real cause: the leader's
+view was read from `entityState_t::angles`, which a player's entity sets only where
+they spawn or are teleported (`SetClientViewAngle`), not from `apos.trBase`, which
+holds their view. The leader's starting yaw was then the yaw they spawned with, so
+their motion was laid into a frame turned by however far they had turned since, and
+their turns and pitch were never seen. The tests feed samples directly and never read
+an entity; one now does. Not yet tried in a game. The same session showed the build
+line three days stale (`c6b3f2d` on a build of `f79c8d2`): the build script watched
+`HEAD`, the branch's loose ref and `packed-refs`, and missed the ref when git had
+packed it; it now watches `HEAD`'s reflog too.
 
 Since branch `personal/experimental-showcase` (11/10/2026) `ghost` and `mimic` are
 experimental, off by default behind Settings > Gameplay > "Experimental: showcase

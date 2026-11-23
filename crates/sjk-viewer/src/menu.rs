@@ -200,6 +200,9 @@ pub(crate) struct ClientMenu {
     destination_map: Option<String>,
     /// First setup was offered in this run (`offer_first_setup`).
     first_setup_offered: bool,
+    /// The Character page was opened from First setup's pop-up, on this step: closing
+    /// it shows the pop-up on that step again.
+    first_setup_resume: Option<usize>,
     /// The renderer ([`crate::ui_renderer::ShapeRenderer::id`]) the menu's
     /// images were uploaded into; another one (a world change) has none of them.
     uploaded_into: Option<u64>,
@@ -285,6 +288,7 @@ impl ClientMenu {
             password_target: None,
             destination_map: None,
             first_setup_offered: false,
+            first_setup_resume: None,
             password: String::with_capacity(64),
             address_editing: false,
             address_purpose: controller::AddressPurpose::Join,
@@ -769,6 +773,15 @@ impl ClientMenu {
             // with the configs found (or the file dialog), over the settings.
             SettingsResult::OpenImport => {
                 console.browse_config_import();
+                MenuAction::None
+            }
+            // First setup's pop-up's "Choose a character": the Character page on its
+            // own (not the Profile screen's tabs, which lead elsewhere), and the
+            // pop-up's step again when it closes.
+            SettingsResult::OpenCharacter => {
+                let step = self.settings.setup_step();
+                self.open_player(console, ReturnTarget::MainMenu);
+                self.first_setup_resume = Some(step);
                 MenuAction::None
             }
             // The Gameplay FPS row: its card, over the settings.
@@ -1390,6 +1403,11 @@ impl ClientMenu {
             PlayerMenuResult::None => MenuAction::None,
             PlayerMenuResult::Back(ReturnTarget::MainMenu) => {
                 self.state.main_menu();
+                // Opened from First setup's pop-up: back on its step.
+                if let Some(step) = self.first_setup_resume.take() {
+                    self.open_first_setup(console, ReturnTarget::MainMenu);
+                    self.settings.show_setup_step(console, step);
+                }
                 MenuAction::None
             }
             PlayerMenuResult::Back(ReturnTarget::InGame) => {
@@ -1415,6 +1433,8 @@ impl ClientMenu {
     }
 
     pub(crate) fn open_player(&mut self, console: &ViewerConsole, target: ReturnTarget) {
+        // Only the visit First setup's pop-up starts comes back to it.
+        self.first_setup_resume = None;
         self.player.open(console, target);
         self.state.open_player();
     }
@@ -1491,6 +1511,30 @@ impl ClientMenu {
     #[cfg(test)]
     pub(crate) fn select_setting_for_shot(&mut self, cvar: &str) {
         self.settings.select_cvar(cvar);
+    }
+
+    /// Show step `step` of First setup's pop-up, the keyboard on its picture button
+    /// `target` or on its rows (world shots).
+    #[cfg(test)]
+    pub(crate) fn first_setup_step_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        step: usize,
+        target: Option<usize>,
+    ) {
+        self.settings.setup_step_for_shot(console, step, target);
+    }
+
+    /// Type `text` in the field of the step First setup's pop-up shows (world shots).
+    #[cfg(test)]
+    pub(crate) fn first_setup_type_for_shot(&mut self, console: &mut ViewerConsole, text: &str) {
+        self.settings.setup_type_for_shot(console, text);
+    }
+
+    /// Whether First setup's pop-up is on show (world shots).
+    #[cfg(test)]
+    pub(crate) fn first_setup_popup_on_show(&self) -> bool {
+        self.sjk_settings_on_show() && self.settings.popup()
     }
 
     /// Open the resolution list from the Resolution row of the settings on

@@ -40,6 +40,7 @@ const SCOPES: &[Scope] = &[
 /// Not part of the #132 server contract, so an advertised 3 falls back to full body.
 const OFF_MODE: i64 = SCOPES[SCOPES.len() - 1].mode as i64 + 1;
 /// Highest mode offered by the shared settings catalogue.
+#[cfg(test)]
 pub(crate) const MAX_SCOPE: i64 = OFF_MODE;
 
 /// Options sampled once at actor-frame submission, without allocation or locking.

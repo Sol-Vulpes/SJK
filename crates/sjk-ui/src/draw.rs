@@ -384,6 +384,33 @@ impl DrawList {
         self.commands.retain(keep);
     }
 
+    /// Give every plain colour of every command to `map` and keep what it returns:
+    /// fills, borders, text, lines, arcs, polygons, gradients' ends and acrylic
+    /// tints. A picture's tint is left alone (it multiplies the picture, it is not a
+    /// colour of the page). For a screen whose palette is swapped whole after it
+    /// is drawn.
+    pub fn recolour(&mut self, mut map: impl FnMut(Color) -> Color) {
+        for command in &mut self.commands {
+            match command {
+                DrawCommand::SolidRect { color, .. }
+                | DrawCommand::RoundedRect { color, .. }
+                | DrawCommand::Border { color, .. }
+                | DrawCommand::Text { color, .. }
+                | DrawCommand::Arc { color, .. }
+                | DrawCommand::Line { color, .. } => *color = map(*color),
+                DrawCommand::Polygon { color, texture, .. } if texture.is_none() => {
+                    *color = map(*color);
+                }
+                DrawCommand::GradientRect { gradient, .. } => {
+                    gradient.start = map(gradient.start);
+                    gradient.end = map(gradient.end);
+                }
+                DrawCommand::Backdrop { tint, .. } => *tint = map(*tint),
+                _ => {}
+            }
+        }
+    }
+
     /// Commands in submission order.
     pub fn commands(&self) -> &[DrawCommand] {
         &self.commands

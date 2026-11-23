@@ -623,7 +623,7 @@ impl TextDialog {
     }
 
     /// Draw the Report a bug button centred at the bottom of the screen (the
-    /// classic menus only; the SJK UI has it on its Sol JK page).
+    /// classic menus only; the SJK UI has it on its Sun JK page).
     pub(crate) fn append_launcher(
         &mut self,
         vertices: &mut Vec<TextVertex>,

@@ -6,7 +6,8 @@
 //! [`Sample`]s, plays them back after the chosen delay and rebuilds commands that make
 //! the local player do the same:
 //!
-//! - **View:** the leader's yaw turn since the start, mirrored (or copied), and pitch.
+//! - **View:** the leader's yaw turn since the start, mirrored (or copied), and pitch,
+//!   turned to from the view the player has ([`steer`]), which a move may hold.
 //! - **Movement:** the leader's motion since the start, turned into the mimic's own
 //!   frame (facing each other: the leader stepping forward makes the mimic step
 //!   forward too) and mirrored left for right; followed through the movement keys by
@@ -88,6 +89,20 @@ const ROLL_SPEED: f32 = 200.0;
 /// up on a stance this player lacks.
 const PRESS_SPACING: i32 = 400;
 const STANCE_TRIES: u8 = 8;
+/// The single saber's stances run from `SS_FAST` (1) to `SS_TAVION` (5); `SS_DUAL` (6)
+/// and `SS_STAFF` (7) belong to the sabers held, not to a choice.
+const LAST_SINGLE_STANCE: u8 = 5;
+/// `saberHolstered` with every blade off (1 is one blade of a staff or one saber of two).
+const ALL_BLADES_OFF: u8 = 2;
+/// The most the view turns in one command, in degrees (750 a second at 125 commands).
+const MAX_TURN: f32 = 6.0;
+/// The steepest pitch asked for, in degrees: short of Pmove's own clamp (16000 of
+/// 65536, 87.9), which rewrites `delta_angles` when reached.
+const PITCH_LIMIT: f32 = 85.0;
+/// A view this far, in degrees, from the one asked for is held by the game; the client
+/// log says so at most once in this many milliseconds.
+const HELD_VIEW: f32 = 2.0;
+const HELD_NOTE_SPACING: i32 = 1_000;
 
 /// What a snapshot shows of the leader.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -118,12 +133,14 @@ impl Sample {
             time,
             origin: entity.trajectory_base(),
             velocity: entity.trajectory_delta(),
-            angles: entity.angles(),
+            // Not `entity.angles()`: a player's `s.angles` is set where they spawn or are
+            // teleported (`SetClientViewAngle`) and stays there while they turn.
+            angles: entity.angular_trajectory_base(),
             on_ground: entity.ground_entity_num() != NO_GROUND,
             crouched: solid != 0 && solid != 0x00FF_FFFF && top < 30,
             saber_move: entity.saber_move(),
             style: entity.fire_flag(),
-            holstered: entity.saber_holstered() != 0,
+            holstered: entity.saber_holstered() == ALL_BLADES_OFF,
             weapon: entity.weapon(),
         }
     }
@@ -159,6 +176,11 @@ struct Following {
     stance_wanted: u8,
     last_stance_press: i32,
     last_holster_press: i32,
+    /// The last command's angles, which the next one turns from ([`steer`]).
+    last_angles: Option<[i32; 3]>,
+    /// The view the last command asked for, and when a held one was last logged.
+    asked_view: Option<[f32; 2]>,
+    last_held_note: i32,
 }
 
 /// The leader on the playback timeline: at the playback time, a little ahead (for
@@ -220,6 +242,9 @@ impl Mimic {
             stance_wanted: 0,
             last_stance_press: i32::MIN / 2,
             last_holster_press: i32::MIN / 2,
+            last_angles: None,
+            asked_view: None,
+            last_held_note: i32::MIN / 2,
         }));
     }
 
@@ -354,8 +379,18 @@ impl Following {
             from_frame(ahead.velocity, anchors.leader_yaw, side),
             anchors.own_yaw,
         );
-        let yaw = anchors.own_yaw + side * angle_delta(leader.angles[1], anchors.leader_yaw);
-        let pitch = leader.angles[0];
+        // The view turns toward the leader's from the one the player has; the keys are
+        // read in the view this command gets, which is not the leader's while a move
+        // holds it (a lunge, a DFA, a back attack, a kata, a knockdown, a saber lock).
+        let wanted_view = [
+            angle_delta(leader.angles[0], 0.0).clamp(-PITCH_LIMIT, PITCH_LIMIT),
+            anchors.own_yaw + side * angle_delta(leader.angles[1], anchors.leader_yaw),
+        ];
+        self.note_held_view(state, leader, time);
+        let (angles, view) = steer(self.last_angles, state, wanted_view);
+        self.last_angles = Some(angles);
+        self.asked_view = Some(view);
+        let [_, yaw] = view;
 
         let on_ground = state.ground_entity_number != NO_GROUND;
         let leader_speed = leader.velocity[0].hypot(leader.velocity[1]);
@@ -452,15 +487,10 @@ impl Following {
         self.last_press = press;
 
         let generic_command = self.saber_upkeep(leader, state, time);
-        let view = [pitch, yaw];
         Drive {
             command: UserCommand {
                 server_time: input.server_time,
-                angles: [
-                    angle_short(pitch).wrapping_sub(state.delta_angles[0]) & 0xFFFF,
-                    angle_short(yaw).wrapping_sub(state.delta_angles[1]) & 0xFFFF,
-                    0_i32.wrapping_sub(state.delta_angles[2]) & 0xFFFF,
-                ],
+                angles,
                 buttons: press.buttons | (input.buttons & sjk_game_jka::pmove_talk::BUTTON_TALK),
                 weapon: if leader.weapon != 0 {
                     leader.weapon
@@ -477,12 +507,36 @@ impl Following {
         }
     }
 
+    /// Say in the client log, now and then, that the game holds the view away from the
+    /// one the last command asked for: the copy cannot face the leader's way meanwhile.
+    fn note_held_view(&mut self, state: &MovementState, leader: &Sample, time: i32) {
+        let Some(asked) = self.asked_view else {
+            return;
+        };
+        let off: [f32; 2] = std::array::from_fn(|i| angle_delta(state.view_angles[i], asked[i]));
+        if off[0].abs().max(off[1].abs()) < HELD_VIEW
+            || time - self.last_held_note < HELD_NOTE_SPACING
+        {
+            return;
+        }
+        self.last_held_note = time;
+        eprintln!(
+            "mimic: view held {:.0} (pitch) {:.0} (yaw) degrees from the asked one; own              saber move {}, legs {}, the leader's move {}",
+            off[0], off[1], state.saber_move, state.legs_anim, leader.saber_move
+        );
+    }
+
     /// Match the leader's stance and holster with one generic command at a time.
     fn saber_upkeep(&mut self, leader: &Sample, state: &MovementState, time: i32) -> u8 {
         if leader.weapon != WP_SABER || state.weapon != WP_SABER {
             return 0;
         }
-        let holstered = state.saber_holstered != 0;
+        // A press during a swing is kept by the server and lands after it, by when the
+        // leader may show something else: both wait for the swing's end.
+        if saber::in_chain(leader.saber_move) || saber::in_chain(state.saber_move) {
+            return 0;
+        }
+        let holstered = state.saber_holstered == ALL_BLADES_OFF;
         if leader.holstered != holstered {
             if time - self.last_holster_press >= PRESS_SPACING {
                 self.last_holster_press = time;
@@ -494,7 +548,11 @@ impl Following {
             self.stance_wanted = leader.style;
             self.stance_tries = 0;
         }
-        if leader.style != 0
+        // Only between a single saber's stances: the cycle of a staff or of two sabers
+        // puts a blade away instead, and no press gives a single saber their stance.
+        let single = |style: u8| (1..=LAST_SINGLE_STANCE).contains(&style);
+        if single(leader.style)
+            && single(state.saber_anim_level)
             && leader.style != state.saber_anim_level
             && self.stance_tries < STANCE_TRIES
             && time - self.last_stance_press >= PRESS_SPACING
@@ -521,6 +579,32 @@ fn still(input: &UserCommand, walk: bool) -> Drive {
         },
         view: None,
     }
+}
+
+/// The command angles that turn the view from the one `state` has toward `wanted`
+/// (pitch, yaw), [`MAX_TURN`] at most, and the view they ask for.
+///
+/// They are the last command's angles (`last`) plus the turn, as a mouse adds to
+/// `cl.viewangles`, and not `wanted - delta_angles`: a move that holds the view rewrites
+/// `delta_angles` every command to cancel the command's angles (`PM_SetPMViewAngle`), so
+/// angles worked back from a `delta_angles` that is a command late, or mispredicted, throw
+/// the view anywhere, the pitch into its clamp, straight down. Adding the turn needs no
+/// `delta_angles`: a held view stays, and a released one goes on from where it was.
+fn steer(last: Option<[i32; 3]>, state: &MovementState, wanted: [f32; 2]) -> ([i32; 3], [f32; 2]) {
+    // Without a last command, the angles that keep the view as it is.
+    let mut angles = last.unwrap_or_else(|| {
+        std::array::from_fn(|i| {
+            angle_short(state.view_angles[i]).wrapping_sub(state.delta_angles[i]) & 0xFFFF
+        })
+    });
+    let view = std::array::from_fn(|i| {
+        let turn = angle_delta(wanted[i], state.view_angles[i]).clamp(-MAX_TURN, MAX_TURN);
+        let turn_short = (turn * (65_536.0 / 360.0)).round() as i32;
+        angles[i] = angles[i].wrapping_add(turn_short) & 0xFFFF;
+        angle_delta(state.view_angles[i] + turn, 0.0)
+    });
+    angles[2] = 0_i32.wrapping_sub(state.delta_angles[2]) & 0xFFFF;
+    (angles, view)
 }
 
 /// The leader at `time`: interpolated between the samples around it, extrapolated a

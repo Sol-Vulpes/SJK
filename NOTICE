@@ -1,4 +1,4 @@
-Sol JK (SJK)
+Sun JK (SJK)
 Copyright (C) 2026 Sol-Vulpes, Bishop-R and the JKR contributors
 
 SJK is developed by Sol (Sol-Vulpes) and contributors. It began as a modified
@@ -23,10 +23,11 @@ The license requires anyone who copies, modifies or redistributes SJK to:
 
 Name and emblem
 ---------------
-The GPL covers the code, not the project's identity. "Sol JK", "SJK" and the
-SJK emblem identify Sol's releases: a modified version must use its own name
-and emblem unless Sol agrees otherwise, and must not suggest that it is an
-official SJK release. Credit stays: saying a work is based on SJK is welcome and
-expected. The copyright line the programs print at startup names Sol JK (SJK); a
-modified version keeps it intact under its own name, for example "<Name> 1.0,
-based on Sol JK (SJK), Copyright (C) 2026 Sol-Vulpes, ...".
+The GPL covers the code, not the project's identity. "Sun JK" (Sol JK until
+21/11/2026), "SJK" and the SJK emblem identify Sol's releases: a modified
+version must use its own name and emblem unless Sol agrees otherwise, and must
+not suggest that it is an official SJK release. Credit stays: saying a work is
+based on SJK is welcome and expected. The copyright line the programs print at
+startup names Sun JK (SJK); a modified version keeps it intact under its own
+name, for example "<Name> 1.0, based on Sun JK (SJK), Copyright (C) 2026
+Sol-Vulpes, ...".

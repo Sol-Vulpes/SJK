@@ -24,6 +24,146 @@
 
 # ---- Console & chat ----
 
+[first-setup-steps]
+area: Menus & settings
+title: First setup in steps with pictures (the pop-up, in every menu style)
+change: Six steps: Look, Colours, Player (your name), Graphics, Play, Online. Picture buttons.
+change: Done on the last step finishes it: it no longer opens at start. firstsetup reopens it.
+change: It opens with the classic menus too (at start and by firstsetup), not the old list.
+test: New profile (or firstsetup): step 1 shows SJK and EJK with pictures, SJK in use.
+test: Both pictures are the same match view: SJK has the status bar and timer, EJK the retail HUD.
+test: Click EJK: In use moves, the pop-up stays, Menu style and HUD rows follow in a moment.
+test: Click SJK again: your settings come back. Enter on the one in use goes to step 2.
+test: Step 2: click each theme, the whole card changes colour. With EJK on, a gold note shows.
+test: Step 3 opens in the Name field: type, the name changes at once (check the main page after).
+test: Step 3: ^ and a digit show in the field as typed; In game shows the colours. Click a chip.
+test: Step 3: Ctrl+A then type replaces; Ctrl+C / Ctrl+V; hold Backspace; double click selects all.
+test: Step 3: empty the field and leave it: the name you had is back, not an empty one.
+test: Step 3: Enter in the field goes to step 4. Down reaches the buttons, Up the field again.
+test: Step 3: Import my setup opens the Import page; an imported name shows in the field.
+test: Step 3: Choose a character opens the Character page; Esc there returns to step 3.
+test: Step 4: three pictures of the same spot; ratings and Recommended fit your card.
+test: Step 4: Low/Medium/High/Ultra chips under Solar Renderer set that level and its picture.
+test: Step 5: Gameplay FPS is the first row; all ten rows and the help fit, nothing scrolls.
+test: Step 6: Your setup shows Look, Colours, Player, Graphics; a click on a tile opens its step.
+test: Left/Right/Tab move over buttons and chips, Down reaches the rows, then the tick.
+test: PgUp/PgDn, Back/Next and a click on a step's name change step.
+test: Done on step 6 (or PgDn there), restart: First setup does not open. firstsetup: it does.
+test: Esc on any step, restart: it opens again. Tick Don't show at start, restart: it does not.
+test: F2 or All settings opens Settings > First setup with the whole list. Esc closes.
+test: ui_menuStyle classic and ui_hideFirstSetup 0, restart: the pop-up opens over the classic menu.
+test: Classic menus, firstsetup: the pop-up. Its All settings: the classic list panel.
+test: Classic menus > Setup > First setup: still the classic list.
+test: In a game, firstsetup: still the list panel over the game.
+test: At 4:3, ultrawide and 4K nothing is cut, overlaps or leaves the card.
+note: Not in the steps any more: nameplate range/bars/icons/duel, Force shells, duel ghost.
+
+[modes-any-order]
+area: Menus & settings
+title: EJK mode, Tactical and renderer vanilla on together, off in any order
+change: Each keeps your own values, never another mode's; off hands a setting to the mode still on.
+test: Note your graphics preset and a few custom values (shadows, stock blades, fog).
+test: ejkmode on, tactical medium, ejkmode off: graphics stay Vanilla (Tactical holds them).
+test: tactical off: your own preset and values are back, not Vanilla.
+test: tactical max, ejkmode on, tactical off, ejkmode off: your own values again.
+test: renderer vanilla, ejkmode on, renderer sjk: it says EJK mode still holds the graphics.
+test: ejkmode off after that: your own graphics are back.
+test: EJK mode on, change the HUD look by hand, EJK mode off: the HUD you picked stays.
+test: Update with EJK mode or Tactical already on from the release before: off gives your own back.
+note: A profile where the old build already handed back Vanilla wrongly stays as that build left it.
+
+[ejk-mode]
+area: Menus & settings
+title: EJK mode: one switch for JoF EJK's look (ui_ejkMode)
+change: Settings > Interface > EJK mode (also First setup > Look, Simple > General).
+change: On sets JoF EJK's look from one table and keeps your settings; off gives them back.
+change: New row Gameplay > Finishers (cg_finishers): off, saber kills play no finisher.
+test: Note your menu style, HUD, scoreboard, graphics preset. Turn EJK mode on.
+test: Menus go classic in the retail look; accept the graphics reload card.
+test: In a match: JoF EJK HUD (or retail), no status bar, kill feed, version line, timer.
+test: Console is the classic one; kills and joins print at the top left.
+test: Scoreboard is the retail one, no IDs, no head icons.
+test: Chat is in the game's font at JoF EJK's size; no nameplates, kybers, toys, tags.
+test: Graphics preset reads Vanilla; compare the picture with JoF EJK side by side.
+test: Change one setting by hand (HUD look): it stays, also after a restart.
+test: Turn EJK mode off: everything you noted is back, but the one you changed by hand.
+test: Search Settings for ejk, eternal, jof, openjk, classic, retail: the row is found.
+test: Console: ejkmode, ejkmode on, ejkmode off, ejkmode list (each setting and why).
+test: What's new card: EJK mode shows with its switch.
+note: The chat composer, chat place and emotes are not covered; see docs/status.md.
+
+[classic-own-look]
+area: Menus & settings
+title: Classic menus' own look: no retail art, the theme's colours (ui_classicLook sjk)
+change: Settings > Interface > Classic menus' look: Retail (default) or SJK.
+change: SJK draws every classic page without the game's pictures, in the theme's colours.
+test: ui_menuStyle classic, then ui_classicLook sjk: the main page has no Star Wars art.
+test: Text, rules and boxes are sharp at your resolution; nothing is a stretched picture.
+test: Change Theme to Sith, Jedi, Custom: the classic pages follow at once.
+test: Walk Play, Profile (character, saber, Force, cosmetics), Settings, SJK, in-game menu.
+test: Force page: light and dark sides keep their own blue and red; saber swatches too.
+test: Look for a leftover retail blue anywhere and note where (it is one table entry).
+test: ui_classicLook retail: the retail pictures and colours are back, unchanged.
+test: With ui_menuStyle sjk the row is dimmed and says it needs Menu style on Classic.
+test: Main page: frame lines from the corners, a window each side of the ring, the ring.
+test: The windows and ring keep the original menu's proportions, centred, on 16:9 too.
+test: On 16:9: a plate with studs and a conduit each side; nothing is a stretched picture.
+test: Title: the game's Star Wars / Jedi Academy logo, letters only, no blue box behind.
+test: Sides: columns of Aurebesh letters, climbing slowly; four of them on 16:9.
+test: Other pages: the page bar is a band from edge to edge between two rules.
+note: Entries and panels are still placed on the 4:3 canvas; moving them out is next.
+
+[first-setup-themes]
+area: Menus & settings
+title: First setup opens on the look: Solar, Sith, Jedi and Custom theme tiles
+change: Themes are named Solar (warm), Sith (new, red), Jedi (cold) and Custom.
+change: First setup shows them as four tiles; its first rows are theme, hue, saturation, menus.
+test: Console: firstsetup. Four tiles under the title, each in its own colours.
+test: Click Sith: the whole pop-up turns red at once; the tile gets the gold edge, In use.
+test: Click Jedi, then Solar: each applies at once; Done keeps the last one.
+test: Move Theme hue: the theme becomes Custom and the Custom tile shows that colour.
+test: With Sith worn: main menu, Settings, the status bar and nameplates are red too.
+test: Sith: text and lines stay readable over a bright map (snow, sky) behind glass.
+test: Settings > Interface > Theme: a list of Solar, Sith, Jedi, Custom; same result.
+test: Console: ui_theme jedi and ui_theme solar are understood; ui_theme sith is saved.
+note: A saved ui_theme cold shows as Jedi; nothing is migrated.
+
+[settings-pictures]
+area: Menus & settings
+title: Settings: new icons drawn by one script, long categories cut into pictured sections
+change: All 64 settings icons are drawn by scripts/settings_icons_draw.py: one look.
+change: HUD, Gameplay, Sound, Chat, Interface: short sections by subject, a picture each.
+change: Away settings moved from Sound to Gameplay; Page Up/Down jump a section.
+test: Settings (Advanced): each category on the rail has its new icon; Gameplay: sabers.
+test: HUD: sections Layout, Crosshair, Names and cards, Nameplates, Playstyle, Readouts...
+test: Gameplay: Players and models, Sabers, Force, Duels, Maps and remaps, Toys, Camera...
+test: Sound: Volume, Game sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds.
+test: Chat: Chat box, Chat look, Chat tabs, Do not disturb, Duel lines, SJK chat...
+test: Each heading shows a small icon before its name, sharp, no edge of a neighbour.
+test: Page Down goes to the next section's first row, Page Up to the one before.
+test: Search away: the away rows are found under Gameplay. Nothing is under "More".
+test: Classic menus, in-game menu, key bindings, news: their icons are the new set too.
+note: The quick wheel's own icons are still the old boards' (a slightly different hand).
+
+[smart-settings]
+area: Menus & settings
+title: Settings: named stops, units, loudness volumes, dependent rows, smarter search
+change: FPS caps, Away after, error smoothing, Rate, Snapshots: lists of stops plus Custom.
+change: Sliders show units and a default mark; volumes read as loudness (22% = old 0.05).
+change: Rows that do nothing while a parent is off are dimmed; search forgives typos.
+test: Display > FPS cap: open the list, pick 144 FPS; Left/Right step; type 275, Enter.
+test: FPS cap > Custom...: the entry opens on the value; Esc keeps it, Enter sets it.
+test: Sound: drag Effects volume low: whole percents; Left/Right move 5%; 0 reads Off.
+test: Any slider: a tick marks the default; drag near it and the knob catches it.
+test: Controls: sensitivity drags in 0.1 steps, 5 near the middle; type 2.35 works.
+test: HUD: nameplates off dims their rows; the detail says what they need; on undims.
+test: Display: Detect refresh rate is dimmed unless FPS cap is on Auto.
+test: Search crosshar, caht, afk, pov, msaa: each finds its setting; hud leads with best.
+test: Search bind: the empty result points to Key bindings.
+test: Graphics > Time of day reads 19:30 style; HUD scale reads in percent.
+test: Classic menus (ui_menuStyle classic): the same rows work, lists and typed values too.
+note: Saved values are untouched: s_volume 0.05 still is 0.05, it only reads 22%.
+
 [bar-ping]
 area: HUD
 title: Top bar ping matches the scoreboard; the lagometer graphs stock's snapshot ping
@@ -4030,6 +4170,18 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[sun-jk]
+area: Menus & settings
+title: Sol JK is now Sun JK (visible text only)
+change: Home, welcome card, classic title, credits, Discord presence text say Sun JK.
+change: Release titles, README, NOTICE, site and its social card say Sun JK; SJK stays.
+change: A refused DOOM coin roll speaks of the Force box, not the WHEEL OF DOOM.
+test: New profile: the welcome card says Welcome to Sun JK; the SJK UI home names Sun JK.
+test: ui_menuStyle classic: the main menu title reads SUN JK; credits heading SUN JK.
+test: Discord open: hovering the large image says Sun JK (the game name is the portal's).
+test: Hold Use at a box with no coin: No DOOM coin: the teddy bear in a Force box brings one.
+note: Rename the Discord application in its developer portal for the game name to follow.
+
 [one-status-bar]
 area: HUD
 title: One status bar at the bottom: the top bar's parts merged into it
@@ -5398,6 +5550,35 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[sith-hunt]
+area: Gameplay
+title: Box hunt: Sith card and alert; nobody away or typing is ever tagged
+change: The mark's card is a pointed basalt plate edged in red: THE TOMB'S MARK over the name.
+change: It arrives as an alert (big, lower, 2.6 s) then settles; the alarm is Force rage's roar.
+change: Away for the hunt after 15 s off the keys and mouse; a mark found away is handed on.
+test: 3+ hunters, toy_boxhunt on: a mark is picked; the big plate shows, then shrinks to the top.
+test: As the mark: THE TOMB HAS CHOSEN / YOU ARE THE MARK, blood red, screen edges flush red.
+test: Over the mark: MARKED in red, a barbed blade for an arrow; out of view it rides the ring.
+test: Stand still 15 s hands off, or sit in the chat or a menu, at pick time: never the mark.
+test: Open the chat just as you are picked: within seconds another hunter is the mark instead.
+test: With 3 hunters and the picked one away: no mark at all, the hunt tries again a minute on.
+note: The hand-on at the pick needs hub branch hunt-in-play (dfe36aa); merged local, not deployed.
+
+[sith-tomb]
+area: Gameplay
+title: Force box: an ancient Sith tomb, red glyphs, a lid that grinds apart
+change: The box is a black basalt sarcophagus on two steps, a horn at each corner, red glyphs.
+change: Its lid is two slabs: they lift, slide apart and tip; red fire rises while it is open.
+change: JA's stone door sounds: seal, grind (2.4 s), a thud as the slabs rest; again to shut.
+test: A box on a map: dark stone, a red sigil each side, glyphs, slits down the horns, a halo.
+test: From afar the halo is a soft red light, never a flat red pane or a hard edge.
+test: Tap Use: the slabs grind apart over 2.3 s, a thud, embers and red fire inside.
+test: The roll waits inside ~1 s then rises above the horns; the words stand clear over it.
+test: Take it (or wait 10 s): the slabs grind shut, a thud, the fire sinks back.
+test: Walk round it: no texture stretched or mirrored badly, the lid meets the rim when shut.
+test: mapedit web editor: the box shows with both lid slabs shut.
+note: Bigger than the chest (80 x 41 on the floor, 47 tall): check each placed box still fits.
+
 [force-box]
 area: Gameplay
 title: Force box: stone, gold, blue runes, JA sounds; hold Use to roll a DOOM coin
@@ -5581,6 +5762,12 @@ test: Try mimic <name> 0, then mimic <name> 2 copy: no delay, then sides kept af
 test: Press any key: it stops. mimic off also stops it.
 test: mimic <name> 0.3 walk, both walking the choreography: you walk the whole time.
 test: Without walk, while they walk slowly: you walk too, not run (no catch-up run).
+change: 22/11: view turns like a mouse (held views are safe); staff and duals keep their stance.
+test: mimic <name> 3 copy through lunges, katas, back attacks: no look at the ground.
+test: Same run: you walk the way they did, also right after a special move.
+note: If the view still goes off, the client log has lines starting mimic: view held.
+test: 22/11: they turn, then strafe left: you turn the same and strafe (not walk forward).
+test: With a staff, then duals, mimic a single-saber player's swings: your blades stay.
 note: A 0.2-0.3 s delay or more keeps it tight; with 0 it reacts after your pings.
 
 [ghost-replay]

@@ -20,9 +20,12 @@ use sjk_identity::service::BoxDone;
 use sjk_protocol::{PlayerState, UserCommand};
 use std::time::{Duration, Instant};
 
-/// The box's chest and its lid (bundled, `scripts/mystery_box_model.py`).
+/// The box, a Sith tomb since 23/11/2026, and half its lid, drawn twice (bundled,
+/// `scripts/mystery_box_model.py`).
 pub(crate) const MODEL: &str = "models/sjk/mystery_box.md3";
 pub(crate) const LID_MODEL: &str = "models/sjk/mystery_box_lid.md3";
+/// What an open tomb lets out: its embers and the red fire over them.
+const FIRE_MODEL: &str = "models/sjk/mystery_box_fire.md3";
 /// What the roll stops on when the box blows up (bundled, `scripts/teddy_bear_model.py`).
 const TEDDY_MODEL: &str = "models/sjk/teddy_bear.md3";
 /// The piles of gold coins credits come as (Sol, 11/11/2026: crystals before; bundled,
@@ -30,24 +33,34 @@ const TEDDY_MODEL: &str = "models/sjk/teddy_bear.md3";
 const COINS_SMALL: &str = "models/sjk/coins_small.md3";
 const COINS_MEDIUM: &str = "models/sjk/coins_medium.md3";
 const COINS_BIG: &str = "models/sjk/coins_big.md3";
-/// The chest's height and depth (across its front), and how far the lid reaches past it.
-const HEIGHT: f32 = 24.0;
-const DEPTH: f32 = 26.0;
-const LID_OVERHANG: f32 = 1.0;
-/// How far the lid swings open, in degrees, and how long it takes to open and to close.
-const LID_OPEN: f32 = 75.0;
-const LID_OPENING: Duration = Duration::from_millis(450);
-const LID_CLOSING: Duration = Duration::from_millis(700);
-// The Force box's sounds (Sol, 20/11/2026: "its own sounds from Star Wars"): Jedi
-// Academy's own retail files, read from the player's game, never shipped. The chest's
-// bundled music box tune and the extras pack's opening, roll and closing played before.
-/// Played when a box opens, for the opener and everyone near: the Force lifts the lid.
-const OPEN: &str = "sound/weapons/force/pull.mp3";
+/// How high the tomb's lid lies over its bottom.
+const HEIGHT: f32 = 27.0;
+/// How the lid's two slabs part: lifted off the rim, slid away from the seam and tipped
+/// outwards (degrees), and how long they take to part and to shut: [`GRIND`]'s length.
+const LID_LIFT: f32 = 2.5;
+const LID_SLIDE: f32 = 10.0;
+const LID_TILT: f32 = 5.0;
+const LID_OPENING: Duration = Duration::from_millis(2_300);
+const LID_CLOSING: Duration = Duration::from_millis(2_300);
+/// How high over the tomb's bottom its embers lie, where its fire stands.
+const FIRE_FLOOR: f32 = 13.0;
+// The box's sounds (Sol, 20/11/2026: "its own sounds from Star Wars"; 23/11/2026: "stone
+// door sound when it opens"): Jedi Academy's own retail files, read from the player's
+// game, never shipped. The chest's bundled music box tune and the extras pack's opening,
+// roll and closing played first, Force pull and push from 20/11/2026.
+/// Played when a box opens, for the opener and everyone near: the stone lid breaks its
+/// seal.
+const OPEN: &str = "sound/movers/doors/door_stone_start.mp3";
+/// Played while the lid's slabs slide, parting or shutting: stone grinding on stone,
+/// 2.4 s long.
+const GRIND: &str = "sound/movers/doors/door_stone_move.wav";
+/// Played as the slabs come to rest, parted or shut.
+const SETTLE: &str = "sound/movers/doors/door_stone_stop.mp3";
 /// Played while the roll runs: Force speed's hum, 5.14 s long, ending as the roll stops
 /// ([`ROLL`]).
 const ROLL_SOUND: &str = "sound/weapons/force/speedloop.wav";
 /// Played as the lid shuts.
-const CLOSE: &str = "sound/weapons/force/push.mp3";
+const CLOSE: &str = GRIND;
 /// The laugh in the optional SJK extras pack (`unofficial_sjk_extras.pk3`) and what plays
 /// without the pack: the only extra the Force box still plays.
 const EXTRAS: [(&str, Option<&str>); 1] = [(LAUGH, Some(LAUGH_FALLBACK))];
@@ -61,7 +74,7 @@ const JACKPOT: &str = "sound/interface/secret_area.mp3";
 const EMPTY: &str = "sound/weapons/force/noforce.mp3";
 /// Played to every hunter, the mark too, when the box hunt picks a new mark (Sol's
 /// pick, 28/10/2026).
-const HUNT_MARK: &str = "sound/effects/mpalarm.wav";
+const HUNT_MARK: &str = "sound/weapons/force/rage.mp3";
 /// Played, with [`BLAST_EFFECT`], where a box's opener stands when it blows up.
 const BLAST_SOUND: &str = "sound/weapons/detpack/explode.mp3";
 const BLAST_EFFECT: &str = "detpack/explosion";
@@ -95,10 +108,13 @@ const DOOM_STAY: Duration = Duration::from_secs(3);
 const DOOM_COOLDOWN: u64 = 15;
 /// How long what came out waits for its opener before it is taken by itself.
 const HOLD: Duration = Duration::from_secs(10);
-/// How long the roll's first thing takes to rise out of the box.
-const RISE: Duration = Duration::from_millis(700);
-/// How high over the box's base the roll floats (the crate is 33 units tall).
-const FLOAT: f32 = 44.0;
+/// How long the roll's first thing waits inside the tomb for the lid to part, and how
+/// long it then takes to rise out of it.
+const RISE_DELAY: Duration = Duration::from_millis(900);
+const RISE: Duration = Duration::from_millis(900);
+/// How high over the box's base the roll floats (the tomb's ridge is 35 units up, its
+/// horns 47).
+const FLOAT: f32 = 58.0;
 /// How many times the roll changes what it shows; it slows to a stop on the last.
 const SWAPS: f32 = 30.0;
 /// How far apart the opener's client tells each other SJK player that they took what
@@ -288,7 +304,7 @@ fn models() -> impl Iterator<Item = &'static str> {
     MODELS
         .get_or_init(|| {
             let mut models: Vec<&'static str> = Vec::new();
-            let every = [MODEL, LID_MODEL].into_iter().chain(
+            let every = [MODEL, LID_MODEL, FIRE_MODEL].into_iter().chain(
                 PRIZES
                     .iter()
                     .chain(&REEL)
@@ -336,9 +352,22 @@ macro_rules! bundled {
 
 /// The bundled files at their game paths (made by `scripts/mystery_box_model.py`,
 /// `teddy_bear_model.py` and `box_loot_model.py`; the shader by hand).
-const FILES: [(&str, &[u8]); 12] = [
+const FILES: [(&str, &[u8]); 16] = [
     (MODEL, bundled!("mystery_box.md3")),
     (LID_MODEL, bundled!("mystery_box_lid.md3")),
+    (FIRE_MODEL, bundled!("mystery_box_fire.md3")),
+    (
+        "models/sjk/mystery_box_n.png",
+        bundled!("mystery_box_n.png"),
+    ),
+    (
+        "models/sjk/mystery_box_fire.jpg",
+        bundled!("mystery_box_fire.jpg"),
+    ),
+    (
+        "models/sjk/mystery_box_ember.jpg",
+        bundled!("mystery_box_ember.jpg"),
+    ),
     (TEDDY_MODEL, bundled!("teddy_bear.md3")),
     ("models/sjk/teddy_bear.jpg", bundled!("teddy_bear.jpg")),
     ("models/sjk/mystery_box.jpg", bundled!("mystery_box.jpg")),
@@ -433,11 +462,13 @@ struct Here {
     lid: Lid,
 }
 
-/// A box's lid: open or not, and since when (it swings between the two).
+/// A box's lid: open or not, since when (its slabs slide between the two), and whether
+/// they came to rest since ([`SETTLE`] played).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct Lid {
     open: bool,
     since: Option<Instant>,
+    settled: bool,
 }
 
 impl Lid {
@@ -446,12 +477,13 @@ impl Lid {
             *self = Self {
                 open,
                 since: Some(now),
+                settled: false,
             };
         }
     }
 
-    /// How far open it is at `now`, in degrees.
-    fn angle(&self, now: Instant) -> f32 {
+    /// How far its slabs have parted at `now`: 0 shut, 1 open.
+    fn parted(&self, now: Instant) -> f32 {
         let Some(since) = self.since else {
             return 0.0;
         };
@@ -461,10 +493,23 @@ impl Lid {
             t * t * (3.0 - 2.0 * t)
         };
         if self.open {
-            LID_OPEN * ease(elapsed / LID_OPENING.as_secs_f32())
+            ease(elapsed / LID_OPENING.as_secs_f32())
         } else {
-            LID_OPEN * (1.0 - ease(elapsed / LID_CLOSING.as_secs_f32()))
+            1.0 - ease(elapsed / LID_CLOSING.as_secs_f32())
         }
+    }
+
+    /// Whether its slabs come to rest at `now`: true once after each move.
+    fn settles(&mut self, now: Instant) -> bool {
+        let Some(since) = self.since else {
+            return false;
+        };
+        let moving = if self.open { LID_OPENING } else { LID_CLOSING };
+        if self.settled || now.saturating_duration_since(since) < moving {
+            return false;
+        }
+        self.settled = true;
+        true
     }
 }
 
@@ -534,11 +579,20 @@ struct PendingPlace {
     server: String,
 }
 
-/// Where the lid of a box at `origin` facing `yaw` degrees hangs: its hinge, the chest's
-/// back top edge.
-pub(crate) fn lid_origin(origin: Vec3, yaw: f32) -> Vec3 {
+/// Where the two slabs of the lid of a box at `origin` facing `yaw` degrees lie, `parted`
+/// from shut (0) to open (1): each one's place (the middle of the seam's bottom edge) and
+/// its pitch, yaw and roll in degrees. The front one reaches the box's front, the other
+/// is the same model turned half round; parting, they lift off the rim, slide away from
+/// the seam and tip outwards.
+pub(crate) fn lid_slabs(origin: Vec3, yaw: f32, parted: f32) -> [(Vec3, [f32; 3]); 2] {
     let turn = Quat::from_rotation_z(yaw.to_radians());
-    origin + turn * Vec3::new(-(DEPTH / 2.0 + LID_OVERHANG), 0.0, HEIGHT)
+    let lift = LID_LIFT * (parted * 4.0).min(1.0);
+    [(1.0, yaw), (-1.0, yaw + 180.0)].map(|(side, yaw)| {
+        (
+            origin + turn * Vec3::new(side * LID_SLIDE * parted, 0.0, HEIGHT + lift),
+            [LID_TILT * parted, yaw, 0.0],
+        )
+    })
 }
 
 /// The boxes of the loaded map, the openings under way and the sounds to play.
@@ -731,7 +785,7 @@ impl MysteryBoxes {
         });
         here.lid.set(true, now);
         let (origin, id) = (here.origin.to_array(), here.id);
-        for path in [OPEN, ROLL_SOUND] {
+        for path in [OPEN, GRIND, ROLL_SOUND] {
             self.cues.push(Cue {
                 path,
                 origin: Some(origin),
@@ -761,6 +815,14 @@ impl MysteryBoxes {
     fn tick(&mut self, now: Instant) -> Vec<Moment> {
         let mut moments = Vec::new();
         for here in &mut self.here {
+            // The lid's slabs come to rest, parted or shut.
+            if here.lid.settles(now) {
+                self.cues.push(Cue {
+                    path: SETTLE,
+                    origin: Some(here.origin.to_array()),
+                    source: source(here.id),
+                });
+            }
             let Some(opening) = here.opening.as_mut() else {
                 continue;
             };
@@ -1139,10 +1201,10 @@ fn result_text(outcome: &str, price: u64, won: u64) -> String {
 /// yaw (side on to the box's front, turning slowly once the roll stopped).
 fn float(elapsed: Duration, yaw: f32) -> (f32, f32) {
     let seconds = elapsed.as_secs_f32();
-    let rise = (seconds / RISE.as_secs_f32()).min(1.0);
+    let rise = ((seconds - RISE_DELAY.as_secs_f32()) / RISE.as_secs_f32()).clamp(0.0, 1.0);
     let rise = 1.0 - (1.0 - rise) * (1.0 - rise);
-    let bob = (seconds * 2.4).sin() * 1.5;
-    let height = 12.0 + (FLOAT - 12.0) * rise + bob;
+    let bob = (seconds * 2.4).sin() * 1.5 * rise;
+    let height = 16.0 + (FLOAT - 16.0) * rise + bob;
     let held = seconds - ROLL.as_secs_f32();
     let turn = if held > 0.0 { held * 60.0 } else { 0.0 };
     (height, yaw + 90.0 + turn)
@@ -1788,6 +1850,7 @@ impl GpuState {
         let boxes = &self.mystery_boxes;
         let box_mesh = boxes.mesh_of(MODEL);
         let lid_mesh = boxes.mesh_of(LID_MODEL);
+        let fire_mesh = boxes.mesh_of(FIRE_MODEL);
         for here in &boxes.here {
             let elapsed = here
                 .opening
@@ -1806,16 +1869,23 @@ impl GpuState {
                     sjk_client::legacy_angles_to_quaternion([0.0, here.yaw + shake, 0.0]),
                     [1.0; 3],
                 ));
-                // The lid on its hinge, the chest's back top edge, pitched open.
+                // The lid's two slabs, parted as far as it is open.
+                let parted = here.lid.parted(now);
                 if let Some(lid) = lid_mesh {
-                    self.object_groups[lid].push(ActorInstance::new(
-                        lid_origin(here.origin, here.yaw + shake).to_array(),
-                        sjk_client::legacy_angles_to_quaternion([
-                            -here.lid.angle(now),
-                            here.yaw + shake,
-                            0.0,
-                        ]),
-                        [1.0; 3],
+                    for (at, angles) in lid_slabs(here.origin, here.yaw + shake, parted) {
+                        self.object_groups[lid].push(ActorInstance::new(
+                            at.to_array(),
+                            sjk_client::legacy_angles_to_quaternion(angles),
+                            [1.0; 3],
+                        ));
+                    }
+                }
+                // Its embers and the fire over them, rising as the slabs part.
+                if let Some(fire) = fire_mesh.filter(|_| parted > 0.02) {
+                    self.object_groups[fire].push(ActorInstance::new(
+                        (here.origin + Vec3::Z * FIRE_FLOOR).to_array(),
+                        sjk_client::legacy_angles_to_quaternion([0.0, here.yaw + shake, 0.0]),
+                        [1.0, 1.0, parted],
                     ));
                 }
             }
@@ -1898,8 +1968,9 @@ impl GpuState {
                 vfs,
                 [
                     OPEN,
+                    GRIND,
+                    SETTLE,
                     ROLL_SOUND,
-                    CLOSE,
                     TAKE_SOUND,
                     WIN,
                     JACKPOT,
@@ -1976,6 +2047,21 @@ impl GpuState {
         }
     }
 
+    /// For the world shots: the tomb's three states (23/11/2026), the first of `boxes`
+    /// shut, the second with its lid parting, the others open on a holocron.
+    pub(crate) fn shot_mystery_box_tomb(&mut self, boxes: &[([f32; 3], f32)], since: Duration) {
+        self.shot_mystery_box_prizes(boxes, since, &HOLOCRONS[2..3]);
+        let here = &mut self.mystery_boxes.here;
+        if let Some(first) = here.first_mut() {
+            first.opening = None;
+            first.lid = Lid::default();
+        }
+        if let Some(second) = here.get_mut(1) {
+            second.opening = None;
+            second.lid.since = Some(Instant::now() - LID_OPENING / 2);
+        }
+    }
+
     fn shot_mystery_box_prizes(
         &mut self,
         boxes: &[([f32; 3], f32)],
@@ -2005,6 +2091,7 @@ impl GpuState {
                 lid: Lid {
                     open: true,
                     since: Some(started),
+                    settled: true,
                 },
             })
             .collect();
@@ -2121,7 +2208,7 @@ mod tests {
         assert_eq!(state.price, 100);
         // The box, its lid and everything the roll shows, each once.
         let wanted: Vec<&str> = state.wanted_models().collect();
-        assert_eq!(wanted[..2], [MODEL, LID_MODEL]);
+        assert_eq!(wanted[..3], [MODEL, LID_MODEL, FIRE_MODEL]);
         assert_eq!(wanted.len(), models().count());
         let mut unique = wanted.clone();
         unique.sort_unstable();
@@ -2225,13 +2312,20 @@ mod tests {
         // The hunt's source is no box's.
         assert!((0..=0xFFFF).all(|id| source(id) != HUNT_SOURCE));
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        // The Force lifts the lid, Force speed hums through the roll.
-        assert_eq!(paths, [OPEN, ROLL_SOUND]);
-        // The lid swings open, and stays open while it rolls.
-        assert_eq!(state.here[0].lid.angle(now), 0.0);
-        assert_eq!(state.here[0].lid.angle(now + LID_OPENING), LID_OPEN);
+        // The stone lid breaks its seal and grinds apart, Force speed hums through the
+        // roll.
+        assert_eq!(paths, [OPEN, GRIND, ROLL_SOUND]);
+        // The lid's slabs part, and stay parted while it rolls.
+        assert_eq!(state.here[0].lid.parted(now), 0.0);
+        assert_eq!(state.here[0].lid.parted(now + LID_OPENING), 1.0);
         // Not taken while it rolls; the box is busy.
         assert!(state.tick(now + Duration::from_secs(2)).is_empty());
+        assert!(state.cues.is_empty());
+        // The slabs come to rest, once.
+        assert!(state.tick(now + LID_OPENING).is_empty());
+        assert!(state.tick(now + LID_OPENING * 2).is_empty());
+        let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
+        assert_eq!(paths, [SETTLE]);
         assert_eq!(state.take_prize(7), None);
         // The roll stops: its sound, and the player is told.
         let moments = state.tick(now + ROLL);
@@ -2267,8 +2361,10 @@ mod tests {
         state.opened(8, "jackpot", None, Some(5), None, 2, now);
         let moments = state.tick(now + ROLL);
         assert_eq!(moments.len(), 1);
-        let stops: Vec<&str> = state.cues[4..].iter().map(|cue| cue.path).collect();
-        assert_eq!(stops, [EMPTY, JACKPOT]);
+        // After both openings' three sounds: each lid's slabs come to rest, each roll
+        // stops.
+        let stops: Vec<&str> = state.cues[6..].iter().map(|cue| cue.path).collect();
+        assert_eq!(stops, [SETTLE, EMPTY, SETTLE, JACKPOT]);
         assert_eq!(state.take_prize(8), None);
         assert!(state.tick(now + ROLL + HOLD / 2).is_empty());
         let moments = state.tick(now + ROLL + HOLD);
@@ -2418,10 +2514,11 @@ mod tests {
         assert_eq!(PRIZES[4].model, TEDDY_MODEL);
         let opening = state.here[0].opening.clone().unwrap();
         assert_eq!(opening.showing(ROLL), PRIZES[4]);
-        // The roll stops on the bear: the laugh, and nothing blows up yet.
+        // The roll stops on the bear: the laugh (after the lid's slabs came to rest), and
+        // nothing blows up yet.
         assert!(state.tick(now + ROLL).is_empty());
         let paths: Vec<&str> = state.cues.drain(..).map(|cue| cue.path).collect();
-        assert_eq!(paths, [LAUGH]);
+        assert_eq!(paths, [SETTLE, LAUGH]);
         assert!(state.tick(now + ROLL + BLAST_DELAY / 2).is_empty());
         // Then it blows up, once, and the opener is told.
         let moments = state.tick(now + ROLL + BLAST_DELAY);
@@ -2446,7 +2543,7 @@ mod tests {
         assert!(state.tick(now + ROLL + BLAST_DELAY * 2).is_empty());
         // The laugh is the extras pack's, the retail gloat without it.
         assert!(EXTRAS.contains(&(LAUGH, Some(LAUGH_FALLBACK))));
-        // The lid shuts with a Force push.
+        // The lid grinds shut.
         state.tick(now + ROLL + HOLD);
         assert!(state.cues.iter().any(|cue| cue.path == CLOSE));
     }

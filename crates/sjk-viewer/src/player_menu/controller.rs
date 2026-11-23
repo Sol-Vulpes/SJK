@@ -662,7 +662,8 @@ fn species_indices(species: &LegacySpecies, model: &str) -> Option<[usize; 3]> {
     Some([head, torso, legs])
 }
 
-pub(super) fn append_legacy_name(name: &mut String, text: &str) {
+/// Typed `text` added to a player's `name`, within the game's length for one.
+pub(crate) fn append_legacy_name(name: &mut String, text: &str) {
     // OpenJK `q_shared.h` MAX_NAME_LENGTH is 32 including the NUL terminator.
     for character in text.chars().filter(|character| !character.is_control()) {
         if name.len() + character.len_utf8() > 31 {

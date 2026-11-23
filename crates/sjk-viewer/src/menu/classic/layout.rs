@@ -206,7 +206,7 @@ impl Page {
             Self::Play => ("START PLAYING", 172.0),
             Self::Controls => ("KEY BINDINGS", 172.0),
             Self::Setup => ("OPTIONS", 172.0),
-            Self::Sjk => ("SOL JK", 172.0),
+            Self::Sjk => ("SUN JK", 172.0),
             Self::Graphics => ("GRAPHICS", 172.0),
             Self::Gameplay => ("GAMEPLAY", 172.0),
             Self::Quit => ("QUIT", 172.0),

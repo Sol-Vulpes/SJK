@@ -63,6 +63,7 @@ migrated, except where the table says so. Where each is documented:
 | Setting | Default | See |
 | --- | --- | --- |
 | `ui_menuStyle` | `sjk` (the SJK UI), saved `classic` moved to `sjk` once, saved `modern` reset | [Menu style](client.md#menu-style) |
+| `ui_ejkMode` | off; on sets JoF EJK's look from one table and puts the player's settings aside | [EJK mode](client.md#ejk-mode) |
 | `ui_theme` | `warm` (the sun's colours, Sol, 17/11/2026); `cold` and `custom` (`ui_themeHue` 22, `ui_themeSaturation` 100) by choice | [Theme](sjk-ui.md#theme) |
 | `ui_gameFont` | on | [UI ownership](rendering.md#ui-ownership) |
 | `cg_scoreboardStyle` | `auto` (SJK UI's with its menus, else `classic`), saved `modern` reset | [Scoreboard styles](client.md#scoreboard-styles) |
@@ -284,7 +285,7 @@ update the script, replace the vendored file with GoatCounter's current
 Release tags exist only on SJK. They are cut by Sol or, since 03/11/2026, by the
 maintainers Sol gave write access to SJK (Slash and Milamber, Lumaya since
 05/11/2026 and Creyon since 11/11/2026), who may also review pull requests and merge or push to `main`, as
-[reviewing.md](reviewing.md) says. The release title carries the stage, "Sol JK 2026.1005.1 (Alpha)" (`STAGE` in the workflow).
+[reviewing.md](reviewing.md) says. The release title carries the stage, "Sun JK 2026.1005.1 (Alpha)" (`STAGE` in the workflow).
 Alphas are not marked as pre-releases, so the site's download link
 (`releases/latest`) finds them; their name and notes say "Alpha" instead.
 

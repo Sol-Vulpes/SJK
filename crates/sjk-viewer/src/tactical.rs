@@ -25,7 +25,9 @@
 //! [`RESTORE_CVAR`], and given back when the level drops, as `renderer vanilla` does
 //! (`graphics_quality::toggle_vanilla`): Tactical off leaves the player's settings as they
 //! were. A setting changed by hand while Tactical holds it goes back when Tactical lets
-//! go. The level is followed each frame ([`crate::GpuState::update_tactical`]), so
+//! go. EJK mode and `renderer vanilla` hold some of the same settings: `cvar_restore.rs`
+//! tells the three of one another, so each record keeps the player's own value and a
+//! setting another mode still holds stays on that mode's value. The level is followed each frame ([`crate::GpuState::update_tactical`]), so
 //! the console, the Settings row and a config all switch it.
 
 use crate::console::ViewerConsole;
@@ -211,27 +213,49 @@ pub(crate) fn apply(console: &mut ViewerConsole, level: Level) {
 
 /// [`apply`]'s settings, without telling the rest of the client. [`CVAR`] is the player's
 /// choice and is left as it is: a duel's level ([`DUEL_CVAR`]) is never saved there.
+/// What the last level held goes back first (to another mode that still holds it, else
+/// to the player: `cvar_restore.rs`), then `level`'s settings are put aside and set.
 fn set(console: &mut ViewerConsole, level: Level) {
+    crate::cvar_restore::give_back(console, &MODE);
+    crate::cvar_restore::put_aside(console, &MODE, &values(level));
+}
+
+/// [`set`], for the tests of the settings put aside (`cvar_restore.rs`).
+#[cfg(test)]
+pub(crate) fn set_for_test(console: &mut ViewerConsole, level: Level) {
+    set(console, level);
+}
+
+/// Tactical as the settings put aside know it (`cvar_restore.rs`): going off, it gives
+/// every setting back, one changed by hand too.
+pub(crate) const MODE: crate::cvar_restore::Mode = crate::cvar_restore::Mode {
+    name: "Tactical",
+    record: RESTORE_CVAR,
+    values: held,
+    keeps_hand_changes: false,
+};
+
+/// The settings Tactical holds now: those of the highest level whose every setting is
+/// put aside (none while it is off).
+fn held(console: &ViewerConsole) -> Vec<(&'static str, &'static str)> {
     let kept = console
         .cvar(RESTORE_CVAR)
         .map(sjk_shell::CvarValue::as_text)
         .unwrap_or_default();
-    let restored: Vec<(&str, &str)> = kept
-        .split(';')
-        .filter_map(|pair| pair.split_once('='))
-        .filter(|(cvar, _)| console.cvar(cvar).is_some())
-        .collect();
-    console.set_cvars(restored);
-    let values: Vec<_> = values(level)
+    if kept.is_empty() {
+        return Vec::new();
+    }
+    let named = |cvar: &str| crate::cvar_restore::pairs(&kept).any(|(name, _)| name == cvar);
+    [Level::Max, Level::Medium, Level::Minimal]
         .into_iter()
-        .filter(|(cvar, _)| console.cvar(cvar).is_some())
-        .collect();
-    let kept = values
-        .iter()
-        .filter_map(|(cvar, _)| Some(format!("{cvar}={}", console.cvar(cvar)?.as_text())))
-        .collect::<Vec<_>>()
-        .join(";");
-    console.set_cvars(values.into_iter().chain([(RESTORE_CVAR, kept.as_str())]));
+        .map(values)
+        .find(|values| {
+            values
+                .iter()
+                .filter(|(cvar, _)| console.cvar(cvar).is_some())
+                .all(|(cvar, _)| named(cvar))
+        })
+        .unwrap_or_default()
 }
 
 /// Take up `level` without touching a setting when the profile already holds it: every
@@ -257,9 +281,7 @@ fn holds(console: &ViewerConsole, level: Level) -> bool {
         .filter(|(cvar, _)| console.cvar(cvar).is_some())
         .all(|(cvar, value)| {
             crate::graphics_quality::holds(console, cvar, value)
-                && kept
-                    .split(';')
-                    .any(|pair| pair.split_once('=').is_some_and(|(name, _)| name == cvar))
+                && crate::cvar_restore::pairs(&kept).any(|(name, _)| name == cvar)
         })
 }
 

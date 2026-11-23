@@ -298,6 +298,8 @@ pub(super) enum Source {
     HudPreview,
     /// One of the News panel's pictures, by its slot.
     News(u8),
+    /// One of First setup's pictures (`setup_pictures.rs`), by its index.
+    Setup(u8),
     /// The Collection's live blade pictures, added over what is below.
     BladePictures,
     /// The Collection's blade stills (`blade_stills.rs`), added the same way.

@@ -100,6 +100,51 @@ pub(super) fn classic_label<'a>(cvar: &str, label: &'a str) -> (&'a str, Timing)
 /// a code: each `(cvar, value, name)`. A value not listed is shown as it is
 /// written ([`super::classic_view::choice_label`]).
 const CHOICE_NAMES: &[(&str, &str, &str)] = &[
+    (crate::menu::classic::own_look::CVAR, "retail", "Retail"),
+    (crate::menu::classic::own_look::CVAR, "sjk", "SJK"),
+    ("cg_crosshair", "0", "Off"),
+    ("cg_crosshair", "1", "Crosshair 1"),
+    ("cg_crosshair", "2", "Crosshair 2"),
+    ("cg_crosshair", "3", "Crosshair 3"),
+    ("cg_crosshair", "4", "Crosshair 4"),
+    ("cg_crosshair", "5", "Crosshair 5"),
+    ("cg_crosshair", "6", "Crosshair 6"),
+    ("cg_crosshair", "7", "Crosshair 7"),
+    ("cg_crosshair", "8", "Crosshair 8"),
+    ("cg_crosshair", "9", "Crosshair 9"),
+    ("cg_crosshair", "10", "White dot"),
+    ("cg_drawPlayerNames", "0", "Off"),
+    ("cg_drawPlayerNames", "1", "Names"),
+    ("cg_drawPlayerNames", "2", "With health"),
+    ("cg_nameplateBars", "0", "None"),
+    ("cg_nameplateBars", "1", "Allies"),
+    ("cg_nameplateBars", "2", "Everyone"),
+    ("cg_nameplateBars", "3", "Your target"),
+    (
+        crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
+        "-1",
+        "The server's",
+    ),
+    (
+        crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
+        "0",
+        "Full body",
+    ),
+    (
+        crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
+        "1",
+        "Arms",
+    ),
+    (
+        crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
+        "2",
+        "Hands",
+    ),
+    (
+        crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
+        "3",
+        "Off",
+    ),
     (crate::status_balloons::CVAR, "0", "Default"),
     (crate::status_balloons::CVAR, "1", "SJK"),
     (crate::status_balloons::CVAR, "2", "SJK Clan Default"),
@@ -396,6 +441,11 @@ pub(super) fn choice_name(cvar: &str, value: &str) -> Option<&'static str> {
             name.eq_ignore_ascii_case(cvar) && choice.eq_ignore_ascii_case(value.trim())
         })
         .map(|(_, _, shown)| *shown)
+        .or_else(|| {
+            cvar.eq_ignore_ascii_case(crate::menu::sjk::theme::CVAR)
+                .then(|| crate::menu::sjk::theme::Theme::label_of(value))
+                .flatten()
+        })
         .or_else(|| crate::away_emote::choice_name(cvar, value))
         .or_else(|| crate::chat_sounds::choice_name(cvar, value))
         .or_else(|| crate::text::system_font::choice_name(cvar, value))
@@ -527,11 +577,11 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "com_maxfps",
-        "Most frames drawn a second; your movement is Gameplay FPS. AUTO is 125, or the monitor's rate with Detect refresh rate; 0 is off.",
+        "Most frames drawn a second; your movement is Gameplay FPS. Auto is 125, or the monitor's rate with Detect refresh rate.",
     ),
     (
         crate::runtime_settings::MENU_CAP_CVAR,
-        "Most frames a second in the menus while no game or demo runs, never above the FPS cap. 0 uses the FPS cap.",
+        "Most frames a second in the menus while no game or demo runs, never above the FPS cap, to keep the PC quiet there.",
     ),
     (
         crate::server_caps::OVERRIDE_CVAR,
@@ -585,7 +635,7 @@ const HELP: &[(&str, &str)] = &[
     // AUDIO
     (
         "s_volume",
-        "Loudness of every sound but the music and the voices.",
+        "Loudness of every sound but the music and the voices. The number is how loud it sounds, not the raw gain: half is 50%.",
     ),
     ("s_musicVolume", "Loudness of the music."),
     (
@@ -610,7 +660,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
-        "Empower glow: -1 follows the server; 0 full body, 1 arms, 2 hands, 3 off. Ordinary Push stays full body.",
+        "Where the Empower glow shows: as the server says, the full body, the arms, the hands, or not at all. Ordinary Push stays full body.",
     ),
     (
         "cg_tauntAntiSpam",
@@ -759,7 +809,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::away_emote::IDLE_CVAR,
-        "How long without a key or the mouse before you count as away; 0 only alt-tabbing does.",
+        "How long without a key or the mouse before you count as away, or only when you alt-tab.",
     ),
     (
         crate::emotes::ATTACK_STOP_CVAR,
@@ -814,7 +864,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cg_crosshair",
-        "Crosshair picture: 0 hides it, 1 to 9 pick a picture, 10 is a white dot.",
+        "The crosshair's picture: the game's nine, a white dot, or none.",
     ),
     (
         "cg_drawCrosshairNames",
@@ -822,7 +872,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cg_drawPlayerNames",
-        "Plain names above players: 0 off, 1 names, 2 with a health strip. Nameplates replace it.",
+        "Plain names above players, alone or with a health strip. Nameplates replace it.",
     ),
     (
         "cg_drawPlayerNamesScale",
@@ -879,7 +929,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cg_nameplateBars",
-        "Bars under the name: 0 none, 1 allies, 2 everyone, 3 your target. Never on a duel opponent. V cycles modes.",
+        "Whose health and shield bars show under the name. Never on a duel opponent. V cycles modes.",
     ),
     (
         "cg_nameplateSelf",
@@ -1102,7 +1152,7 @@ const HELP: &[(&str, &str)] = &[
     // CONTROLS
     (
         "sensitivity",
-        "How far the view turns for a given mouse movement.",
+        "How far the view turns for a given mouse movement. The track gives the low values room; type a number for an exact one.",
     ),
     (
         "m_invert",
@@ -1209,6 +1259,10 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::boombox::RANGE_CVAR,
         "How far your boombox carries, in units (a player is 64 tall). It fades out toward the edge.",
+    ),
+    (
+        crate::finishers::SHOW_CVAR,
+        "Finishers play on saber kills, yours and others'. Off: a body is left as the game leaves it, on this PC.",
     ),
     (
         crate::duel_blades::CVAR,
@@ -1401,7 +1455,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "cg_errorDecay",
-        "Smooths the view over this many milliseconds when the server corrects you; 0 snaps.",
+        "Smooths the view over this long when the server corrects you; Off snaps to the corrected place.",
     ),
     (
         "mod_japlus",
@@ -1469,12 +1523,20 @@ const HELP: &[(&str, &str)] = &[
         "The Collection opens on its hall, a tile to each kind with what is new in it. Off opens it on the kind you used last.",
     ),
     (
+        crate::ejk_mode::CVAR,
+        "SJK looks like JoF EJK: its menus, fonts, console, HUD, scoreboard and graphics. Off gives your settings back.",
+    ),
+    (
         crate::menu::style::CVAR,
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
     ),
     (
+        crate::menu::classic::own_look::CVAR,
+        "How the classic menus are drawn: Retail, the game's own artwork and colours; or SJK, drawn sharp at any size in the theme's colours.",
+    ),
+    (
         crate::menu::sjk::theme::CVAR,
-        "The SJK UI's colours: warm, the sun's; cold, deep navy and holo blue; or custom, the hue and saturation below.",
+        "The SJK UI's colours: Solar, the sun's; Sith, red and gold; Jedi, deep navy and holo blue; or Custom, the hue and saturation below.",
     ),
     (
         crate::menu::sjk::theme::HUE_CVAR,
@@ -2286,7 +2348,10 @@ mod tests {
             row_label("Adaptation: max darken, EV (HDR)"),
             ("Adaptation: max darken, EV", Timing::Now)
         );
-        assert_eq!(row_label("FPS cap (AUTO, 0 = off)").0, "FPS cap");
+        assert_eq!(
+            row_label("Dynamic glow (0 off, 2 sabers)").0,
+            "Dynamic glow"
+        );
         assert_eq!(
             row_label("Supersampling, 1 off (reload)").0,
             "Supersampling, 1 off"

@@ -18,6 +18,7 @@ mod grid;
 pub(crate) mod icons;
 mod model_icons;
 mod model_rgb;
+pub(crate) use controller::append_legacy_name;
 pub(crate) use model_rgb::takes_entity_colour;
 mod numeric;
 mod part_icons;

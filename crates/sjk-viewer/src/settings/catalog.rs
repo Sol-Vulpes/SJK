@@ -83,6 +83,16 @@ pub(super) enum ValueKind {
     /// 333); Enter opens the card that explains it and takes any value
     /// ([`crate::gameplay_fps`]).
     GameplayFps,
+    /// A number picked from named stops, or typed ([`super::stops`]). No row is
+    /// written as one: [`Setting::kind`] hands a number row with stops on as this,
+    /// with the range its catalogue row gives a typed value.
+    Stops {
+        stops: &'static [super::stops::Stop],
+        suffix: &'static str,
+        min: f64,
+        max: f64,
+        integer: bool,
+    },
 }
 
 /// The "SJK identity key" row's name in place of a cvar: the command that opens the
@@ -108,11 +118,24 @@ pub(super) struct Setting {
 }
 
 impl Setting {
-    /// How the row edits its value: a [`ValueKind::Live`] row as the choice it is now.
+    /// How the row edits its value: a [`ValueKind::Live`] row as the choice it is
+    /// now, a number row with named stops ([`super::stops`]) as their list.
     pub(super) fn kind(&self) -> ValueKind {
-        match self.kind {
-            ValueKind::Live(choices) => ValueKind::Choice(choices()),
-            kind => kind,
+        let (min, max, integer) = match self.kind {
+            ValueKind::Live(choices) => return ValueKind::Choice(choices()),
+            ValueKind::Integer { min, max, .. } => (min as f64, max as f64, true),
+            ValueKind::Float { min, max, .. } => (min, max, false),
+            kind => return kind,
+        };
+        match super::stops::of(self.cvar) {
+            Some(list) => ValueKind::Stops {
+                stops: list.stops,
+                suffix: list.suffix,
+                min,
+                max,
+                integer,
+            },
+            None => self.kind,
         }
     }
 }
@@ -157,7 +180,7 @@ pub(super) const VIDEO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "FPS cap (AUTO, 0 = off)",
+        label: "FPS cap",
         cvar: "com_maxfps",
         kind: ValueKind::Integer {
             min: -1,
@@ -166,7 +189,7 @@ pub(super) const VIDEO: &[Setting] = &[
         },
     },
     Setting {
-        label: "Menu FPS cap (0 = game)",
+        label: "Menu FPS cap",
         cvar: crate::runtime_settings::MENU_CAP_CVAR,
         // A cap to lower the menus' rate: past 300 it would rarely lower anything, and the
         // usual 30 to 144 keep room on the slider.
@@ -398,7 +421,7 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Away after (seconds)",
+        label: "Away after",
         cvar: crate::away_emote::IDLE_CVAR,
         kind: ValueKind::Integer {
             min: 0,
@@ -817,13 +840,9 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Crosshair (0 off)",
+        label: "Crosshair",
         cvar: "cg_crosshair",
-        kind: ValueKind::Integer {
-            min: 0,
-            max: 10,
-            step: 1,
-        },
+        kind: ValueKind::Choice(&["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]),
     },
     Setting {
         label: "Crosshair names",
@@ -843,11 +862,7 @@ pub(super) const HUD: &[Setting] = &[
     Setting {
         label: "Overhead names",
         cvar: "cg_drawPlayerNames",
-        kind: ValueKind::Integer {
-            min: 0,
-            max: 2,
-            step: 1,
-        },
+        kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
         label: "Name size",
@@ -869,7 +884,7 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
-        label: "Card delay (s)",
+        label: "Card delay",
         cvar: "cg_playerCardDelay",
         kind: ValueKind::Float {
             min: 0.5,
@@ -945,11 +960,7 @@ pub(super) const HUD: &[Setting] = &[
     Setting {
         label: "Nameplate bars",
         cvar: "cg_nameplateBars",
-        kind: ValueKind::Integer {
-            min: 0,
-            max: 3,
-            step: 1,
-        },
+        kind: ValueKind::Choice(&["0", "1", "2", "3"]),
     },
     Setting {
         label: "Power icons",
@@ -1252,7 +1263,7 @@ pub(super) const HUD: &[Setting] = &[
         },
     },
     Setting {
-        label: "Chat backdrop (%)",
+        label: "Chat backdrop",
         cvar: crate::chat::options::BACKDROP_CVAR,
         kind: ValueKind::Integer {
             min: 0,
@@ -1317,7 +1328,7 @@ pub(super) const CONTROLS: &[Setting] = &[
         kind: ValueKind::Float {
             min: 0.1,
             max: 20.0,
-            step: 0.25,
+            step: 0.1,
         },
     },
     Setting {
@@ -1336,7 +1347,7 @@ pub(super) const CONTROLS: &[Setting] = &[
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
-        label: "Last key wins delay (ms)",
+        label: "Last key wins delay",
         cvar: crate::input::idrive::DELAY_CVAR,
         kind: ValueKind::Integer {
             min: 0,
@@ -1528,6 +1539,11 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&["0", "1", "2"]),
     },
     Setting {
+        label: "Finishers",
+        cvar: crate::finishers::SHOW_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Saber rain steam",
         cvar: crate::effect_aux::saber_rain_steam::CVAR,
         kind: ValueKind::Choice(&["0", "1", "2"]),
@@ -1652,13 +1668,9 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Empower glow (-1 server)",
+        label: "Empower glow",
         cvar: crate::actor_world_submission::force_powers::policy::EMPOWER_CVAR,
-        kind: ValueKind::Integer {
-            min: -1,
-            max: crate::actor_world_submission::force_powers::policy::MAX_SCOPE,
-            step: 1,
-        },
+        kind: ValueKind::Choice(&["-1", "0", "1", "2", "3"]),
     },
     Setting {
         label: "Protect+Absorb combo",
@@ -1801,7 +1813,7 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&["0", "255"]),
     },
     Setting {
-        label: "Prediction error smoothing (ms)",
+        label: "Prediction error smoothing",
         cvar: "cg_errorDecay",
         kind: ValueKind::Float {
             min: 0.0,
@@ -1820,9 +1832,19 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "EJK mode",
+        cvar: crate::ejk_mode::CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Menu style",
         cvar: crate::menu::style::CVAR,
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),
+    },
+    Setting {
+        label: "Classic menus' look",
+        cvar: crate::menu::classic::own_look::CVAR,
+        kind: ValueKind::Choice(&crate::menu::classic::own_look::NAMES),
     },
     Setting {
         label: "Theme",
@@ -2174,7 +2196,7 @@ pub(super) const NETWORK: &[Setting] = &[
         kind: ValueKind::IdentityPage,
     },
     Setting {
-        label: "Rate (bytes/s)",
+        label: "Rate",
         cvar: "rate",
         kind: ValueKind::Integer {
             min: 1000,
@@ -2342,7 +2364,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Sharpening (%)",
+        label: "Sharpening",
         cvar: crate::frame_target::aa::color::SHARPEN_CVAR,
         kind: ValueKind::Integer {
             min: 0,
@@ -2356,7 +2378,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Choice(&["1", "2", "3"]),
     },
     Setting {
-        label: "Render scale (%) (reload)",
+        label: "Render scale (reload)",
         cvar: crate::frame_target::scale::CVAR,
         kind: ValueKind::Integer {
             min: crate::frame_target::scale::MIN_PERCENT as i64,
@@ -2425,7 +2447,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Parallax depth (0 flat)",
+        label: "Parallax depth",
         cvar: "r_parallaxStrength",
         kind: ValueKind::Float {
             min: 0.0,
@@ -2439,7 +2461,7 @@ pub(super) const RENDER_IMAGE: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Emission strength (0 off)",
+        label: "Emission strength",
         cvar: "r_emissionStrength",
         kind: ValueKind::Float {
             min: 0.0,
@@ -2565,7 +2587,7 @@ pub(super) const RENDER_LIGHTING: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Time of day (hour)",
+        label: "Time of day",
         cvar: "r_dayHour",
         kind: ValueKind::Float {
             min: 0.0,

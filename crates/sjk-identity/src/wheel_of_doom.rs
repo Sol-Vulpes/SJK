@@ -161,6 +161,42 @@ pub struct Refused {
     pub left: Option<u64>,
 }
 
+/// A refused DOOM coin roll at a Force box (`POST /v1/mystery-box/doom`, which answers
+/// the wheel's codes) in the player's words, with the cooldown's seconds left.
+pub fn box_refusal(error: &HubError) -> Refused {
+    let HubError::Rejected { code, message, .. } = error else {
+        return refusal(error);
+    };
+    let seconds = message
+        .split(|c: char| !c.is_ascii_digit())
+        .rfind(|digits| !digits.is_empty())
+        .and_then(|digits| digits.parse::<u64>().ok());
+    let (words, left) = match (code.as_str(), seconds) {
+        ("wheel_busy", Some(left)) => (
+            format!("Someone is rolling a DOOM coin at this Force box: {left} s left"),
+            None,
+        ),
+        ("wheel_cooldown", Some(left)) => {
+            (format!("Your next DOOM coin roll in {left} s"), Some(left))
+        }
+        ("wheel_busy", None) => (
+            "Someone is rolling a DOOM coin at this Force box.".to_owned(),
+            None,
+        ),
+        ("wheel_cooldown", None) => ("Roll your next DOOM coin a little later.".to_owned(), None),
+        ("no_doom_coin", _) => (
+            "No DOOM coin: the teddy bear in a Force box brings one.".to_owned(),
+            None,
+        ),
+        ("wheel_off", _) => ("DOOM coin rolls are off for now.".to_owned(), None),
+        ("no_such_box", _) => ("That Force box is not here any more.".to_owned(), None),
+        ("box_server", _) => ("Force boxes do not open on this server.".to_owned(), None),
+        ("client_update_required", _) => ("Update SJK to roll a DOOM coin.".to_owned(), None),
+        _ => return refusal(error),
+    };
+    Refused { words, left }
+}
+
 /// A refused spin in the player's words, with the cooldown's seconds left when it says.
 pub fn refusal(error: &HubError) -> Refused {
     let left = match error {
@@ -349,5 +385,29 @@ mod tests {
         .unwrap();
         assert_eq!((doom.box_id, doom.coins), (4, Some(1)));
         assert_eq!(doom.holocron.unwrap().tier, "rare");
+    }
+
+    #[test]
+    fn a_refused_coin_roll_speaks_of_the_force_box() {
+        let rejected = |code: &str, message: &str| HubError::Rejected {
+            status: 409,
+            code: code.to_owned(),
+            message: message.to_owned(),
+        };
+        let busy = box_refusal(&rejected("wheel_busy", "busy for 4 s"));
+        assert_eq!(
+            busy.words,
+            "Someone is rolling a DOOM coin at this Force box: 4 s left"
+        );
+        assert_eq!(busy.left, None);
+        let wait = box_refusal(&rejected("wheel_cooldown", "again in 9 s"));
+        assert_eq!(
+            (wait.words.as_str(), wait.left),
+            ("Your next DOOM coin roll in 9 s", Some(9))
+        );
+        for code in ["no_doom_coin", "wheel_off", "no_such_box", "box_server"] {
+            let words = box_refusal(&rejected(code, "")).words;
+            assert!(!words.contains("WHEEL"), "{code}: {words}");
+        }
     }
 }

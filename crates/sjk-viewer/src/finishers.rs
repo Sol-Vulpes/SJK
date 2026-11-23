@@ -14,6 +14,10 @@ use crate::unlockables::Rarity;
 /// Archived: the finisher the local player wears, an id of [`CATALOGUE`]; empty for none.
 /// It is worn (and sent to the hub) only while the own hub profile lists it.
 pub(crate) const CVAR: &str = "cg_saberFinisher";
+/// Archived, on by default: finishers play on this PC, the player's own and other
+/// players' (`GpuState::observe_saber_kills`). Off, a saber kill leaves the body as the
+/// game does; what the player wears still goes to the hub, so others see it.
+pub(crate) const SHOW_CVAR: &str = "cg_finishers";
 
 /// One finisher of the catalogue.
 #[derive(Debug, Eq, PartialEq)]

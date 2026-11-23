@@ -1,9 +1,11 @@
 //! The SJK UI's colour theme (`docs/sjk-ui.md`, Theme): `ui_theme` picks the
-//! palette its tokens ([`super::color`]) give, `warm` (the sun's colours, the
-//! default), `cold` (the deep navy and holo blue the sun theme replaced) or
-//! `custom`, the warm palette turned to the hue `ui_themeHue` at
-//! `ui_themeSaturation`. Moving either of those picks `custom`
-//! ([`follows_custom`], in the console's cvar writes).
+//! palette its tokens ([`super::color`]) give. Players know them by name: Solar
+//! (`warm`, the sun's colours, the default), Sith (`sith`, red line-work on a dark
+//! ground, the gold kept), Jedi (`cold`, the deep navy and holo blue the sun theme
+//! replaced) or Custom (`custom`), the warm palette turned to the hue `ui_themeHue`
+//! at `ui_themeSaturation`. Moving either of those picks `custom`
+//! ([`follows_custom`], in the console's cvar writes). The cvar keeps `warm` and
+//! `cold`, the values saved since 18/11/2026; `solar` and `jedi` read as them.
 //!
 //! A custom palette keeps each token's lightness: every colour is turned round
 //! the OKLab hue circle, its chroma scaled by the saturation, then set to the
@@ -21,7 +23,7 @@ use crate::console::ViewerConsole;
 use sjk_ui::Color;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
-/// The theme: `warm`, `cold` or `custom`.
+/// The theme: `warm`, `sith`, `cold` or `custom`.
 pub(crate) const CVAR: &str = "ui_theme";
 /// The custom theme's hue, in degrees round the colour wheel (0 red, 120 green,
 /// 240 blue): the hue its line-work takes.
@@ -44,10 +46,12 @@ pub(crate) const DEFAULT_SATURATION: i64 = 100;
 /// Which palette the SJK UI wears.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Theme {
-    /// The sun's warm colours (17/11/2026): SJK's default.
+    /// Solar: the sun's warm colours (17/11/2026), SJK's default.
     #[default]
     Warm,
-    /// Deep navy and holo blue, the SJK UI's colours before the sun theme.
+    /// Sith (21/11/2026): red line-work on a ground near black, the sun's gold kept.
+    Sith,
+    /// Jedi: deep navy and holo blue, the SJK UI's colours before the sun theme.
     Cold,
     /// The warm palette turned to `ui_themeHue` at `ui_themeSaturation`.
     Custom,
@@ -55,18 +59,48 @@ pub(crate) enum Theme {
 
 impl Theme {
     /// Values the settings offer, in [`Theme`] order.
-    pub(crate) const NAMES: [&'static str; 3] = ["warm", "cold", "custom"];
+    pub(crate) const NAMES: [&'static str; 4] = ["warm", "sith", "cold", "custom"];
+    /// Every theme, in [`Self::NAMES`]' order.
+    pub(crate) const ALL: [Self; 4] = [Self::Warm, Self::Sith, Self::Cold, Self::Custom];
+
+    /// The `ui_theme` value of the theme.
+    pub(crate) const fn name(self) -> &'static str {
+        Self::NAMES[self as usize]
+    }
+
+    /// What players call the theme.
+    pub(crate) const fn label(self) -> &'static str {
+        match self {
+            Self::Warm => "Solar",
+            Self::Sith => "Sith",
+            Self::Cold => "Jedi",
+            Self::Custom => "Custom",
+        }
+    }
+
+    /// The label of the theme `ui_theme` value `value` names, when it names one.
+    pub(crate) fn label_of(value: &str) -> Option<&'static str> {
+        Self::ALL
+            .into_iter()
+            .find(|theme| theme.name().eq_ignore_ascii_case(value.trim()))
+            .map(Self::label)
+    }
     /// The `ui_theme` value of the default theme.
     pub(crate) const DEFAULT_NAME: &'static str = Self::NAMES[0];
 
-    /// Read the cvar: `cold` or `custom` (any case, spaces round it allowed);
-    /// anything else, a missing or mistyped value included, is the default
-    /// warm theme.
+    /// Read the cvar: `sith`, `cold` (or `jedi`) or `custom` (any case, spaces round
+    /// it allowed); anything else, `solar`, a missing or mistyped value included, is
+    /// the default warm theme.
     pub(crate) fn from_cvar(value: Option<&str>) -> Self {
-        match value.map(str::trim) {
-            Some(text) if text.eq_ignore_ascii_case("cold") => Self::Cold,
-            Some(text) if text.eq_ignore_ascii_case("custom") => Self::Custom,
-            _ => Self::Warm,
+        let is = |name: &str| value.is_some_and(|text| text.trim().eq_ignore_ascii_case(name));
+        if is("sith") {
+            Self::Sith
+        } else if is("cold") || is("jedi") {
+            Self::Cold
+        } else if is("custom") {
+            Self::Custom
+        } else {
+            Self::Warm
         }
     }
 }
@@ -180,10 +214,30 @@ pub(crate) const COLD: Palette = Palette {
 pub(crate) fn palette(theme: Theme, hue: f32, saturation: f32) -> Palette {
     match theme {
         Theme::Warm => WARM,
+        Theme::Sith => SITH,
         Theme::Cold => COLD,
         Theme::Custom => custom(hue, saturation),
     }
 }
+
+/// The Sith theme (21/11/2026): a ground near black with a breath of red, dark
+/// blood-red glass, rose-red line-work (as red as it can be and still read over
+/// snow behind the glass, which the contrast test asks of every theme), the sun's gold for the choice (red and gold
+/// is the look, and a red choice among red lines would not stand out), white text
+/// leaning to rose. Leaving and errors, red in the other themes, are orange here so
+/// they are not one more red line.
+pub(crate) const SITH: Palette = Palette {
+    space: rgb(0.055, 0.012, 0.016),
+    glass: rgb(0.098, 0.027, 0.031),
+    glass_lit: rgb(0.2, 0.043, 0.055),
+    holo: rgb(1.0, 0.61, 0.67),
+    gold: WARM.gold,
+    gold_bright: WARM.gold_bright,
+    text: rgb(0.992, 0.925, 0.918),
+    muted: rgb(0.86, 0.74, 0.73),
+    quiet: rgb(0.70, 0.57, 0.57),
+    ember: rgb(1.0, 0.52, 0.2),
+};
 
 /// The warm palette turned so its line-work takes `hue` (degrees round the
 /// colour wheel), its chroma at `saturation` percent, each token at the warm
@@ -429,6 +483,23 @@ pub(crate) fn sync(console: &ViewerConsole) {
     }
 }
 
+/// The palette theme `theme` would give right now, a custom one at the hue and
+/// saturation in use: what a theme's tile shows before it is picked.
+pub(crate) fn preview(theme: Theme) -> Palette {
+    let (hue, saturation) = applied();
+    palette(theme, hue as f32, saturation as f32)
+}
+
+/// The theme [`sync`] last applied (tests).
+#[cfg(test)]
+pub(crate) fn current() -> Theme {
+    let key = APPLIED.load(Ordering::Relaxed);
+    Theme::ALL
+        .into_iter()
+        .find(|theme| *theme as u64 == (key >> 32) & 0xff)
+        .unwrap_or_default()
+}
+
 /// Whether a write to cvar `name` picks the custom theme: the hue's and the
 /// saturation's, which mean nothing to the presets.
 pub(crate) fn follows_custom(name: &str) -> bool {
@@ -491,7 +562,11 @@ mod tests {
     /// Every palette a test walks: the presets and custom ones round the wheel,
     /// at full, half and no saturation.
     fn palettes() -> Vec<(String, Palette)> {
-        let mut all = vec![("warm".to_owned(), WARM), ("cold".to_owned(), COLD)];
+        let mut all = vec![
+            ("warm".to_owned(), WARM),
+            ("sith".to_owned(), SITH),
+            ("cold".to_owned(), COLD),
+        ];
         for hue in (0..360).step_by(15) {
             for saturation in [100, 50, 0] {
                 all.push((
@@ -501,6 +576,42 @@ mod tests {
             }
         }
         all
+    }
+
+    #[test]
+    fn the_sith_theme_is_red_with_the_suns_gold() {
+        // Red line-work on a ground that is red before anything else, and darker
+        // than the sun's.
+        assert!(SITH.holo.r > SITH.holo.g * 1.4 && SITH.holo.r > SITH.holo.b * 1.4);
+        for ground in [SITH.space, SITH.glass, SITH.glass_lit] {
+            assert!(ground.r > ground.g * 2.5 && ground.r > ground.b * 2.5);
+        }
+        assert!(luminance(SITH.space) < luminance(WARM.space));
+        // It reads as another theme than the sun's: the line-work is far from amber.
+        assert!((wheel_hue(WARM.holo) - wheel_hue(SITH.holo)).abs() >= 15.0);
+        // The choice keeps the sun's gold, apart from the line-work; leaving and
+        // errors are apart from both.
+        assert_eq!(SITH.gold, WARM.gold);
+        let gap = (wheel_hue(SITH.gold) - wheel_hue(SITH.holo)).rem_euclid(360.0);
+        assert!((30.0..=330.0).contains(&gap), "gold against the line-work");
+        assert!((wheel_hue(SITH.ember) - wheel_hue(SITH.holo)).abs() >= 15.0);
+        assert!((wheel_hue(SITH.gold) - wheel_hue(SITH.ember)).abs() >= 15.0);
+        assert_eq!(palette(Theme::Sith, 200.0, 0.0), SITH);
+    }
+
+    #[test]
+    fn themes_are_named_for_players_and_old_values_still_read() {
+        assert_eq!(Theme::label_of("warm"), Some("Solar"));
+        assert_eq!(Theme::label_of("SITH"), Some("Sith"));
+        assert_eq!(Theme::label_of("cold"), Some("Jedi"));
+        assert_eq!(Theme::label_of("custom"), Some("Custom"));
+        assert_eq!(Theme::label_of("green"), None);
+        assert_eq!(Theme::from_cvar(Some("sith")), Theme::Sith);
+        assert_eq!(Theme::from_cvar(Some(" Jedi ")), Theme::Cold);
+        assert_eq!(Theme::from_cvar(Some("solar")), Theme::Warm);
+        for theme in Theme::ALL {
+            assert_eq!(Theme::from_cvar(Some(theme.name())), theme);
+        }
     }
 
     #[test]
@@ -584,7 +695,7 @@ mod tests {
 
     #[test]
     fn a_custom_hue_keeps_every_tokens_luminance() {
-        for (name, p) in palettes().into_iter().skip(2) {
+        for (name, p) in palettes().into_iter().skip(3) {
             for (index, (turned, warm)) in p.tokens().into_iter().zip(WARM.tokens()).enumerate() {
                 let (a, b) = (luminance(turned), luminance(warm));
                 assert!(

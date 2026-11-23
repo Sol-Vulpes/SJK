@@ -1050,8 +1050,9 @@ The settings a level changes are put aside first, as `cvar=value` pairs in
 `cg_tacticalRestore`, and given back when the level drops, as `renderer vanilla` does: off
 leaves the player's settings as they were, and a profile saved at a level comes back at it
 with the originals still put aside. A setting changed by hand while Tactical holds it goes
-back when Tactical lets go. Some graphics settings take a graphics reload (`vid_restart`),
-remaps the next map; the rest is live.
+back when Tactical lets go. EJK mode and `renderer vanilla` hold some of the same settings;
+[the three are told of one another](#modes-that-hold-settings). Some graphics settings
+take a graphics reload (`vid_restart`), remaps the next map; the rest is live.
 
 `r_flatWorld` ([flat_world.rs](../crates/sjk-viewer/src/flat_world.rs), also a switch of its
 own) draws each world surface in its texture's smallest mip, its average colour, under the
@@ -1060,6 +1061,101 @@ map's own light, and stops each shader at its first later stage that is no light
 foliage. Textures uploaded without mips (`nomipmaps` shaders, the sky) keep their image.
 Models, effects and the HUD are untouched. JA+ emotes are the server's animations and still
 show.
+
+## EJK mode
+
+`ui_ejkMode` (Sol, 22/11/2026; [ejk_mode.rs](../crates/sjk-viewer/src/ejk_mode.rs)) is one
+switch that makes SJK look and feel like JoF EJK (EternalJK, of OpenJK's lineage), as close
+as SJK's own settings get. It is archived and off by default; the EJK mode row leads
+Settings > Interface > Menus (SJK UI, Advanced and Simple's General, and the classic+
+Interface group), stands in First setup's Look after Menu style (in the SJK UI's First
+setup pop-up it is the first step's two picture buttons, SJK and EJK,
+[sjk-ui.md](sjk-ui.md#first-setup)), and the Settings search
+finds it by `ejk`, `eternal`, `jof`, `openjk`, `ojk`, `classic` and `retail`. The `ejkmode
+[on|off|list]` console command names or sets it, and `ejkmode list` prints every setting
+it sets with its value and the reason.
+
+It is a preset, not a mode the drawing code knows of. One table (`ejk_mode::TABLE`) names
+each setting and the value JoF EJK's look takes, with why; the renderer's settings are the
+[Vanilla graphics preset](rendering.md)'s (`graphics_quality.rs`), which the table does
+not repeat. Nothing else reads `ui_ejkMode`, so every change the switch makes shows on its
+own row in Settings and can be changed again there.
+
+| Subject | Settings set |
+| --- | --- |
+| Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_classicLook retail`, `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
+| Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
+| HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
+| Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
+| Chat | `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
+| Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
+| Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
+| The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
+| Image and weather | The Vanilla preset, then `r_autoExposure 0` (eye adaptation brightens dark rooms even without HDR), `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
+
+Turning it on puts the player's value of each of those settings aside, as `cvar=value`
+pairs in `ui_ejkModeRestore` (the format `renderer vanilla` and Tactical use,
+[cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs)), and sets the table's. The
+switch writes only as it flips: it is followed each frame (`GpuState::update_ejk_mode`),
+which reads the switch and whether anything is put aside and does nothing when the two
+agree, so the console, the Settings row, the what's-new card and a config all switch it and
+a profile saved with the mode on comes back as it was left. A setting changed by hand while
+the mode is on therefore stays as the player set it. Turning the mode off gives back what
+was put aside, but for the settings changed by hand since (they no longer hold the mode's
+value): those are the player's later choice and stay. The graphics settings read only at
+the graphics' start wait for a reload, which the reload card offers; the menu style's map
+behind the main page changes at the next start, as with the Menu style row.
+
+What it leaves alone: the SJK hub's features (the SJK chat and its buttons, the identity,
+the Collection, trading, notifications), gameplay and the network, other players' emotes,
+the player's own numbers (field of view, sensitivity, HUD scale, brightness, text sizes
+other than the chat's) and whatever has no setting of its own.
+
+### Modes that hold settings
+
+EJK mode, [Tactical](#tactical-mode) and `renderer vanilla` each set a group of settings
+and put the player's own values aside in a record of their own (`ui_ejkModeRestore`,
+`cg_tacticalRestore`, `r_ultraLowRestore`), and all three set the Vanilla graphics. Until
+23/11/2026 each kept "what the setting held when I came on", so with EJK mode on and then
+Tactical, Tactical's record held EJK mode's values, and turning EJK mode off and then
+Tactical left the player on Vanilla. Since then the three are told of one another in one
+place, [cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs) (`MODES`, `put_aside`,
+`give_back`):
+
+- A record only ever holds the player's own value. A mode coming on over a setting another
+  applied mode already holds copies that mode's record of it.
+- A mode going off gives a setting to the mode that still holds it (that mode's value)
+  when one does, else back to the player. So the modes can come on and go off in any
+  order and the player ends on their own settings (a test runs every order of the three,
+  at each Tactical level).
+- Each keeps its own way of going off: EJK mode leaves alone a setting changed by hand
+  while it was on, Tactical gives everything back. A setting counts as changed by hand
+  when it holds the value of none of the modes holding it; EJK mode then lets go of it,
+  and Tactical, when it goes off, gives the player's own value back.
+- `renderer vanilla` asked for while EJK mode or Tactical already holds Vanilla is kept
+  too: Vanilla stays when that mode goes off, until `renderer sjk`. `renderer sjk` while
+  another mode holds Vanilla only lets go of its own claim, and says which mode still
+  holds the graphics (before, it set Vanilla Plus under the mode).
+
+The records keep the format every release wrote (`cvar=value` pairs joined by `;`), so a
+profile saved with a mode on reads as it is and nothing saved is lost, and an older build
+still reads what this one writes. A profile an older build saved with two modes on has
+the second's record crossed; both are read, and of two records of a setting that differ,
+the one that is no mode's value is taken as the player's (`cvar_restore::own`), which
+sets such a profile right whichever mode goes off first. What cannot be told is a profile
+where the older build already gave the wrong values back (one mode turned off in the
+crossed order before the update): its settings are what that build left.
+
+Finishers gained their viewer's switch with it: `cg_finishers` (archived, on by default;
+Settings > Gameplay > Finishers) plays them on this PC; off, a saber kill leaves the body
+as the game does, while the finisher the player wears still goes to the hub
+([unlockables.md](unlockables.md#finishers)).
+
+Unit tests (`ejk_mode.rs`): every setting the mode names is registered, has a Settings row
+that offers its value and is named once; on then off gives a profile's settings back
+exactly; a setting changed by hand while on is left alone, on and off; a restart with the
+mode on writes nothing; a setting an earlier table put aside is given back; the command
+names, sets and lists the mode.
 
 ## Hats and capes
 
@@ -1745,7 +1841,8 @@ Like `ghost`, it is experimental and off until Settings > Mods > "Experimental:
 showcase tools" turns it on ([Ghost replay](#ghost-replay)).
 
 The client never sees another player's keys, only what they lead to: each snapshot
-carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`),
+carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`;
+`entityState_t::angles` is a player's spawn or teleport facing, not their view),
 ground entity, linked box (`solid`'s top tells a crouch, 16, from standing, 40), saber
 move, stance (`fireflag`), holster and weapon. The mimic keeps these samples, plays them
 back on its own timeline after the delay (interpolated, extrapolated at most 100 ms past
@@ -1755,7 +1852,20 @@ the newest) and rebuilds commands:
   leader's motion since then, in their own frame, becomes the mimic's in its frame: the
   leader stepping toward the mimic makes the mimic step toward them. `mirror` swaps
   left and right, so a step to the leader's left is a step to the mimic's right and both
-  stay face to face; their yaw turns mirror too. Pitch is copied.
+  stay face to face; their yaw turns mirror too. Pitch is copied, within 85 degrees
+  (Pmove's own clamp, 87.9, rewrites `delta_angles` when reached).
+- **View.** Each command's angles are the last command's plus a turn toward the wanted
+  view from the one the player has, 6 degrees at most (750 a second), as a mouse adds to
+  `cl.viewangles`. They are not `wanted - delta_angles`: a move that holds the view (the
+  lunge, the DFA, the back attacks, a kata, a knockdown, a saber lock, a JA+ emote)
+  rewrites `delta_angles` every command to cancel the command's angles
+  (`PM_SetPMViewAngle`), so angles worked back from a `delta_angles` a command late or
+  mispredicted threw the view anywhere, the pitch into its clamp (looking straight down),
+  and the keys, read in the wanted view, walked the wrong way (seen in a game on
+  22/11/2026). Adding the turn needs no `delta_angles`: a held view stays and a released
+  one goes on from where it was. The movement keys are read in the view the command
+  gets, not the wanted one. A view held more than 2 degrees from the asked one is said
+  in the client log, once a second at most, with the saber moves (`mimic: view held`).
 - **Movement.** On the ground the keys aim for the leader's velocity, read 80 ms ahead
   where the delay leaves samples there (so a turn starts when theirs did, not an
   acceleration later), plus a return toward their mapped position at 4 units a second
@@ -1787,7 +1897,12 @@ the newest) and rebuilds commands:
   kicks (alternate attack and a direction), the katas (both buttons); the others hold
   attack. A bounce keeps the buttons; parries, knockaways and locks, the fight's and not
   inputs, let go. A different stance presses `saberAttackCycle` (every 400 ms, eight
-  tries for a stance this player lacks) and a different holster `sv_saberswitch`.
+  tries for a stance this player lacks), only between a single saber's stances (1 to
+  5): with a staff or two sabers the cycle puts a blade away instead, which in a game
+  on 22/11/2026 changed the stance at each swing. A different holster presses
+  `sv_saberswitch`, holstered meaning every blade off (`saberHolstered` 2; 1 is one
+  blade of a staff or one saber of two). Neither is pressed while the leader or the
+  player swings: the server keeps a press made in a swing for its end.
 
 With no delay the copy runs as soon as the leader is seen, which is after their ping,
 the snapshot interval and this client's ping, and nothing ahead is known. It stops on any
@@ -1807,7 +1922,13 @@ with none (a full-speed leader cannot be caught up). `copy` keeps the sides. Wit
 and a leader doing the same choreography at walking pace (keys of 46, walk held,
 attacks included) every command holds the walk with no key past 64, the attacks come
 mirrored 4-24 ms late, it crouches, tracks within 8 units with no delay and 5 with 0.3
-seconds, and ends within 2. Not yet tried in a game.
+seconds, and ends within 2. The view has its own tests against the server's side of it
+(`PM_UpdateViewAngles` and a held view): free, it reaches the wanted view exactly, 6
+degrees a command; held for a second with a `delta_angles` three commands old, it does
+not move, then goes on from where it was held; a leader looking straight down gives 85
+degrees. Tried in a game on 22/11/2026 (`mimic vin 3 copy`): the saber moves were
+copied, the walk went the wrong way and the view to the ground at times, which the
+view's turn above answers; that fix is not yet tried in a game.
 
 ## Sound memory
 
@@ -2822,28 +2943,40 @@ Force aura and the combined Protect+Absorb shell, and the update and identity
 opt-ins, then its own "Don't show at start" row (`ui_hideFirstSetup`), ending in a
 Key bindings row. Its other rows are the catalogue's own, looked up by cvar, so a
 change there is the same change the other tabs make; it is the last tab so the
-other tabs keep their numbers. The SJK UI pop-up's line under its title points at
-the first row.
+other tabs keep their numbers.
 
 With the classic menus the same rows are the first group of the
 Setup page, FIRST SETUP (`Group::Quick`, [groups.rs](../crates/sjk-viewer/src/settings/groups.rs)),
 drawn as a classic+ option panel like the others, with search, descriptions and
-defaults, and opens the FIRST SETUP tab only if that panel cannot open. The SJK UI shows
-them as a pop-up card over the map (since 08/10/2026,
+defaults, and opens the FIRST SETUP tab only if that panel cannot open. Over the main
+menu First setup is a pop-up card over the map (since 08/10/2026,
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs),
-[sjk-ui.md](sjk-ui.md#first-setup)): the rows scroll inside it, and "Don't show
-at start" is a tick box pinned at its foot, always in view, beside All settings
-(the Settings screen on its First setup category, which keeps the rows too) and
-Done. Picking another menu style on its Menu style row keeps First setup on show in
-the new style: the classic Setup page's FIRST SETUP group or the SJK UI's
-pop-up.
+[sjk-ui.md](sjk-ui.md#first-setup)), which since 23/11/2026 asks one thing at a time:
+six steps (the look, with a picture button each for SJK and for EJK mode, the same
+moment of a match drawn both ways; the colours; the player, with the name typed in a
+field, an import from another client and the Character page; the graphics preset, each
+one a picture of the same spot; how you play; online, closing on a recap), each with its
+picture buttons and the few rows that belong with them, none scrolling. The steps and
+what each shows are a table
+([setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)); seven rows of the
+list are left out of the steps on purpose and listed there. "Don't show at start" is a
+tick box pinned at its foot, always in view, beside All settings (the Settings screen on
+its First setup category, which keeps every row in one list; under the classic style
+the classic Setup page's FIRST SETUP group), Back and Next. The pop-up has the SJK UI's
+look whatever the menu style, and since 23/11/2026 it is what opens over the main menu
+in every style, at start and by the command: picking EJK (or Classic on its Menu style
+row) turns the classic menus on under it and it stays open on its step, and a player on
+the classic menus gets it too. The classic Setup page's First setup still opens the
+list, and picking the SJK UI there goes on as the pop-up.
 
 At every start, the first time the main menu is up and the menu style is known, it
-opens in the active style, until the player ticks "Don't show at start"
-(`ui_hideFirstSetup` 1, archived); Escape leaves it for that run. (Before
-07/10/2026 it opened once, on the first start, marked by `ui_quickSetup`, which is
-no longer read.) The `firstsetup` console command opens it too, over the main
-menu or from a running game, in the active style
+opens, until the player finishes it (Done on its last step) or ticks "Don't show at
+start": both set `ui_hideFirstSetup` 1 (archived), so the tick shows what will happen
+and can be taken off again; Escape leaves it for that run and it is offered at the next
+start. (Before 23/11/2026 only the tick stopped it, so it came back at every start for
+a player who never found the tick. Before 07/10/2026 it opened once, on the first
+start, marked by `ui_quickSetup`, which is no longer read.) The `firstsetup` console
+command always opens it: the pop-up over the main menu, the list from a running game
 ([first_setup.rs](../crates/sjk-viewer/src/menu/first_setup.rs)). Its old name
 `quicksetup` was removed on 08/10/2026, with no hidden alias, so `quit` is the only
 command a `q` completes to. Not yet run in a game window.
@@ -2851,7 +2984,8 @@ command a `q` completes to. Not yet run in a game window.
 ### Importing from another client
 
 First setup's first row, Import from a client (its `firstsetup import` row, in
-every menu style), opens the Import page on the configs the clients installed beside
+every menu style; the Import my setup button of the SJK UI pop-up's third step), opens
+the Import page on the configs the clients installed beside
 SJK wrote, newest first, at most four: retail Jedi Academy and JA+
 (`jampconfig.cfg`), OpenJK (`openjk.cfg`), EternalJK and JoF EJK (`eternaljk.cfg`)
 and TaystJK (`taystjk.cfg`), in any folder of GameData (portable installs) or of
@@ -5430,7 +5564,7 @@ The main menu's Credits entry (SJK > Credits in the SJK UI; SJK > CREDITS on the
 [credits_data.rs](../crates/sjk-viewer/src/credits_data.rs)), and everyone's
 work from [credits_history.txt](../crates/sjk-viewer/assets/credits_history.txt),
 which `scripts/credits_history.py` writes from git and GitHub. Each section of
-the file (Sol JK, Contributors, Art, Made with, Origins) is a heading with its people.
+the file (Sun JK, Contributors, Art, Made with, Origins) is a heading with its people.
 
 - Everyone with a history (Sol, Bishop, Creyon, Lumaya) has a panel across the
   column: the name large (the first section's larger still), the role, chips
@@ -5537,7 +5671,7 @@ again every 20 seconds; the log says which apps it reached.
   alone. The elapsed timer counts from entering the menus, a server, a demo or a map.
 - The picture is the SJK logo on the project site, and a "Get SJK" button opens the
   site. There is no join button: SJK has no link scheme (`sjk://`) yet.
-- The game name Discord shows is the "Sol JK" application's in Discord's developer
+- The game name Discord shows is the "Sun JK" application's in Discord's developer
   portal, whose id is `APPLICATION_ID` in `discord_presence.rs`; while it is empty the
   feature stays off. `SJK_DISCORD_APP=<id> cargo test -p sjk-viewer --bins
   discord_app_takes_an_activity -- --ignored` checks the pipe against a running

@@ -18,19 +18,23 @@ pub(crate) mod mode;
 mod numeric;
 mod plugin_rows;
 mod pointer;
+mod present;
 pub(crate) mod quick;
+mod requires;
 mod resolution;
 mod resolution_list;
 mod search;
+mod section_icons;
+mod sections;
+mod setup_steps;
 mod sjk_popup;
 pub(crate) mod sjk_view;
 pub(crate) mod slider_peek;
+mod stops;
 mod usage;
 mod wheel_editor;
 mod wheel_editor_view;
 
-#[cfg(test)]
-pub(crate) use catalog::IMPORT_ROW;
 use catalog::*;
 pub(crate) use catalog::{FIRST_SETUP_CAPTION, RESOLUTIONS};
 pub(crate) use display::{
@@ -42,6 +46,12 @@ pub(crate) use groups::{Advanced, Group, Simple};
 use resolution::{PickResult, ResolutionChoice, ResolutionPicker};
 pub(crate) use sjk_view::Rail;
 pub(crate) use wheel_editor::WheelMode;
+/// How many steps First setup's pop-up has (tests).
+#[cfg(test)]
+pub(crate) fn setup_steps_len() -> usize {
+    setup_steps::STEPS.len()
+}
+
 pub(crate) enum SettingsResult {
     None,
     Back,
@@ -53,6 +63,9 @@ pub(crate) enum SettingsResult {
     /// First setup's "Import from another client" row: the Import page with
     /// the configs found (or the file dialog), over the settings.
     OpenImport,
+    /// First setup's pop-up's "Choose a character": the Character page, which comes
+    /// back to the pop-up's step when it closes.
+    OpenCharacter,
     /// The Gameplay FPS row's Enter: the card that explains it, over the settings.
     OpenGameplayFps,
     /// The installed-pack browser, over the settings.
@@ -69,25 +82,14 @@ pub(crate) enum SettingsResult {
     AllSettings,
 }
 
-/// What First setup's pop-up does with `key` before its rows see it: Tab
-/// leaves for the whole Settings screen; the search's and the groups' keys do
-/// nothing, as it has neither.
-fn popup_key(key: KeyCode) -> Option<SettingsResult> {
-    match key {
-        KeyCode::Tab => Some(SettingsResult::AllSettings),
-        KeyCode::Slash | KeyCode::NumpadDivide | KeyCode::BracketLeft | KeyCode::BracketRight => {
-            Some(SettingsResult::None)
-        }
-        _ => None,
-    }
-}
-
 /// One line of a classic option panel: a heading (a group of search
-/// results) or a setting row.
+/// results), a setting row, or a sentence under the row before it (First
+/// setup's pop-up says what a row does there, `setup_steps.rs`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Line {
     Heading(&'static str),
     Row(usize),
+    Note(&'static str),
 }
 
 /// The lines a classic option panel shows: a span of the tab, or a search's
@@ -128,7 +130,7 @@ impl ClassicRows {
             .iter()
             .filter_map(|line| match line {
                 Line::Row(row) => Some(*row),
-                Line::Heading(_) => None,
+                Line::Heading(_) | Line::Note(_) => None,
             })
             .chain(self.pinned)
     }
@@ -193,6 +195,10 @@ enum Pick {
     Mode(DisplayMode),
     /// A graphics quality level.
     Quality(crate::graphics_quality::Level),
+    /// One of a number row's named stops ([`stops`]).
+    Stop(stops::Stop),
+    /// A number row's "Custom...": type any value of its range.
+    Custom,
 }
 
 /// A classic+ dropdown open on row `row`: its choices, the highlighted one
@@ -288,9 +294,14 @@ pub(crate) struct SettingsMenu {
     values: Vec<String>,
     /// Each row's default and whether its value differs (classic+ panels).
     defaults: Vec<classic_view::RowDefault>,
+    /// For each row, the rule that keeps its setting from having an effect right
+    /// now ([`requires`]); `None` for a row that acts.
+    idle: Vec<Option<&'static requires::Rule>>,
     /// The classic+ detail box's facts line and the description line's keys,
     /// rewritten each frame.
     detail_facts: String,
+    /// The focused row's value as the classic+ detail box shows it.
+    detail_value: String,
     key_hint: String,
     editing: Option<TextDraft>,
     /// What the window's monitor offers; asked for each time the screen opens.
@@ -341,6 +352,8 @@ pub(crate) struct SettingsMenu {
     /// The row peeking this frame and how far the rest has faded, while the
     /// SJK UI draws the rows; `None` outside that.
     peek_draw: Option<(usize, f32)>,
+    /// First setup's pop-up: the step on show and where the keyboard is.
+    setup: sjk_popup::Wizard,
 }
 
 impl SettingsMenu {
@@ -394,7 +407,9 @@ impl SettingsMenu {
             selected: 0,
             values: Vec::with_capacity(12),
             defaults: Vec::with_capacity(20),
+            idle: Vec::with_capacity(20),
             detail_facts: String::with_capacity(96),
+            detail_value: String::new(),
             key_hint: String::with_capacity(96),
             editing: None,
             monitor: None,
@@ -419,6 +434,7 @@ impl SettingsMenu {
             peek: slider_peek::SliderPeek::default(),
             peek_world: false,
             peek_draw: None,
+            setup: sjk_popup::Wizard::default(),
         }
     }
 
@@ -631,6 +647,8 @@ impl SettingsMenu {
         self.searching
             || self.editing.is_some()
             || self.numeric.is_some()
+            // First setup's pop-up's field (the player's name).
+            || self.popup_on_field()
             // The quick wheel's catalogue types into its search, so held
             // letters and Backspace repeat there too.
             || self.wheel.is_open() && (self.wheel.typing.is_some() || self.wheel.picker.is_some())
@@ -643,6 +661,9 @@ impl SettingsMenu {
         }
         if self.wheel.is_open() && self.wheel.typing.is_none() && self.wheel.picker.is_some() {
             return Some(&self.wheel.search);
+        }
+        if let Some(field) = self.popup_field_text() {
+            return Some(field);
         }
         self.editing.as_ref().map(|draft| draft.text.as_str())
     }
@@ -728,13 +749,17 @@ impl SettingsMenu {
             }
             return SettingsResult::None;
         }
+        // First setup's pop-up's field takes what is typed, held keys too.
+        if self.popup_field_key(key, event.text.as_deref(), console) {
+            return SettingsResult::None;
+        }
         if event.repeat {
             return SettingsResult::None;
         }
         let classic = self.classic.is_some();
-        // Up from the pop-up's first row wraps to its foot, as it has no search.
+        // First setup's pop-up has its own keys: its picture buttons, its steps.
         if self.popup() {
-            if let Some(result) = popup_key(key) {
+            if let Some(result) = self.popup_key(key, console) {
                 return result;
             }
         } else if classic {
@@ -782,6 +807,9 @@ impl SettingsMenu {
             }
             KeyCode::ArrowUp | KeyCode::KeyW => self.step_selection(-1),
             KeyCode::ArrowDown | KeyCode::KeyS => self.step_selection(1),
+            // Classic+ and SJK: a section at a time.
+            KeyCode::PageDown if classic => self.step_section(1),
+            KeyCode::PageUp if classic => self.step_section(-1),
             KeyCode::ArrowLeft | KeyCode::KeyA => self.adjust(console, -1),
             KeyCode::ArrowRight | KeyCode::KeyD => self.adjust(console, 1),
             // SJK: Space keeps stepping a slider; Enter opens its entry.
@@ -864,6 +892,19 @@ impl SettingsMenu {
             return;
         }
         let next = match (setting.kind(), console.cvar(setting.cvar)) {
+            // A number with named stops steps along them.
+            (ValueKind::Stops { stops, integer, .. }, Some(value)) => {
+                let Ok(current) = value.as_text().trim().parse::<f64>() else {
+                    return;
+                };
+                stops::text(stops::step(stops, current, direction), integer)
+            }
+            // A volume steps in what it shows, not in gain ([`present`]).
+            (ValueKind::Float { min, max, .. }, Some(CvarValue::Float(value)))
+                if present::unit(setting.cvar) == present::Unit::Loudness =>
+            {
+                present::loudness_stepped(*value, direction, min, max)
+            }
             (ValueKind::Bool, Some(CvarValue::Bool(value))) => (!value).to_string(),
             (ValueKind::Bool, Some(value)) => if switch_on(value) { "0" } else { "1" }.to_owned(),
             (ValueKind::Integer { min, max, step }, Some(CvarValue::Integer(value))) => {
@@ -906,6 +947,53 @@ impl SettingsMenu {
         };
         console.set_cvar(setting.cvar, &next);
         self.refresh(console);
+    }
+
+    /// Choose the first row of the next section (`direction` 1) or of the one before
+    /// (-1; from inside a section, its own first row), a section being the rows under
+    /// one sub-heading. The ends stay where they are; a panel without sub-headings
+    /// goes to its first or last row.
+    fn step_section(&mut self, direction: i32) {
+        let Some(classic) = &self.classic else {
+            return;
+        };
+        // Each section's first row, in order.
+        let mut firsts: Vec<usize> = Vec::new();
+        let mut after_heading = true;
+        for line in &classic.lines {
+            match line {
+                Line::Heading(_) => after_heading = true,
+                Line::Note(_) => {}
+                Line::Row(row) => {
+                    if after_heading {
+                        firsts.push(*row);
+                    }
+                    after_heading = false;
+                }
+            }
+        }
+        let rows: Vec<usize> = classic.rows().collect();
+        let Some(at) = rows.iter().position(|row| *row == self.selected) else {
+            return;
+        };
+        let place = |row: &usize| rows.iter().position(|other| other == row).unwrap_or(0);
+        let target = if direction > 0 {
+            firsts
+                .iter()
+                .copied()
+                .find(|first| place(first) > at)
+                .or(rows.last().copied())
+        } else {
+            firsts
+                .iter()
+                .copied()
+                .rfind(|first| place(first) < at)
+                .or(rows.first().copied())
+        };
+        if let Some(target) = target {
+            self.selected = target;
+            self.reveal_selected();
+        }
     }
 
     /// Whether exclusive fullscreen can be offered; assumed until the
@@ -1024,9 +1112,16 @@ impl SettingsMenu {
                 .iter()
                 .map(|setting| classic_view::row_default(console, setting)),
         );
+        self.idle.clear();
+        self.idle.extend(
+            self.rows()
+                .iter()
+                .map(|setting| requires::idle(console, setting.cvar)),
+        );
         if let Some(before) = before {
             self.record_change(&before);
         }
+        self.read_setup(console);
     }
 
     /// What `key` (with Ctrl held when `control`) asks of the screen around
@@ -1171,6 +1266,12 @@ pub(crate) fn row_takes(cvar: &str, value: &str) -> bool {
             number.fract() == 0.0 && (min as f64..=max as f64).contains(&number)
         }
         (ValueKind::Float { min, max, .. }, Ok(number)) => (min..=max).contains(&number),
+        (
+            ValueKind::Stops {
+                min, max, integer, ..
+            },
+            Ok(number),
+        ) => (!integer || number.fract() == 0.0) && (min.min(0.0)..=max).contains(&number),
         _ => false,
     }
 }
@@ -1519,6 +1620,11 @@ mod tests {
                 (ValueKind::Float { min, max, .. }, CvarValue::Float(value)) => {
                     (min..=max).contains(value)
                 }
+                // A number with named stops: its default is one of them.
+                (ValueKind::Stops { stops, .. }, value) => value
+                    .as_text()
+                    .parse::<f64>()
+                    .is_ok_and(|value| stops::index(stops, value).is_some()),
                 // Choices cycle the cvar's text form, whatever its type.
                 (ValueKind::Choice(values), value) => values.contains(&value.as_text().as_str()),
                 (ValueKind::Text, CvarValue::Text(_)) => true,

@@ -3843,7 +3843,7 @@ impl Worker {
                     snapshot.set_me(answer.profile);
                     Ok(answer.doom)
                 }
-                Err(error) => Err(crate::wheel_of_doom::refusal(&error)),
+                Err(error) => Err(crate::wheel_of_doom::box_refusal(&error)),
             };
             snapshot.mystery_box_doom = Some((serial, outcome));
         });

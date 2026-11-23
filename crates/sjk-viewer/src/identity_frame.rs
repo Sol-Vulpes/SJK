@@ -32,6 +32,7 @@ impl GpuState {
         self.update_sjk_chat();
         self.update_chat_translations();
         self.update_tactical();
+        self.update_ejk_mode();
         self.update_emotes();
         self.update_away_emote();
         self.update_world_pings();

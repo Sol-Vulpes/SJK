@@ -18,8 +18,11 @@ dialog (Report a bug), the new medal pop-up and Create game with its map list
 (10/10/2026, in every menu style) are done. Every other
 screen opens in its classic+ version, which
 covers the map as the classic style does.
-The other style: First setup's Menu style row, Settings > Interface > Menu style, or
-`ui_menuStyle classic`; restart for the style's map behind the main page.
+The other style: First setup's Menu style row (its first step), Settings > Interface > Menu style, or
+`ui_menuStyle classic`; restart for the style's map behind the main page. EJK mode
+(`ui_ejkMode`, the row before Menu style in both, [client.md](client.md#ejk-mode)) picks the
+classic style in retail's look together with everything else that makes SJK look like JoF
+EJK, and gives the player's settings back when turned off.
 
 **Every feature has its SJK UI (Sol's rule, 11/10/2026).** Anything a player
 sees or uses that a change adds (a screen, page, pop-up, overlay, setting row or
@@ -108,11 +111,12 @@ in front of a white scene, and over its plain fallback
 The player picks the SJK UI's colours (18/11/2026, Sol's request), in Settings >
 Interface under Theme, or `ui_theme` ([theme.rs](../crates/sjk-viewer/src/menu/sjk/theme.rs)):
 
-| `ui_theme` | Colours |
-| --- | --- |
-| `warm` (the default) | The sun's, in the table above |
-| `cold` | The SJK UI's colours before 17/11/2026: deep space navy `#060A14`, holo-blue line-work `#A8CFFF`, gold `#E8B84A` for the choice, cool white text `#E2E9F6`, ember `#FF7A3D`. Its glass is the navy its panels' literals had (`#0A0F1F`, lit `#121A2B`); its muted text is lifted 4 % (`#B0BCD3`) so it reads on the status bars' acrylic, which that palette never had |
-| `custom` | The warm palette turned to `ui_themeHue` (0 to 360 round the colour wheel, default 22, the warm line-work's own hue) at `ui_themeSaturation` (0 greys to 100 the warm palette's, the default) |
+| `ui_theme` | Name | Colours |
+| --- | --- | --- |
+| `warm` (the default) | Solar | The sun's, in the table above |
+| `sith` (since 21/11/2026) | Sith | A ground near black with a breath of red `#0E0304`, blood-red glass (`#190708`, lit `#330B0E`), rose-red line-work `#FF9CAB` (as red as still reads over a bright scene behind the glass), the sun's gold for the choice, white text leaning to rose `#FDECEA`; leaving and errors are orange `#FF8533` here, so they are not one more red line |
+| `cold` | Jedi | The SJK UI's colours before 17/11/2026: deep space navy `#060A14`, holo-blue line-work `#A8CFFF`, gold `#E8B84A` for the choice, cool white text `#E2E9F6`, ember `#FF7A3D`. Its glass is the navy its panels' literals had (`#0A0F1F`, lit `#121A2B`); its muted text is lifted 4 % (`#B0BCD3`) so it reads on the status bars' acrylic, which that palette never had |
+| `custom` | Custom | The warm palette turned to `ui_themeHue` (0 to 360 round the colour wheel, default 22, the warm line-work's own hue) at `ui_themeSaturation` (0 greys to 100 the warm palette's, the default) |
 
 A custom theme turns every token round the OKLab hue circle by the turn that brings the
 warm line-work's hue to the chosen one, scales its chroma by the saturation and sets it
@@ -122,7 +126,11 @@ is the warm theme's at every hue (`theme::tests::a_custom_hue_keeps_every_tokens
 at the default hue and saturation it is the warm theme. Ember keeps the warm theme's red in
 a custom theme: it means leaving and errors.
 
-Settings shows Theme as three segments (Warm, Cold, Custom), then Theme hue and Theme
+Players read the themes by name (Solar, Sith, Jedi, Custom, since 21/11/2026, Sol's
+request); the cvar keeps `warm` and `cold`, the values saved before, and reads `solar` and
+`jedi` as them. First setup's pop-up shows them as four picture buttons on its Colours step
+([First setup](#first-setup)).
+Settings shows Theme as a list of the four, then Theme hue and Theme
 saturation as sliders, each with a swatch of the line-work it gives left of its track
 (`theme::row_swatch`, `kit::swatch`). Moving the hue or the saturation, in Settings or
 the console, picks `custom` (`ViewerConsole::apply_cvar`). A change applies on the next
@@ -929,7 +937,7 @@ overlay routes their text to the UI's families (`console_sjk_pages.rs`).
   under the last where sections are hidden.
   The column (x 640, 1120 wide, from y 140 to 960, scrolled by the arrows, Page Up and Down, Space, Home and End, the wheel and a
   thin holo scrollbar at x 1800) holds each section under a sub-heading:
-  - Someone with a history: the name (Rajdhani 84 for Sol JK's section, 62 for
+  - Someone with a history: the name (Rajdhani 84 for Sun JK's section, 62 for
     the rest), the GitHub handle in gold at the right of its line, the role, the
     counts (changes when some are not pull requests, pull requests, commits) as
     gold numbers with their words, the links in gold after a holo dot, and the
@@ -1130,6 +1138,69 @@ that mode for the visit and leaves the player's choice as it was.
     Key bindings' rows place theirs the same way.
   - A list opens under its field (over it near the bottom), its choice in use
     marked with a gold dot; the controls under it are left out while it is open.
+  - Sections and pictures (since 21/11/2026, Sol's request). Advanced's long
+    categories are cut into sections by subject
+    ([sections.rs](../crates/sjk-viewer/src/settings/sections.rs)), each a heading
+    over at most 15 rows (the status bar's 22 parts aside): Sound is Volume, Game
+    sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds; Gameplay is Players and
+    models, Sabers, Force, Duels, Maps and remaps, Toys, Camera, Prediction, Away (the
+    away settings came from Sound); Interface is Menus, Theme, Console; HUD is Layout,
+    Crosshair, Names and cards, Nameplates, Playstyle, Readouts, Match, Movement,
+    Status bar, Scoreboard; Chat is Chat box, Chat look, Chat tabs, Do not disturb,
+    Duel lines, SJK chat, Translation, Privacy and blocks. A setting no section names
+    would show last under "More"; a test keeps that empty. Every sub-heading of the
+    screen (these, Display's, Graphics', Mods', Network's, First setup's, Simple's and
+    a search's groups) has its settings icon, 32 pixels, before its name
+    ([section_icons.rs](../crates/sjk-viewer/src/settings/section_icons.rs)); the
+    classic+ groups keep their own lists and headings. Page Down chooses the first
+    row of the next section and Page Up of the one before. The icons are all drawn by
+    `scripts/settings_icons_draw.py`
+    ([their README](../crates/sjk-viewer/assets/settings/README.md)).
+  - Smarter controls (since 21/11/2026, Sol's request, shaped by the hub's
+    [settings usage](client.md#settings-usage): 2,206 runs, 13,951 changes, 2,438
+    searches). The cvars and saved values keep their numbers; only the rows differ, in
+    both menu styles, each from a table with one entry per setting:
+    - **Named stops** ([stops.rs](../crates/sjk-viewer/src/settings/stops.rs)): a number
+      players set to a handful of known values is a list, not a slider: FPS cap (Auto,
+      60 to 1000 FPS, Unlimited), Menu FPS cap, Away after (as minutes), Prediction error
+      smoothing, Rate, Snapshots per second. The list ends with "Custom...", which opens
+      the typed entry on any value of the range; a digit typed on the row opens it at
+      once; Left and Right step along the stops, a typed value joining the list at its
+      place. A value that is no stop reads with its unit ("275 FPS").
+    - **Named choices** for small numbers that were sliders: Crosshair (Off, Crosshair 1
+      to 9, White dot), Overhead names, Nameplate bars, Empower glow.
+    - **Units** ([present.rs](../crates/sjk-viewer/src/settings/present.rs)): a slider's
+      number reads in its unit (85%, 100 degrees, 1.5 s, 19:30 for the time of day), a
+      value that means something else by its name (Off, World, Flat, Native), and the
+      detail's Default and Range the same way; a number typed is the one shown (65 for
+      65%). Labels no longer carry "(%)", "(ms)" or "(0 off)".
+    - **Loudness**: the five volumes show the square root of the gain as a percentage and
+      their track follows it, so 100% is the cvar's 1, 50% its 0.25 and 22% the 0.05 most
+      players set; Left and Right step 5% of loudness, a drag lands on whole percents.
+    - **Curved tracks**: Mouse sensitivity (0.1 to 20, in steps of 0.1 where 0.25 from
+      0.1 gave 1.35 and 2.1), World brightness and Sunlight brightness give their low
+      values most of the track.
+    - **Default mark**: a short tick on each slider's track where its default lies
+      (`kit::slider_mark`); a knob dragged within three pixels of it takes the default.
+    - **Dependent rows** ([requires.rs](../crates/sjk-viewer/src/settings/requires.rs),
+      its rules in `requires_rules.rs`, each checked against the code that reads the
+      cvars): a row whose setting does nothing right now is drawn at 40% and the detail
+      says in gold what it needs ("Does nothing right now: it needs See & share
+      nameplates."); classic+ adds "needs ..." to its facts. The row still works. Covered:
+      the nameplates' options, the plain names, crosshair size, lagometer scale, card
+      delay, Detect refresh rate (FPS cap on Auto), the chat sounds, auto exposure's
+      limits, glow style and halo, light shaft clarity and dust, parallax depth, emission
+      strength, the sun shadows' tuning, the time of day and real-time lighting's rows,
+      and the weather's looks.
+    - **Search** ([search.rs](../crates/sjk-viewer/src/settings/search.rs)): other words
+      for a setting (`SYNONYMS`: afk, pov, msaa, vsync, dnd...), a slip of the fingers
+      when nothing matches (one letter for a word of four or five, two from six: caht,
+      crosshar, namepalte), a search typed on a Russian keyboard layout read as its keys,
+      and, when more than eight settings match, the ones whose own name carries the word
+      first under "Best matches". An empty result says where the keys are set, and how
+      many key bindings match.
+    - Simple gained Emote volume (Sound), Prediction and Server remaps (Gameplay), the
+      settings players changed and searched for most without finding them there.
 - **Detail:** on the right (x 1360, 464 wide), the focused setting: its
   category's icon (a search result's own group's) and its name, what it does,
   then its default, range or choices, when a change applies (gold), where a
@@ -1187,37 +1258,172 @@ the download's progress, Check again and Download
 
 ### First setup
 
-At start (until it is ticked off) and from the `firstsetup` command, First setup
-is a pop-up card over the map, not the Settings screen (Sol's request,
-08/10/2026, with the tick that stops it opening always in view at its foot). [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs)
-draws it; the rail's First setup category still shows the same rows in the
-Settings screen.
+At start (until it is finished or ticked off) and from the `firstsetup` command, First
+setup is a pop-up card over the map, not the Settings screen (Sol's request,
+08/10/2026, with the tick that stops it opening always in view at its foot). Since
+23/11/2026 it asks one thing at a time, in steps with pictures (Sol: "we should have
+steps in the first setup with images", and a button with an image for EJK mode, which
+was a small switch lost in a list of thirty rows).
+[sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs) draws it; the rail's
+First setup category still shows every row in one list in the Settings screen.
 
-- **Card:** 960 wide and 948 tall, centred, over the map darkened all over
-  (78 %), with the browser prompts' glass, shadow and holo edge (`kit::card`).
-- **Top:** "First setup", what it is for, and how to bring another client's
-  .cfg over.
-- **Rows:** First setup's rows as Settings draws them, its column moved into
-  the card, under its sub-headings (Graphics first: the graphics preset, Vanilla,
-  Vanilla Plus or the Solar Renderer's Low to Ultra, each marked green to red for this
-  PC, whose list opens on Enter; see [graphics
-  quality](client.md#graphics-quality); then Styles: menu and camera style).
-  Eleven lines show; the rest scroll inside the card. The focused row's help
-  sits in two lines under them (left out while a list is open).
+It is the pop-up over the main menu in every menu style, at start and from the command
+(it is a page with only an SJK look, and a look picked on it changes the style under
+it): until 23/11/2026 the classic style got the classic Setup page's list instead, so a
+player who had picked EJK in step 1 never saw the pop-up again. That list is still what
+the classic Setup page's First setup opens, what the pop-up's All settings shows under
+the classic style, and what `firstsetup` opens in a game.
+
+**It finishes.** Done on the last step (or Page Down there) closes it and sets
+`ui_hideFirstSetup`, the "Don't show at start" tick's own setting, so it no longer
+opens at start; opened again by `firstsetup`, the tick shows ticked and can be taken
+off. Closed before its end (Escape, All settings), it is offered again at the next
+start, unless the tick was set by hand. No second setting records the finish: the tick
+says what will happen, and a player who ticked it before is never shown the pop-up
+again by an update.
+
+- **Card:** 1240 wide and 950 tall, centred, over the map darkened all over
+  (78 %), with the browser prompts' glass, shadow and holo edge (`kit::card`). It is
+  the same size on every step; a step that does not fill it sits a little lower, and a
+  step whose pictures are drawn (the themes, the icons) draws them taller first.
+- **Steps strip,** across the top: each step a numbered disc and its name, a line
+  running on to the next. The step on show is gold, those before it lit. A click on a
+  step shows it.
+- **Title and sentence:** what the step asks (Rajdhani 40) and one sentence under it.
+- **Field** (the Player step's name): a label, a text field and, for a name, the name
+  as the game draws it beside the field and a chip for each colour `^1` to `^7` under
+  it. The field shows what is typed, the colour codes as their two characters (drawn a
+  piece at a time so that no piece holds a whole code); a click on a chip types its
+  code. The setting is written as it is typed, an emptied field keeps the name the
+  field was entered with, and a name stops at the game's 31 bytes
+  (`player_menu::append_legacy_name`, the Character page's rule). It follows the
+  [text field rule](#sjk-ui): Ctrl+A, Ctrl+C, Ctrl+V and a held Backspace come from the
+  menu's one handler for a page's open field (`SettingsMenu::typing`, `field_text`,
+  [text_entry.rs](../crates/sjk-viewer/src/text_entry.rs)), a double click selects all.
+- **Picture buttons,** side by side, every one of a step the same size: a picture at
+  the top, the name, a few short lines of what choosing it means. The one in use has a
+  gold edge and "In use"; the one under the keyboard or the pointer a white edge, and
+  the keyboard's also a ring round it. A click chooses at once. Where one button of a
+  step has choices under its words (the Solar Renderer's levels), the others write on
+  in that room.
+- **Rows:** the few rows that belong with the step, as Settings draws them, in a
+  column centred in the card. No step scrolls. The focused row's help sits in two lines
+  under them (left out while a list is open, or while a picture button or the field
+  has the keyboard); a step may instead write what each row does under it.
+- **Recap** (the last step): under "Your setup", a tile for each step before it with
+  what it holds now (the look, the theme, the name in its colours, the preset and its
+  level; a step whose buttons are none of them in use has none). A click on a tile
+  shows its step.
+- **Aside:** one sentence in gold under a step's buttons (under its rows and recap when
+  it has no buttons), which may show only while a setting is on.
 - **Foot,** always in view under a rule: the "Don't show at start" tick box
-  (`kit::tick`, gold with a dark tick when ticked) and its name on the left, All
-  settings and Done (gold) on the right.
-- **Keys:** under the card, bottom right: the focused row's, Tab all settings,
-  Esc done.
+  (`kit::tick`, gold with a dark tick when ticked) and its name on the left; All
+  settings, Back and Next (gold) on the right, Done in Next's place on the last step.
+- **Keys:** under the card, right-aligned with it. In the field keys type, Enter goes
+  on to the next step, Down or Tab to the buttons and Up to the tick; on the buttons
+  Left and Right (or Tab) move, Enter chooses and Enter on the one in use goes on, Down
+  goes to the rows and Up to the field (the tick on a step without one); Page Up and
+  Page Down change step, F2 opens all settings, Escape closes.
+
+The steps are a table, [setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)
+(`STEPS`): a step is its name, title, sentence, field, buttons, rows (by cvar), aside and
+whether it closes on the recap, and the pop-up draws whatever the table holds, so a step
+is added or changed there, not in the drawing code. As of 23/11/2026:
+
+| Step | Asks | Picture buttons | Rows |
+| --- | --- | --- | --- |
+| 1 Look | Choose your look | SJK, EJK (EJK mode off, on) | Menu style, HUD look |
+| 2 Colours | Pick your colours | Solar, Sith, Jedi, Custom | Theme hue, Theme saturation |
+| 3 Player | Your player | Import my setup, Choose a character, Start fresh, under the Name field | none |
+| 4 Graphics | Graphics | Vanilla, Vanilla Plus, Solar Renderer (Low, Medium, High, Ultra under it) | Resolution, Display mode, Vertical sync |
+| 5 Play | How you play | none | Gameplay FPS, Camera style, Field of view, Mouse sensitivity, Invert mouse, Always run, Crosshair, HUD scale, Effects volume, Music volume |
+| 6 Online | Online | none | SJK identity, Check for updates, See & share nameplates, each with what it does under it; then the recap |
+
+The Player step asks the name because a new player who starts fresh otherwise plays as
+"Padawan" (Sol, 23/11/2026); an import brings a name over, so the two stand together.
+Choose a character opens the Character page on its own (not the Profile screen's tabs),
+and closing it shows the pop-up on that step again (`ClientMenu::first_setup_resume`).
+Gameplay FPS, which the import step held, is the first row of Play.
+
+A button stands for a row of First setup too (the two looks for EJK mode, the themes for
+Theme, the presets for Graphics preset, Import for Import from a client), so every row of
+[quick.rs](../crates/sjk-viewer/src/settings/quick.rs) is in a step, or in the table's
+`LEFT_OUT` list with the reason; a test fails when a row is in neither. Left out on
+purpose (they stay in Settings, and in its First setup category): the nameplates'
+range, bars, icons and duel rows, the Force aura and Protect+Absorb shell, and other
+duels' players.
+
+What the buttons show (`Art`):
+
+- The **looks** and the **presets:** the client's own off-screen renders, bundled as
+  small JPEGs ([setup_pictures.rs](../crates/sjk-viewer/src/setup_pictures.rs),
+  `assets/setup_pictures/`, 960x540 a look and 768x432 a preset, under 1 MB in all, a
+  test). The two looks are the same view of a match on mp/duel6, the player on one
+  spot of a local server (alone: a bot fights the moment it finds the player, and a
+  fight would make the two pictures differ more than the looks do), as SJK draws it on
+  a new profile and as EJK mode does (every setting of `ejk_mode::values`): what
+  differs is what a player sees in a match, the HUD's type, the status bar, the timer,
+  the image. The presets are mp/duel6 from
+  one camera under each of the six, as the menu pictures are bundled renders of the
+  same map ([The map behind](#the-map-behind)). Each picture has a texture of its own
+  outside the icon atlas, decoded on a worker the first time the pop-up draws one and
+  uploaded into the menu's renderer. Take them again with `setup_pictures_generate`
+  (the presets) and `setup_look_pictures_generate` (the looks, on a local server)
+  ([world_shot_setup_pictures.rs](../crates/sjk-viewer/src/world_shot_setup_pictures.rs))
+  after the renderer's look, a preset, the HUD or what EJK mode sets changes.
+- **What is bundled, and why** (23/11/2026). Renders of the game being played are
+  bundled, as the menu pictures and the site's screenshots are; files of the game are
+  not. The looks' pictures are frames of a match: the map, the default player's model
+  and the HUD at its small size in the corners, a screenshot of play. They are taken
+  with the retail archives only (`assets0.pk3` to `assets3.pk3`), so no HUD pack, model
+  or font of whoever took them is in them; the only name in them is the default
+  player's, Padawan, and no key or chat. Until then the EJK button drew the classic menus'
+  main page live from the player's own files, because a picture of that page would
+  have been the game's logo and frame artwork almost whole, which is the game's art
+  rather than a view of it being played; that page is no longer shown, since a player
+  choosing a look cares for the match more than for the menu.
+- **Themes:** each in its own colours whatever theme is worn (`theme::preview`): its
+  ground, a panel of its lit glass with strokes of its text and line-work and a pill of
+  its gold, its name in its text colour.
+- **Import my setup**, **Choose a character** and **Start fresh:** a settings picture,
+  large, on a disc.
+- A **preset** button also says how it should run on this PC, in the rating's colour
+  (`graphics_quality::Rating`), and carries "Recommended" when it holds the preset
+  recommended for the card. The Solar Renderer's four levels are chips under its words,
+  each with its rating's dot; its picture is the level under the keyboard, else the one
+  in use, else the richest that runs smoothly here, which a click on the button sets.
+  The step's aside says the card's memory and the recommendation.
+
+Choosing EJK sets `ui_ejkMode` (the mode then applies itself, `ejk_mode::follow`) and SJK
+clears it. The pop-up is the SJK UI's in every menu style: EJK mode turns the classic
+menus on under it and it stays open on its step (`ClientMenu::set_menu_style`), so the
+player goes on to the next steps; the same holds for its Menu style row. Settings changed
+elsewhere while it is open (the mode sets many a moment after its button) are read again
+the frame they change (`SettingsMenu::follow_console`, by the archive's stamp). On the
+Colours step an aside says, while EJK mode is on, that the theme colours SJK's pages, not
+the classic menus. On the Graphics step a preset stays the player's choice under EJK mode,
+which opens on Vanilla.
+
+The keyboard is in the step's field, on a picture button or on a row. A step with a
+field opens in it, else on its button in use: Left and Right (or Tab) move through the
+buttons and a button's chips, Enter chooses, and Enter on the one in use goes on to the
+next step, so Enter alone walks a new player through (in the field Enter goes on too).
+Down goes to the step's first row, Up to the field or the tick; from the rows, Up past
+the first comes back to the buttons and Down past the tick to the top of the step. A step
+of rows opens on its first row and wraps as Settings does. Page Up and Page Down change
+step from anywhere (Page Down on the last step is Done), F2 opens All settings, Escape
+closes. The pointer on a button or a row takes the keyboard there, but not from the
+field, which keeps it until a click elsewhere.
 
 The tick is First setup's own last row (`ui_hideFirstSetup`), pinned out of the
-scrolling lines (`ClassicRows::pinned`): the keyboard reaches it after the last
-row (Up from the first wraps to it), Enter or a click flips it, Backspace
-returns it to its default. Done or Escape goes back to the main page; All
-settings or Tab opens the Settings screen on First setup (Advanced, for the
-visit, in Simple). The pop-up has no
-search. Picking the classic style on its Menu style row goes on as that style's
-First setup, and picking the SJK UI on the classic one comes back to the pop-up. In a game the SJK UI's First setup is still the classic panel.
+lines (`ClassicRows::pinned`) on every step: Enter or a click flips it, Backspace
+returns it to its default, and Done on the last step sets it. Done or Escape goes back
+to the main page; All settings or F2 opens the Settings screen on First setup (Advanced,
+for the visit, in Simple), under the classic menu style that style's panel with the
+whole list ([client.md](client.md#first-setup)), where picking the SJK UI comes back to
+the pop-up. The pop-up has no search. In a game First setup is still the classic panel.
+picking the SJK UI there comes back to the pop-up. In a game the SJK UI's First setup is
+still the classic panel.
 
 ### Quick wheel
 
@@ -2901,7 +3107,7 @@ same look in every menu style, on the 16:9 frame:
 
 - **Card:** the kit's card over its scrim, 900 wide from x 510, centred, as tall as its
   words.
-- **Words:** "Alpha build" in gold (Rajdhani 22), "Welcome to Sol JK" (Rajdhani 36),
+- **Words:** "Alpha build" in gold (Rajdhani 22), "Welcome to Sun JK" (Rajdhani 36),
   then Exo 2 18 (muted): an alpha of a free and open-source client, expect bugs and
   unfinished parts, some collectibles shown but not unlockable yet (a work in
   progress, no need to ask Sol); report on the SJK Discord or with Report a bug, this icon in the

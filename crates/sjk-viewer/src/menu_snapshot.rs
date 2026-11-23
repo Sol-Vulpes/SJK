@@ -709,7 +709,11 @@ impl Snapshot {
         over_match: bool,
         viewport: [f32; 2],
     ) {
-        let directory = workspace_root().join("target/menu-snapshots");
+        let directory = workspace_root().join(if crate::menu::classic::own_look::on() {
+            "target/menu-snapshots-own"
+        } else {
+            "target/menu-snapshots"
+        });
         std::fs::create_dir_all(&directory).expect("create the snapshot directory");
         let size = (viewport[0] as u32, viewport[1] as u32);
         let mut image = match (&self.in_match, over_match) {
@@ -751,6 +755,11 @@ fn match_backdrop(vfs: &sjk_vfs::VirtualFileSystem) -> Option<RgbaImage> {
 #[ignore = "reads the installed game data named by JKA_GAME_DATA"]
 fn menu_snapshot() {
     let (art, vfs) = art();
+    // `SJK_CLASSIC_LOOK=sjk` draws the set in the classic menus' own look, into
+    // `target/menu-snapshots-own`; `SJK_THEME` names the theme it wears.
+    let own = std::env::var("SJK_CLASSIC_LOOK").is_ok_and(|look| look == "sjk");
+    crate::menu::classic::own_look::set(own);
+    let art = crate::menu::classic::own_look::art(art);
     let mut shots = Snapshot {
         font: crate::text::load_modern(1.0, None).expect("build the menu font"),
         icons: HashMap::from([(crate::ui_renderer::LOGO_TEXTURE.0, logo_icon())]),
@@ -767,6 +776,10 @@ fn menu_snapshot() {
     let directory = tempfile::tempdir().expect("scratch profile");
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).expect("console");
+    if let Ok(theme) = std::env::var("SJK_THEME") {
+        console.set_cvar(crate::menu::sjk::theme::CVAR, &theme);
+        crate::menu::sjk::theme::sync(&console);
+    }
     // A changed setting shows its mark and its default.
     console.set_cvar("r_hdrExposure", "1.5");
     // The classic option panels, focused on a row with something to say.
@@ -2261,6 +2274,10 @@ fn sjk_settings_snapshot() {
         let icon = image::load_from_memory(bytes).expect("a wheel icon");
         icons.insert(crate::ui_renderer::wheel_icon(index).0, icon.into_rgba8());
     }
+    // The sub-headings' small icons, four to a cell.
+    for (texture, cell) in crate::settings_icons::small_cells() {
+        icons.insert(texture.0, cell);
+    }
     let directory = tempfile::tempdir().unwrap();
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
@@ -2405,7 +2422,123 @@ fn sjk_settings_snapshot() {
     // Advanced's categories, then Simple's: Display, and Graphics on Vanilla and
     // on the SJK renderer, whose alpha warning the detail column shows.
     SettingsMode::Advanced.store(&mut console);
-    let simple: [Case; 6] = [
+    // The smarter controls: values players really set (the hub's settings usage), so
+    // the units, the volume curve and a typed stop show.
+    console.set_cvar("s_volume", "0.05");
+    console.set_cvar("s_musicVolume", "0.0");
+    console.set_cvar("sensitivity", "2.1");
+    console.set_cvar("com_maxfps", "275");
+    console.set_cvar("r_dayHour", "19.5");
+    let simple: [Case; 21] = [
+        // The categories cut into pictured sections.
+        (
+            "sjk-settings-sections-hud",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_nameplateBars"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-hud-top",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_drawHud"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-gameplay",
+            VIEWPORT_WIDE,
+            6,
+            Some("cg_speedTrail"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-sound",
+            VIEWPORT_WIDE,
+            3,
+            Some("s_spatial"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-sections-chat",
+            VIEWPORT_WIDE,
+            9,
+            Some("cg_chatTabFilter"),
+            false,
+            None,
+        ),
+        // A number with named stops: its list, a typed value in use ("Custom...").
+        (
+            "sjk-settings-stops",
+            VIEWPORT_WIDE,
+            1,
+            Some("com_maxfps"),
+            true,
+            None,
+        ),
+        // Volumes as loudness, the default marked on each track.
+        (
+            "sjk-settings-sound",
+            VIEWPORT_WIDE,
+            3,
+            Some("s_volume"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-controls",
+            VIEWPORT_WIDE,
+            4,
+            Some("sensitivity"),
+            false,
+            None,
+        ),
+        // Nameplates off: the rows that need them are dimmed and say so.
+        (
+            "sjk-settings-hud-needs",
+            VIEWPORT_WIDE,
+            8,
+            Some("cg_nameplateScale"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-network",
+            VIEWPORT_WIDE,
+            12,
+            Some("rate"),
+            true,
+            None,
+        ),
+        (
+            "sjk-settings-time-of-day",
+            VIEWPORT_WIDE,
+            2,
+            Some("r_dayHour"),
+            false,
+            None,
+        ),
+        // A slip of the fingers, and a wide search led by its best matches.
+        (
+            "sjk-settings-search-typo",
+            VIEWPORT_WIDE,
+            1,
+            None,
+            false,
+            Some("crosshar"),
+        ),
+        (
+            "sjk-settings-search-best",
+            VIEWPORT_WIDE,
+            1,
+            None,
+            false,
+            Some("hud"),
+        ),
         (
             "sjk-settings-chat",
             VIEWPORT_WIDE,
@@ -2453,6 +2586,22 @@ fn sjk_settings_snapshot() {
             14,
             Some(crate::graphics_quality::ROW_NAME),
             true,
+            None,
+        ),
+        (
+            "sjk-settings-simple-sound",
+            VIEWPORT_WIDE,
+            15,
+            Some("s_musicVolume"),
+            false,
+            None,
+        ),
+        (
+            "sjk-settings-simple-display",
+            VIEWPORT_WIDE,
+            13,
+            Some("com_maxfps"),
+            false,
             None,
         ),
     ];
@@ -2516,6 +2665,7 @@ fn sjk_theme_snapshot() {
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
     let cases = [
         ("sjk-theme-warm", None, None),
+        ("sjk-theme-sith", Some("sith"), None),
         ("sjk-theme-cold", Some("cold"), None),
         ("sjk-theme-custom-150", None, Some("150")),
         ("sjk-theme-custom-275", None, Some("275")),
@@ -2549,6 +2699,198 @@ fn sjk_theme_snapshot() {
         let list = menu.draw_list().expect("the settings screen draws");
         save_sjk_shot(name, VIEWPORT_WIDE, &backdrop, list, &icons, fonts);
     }
+    console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
+    theme::sync(&console);
+}
+
+/// First setup's pop-up over the duel6 levelshot: every step in the Solar theme (its
+/// picture buttons under the keyboard, then its rows), the first step wearing each
+/// theme and with EJK chosen, the graphics step on a Solar level, and the first and
+/// fourth steps on a 4:3 and an ultrawide screen.
+#[test]
+#[ignore = "reads the installed game data named by JKA_GAME_DATA"]
+fn sjk_first_setup_snapshot() {
+    use crate::game_font::SjkFonts;
+    use crate::graphics_quality::Level;
+    use crate::menu::sjk::{TextTarget, theme};
+    let (_, vfs) = art();
+    let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
+    let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
+    let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
+    let mut icons = HashMap::new();
+    for (index, (_, bytes)) in crate::settings_icons::ICONS.iter().enumerate() {
+        let icon = image::load_from_memory(bytes).expect("a settings icon");
+        icons.insert(
+            crate::ui_renderer::settings_icon(index).0,
+            icon.into_rgba8(),
+        );
+    }
+    for (texture, cell) in crate::settings_icons::small_cells() {
+        icons.insert(texture.0, cell);
+    }
+    for picture in crate::setup_pictures::Picture::ALL {
+        icons.insert(picture.texture().0, picture.decoded());
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let mut console =
+        crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
+    // What a shot shows: its name, the step, the choice the keyboard is on (none: its
+    // first row), the theme, EJK mode, a graphics preset to wear, and the screen.
+    struct Shot {
+        name: &'static str,
+        step: usize,
+        target: Option<usize>,
+        theme: &'static str,
+        ejk: bool,
+        level: Option<Level>,
+        viewport: [f32; 2],
+        /// A name typed in the step's field.
+        typed: Option<&'static str>,
+    }
+    let shot = |name, step, target| Shot {
+        name,
+        step,
+        target,
+        theme: "warm",
+        ejk: false,
+        level: None,
+        viewport: VIEWPORT_WIDE,
+        typed: None,
+    };
+    const UHD: [f32; 2] = [3840.0, 2160.0];
+    let shots = [
+        shot("sjk-first-setup-1-look", 0, Some(0)),
+        shot("sjk-first-setup-1-look-rows", 0, None),
+        Shot {
+            ejk: true,
+            ..shot("sjk-first-setup-1-look-ejk", 0, Some(1))
+        },
+        Shot {
+            theme: "sith",
+            ..shot("sjk-first-setup-1-look-sith", 0, Some(0))
+        },
+        Shot {
+            theme: "cold",
+            ..shot("sjk-first-setup-1-look-jedi", 0, Some(0))
+        },
+        Shot {
+            theme: "custom",
+            ..shot("sjk-first-setup-1-look-custom", 0, Some(0))
+        },
+        shot("sjk-first-setup-2-colours", 1, Some(0)),
+        Shot {
+            ejk: true,
+            theme: "cold",
+            ..shot("sjk-first-setup-2-colours-ejk", 1, None)
+        },
+        shot("sjk-first-setup-3-player", 2, None),
+        Shot {
+            typed: Some("^1Kyle^7Katarn"),
+            ..shot("sjk-first-setup-3-player-typed", 2, None)
+        },
+        shot("sjk-first-setup-3-player-buttons", 2, Some(1)),
+        shot("sjk-first-setup-4-graphics", 3, Some(1)),
+        Shot {
+            level: Some(Level::SolarHigh),
+            ..shot("sjk-first-setup-4-graphics-solar", 3, Some(4))
+        },
+        shot("sjk-first-setup-4-graphics-rows", 3, None),
+        Shot {
+            ejk: true,
+            theme: "sith",
+            ..shot("sjk-first-setup-4-graphics-ejk", 3, Some(0))
+        },
+        shot("sjk-first-setup-5-play", 4, None),
+        shot("sjk-first-setup-6-online", 5, None),
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-1-look-4x3", 0, Some(0))
+        },
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-4-graphics-4x3", 3, Some(1))
+        },
+        Shot {
+            viewport: VIEWPORT,
+            typed: Some("^3Sun^7Fox"),
+            ..shot("sjk-first-setup-3-player-4x3", 2, None)
+        },
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-6-online-4x3", 5, None)
+        },
+        Shot {
+            viewport: [2560.0, 1080.0],
+            ..shot("sjk-first-setup-1-look-ultrawide", 0, Some(0))
+        },
+        Shot {
+            viewport: UHD,
+            ..shot("sjk-first-setup-1-look-4k", 0, Some(0))
+        },
+        Shot {
+            viewport: UHD,
+            typed: Some("^1Kyle^7Katarn"),
+            ..shot("sjk-first-setup-3-player-4k", 2, None)
+        },
+        Shot {
+            viewport: UHD,
+            level: Some(Level::SolarMedium),
+            ..shot("sjk-first-setup-4-graphics-4k", 3, Some(3))
+        },
+        Shot {
+            viewport: UHD,
+            ..shot("sjk-first-setup-6-online-4k", 5, None)
+        },
+    ];
+    for shot in shots {
+        console.set_cvar(theme::HUE_CVAR, "150");
+        console.set_cvar(theme::CVAR, shot.theme);
+        theme::sync(&console);
+        console.set_cvar(crate::ejk_mode::CVAR, if shot.ejk { "1" } else { "0" });
+        crate::ejk_mode::follow(&mut console);
+        if let Some(level) = shot.level {
+            level.apply(&mut console);
+        } else if !shot.ejk {
+            Level::DEFAULT.apply(&mut console);
+        }
+        let mut settings = crate::settings::SettingsMenu::new();
+        settings.open_first_setup_popup(&console);
+        settings.setup_step_for_shot(&console, shot.step, shot.target);
+        console.set_cvar("name", "Padawan");
+        if let Some(typed) = shot.typed {
+            settings.setup_type_for_shot(&mut console, typed);
+        } else {
+            settings.follow_console(&console);
+        }
+        let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
+        settings.append_sjk_popup(
+            TextTarget::Families(
+                SjkFonts {
+                    display: (&mut display_text, &display.font),
+                    body: (&mut body_text, &body.font),
+                    code: None,
+                },
+                crate::text::TextStyle::NEUTRAL,
+            ),
+            shot.viewport,
+            1.0,
+        );
+        let fonts = SjkShotFonts {
+            display: (&display_text, &display.image),
+            body: (&body_text, &body.image),
+        };
+        save_sjk_shot(
+            shot.name,
+            shot.viewport,
+            &backdrop,
+            settings.draw_list(),
+            &icons,
+            fonts,
+        );
+    }
+    console.set_cvar(crate::ejk_mode::CVAR, "0");
+    crate::ejk_mode::follow(&mut console);
+    console.set_cvar(theme::HUE_CVAR, "22");
     console.set_cvar(theme::CVAR, theme::Theme::DEFAULT_NAME);
     theme::sync(&console);
 }
@@ -3162,6 +3504,23 @@ fn changelog(shots: &Snapshot, art: ArtSet) {
     let mut vertices = Vec::new();
     canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT);
     shots.save("sjk-page", canvas.draw_list(), &vertices, false);
+    // The same two pages on a 16:9 window: the own look's artwork reaches its edges.
+    for (name, page) in [
+        ("main-classic-wide", Page::Main),
+        ("sjk-page-wide", Page::Sjk),
+    ] {
+        let mut canvas = crate::menu_widgets::MenuCanvas::new();
+        let mut menu = crate::menu::classic::ClassicMain::new();
+        if page == Page::Main {
+            menu.select(2);
+        } else {
+            menu.show(page);
+        }
+        crate::menu::classic::view::build(&mut canvas, VIEWPORT_WIDE, &menu, 1.0, art);
+        let mut vertices = Vec::new();
+        canvas.append_text(&mut vertices, &shots.font.font, VIEWPORT_WIDE);
+        shots.save_at(name, canvas.draw_list(), &vertices, false, VIEWPORT_WIDE);
+    }
 }
 
 fn in_game_menu(shots: &Snapshot, art: ArtSet) {

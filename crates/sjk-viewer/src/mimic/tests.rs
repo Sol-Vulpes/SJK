@@ -234,7 +234,7 @@ fn sample_of(time: i32, state: &MovementState) -> Sample {
         crouched: state.movement_flags & 1 != 0, // PMF_DUCKED
         saber_move: state.saber_move,
         style: state.saber_anim_level,
-        holstered: state.saber_holstered != 0,
+        holstered: state.saber_holstered == ALL_BLADES_OFF,
         weapon: state.weapon,
     }
 }
@@ -466,4 +466,179 @@ fn walking_always_copies_a_walking_choreography_attacks_and_all() {
             run.attack_lag
         );
     }
+}
+
+/// The server's side of the view for one command: `PM_UpdateViewAngles` (the command's
+/// angles plus `delta_angles`, the pitch clamped at 16000 by rewriting its delta), or a
+/// held view (`PM_SetPMViewAngle`: the delta cancels the command's angles).
+fn serve_view(state: &mut MovementState, angles: [i32; 3], held: bool) {
+    for axis in 0..2 {
+        if held {
+            state.delta_angles[axis] =
+                angle_short(state.view_angles[axis]).wrapping_sub(angles[axis]) & 0xFFFF;
+            continue;
+        }
+        let mut short = angles[axis].wrapping_add(state.delta_angles[axis]) as i16;
+        if axis == 0 && short.unsigned_abs() > 16_000 {
+            short = 16_000 * short.signum();
+            state.delta_angles[0] = i32::from(short).wrapping_sub(angles[0]) & 0xFFFF;
+        }
+        state.view_angles[axis] = f32::from(short) * (360.0 / 65_536.0);
+    }
+}
+
+#[test]
+fn the_view_turns_to_the_wanted_one_and_stays_put_through_a_held_view() {
+    let mut state = MovementState {
+        view_angles: [0.0, 90.0, 0.0],
+        delta_angles: [1_234, 40_000, 0],
+        ..MovementState::default()
+    };
+    // Free: there within a few commands, six degrees at a time, and exactly.
+    let wanted = [20.0, 120.0];
+    let mut last = None;
+    for step in 0..6 {
+        let (angles, asked) = steer(last, &state, wanted);
+        let before = state.view_angles;
+        serve_view(&mut state, angles, false);
+        last = Some(angles);
+        for ((now, before), asked) in state.view_angles.iter().zip(before).zip(asked) {
+            assert!(
+                angle_delta(*now, before).abs() <= MAX_TURN + 0.01,
+                "step {step}"
+            );
+            assert!(angle_delta(*now, asked).abs() < 0.01);
+        }
+    }
+    assert!(angle_delta(state.view_angles[0], 20.0).abs() < 0.01);
+    assert!(angle_delta(state.view_angles[1], 120.0).abs() < 0.01);
+
+    // Held for a second while the leader looks elsewhere, and the mimic knows a
+    // `delta_angles` three commands old (a prediction the server's hold got ahead of):
+    // the view stays through the hold and, released, goes on from where it was held, a
+    // turn at a time, never thrown down or round.
+    let wanted = [-30.0, -100.0];
+    let mut known = std::collections::VecDeque::from([state.delta_angles; 3]);
+    for step in 0..250 {
+        let held = step < 125;
+        let stale = MovementState {
+            delta_angles: known.pop_front().unwrap(),
+            ..state.clone()
+        };
+        let (angles, _) = steer(last, &stale, wanted);
+        let before = state.view_angles;
+        serve_view(&mut state, angles, held);
+        known.push_back(state.delta_angles);
+        last = Some(angles);
+        for (now, before) in state.view_angles.iter().zip(before).take(2) {
+            let turned = angle_delta(*now, before).abs();
+            assert!(
+                turned <= if held { 0.01 } else { MAX_TURN + 0.01 },
+                "step {step}: turned {turned}"
+            );
+        }
+    }
+    assert!(angle_delta(state.view_angles[0], -30.0).abs() < 0.01);
+    assert!(angle_delta(state.view_angles[1], -100.0).abs() < 0.01);
+}
+
+#[test]
+fn a_steep_look_stays_short_of_the_pitch_clamp() {
+    let mut mimic = Mimic::default();
+    mimic.start(1, "Leader".into(), 0, false, false);
+    mimic.push(Sample {
+        time: 10,
+        on_ground: true,
+        ..Sample::default()
+    });
+    let mut follower = duelist([128.0, 0.0, 24.0], 180.0);
+    for stamp in (8..2_000).step_by(8) {
+        if stamp % 24 == 0 {
+            // The leader looks straight down.
+            mimic.push(Sample {
+                time: stamp,
+                on_ground: true,
+                angles: [89.0, 0.0, 0.0],
+                ..Sample::default()
+            });
+        }
+        let input = UserCommand {
+            server_time: stamp,
+            weapon: WP_SABER,
+            ..UserCommand::default()
+        };
+        let drive = mimic.drive(&input, follower.state()).unwrap();
+        follower.predict_command(drive.command, &Floor);
+    }
+    let pitch = angle_delta(follower.state().view_angles[0], 0.0);
+    assert!((pitch - PITCH_LIMIT).abs() < 0.1, "pitch {pitch}");
+    assert!(angle_delta(follower.state().view_angles[1], 180.0).abs() < 0.1);
+}
+
+#[test]
+fn the_stance_is_cycled_only_between_a_single_sabers_stances_and_never_in_a_swing() {
+    let mut mimic = Mimic::default();
+    mimic.start(1, "Leader".into(), 0, false, false);
+    let following = mimic.following.as_mut().unwrap();
+    let leader = |style: u8, saber_move: u32| Sample {
+        style,
+        saber_move,
+        weapon: WP_SABER,
+        ..Sample::default()
+    };
+    let own = |style: u8, saber_move: u32, holstered: u8| MovementState {
+        weapon: WP_SABER,
+        saber_anim_level: style,
+        saber_move,
+        saber_holstered: holstered,
+        ..MovementState::default()
+    };
+    // A staff (7) or two sabers (6) copying a single saber's strong stance: no press,
+    // which would put a blade away.
+    for held in [6, 7] {
+        assert_eq!(
+            following.saber_upkeep(&leader(3, 1), &own(held, 1, 0), 1_000),
+            0
+        );
+    }
+    // A single saber copying a staff: no press either.
+    assert_eq!(
+        following.saber_upkeep(&leader(7, 1), &own(2, 1, 0), 2_000),
+        0
+    );
+    // One blade of the staff off is not a holstered saber.
+    assert_eq!(
+        following.saber_upkeep(&leader(7, 1), &own(7, 1, 1), 3_000),
+        0
+    );
+    // Single to single: a press, but not while either swings (move 10, the overhead).
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 10), &own(2, 1, 0), 4_000),
+        0
+    );
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(2, 10, 0), 5_000),
+        0
+    );
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(2, 1, 0), 6_000),
+        GENCMD_SABER_ATTACK_CYCLE
+    );
+    // Every blade off on one side only: the switch.
+    assert_eq!(
+        following.saber_upkeep(&leader(3, 1), &own(3, 1, 2), 7_000),
+        GENCMD_SABER_SWITCH
+    );
+}
+
+#[test]
+fn the_leaders_view_is_read_from_their_angular_trajectory() {
+    // `apos.trBase` (netfields 5, 3, 33) holds a player's view; `angles` (25, 9, 24)
+    // is where they spawned or were teleported.
+    let mut entity = EntityState::from_raw_fields(1, vec![0_u32; 132]).unwrap();
+    for (field, value) in [(5, 10.0_f32), (3, 135.0), (25, 0.0), (9, -90.0)] {
+        assert!(entity.set_raw_field(field, value.to_bits()));
+    }
+    let sample = Sample::of_entity(100, &entity);
+    assert_eq!(sample.angles, [10.0, 135.0, 0.0]);
 }

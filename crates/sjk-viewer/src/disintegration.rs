@@ -296,6 +296,14 @@ impl crate::GpuState {
         let decoded = self.obituaries.decoded();
         let new = decoded.saturating_sub(self.saber_kills_seen).min(8) as usize;
         self.saber_kills_seen = decoded;
+        // `cg_finishers 0`: the kills are counted as seen and none plays.
+        let shown = self
+            .console
+            .as_ref()
+            .is_none_or(|console| console.bool_cvar(crate::finishers::SHOW_CVAR) != Some(false));
+        if !shown {
+            return;
+        }
         for offset in (0..new).rev() {
             let Some(kill) = self.obituaries.feed().newest(offset) else {
                 continue;

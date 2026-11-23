@@ -14,6 +14,9 @@ and part icons.
 This page holds the rules and the recipe, for new classic pages and for older
 ones being reworked.
 
+EJK mode (`ui_ejkMode`, [client.md](client.md#ejk-mode)) turns the classic style on in
+retail's look with the rest of JoF EJK's look (fonts, console, HUD, scoreboard, graphics).
+
 ## What stays retail
 
 A classic+ page must still read as the retail menu it stands for.
@@ -54,6 +57,66 @@ A classic+ page must still read as the retail menu it stands for.
   Apply, Back and Escape lead where retail's did; the description line at the
   bottom says what the hovered or focused item does. Classic screens and the
   SJK UI edit the same values, so switching style never loses anything.
+
+## The own look
+
+Since 21/11/2026 (Sol's request: a classic style of our own that is neat on large
+screens) the classic menus have a second look, `ui_classicLook sjk` (archived; Settings
+> Interface > Menus > Classic menus' look, Retail or SJK; `retail` is the default, the
+stock look being the default look). It keeps every page, entry and key of the classic
+style, so the rules of this page still say where things are, and changes only what is
+drawn ([own_look.rs](../crates/sjk-viewer/src/menu/classic/own_look.rs)):
+
+- **No retail picture.** The art set the classic screens are handed is empty
+  (`own_look::art`, in `sync_menu_style`), so each page draws the version it always had
+  for a player without the game's art: rules, bands, boxes and the title in type,
+  sharp at any size, where the retail pictures are 640x480 art stretched over the
+  window.
+- **The theme's colours.** Retail's colours, which the pages go on naming, are swapped
+  for the theme's when a page is finished (`own_look::recolour`, called by
+  `MenuCanvas::finish`; `DrawList::recolour` in `sjk-ui`): one table, `COLOURS`, says
+  which token each retail colour takes (titles the line-work, values the muted text,
+  buttons the gold, frames the line-work dimmed towards the ground, panels the glass),
+  and the alpha a page gave a colour is kept. So Solar, Sith, Jedi or a custom theme
+  ([sjk-ui.md](sjk-ui.md#theme)) dress the classic menus as they dress the SJK UI. A
+  colour not in the table is left alone: the white focus, greys, team colours, the
+  Force sides' and the saber swatches' own. The SJK UI's pages name no retail colour,
+  so the pass leaves them as they are.
+
+- **Retail's artwork, redrawn**
+  ([own_art.rs](../crates/sjk-viewer/src/menu/classic/own_art.rs), since 22/11/2026: the
+  first own look left the ground plain, which was not the point). The pieces retail has
+  as 640x480 pictures are drawn as shapes in the theme's colours, so a line is one
+  weight at any resolution: the ground over the map, the angular frame lines of the
+  page, and on the main page a framed glass window either side of the ring, each with
+  the slot between its two entries, and the ring round the emblem (a dark disc, three
+  rings, two shoulder arcs, the run of ticks under it, cross hairs behind the emblem);
+  on the other pages the page bar's band between two rules.
+- **The menu keeps its proportions.** The windows, the ring and the bar stand where
+  they stood on retail's 640x480 page, centred. A first version stretched the windows
+  out to a wide window's sides; Sol found the menu no longer looked like itself
+  (22/11/2026). What a 16:9 window shows beside the page is more of the room the page
+  stands in, imagined (`own_art::beyond`): the page's top and foot lines carried to the
+  screen's edges, a bulkhead plate each side with cut corners, ribs and studs, a
+  conduit with a node from each window to the edge, and the ground falling into shadow
+  towards the sides. On a 4:3 window none of it is drawn.
+- **The logo is the game's.** No drawing of ours stands for the game's name, and there
+  is no font to license for it. The player's own logo is used, from their game data,
+  but retail's is two pictures, a plate of the menu's blue with the letters cut out
+  over the metal they show, which on another ground is a blue box: at start the client
+  keeps the metal only where the plate is cut (`art::own_logo`, `ArtPiece::OwnLogo`),
+  the letters alone. Without the game's logo the title is set in type.
+- **The side writing is Aurebesh.** The columns down the sides are written by the
+  client ([own_writing.rs](../crates/sjk-viewer/src/menu/classic/own_writing.rs)) with
+  Aurebesh AF by AurekFonts (public domain, CC0, as the font file says; bundled,
+  `assets/fonts/AurebeshAF-Canon.otf`): SJK's own words in ragged lines, into one tall
+  picture made at start (`ArtPiece::OwnWriting`), tinted with the line-work and
+  climbing slowly as retail's columns do. One stands at each side of the page; a wide
+  window has one more at each edge.
+
+What it does not change yet: the entries and panels of the other pages are still as
+they were (settings lists, profile, Force page), on the same centred page. The in-game
+window and the dialogs keep their plain drawn boxes.
 
 ## What the plus adds
 

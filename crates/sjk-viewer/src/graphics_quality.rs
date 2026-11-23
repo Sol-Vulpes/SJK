@@ -400,13 +400,32 @@ pub(crate) fn vanilla(console: &ViewerConsole) -> bool {
         .all(|(cvar, values)| holds(console, cvar, values[vanilla]))
 }
 
+/// `renderer vanilla` as the settings put aside know it (`cvar_restore.rs`). It is only
+/// left while every setting is on Vanilla's value, so it has no hand change to keep;
+/// a record left behind by a preset picked since lets go of what was changed.
+pub(crate) const VANILLA_MODE: crate::cvar_restore::Mode = crate::cvar_restore::Mode {
+    name: "renderer vanilla",
+    record: RESTORE_CVAR,
+    values: vanilla_values,
+    keeps_hand_changes: true,
+};
+
+fn vanilla_values(_: &ViewerConsole) -> Vec<(&'static str, &'static str)> {
+    preset_cvars(Level::Vanilla)
+}
+
 /// Set the renderer to `value` ([`VANILLA`] or [`SJK`], any case), as the
-/// renderer command does; another value changes nothing.
+/// renderer command does; another value changes nothing. Vanilla asked for while
+/// another mode already holds Vanilla's settings (EJK mode, Tactical) is kept too: it
+/// stays when that mode goes off, until the SJK renderer is asked for.
 pub(crate) fn set_renderer(console: &mut ViewerConsole, value: &str) {
     let value = value.trim();
-    let to_vanilla = value.eq_ignore_ascii_case(VANILLA);
-    if (to_vanilla || value.eq_ignore_ascii_case(SJK)) && to_vanilla != vanilla(console) {
-        toggle_vanilla(console);
+    if value.eq_ignore_ascii_case(VANILLA) {
+        if !vanilla(console) || !crate::cvar_restore::applied(console, &VANILLA_MODE) {
+            enter_vanilla(console);
+        }
+    } else if value.eq_ignore_ascii_case(SJK) && vanilla(console) {
+        leave_vanilla(console);
     }
 }
 
@@ -416,29 +435,33 @@ pub(crate) fn set_renderer(console: &mut ViewerConsole, value: &str) {
 /// as when Vanilla was picked as a preset).
 pub(crate) fn toggle_vanilla(console: &mut ViewerConsole) {
     if vanilla(console) {
-        let kept = console
-            .cvar(RESTORE_CVAR)
-            .map(sjk_shell::CvarValue::as_text)
-            .unwrap_or_default();
-        let restored: Vec<(&str, &str)> = kept
-            .split(';')
-            .filter_map(|pair| pair.split_once('='))
-            .filter(|(cvar, _)| VALUES.iter().any(|(known, _)| known == cvar))
-            .chain([(RESTORE_CVAR, "")])
-            .collect();
-        if restored.len() == 1 {
-            Level::DEFAULT.apply(console);
-        }
-        console.set_cvars(restored);
+        leave_vanilla(console);
     } else {
-        let kept = VALUES
-            .iter()
-            .filter_map(|(cvar, _)| Some(format!("{cvar}={}", console.cvar(cvar)?.as_text())))
-            .collect::<Vec<_>>()
-            .join(";");
-        console.set_cvar(RESTORE_CVAR, &kept);
-        Level::Vanilla.apply(console);
+        enter_vanilla(console);
     }
+}
+
+fn enter_vanilla(console: &mut ViewerConsole) {
+    crate::cvar_restore::put_aside(console, &VANILLA_MODE, &preset_cvars(Level::Vanilla));
+}
+
+/// Give back what `renderer vanilla` put aside. Still on Vanilla with no other mode
+/// holding it (nothing was kept, or the player's own settings were Vanilla's): Vanilla
+/// Plus. While another mode holds Vanilla's settings they stay ([`vanilla_holders`]).
+fn leave_vanilla(console: &mut ViewerConsole) {
+    crate::cvar_restore::give_back(console, &VANILLA_MODE);
+    if vanilla(console) && vanilla_holders(console).is_empty() {
+        Level::DEFAULT.apply(console);
+    }
+}
+
+/// The other modes that hold Vanilla's settings now, by name (`cvar_restore.rs`).
+pub(crate) fn vanilla_holders(console: &ViewerConsole) -> Vec<&'static str> {
+    crate::cvar_restore::held_by_others(
+        console,
+        &VANILLA_MODE,
+        VALUES.iter().map(|(cvar, _)| *cvar),
+    )
 }
 
 /// Start a new profile on Vanilla Plus.
@@ -491,10 +514,18 @@ pub(crate) fn renderer_command(
                 VANILLA
             };
             set_renderer(console, value);
-            Ok(vec![
-                named(console),
-                "It applies after a graphics reload (vid_restart)".to_owned(),
-            ])
+            let mut lines = vec![named(console)];
+            let holders = vanilla_holders(console);
+            if value == SJK && vanilla(console) && !holders.is_empty() {
+                // Nothing to reload: the graphics did not change.
+                lines.push(format!(
+                    "{} still holds the Vanilla graphics: your own come back when it is off",
+                    holders.join(" and ")
+                ));
+            } else {
+                lines.push("It applies after a graphics reload (vid_restart)".to_owned());
+            }
+            Ok(lines)
         }
         _ => Err(format!("usage: {RENDERER_COMMAND} [{VANILLA}|{SJK}]")),
     }
