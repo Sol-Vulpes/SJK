@@ -403,6 +403,7 @@ impl ChatOverlay {
         let original = at.and_then(|at| self.lines.get(at));
         let line = ChatLine {
             name: String::new(),
+            lead: String::new(),
             body: text,
             sender: None,
             channel: original.map_or(Channel::Global, |line| line.channel),

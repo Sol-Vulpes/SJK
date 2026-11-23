@@ -445,6 +445,7 @@ const CHAT: &[Section] = &[
     section(
         "Chat look",
         &[
+            "cg_chatStyle",
             "cg_chatBoxFontSize",
             "cg_chatFont",
             "cg_chatBoxLineSpacing",

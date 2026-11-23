@@ -244,7 +244,12 @@ impl ChatOverlay {
         if !self.pm_visible(line) || !self.quiet_visible(line) {
             return false;
         }
-        let Some(input) = self.input.as_ref().filter(|_| self.options.tabs.filter) else {
+        // The classic box takes no notice of the field (`chat/view/classic.rs`).
+        let Some(input) = self
+            .input
+            .as_ref()
+            .filter(|_| self.options.tabs.filter && self.options.style == super::style::Style::Sjk)
+        else {
             return true;
         };
         match input.channel {

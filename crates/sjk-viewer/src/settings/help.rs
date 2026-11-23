@@ -1054,6 +1054,10 @@ const HELP: &[(&str, &str)] = &[
         "Log all game-server chat, including team/PMs before filters, in this profile's chatlogs/chat.log. Off by default.",
     ),
     (
+        crate::chat::style::CVAR,
+        "Classic is JoF EJK's chat: the message field at the top left, Tab changing channel, plain names, no pointer.",
+    ),
+    (
         "cg_chatBoxFontSize",
         "Size of chat messages and their rows; 1 is EternalJK's size, higher is larger and wraps sooner.",
     ),

@@ -416,6 +416,9 @@ pub(super) struct State {
     /// One past the newest line drawn last frame, so new rows can keep a
     /// scrolled-back view where it is.
     lines_end: u64,
+    /// Where the notify lines drawn this frame end, in pixels from the frame's top:
+    /// the classic chat field starts under them ([`ViewerConsole::notify_bottom`]).
+    notify_bottom: f32,
     /// The time the corner clock and the input clock were formatted at.
     clock_time: Option<LocalTime>,
     corner: String,
@@ -639,6 +642,7 @@ impl ViewerConsole {
     ) {
         frame.atlas = atlas;
         self.presentation.clear(viewport);
+        self.classic.notify_bottom = env.notify_top;
         if self.server_dialogue_active()
             || self.debug_panel.is_open()
             || self.spawn_panel.is_open()
@@ -1243,6 +1247,13 @@ impl ViewerConsole {
         }
     }
 
+    /// Where the notify lines the last frame drew end, in pixels from the frame's top
+    /// (the top itself, or the top status bar's foot, when it drew none): JoF EJK's
+    /// chat line stands under them (`Con_DrawNotify`'s `v`).
+    pub(crate) fn notify_bottom(&self) -> f32 {
+        self.classic.notify_bottom
+    }
+
     /// The notify lines (`Con_DrawNotify`), the console feed: with
     /// `con_drawNotify` on, of the last `con_notifylines` rows, those written in
     /// the last `con_notifytime` seconds and not quiet (chat is), from `top` (the
@@ -1321,6 +1332,7 @@ impl ViewerConsole {
             }
             y += grid.height;
         }
+        self.classic.notify_bottom = y;
         self.classic.rows = rows;
         // The next opening counts every row as already seen.
         self.classic.lines_end = end;

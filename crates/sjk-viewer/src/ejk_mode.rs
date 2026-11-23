@@ -2,8 +2,9 @@
 //! like JoF EJK (EternalJK, OpenJK's lineage), as close as SJK's own settings get: the
 //! classic menus, loading screen and in-game menu in retail's look, the game's own fonts
 //! in the menus, chat, console and HUD, EternalJK's console, HUD and scoreboard, the
-//! Vanilla graphics, and none of what SJK adds over a match (nameplates, status balloons,
-//! feats, kybers, finishers, toys, weather looks).
+//! Vanilla graphics, JoF EJK's chat (`cg_chatStyle classic`, `chat/style.rs`), and none of
+//! what SJK adds over a match (nameplates, status balloons, feats, kybers, finishers, toys,
+//! weather looks).
 //!
 //! It is a preset, not a mode the drawing code knows of: [`TABLE`] names each setting and
 //! the value JoF EJK's look takes, the Vanilla graphics preset
@@ -161,6 +162,11 @@ pub(crate) const TABLE: &[Entry] = &[
         "Away players stay in the server's order",
     ),
     // Chat.
+    entry(
+        crate::chat::style::CVAR,
+        "classic",
+        "JoF EJK's chat: the message field at the top left with its channels (cl_console.cpp),          the chat box as CG_ChatBox_DrawStrings lays it out (cg_draw.c), plain names, retail's          drop shadow, SJK chat lines as its cl_sjk.cpp shows them",
+    ),
     entry(
         "cg_chatBoxFontSize",
         "1",
@@ -472,6 +478,7 @@ mod tests {
         console.set_cvar(crate::stock_blades::CVAR, "1");
         console.set_cvar(crate::menu_hud::STYLE_CVAR, "radial");
         console.set_cvar(crate::text::system_font::CHAT_CVAR, "Segoe UI");
+        console.set_cvar("cg_chatBoxFontSize", "1.25");
         console.set_cvar("cg_nameplate", "1");
         console.set_cvar("cg_drawTimer", "0");
         console.set_cvar("r_sunShadowResolution", "4096");
@@ -491,11 +498,51 @@ mod tests {
             Some(crate::graphics_quality::Level::Vanilla)
         );
 
+        // The chat is JoF EJK's: the style, and what it reads at JoF EJK's defaults.
+        assert_eq!(
+            crate::chat::style::Style::read(Some(&console)),
+            crate::chat::style::Style::Classic
+        );
+        assert!(crate::graphics_quality::holds(
+            &console,
+            "cg_chatBoxFontSize",
+            "1"
+        ));
+
         console.set_cvar(CVAR, "0");
         follow(&mut console);
         assert!(!applied(&console));
         assert_eq!(text(&console, RESTORE_CVAR), "");
         assert_eq!(snapshot(&console), before);
+        assert_eq!(
+            crate::chat::style::Style::read(Some(&console)),
+            crate::chat::style::Style::Sjk
+        );
+    }
+
+    /// A player who picks SJK's chat again while the mode is on keeps it, and the mode
+    /// going off leaves it alone; one who chose the classic chat before the mode came
+    /// on has it still when the mode goes off.
+    #[test]
+    fn the_chat_style_is_the_players_to_change_and_to_keep() {
+        use crate::chat::style::{CVAR as STYLE, Style};
+        let (_directory, mut console) = console();
+        console.set_cvar(CVAR, "1");
+        follow(&mut console);
+        assert_eq!(Style::read(Some(&console)), Style::Classic);
+        console.set_cvar(STYLE, "sjk");
+        follow(&mut console);
+        assert_eq!(Style::read(Some(&console)), Style::Sjk);
+        console.set_cvar(CVAR, "0");
+        follow(&mut console);
+        assert_eq!(Style::read(Some(&console)), Style::Sjk);
+
+        console.set_cvar(STYLE, "classic");
+        console.set_cvar(CVAR, "1");
+        follow(&mut console);
+        console.set_cvar(CVAR, "0");
+        follow(&mut console);
+        assert_eq!(Style::read(Some(&console)), Style::Classic);
     }
 
     #[test]
@@ -565,6 +612,7 @@ mod tests {
         assert!(lines[0].contains("on") && lines.len() == 2);
         assert!(asked(&console) && applied(&console));
         assert_eq!(text(&console, crate::menu::style::CVAR), "classic");
+        assert_eq!(text(&console, crate::chat::style::CVAR), "classic");
         // Already on: nothing new to reload.
         assert_eq!(run(&mut console, &["1"]).unwrap().len(), 1);
         let list = run(&mut console, &["list"]).unwrap();
@@ -573,9 +621,14 @@ mod tests {
             list.iter()
                 .any(|line| line.contains("con_style \"classic\""))
         );
+        assert!(
+            list.iter()
+                .any(|line| line.contains("cg_chatStyle \"classic\""))
+        );
         run(&mut console, &["OFF"]).unwrap();
         assert!(!asked(&console) && !applied(&console));
         assert_eq!(text(&console, crate::menu::style::CVAR), "sjk");
+        assert_eq!(text(&console, crate::chat::style::CVAR), "sjk");
         assert!(run(&mut console, &["maybe"]).is_err());
         assert!(run(&mut console, &["on", "off"]).is_err());
     }

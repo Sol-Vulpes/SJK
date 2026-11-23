@@ -21,6 +21,7 @@ pub(crate) mod reply;
 mod row_tools;
 pub(crate) mod server_copy;
 pub(crate) mod sjk;
+pub(crate) mod style;
 mod substitutions;
 pub(crate) mod tabs;
 pub(crate) mod text_sizes;
@@ -94,6 +95,10 @@ impl Channel {
 
 struct ChatLine {
     name: String,
+    /// What the server wrote before the body, the name with its brackets and
+    /// separator (`^7Fox^7: `, `(Fox^7): `, `[Fox^7]: `), which the classic chat box
+    /// draws as it came (`chat/view/classic.rs`); empty when no name was told apart.
+    lead: String,
     body: String,
     sender: Option<ChatTarget>,
     channel: Channel,
@@ -220,6 +225,9 @@ pub(crate) struct ChatOverlay {
     scoreboard_layout: crate::scoreboard::behavior::ChatLayout,
     /// The room the status bars keep at the screen's edges: the feed stays inside it.
     edges: crate::status_bar::Reserved,
+    /// Where the console's notify lines end this frame, in pixels from the frame's top:
+    /// the classic message field starts there (`chat/view/classic.rs`).
+    notify_bottom: f32,
     options: options::Options,
     emojis: emoji::Emojis,
     /// The newest SJK chat id the feed has seen; `None` before the first sync.
@@ -407,6 +415,7 @@ impl ChatOverlay {
             layout_viewport: [0.0; 2],
             scoreboard_layout: crate::scoreboard::behavior::ChatLayout::Normal,
             edges: crate::status_bar::Reserved::NONE,
+            notify_bottom: 0.0,
             options: options::Options::default(),
             emojis: emoji::Emojis::default(),
             sjk_seen: None,
@@ -640,6 +649,8 @@ impl ChatOverlay {
             }
             None => {}
         }
+        // The stock prefix as the server wrote it, for the classic chat box.
+        let lead = display[..display.len() - body.len()].to_owned();
         let body = options::clean_body(body, self.options.clean);
         let (body, emojis) = if self.options.emojis {
             self.emojis.markup(&body)
@@ -655,6 +666,7 @@ impl ChatOverlay {
         }
         let line = ChatLine {
             name,
+            lead,
             body,
             sender: target,
             channel: if private {
@@ -747,6 +759,8 @@ impl ChatOverlay {
             (body, Vec::new())
         };
         let line = ChatLine {
+            // As the game writes a tell: `[name]: `.
+            lead: format!("[{name}^7]: "),
             name,
             body,
             sender,
@@ -787,6 +801,14 @@ impl ChatOverlay {
     #[cfg(test)]
     pub(crate) fn draft_for_shot(&mut self, text: &str) {
         self.open(false);
+        if let Some(input) = &mut self.input {
+            input.insert(text);
+        }
+    }
+
+    /// Type `text` into the open field, for world shots.
+    #[cfg(test)]
+    pub(crate) fn type_for_shot(&mut self, text: &str) {
         if let Some(input) = &mut self.input {
             input.insert(text);
         }
@@ -868,6 +890,18 @@ impl ChatOverlay {
         self.ui.draw_list()
     }
 
+    /// Say where the console's notify lines end this frame (`console_classic.rs`).
+    pub(crate) fn set_notify_bottom(&mut self, bottom: f32) {
+        self.notify_bottom = bottom;
+    }
+
+    /// Whether the open field takes the keyboard and leaves the pointer to the game, as
+    /// JoF EJK's message field does (`KEYCATCH_MESSAGE` catches keys; the mouse still
+    /// turns the view, `CL_MouseEvent`): the classic style's.
+    pub(crate) fn takes_keys_only(&self) -> bool {
+        self.is_typing() && self.options.style == style::Style::Classic
+    }
+
     /// Keep the feed inside the room the status bars keep this frame (`status_bar.rs`).
     pub(crate) fn set_edges(&mut self, edges: crate::status_bar::Reserved) {
         if self.edges != edges {
@@ -906,9 +940,10 @@ impl ChatOverlay {
         _scale: f32,
     ) {
         let ms = self.millis(Instant::now());
-        self.build(
+        self.build_with(
             draw_feed,
             fonts.font(chat_font(fonts)).unwrap_or(font),
+            fonts.font(RetailFont::Console).unwrap_or(font),
             viewport,
             ms,
         );
@@ -926,11 +961,19 @@ impl ChatOverlay {
         let (start, end) = self.center_text;
         let palette_of = self.palette_of();
         let chat = chat_font(fonts);
+        // The classic field is in the console's characters, as retail's is.
+        let (field_start, field_end) = if self.options.style == style::Style::Classic {
+            self.chat_text[1]
+        } else {
+            (0, 0)
+        };
         self.ui.append_text_routed(
             fonts,
             |id, _| {
                 Some(if (start..end).contains(&id.0) {
                     RetailFont::Headline
+                } else if (field_start..field_end).contains(&id.0) {
+                    RetailFont::Console
                 } else {
                     chat
                 })
@@ -948,18 +991,21 @@ impl ChatOverlay {
     /// dark letters in a white one; the rest as the game draws it.
     fn palette_of(&self) -> impl Fn(u32) -> crate::text::CodePalette + Copy + use<> {
         use crate::text::CodePalette;
-        let feed = match (self.options.outline, self.options.white) {
-            (true, white) => CodePalette::DarkOutlined.white_outlined(white),
-            (false, true) => CodePalette::WhiteEdged,
-            (false, false) => CodePalette::Game,
+        let classic = self.options.style == style::Style::Classic;
+        // The classic chat keeps retail's drop shadows unless the outlines are asked for:
+        // the font renderer's under the box, the character set's under the field.
+        let palettes = match (self.options.outline, self.options.white) {
+            (true, white) => [CodePalette::DarkOutlined.white_outlined(white); 2],
+            (false, true) => [CodePalette::WhiteEdged; 2],
+            (false, false) if classic => [CodePalette::RetailFont, CodePalette::RetailChars],
+            (false, false) => [CodePalette::Game; 2],
         };
         let chat = self.chat_text;
         move |id| {
-            if chat.iter().any(|(start, end)| (*start..*end).contains(&id)) {
-                feed
-            } else {
-                CodePalette::Game
-            }
+            chat.iter()
+                .zip(palettes)
+                .find(|((start, end), _)| (*start..*end).contains(&id))
+                .map_or(CodePalette::Game, |(_, palette)| palette)
         }
     }
 }

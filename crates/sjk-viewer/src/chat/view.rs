@@ -1,6 +1,7 @@
 //! Floating message typography and deterministic motion on the shared canvas.
 
 mod backdrop;
+mod classic;
 mod composer;
 mod draft;
 mod name;
@@ -76,7 +77,24 @@ fn place_beside_scoreboard(g: &mut Geometry, viewport: [f32; 2], font_scale: f32
 }
 
 impl ChatOverlay {
+    /// [`Self::build_with`], the classic field in the feed's font too (the tests').
+    #[cfg(test)]
     pub(super) fn build(&mut self, draw_feed: bool, font: &UiFont, viewport: [f32; 2], ms: u64) {
+        self.build_with(draw_feed, font, font, viewport, ms);
+    }
+
+    /// Lay the frame's chat out: the feed, the centre print and the field in `font`,
+    /// the classic field (`cg_chatStyle classic`) in `field_font`, the console's
+    /// characters.
+    pub(super) fn build_with(
+        &mut self,
+        draw_feed: bool,
+        font: &UiFont,
+        field_font: &UiFont,
+        viewport: [f32; 2],
+        ms: u64,
+    ) {
+        let classic = self.options.style == style::Style::Classic;
         if self.layout_viewport != viewport {
             for line in &mut self.lines {
                 line.y = None;
@@ -106,7 +124,12 @@ impl ChatOverlay {
             crate::scoreboard::behavior::ChatLayout::Classic { hide_feed: true }
         );
         let feed_start = self.ui.next_text_id();
-        if !hide_feed && (self.is_typing() || (draw_feed && self.options.lifetime != 0)) {
+        if classic {
+            // JoF EJK's box takes no notice of the message field.
+            if !hide_feed && draw_feed && self.options.lifetime != 0 {
+                self.build_classic_feed(font, &g, viewport, ms);
+            }
+        } else if !hide_feed && (self.is_typing() || (draw_feed && self.options.lifetime != 0)) {
             self.build_feed(font, &g, ms);
         }
         let feed_text = (feed_start, self.ui.next_text_id());
@@ -153,7 +176,10 @@ impl ChatOverlay {
             self.draw_plums();
         }
         let composer_start = self.ui.next_text_id();
-        if self.is_typing() {
+        if classic {
+            let top = self.notify_bottom.max(self.edges.top);
+            self.build_classic_field(field_font, viewport, top, ms);
+        } else if self.is_typing() {
             // JoF's message input is independent of its chat feed. Keep SJK's
             // composer inside the window when the feed sits at virtual y=475.
             // The composer keeps its pre-19/10/2026 proportion to the feed's text,
@@ -172,8 +198,9 @@ impl ChatOverlay {
         self.chat_text = [feed_text, (composer_start, self.ui.next_text_id())];
         // A find's blade under the pointer shows large, over the feed and the composer.
         self.build_find_blade(&g, viewport);
-        // A name under the pointer shows its profile card, over everything.
-        self.follow_card(self.is_typing(), ms);
+        // A name under the pointer shows its profile card, over everything; the classic
+        // chat has no pointer and so no card.
+        self.follow_card(self.is_typing() && !classic, ms);
         self.build_card(font, &g, viewport);
         self.ui.finish(u16::MAX);
     }

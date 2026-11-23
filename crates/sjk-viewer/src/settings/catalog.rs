@@ -1185,6 +1185,11 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
+        label: "Chat style",
+        cvar: crate::chat::style::CVAR,
+        kind: ValueKind::Choice(&crate::chat::style::Style::NAMES),
+    },
+    Setting {
         label: "Chat text size",
         cvar: "cg_chatBoxFontSize",
         kind: ValueKind::Float {
