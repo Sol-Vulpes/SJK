@@ -2695,7 +2695,7 @@ fn sjk_first_setup_snapshot() {
     use crate::game_font::SjkFonts;
     use crate::graphics_quality::Level;
     use crate::menu::sjk::{TextTarget, theme};
-    let (art, vfs) = art();
+    let (_, vfs) = art();
     let display = crate::text::load_family(&crate::text::DISPLAY, 1.0, None).expect("Rajdhani");
     let body = crate::text::load_family(&crate::text::BODY, 1.0, None).expect("Exo 2");
     let backdrop = decode(&vfs, "levelshots/mp/duel6.jpg").expect("the duel6 levelshot");
@@ -2726,6 +2726,8 @@ fn sjk_first_setup_snapshot() {
         ejk: bool,
         level: Option<Level>,
         viewport: [f32; 2],
+        /// A name typed in the step's field.
+        typed: Option<&'static str>,
     }
     let shot = |name, step, target| Shot {
         name,
@@ -2735,7 +2737,9 @@ fn sjk_first_setup_snapshot() {
         ejk: false,
         level: None,
         viewport: VIEWPORT_WIDE,
+        typed: None,
     };
+    const UHD: [f32; 2] = [3840.0, 2160.0];
     let shots = [
         shot("sjk-first-setup-1-look", 0, Some(0)),
         shot("sjk-first-setup-1-look-rows", 0, None),
@@ -2761,8 +2765,12 @@ fn sjk_first_setup_snapshot() {
             theme: "cold",
             ..shot("sjk-first-setup-2-colours-ejk", 1, None)
         },
-        shot("sjk-first-setup-3-import", 2, Some(0)),
-        shot("sjk-first-setup-3-import-rows", 2, None),
+        shot("sjk-first-setup-3-player", 2, None),
+        Shot {
+            typed: Some("^1Kyle^7Katarn"),
+            ..shot("sjk-first-setup-3-player-typed", 2, None)
+        },
+        shot("sjk-first-setup-3-player-buttons", 2, Some(1)),
         shot("sjk-first-setup-4-graphics", 3, Some(1)),
         Shot {
             level: Some(Level::SolarHigh),
@@ -2785,8 +2793,35 @@ fn sjk_first_setup_snapshot() {
             ..shot("sjk-first-setup-4-graphics-4x3", 3, Some(1))
         },
         Shot {
+            viewport: VIEWPORT,
+            typed: Some("^3Sun^7Fox"),
+            ..shot("sjk-first-setup-3-player-4x3", 2, None)
+        },
+        Shot {
+            viewport: VIEWPORT,
+            ..shot("sjk-first-setup-6-online-4x3", 5, None)
+        },
+        Shot {
             viewport: [2560.0, 1080.0],
             ..shot("sjk-first-setup-1-look-ultrawide", 0, Some(0))
+        },
+        Shot {
+            viewport: UHD,
+            ..shot("sjk-first-setup-1-look-4k", 0, Some(0))
+        },
+        Shot {
+            viewport: UHD,
+            typed: Some("^1Kyle^7Katarn"),
+            ..shot("sjk-first-setup-3-player-4k", 2, None)
+        },
+        Shot {
+            viewport: UHD,
+            level: Some(Level::SolarMedium),
+            ..shot("sjk-first-setup-4-graphics-4k", 3, Some(3))
+        },
+        Shot {
+            viewport: UHD,
+            ..shot("sjk-first-setup-6-online-4k", 5, None)
         },
     ];
     for shot in shots {
@@ -2801,9 +2836,14 @@ fn sjk_first_setup_snapshot() {
             Level::DEFAULT.apply(&mut console);
         }
         let mut settings = crate::settings::SettingsMenu::new();
-        settings.set_retail_art(art);
         settings.open_first_setup_popup(&console);
         settings.setup_step_for_shot(&console, shot.step, shot.target);
+        console.set_cvar("name", "Padawan");
+        if let Some(typed) = shot.typed {
+            settings.setup_type_for_shot(&mut console, typed);
+        } else {
+            settings.follow_console(&console);
+        }
         let (mut display_text, mut body_text) = (Vec::new(), Vec::new());
         settings.append_sjk_popup(
             TextTarget::Families(

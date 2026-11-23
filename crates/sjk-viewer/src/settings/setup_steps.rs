@@ -2,9 +2,12 @@
 //! time, and [`STEPS`] is what it asks. Each step has a title, a sentence, its picture
 //! buttons and the few plain rows under them; the pop-up (`sjk_popup.rs`) draws whatever
 //! the table holds and knows no step by name, so a step is added, moved or changed here.
+//! A step may also hold a text field ([`Field`], the player's name) over its buttons, and
+//! close on a recap of what the steps before it hold ([`Step::recap`]).
 //!
 //! The rows are First setup's own (`quick.rs`), named by cvar. A picture button stands
-//! for a row too ([`Act::stands_for`]): the two looks are the EJK mode switch, the
+//! for a row too ([`Act::stands_for`]): the two looks (each a picture of the same
+//! moment of a match, `setup_pictures.rs`) are the EJK mode switch, the
 //! themes the Theme row, the presets the Graphics preset row, Import the import row. A
 //! row of `quick.rs` that no step shows is listed in [`LEFT_OUT`] with the reason; a test
 //! keeps the three in step, so no row is lost by accident.
@@ -31,6 +34,23 @@ pub(super) struct Step {
     pub(super) explained: bool,
     /// A sentence under the buttons.
     pub(super) aside: Option<Aside>,
+    /// A text field over the buttons.
+    pub(super) field: Option<Field>,
+    /// Under its rows, what the steps before it hold now, each a way back to its step.
+    pub(super) recap: bool,
+}
+
+/// A text field of a step: a text setting typed in place.
+pub(super) struct Field {
+    pub(super) label: &'static str,
+    /// The text cvar it writes, as it is typed.
+    pub(super) cvar: &'static str,
+    /// What the cvar holds on a new profile, kept when the field is left empty.
+    pub(super) empty: &'static str,
+    /// The text is a player's name: `^` and a digit colour what follows, so the field
+    /// shows what is typed, the colours as chips to add, and beside it the name as the
+    /// game draws it.
+    pub(super) colours: bool,
 }
 
 /// A sentence a step shows under its buttons.
@@ -62,9 +82,6 @@ pub(super) enum Art {
     Picture(Picture),
     /// The render of the graphics preset the button would set.
     Preset,
-    /// The classic menus' main page as the game's files draw it, laid out small: the
-    /// player's own retail artwork, which SJK does not ship, so not a bundled render.
-    ClassicMenu,
     /// The theme's own colours, drawn.
     Theme(Theme),
     /// One of the settings' pictures (`settings_icons`), large.
@@ -86,6 +103,8 @@ pub(super) enum Act {
     Preset(&'static [(Level, &'static str)]),
     /// Open the Import page.
     Import,
+    /// Open the Character page; closing it comes back to the step.
+    Character,
     /// Nothing to set: go on to the next step.
     Next,
 }
@@ -100,7 +119,7 @@ impl Act {
             Self::Theme(_) => Some(theme::CVAR),
             Self::Preset(_) => Some(graphics_quality::ROW_NAME),
             Self::Import => Some(super::catalog::IMPORT_ROW),
-            Self::Next => None,
+            Self::Character | Self::Next => None,
         }
     }
 
@@ -127,7 +146,7 @@ impl Act {
             Self::Preset(levels) => levels
                 .get(option)
                 .is_some_and(|(level, _)| Level::current(console) == Some(*level)),
-            Self::Import | Self::Next => false,
+            Self::Import | Self::Character | Self::Next => false,
         }
     }
 
@@ -189,13 +208,13 @@ pub(super) const STEPS: &[Step] = &[
     Step {
         name: "Look",
         title: "Choose your look",
-        sentence: "The same game and the same servers either way. You can change your mind at any time.",
+        sentence: "The same moment of a match, drawn both ways. The game and the servers are the same, and you can change your mind at any time.",
         buttons: &[
             Button {
                 name: "SJK",
                 lines: &[
                     "The new look: SJK's own menus over the live map",
-                    "Nameplates, a kill feed and SJK's extras in a match",
+                    "A status bar, a kill feed and SJK's extras in a match",
                     "Vanilla Plus graphics, yours to raise in step 4",
                 ],
                 art: Art::Picture(Picture::LookSjk),
@@ -211,7 +230,7 @@ pub(super) const STEPS: &[Step] = &[
                     "EJK's HUD, scoreboard and console, Vanilla graphics",
                     "Your own settings come back when you return to SJK",
                 ],
-                art: Art::ClassicMenu,
+                art: Art::Picture(Picture::LookEjk),
                 act: Act::Set {
                     cvar: EJK,
                     value: "1",
@@ -221,6 +240,8 @@ pub(super) const STEPS: &[Step] = &[
         rows: &[crate::menu::style::CVAR, crate::menu_hud::STYLE_CVAR],
         explained: false,
         aside: None,
+        field: None,
+        recap: false,
     },
     Step {
         name: "Colours",
@@ -260,20 +281,31 @@ pub(super) const STEPS: &[Step] = &[
                 "EJK mode is on: the classic menus keep the game's own colours. The theme still colours SJK's pages, such as this one.",
             ),
         }),
+        field: None,
+        recap: false,
     },
     Step {
-        name: "Import",
-        title: "Coming from another client?",
-        sentence: "Bring your name, model, keys and settings over from base JKA, EJK, TaystJK or another client.",
+        name: "Player",
+        title: "Your player",
+        sentence: "Your name as other players see it, and your setup from another client if you have one.",
         buttons: &[
             Button {
                 name: "Import my setup",
                 lines: &[
-                    "Reads a .cfg from the clients found on this PC, or a file you pick",
+                    "Name, model, keys and settings from base JKA, EJK, TaystJK or another client",
                     "You choose which parts come over",
                 ],
                 art: Art::Icon("import"),
                 act: Act::Import,
+            },
+            Button {
+                name: "Choose a character",
+                lines: &[
+                    "Your model, its colours and your saber, on the Character page",
+                    "Closing it brings you back here",
+                ],
+                art: Art::Icon("game_options"),
+                act: Act::Character,
             },
             Button {
                 name: "Start fresh",
@@ -285,9 +317,16 @@ pub(super) const STEPS: &[Step] = &[
                 act: Act::Next,
             },
         ],
-        rows: &[crate::gameplay_fps::CVAR],
+        rows: &[],
         explained: false,
         aside: None,
+        field: Some(Field {
+            label: "Name",
+            cvar: "name",
+            empty: "Padawan",
+            colours: true,
+        }),
+        recap: false,
     },
     Step {
         name: "Graphics",
@@ -296,13 +335,21 @@ pub(super) const STEPS: &[Step] = &[
         buttons: &[
             Button {
                 name: "Vanilla",
-                lines: &["The original game's look, at the least cost"],
+                lines: &[
+                    "The original game's look, at the least cost",
+                    "Baked lighting as the maps were made, every SJK effect off",
+                    "The graphics EJK mode sets",
+                ],
                 art: Art::Preset,
                 act: Act::Preset(&[(Level::Vanilla, "")]),
             },
             Button {
                 name: "Vanilla Plus",
-                lines: &["SJK's image over the maps' own lighting: HDR, bloom, glow"],
+                lines: &[
+                    "SJK's image over the maps' own lighting: HDR, bloom, glow",
+                    "Smoother edges, ambient occlusion and lit models",
+                    "A new profile starts here",
+                ],
                 art: Art::Preset,
                 act: Act::Preset(&[(Level::VanillaPlus, "")]),
             },
@@ -324,13 +371,16 @@ pub(super) const STEPS: &[Step] = &[
             when: None,
             text: Words::Made(graphics_quality::card_words),
         }),
+        field: None,
+        recap: false,
     },
     Step {
         name: "Play",
         title: "How you play",
-        sentence: "Camera, aim and sound. Settings has each of these too, and many more.",
+        sentence: "Movement, camera, aim and sound. Settings has each of these too, and many more.",
         buttons: &[],
         rows: &[
+            crate::gameplay_fps::CVAR,
             crate::camera::STYLE_CVAR,
             "cg_fov",
             "sensitivity",
@@ -343,6 +393,8 @@ pub(super) const STEPS: &[Step] = &[
         ],
         explained: false,
         aside: None,
+        field: None,
+        recap: false,
     },
     Step {
         name: "Online",
@@ -354,9 +406,11 @@ pub(super) const STEPS: &[Step] = &[
         aside: Some(Aside {
             when: None,
             text: Words::Fixed(
-                "That is all. Settings has every option, and the firstsetup command opens this again.",
+                "Done closes First setup for good: it no longer opens at start. The firstsetup command opens it again.",
             ),
         }),
+        field: None,
+        recap: true,
     },
 ];
 
@@ -476,14 +530,14 @@ mod tests {
                     Act::Set { cvar, .. } => assert!(console.cvar(cvar).is_some(), "{cvar}"),
                     Act::Preset(levels) => assert!(!levels.is_empty()),
                     Act::Theme(theme) => assert_eq!(button.name, theme.label()),
-                    Act::Import | Act::Next => {}
+                    Act::Import | Act::Character | Act::Next => {}
                 }
                 if let Art::Icon(name) = button.art {
                     assert!(crate::settings_icons::picture(name).is_some(), "{name}");
                 }
             }
             // A step with pictures keeps to a few rows; one without fits the card.
-            let most = if step.buttons.is_empty() { 9 } else { 3 };
+            let most = if step.buttons.is_empty() { 10 } else { 3 };
             let lines = step.rows.len() * if step.explained { 2 } else { 1 };
             assert!(lines <= most, "{} has {lines} lines", step.title);
             if let Some(Aside {
@@ -491,6 +545,17 @@ mod tests {
             }) = step.aside
             {
                 assert!(console.cvar(cvar).is_some(), "{cvar}");
+            }
+            // A field writes a text cvar, and what it keeps when left empty is that
+            // cvar's own default.
+            if let Some(field) = &step.field {
+                assert!(!field.label.is_empty());
+                assert_eq!(
+                    console.text_value(field.cvar),
+                    Some(field.empty),
+                    "{}",
+                    field.cvar
+                );
             }
         }
     }
@@ -536,6 +601,7 @@ mod tests {
         assert!(solar.act.in_use(1, &console));
         assert!(!solar.act.in_use(0, &console) && !solar.act.in_use(2, &console));
         assert!(!Act::Import.in_use(0, &console) && !Act::Next.in_use(0, &console));
+        assert!(!Act::Character.in_use(0, &console));
     }
 
     /// Left and Right go through every choice, a button's several presets included.

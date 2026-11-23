@@ -46,6 +46,12 @@ pub(crate) use groups::{Advanced, Group, Simple};
 use resolution::{PickResult, ResolutionChoice, ResolutionPicker};
 pub(crate) use sjk_view::Rail;
 pub(crate) use wheel_editor::WheelMode;
+/// How many steps First setup's pop-up has (tests).
+#[cfg(test)]
+pub(crate) fn setup_steps_len() -> usize {
+    setup_steps::STEPS.len()
+}
+
 pub(crate) enum SettingsResult {
     None,
     Back,
@@ -57,6 +63,9 @@ pub(crate) enum SettingsResult {
     /// First setup's "Import from another client" row: the Import page with
     /// the configs found (or the file dialog), over the settings.
     OpenImport,
+    /// First setup's pop-up's "Choose a character": the Character page, which comes
+    /// back to the pop-up's step when it closes.
+    OpenCharacter,
     /// The Gameplay FPS row's Enter: the card that explains it, over the settings.
     OpenGameplayFps,
     /// The installed-pack browser, over the settings.
@@ -638,6 +647,8 @@ impl SettingsMenu {
         self.searching
             || self.editing.is_some()
             || self.numeric.is_some()
+            // First setup's pop-up's field (the player's name).
+            || self.popup_on_field()
             // The quick wheel's catalogue types into its search, so held
             // letters and Backspace repeat there too.
             || self.wheel.is_open() && (self.wheel.typing.is_some() || self.wheel.picker.is_some())
@@ -650,6 +661,9 @@ impl SettingsMenu {
         }
         if self.wheel.is_open() && self.wheel.typing.is_none() && self.wheel.picker.is_some() {
             return Some(&self.wheel.search);
+        }
+        if let Some(field) = self.popup_field_text() {
+            return Some(field);
         }
         self.editing.as_ref().map(|draft| draft.text.as_str())
     }
@@ -733,6 +747,10 @@ impl SettingsMenu {
                 }
                 _ => {}
             }
+            return SettingsResult::None;
+        }
+        // First setup's pop-up's field takes what is typed, held keys too.
+        if self.popup_field_key(key, event.text.as_deref(), console) {
             return SettingsResult::None;
         }
         if event.repeat {

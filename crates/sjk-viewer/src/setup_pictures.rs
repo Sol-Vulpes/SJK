@@ -1,7 +1,6 @@
-//! First setup's pictures: the SJK look and each graphics preset, shown on the
-//! pop-up's picture buttons (`settings/sjk_popup.rs`, `docs/sjk-ui.md`, First setup).
-//! The classic menus' picture is not one of them: it shows the game's own menu
-//! artwork, which SJK never ships, so the pop-up draws it from the player's files.
+//! First setup's pictures: the two looks (the same moment of a match as SJK and as EJK
+//! mode draw it) and each graphics preset, shown on the pop-up's picture buttons
+//! (`settings/sjk_popup.rs`, `docs/sjk-ui.md`, First setup).
 //!
 //! They are the client's own off-screen renders, bundled as small JPEGs
 //! (`assets/setup_pictures/`), as the menu pictures are (`menu_pictures.rs`):
@@ -19,8 +18,9 @@ use std::sync::{Arc, Mutex};
 /// One picture.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Picture {
-    /// The SJK UI's main page over its map.
+    /// A match as SJK draws it on a new profile, and the same view as EJK mode does.
     LookSjk,
+    LookEjk,
     /// The same view under each graphics preset.
     Vanilla,
     VanillaPlus,
@@ -47,8 +47,9 @@ const LOOK_SIZE: [u32; 2] = [960, 540];
 const PRESET_SIZE: [u32; 2] = [768, 432];
 
 impl Picture {
-    pub(crate) const ALL: [Self; 7] = [
+    pub(crate) const ALL: [Self; 8] = [
         Self::LookSjk,
+        Self::LookEjk,
         Self::Vanilla,
         Self::VanillaPlus,
         Self::SolarLow,
@@ -79,6 +80,7 @@ impl Picture {
     pub(crate) fn name(self) -> &'static str {
         match self {
             Self::LookSjk => "look-sjk",
+            Self::LookEjk => "look-ejk",
             Self::Vanilla => "preset-vanilla",
             Self::VanillaPlus => "preset-vanilla-plus",
             Self::SolarLow => "preset-solar-low",
@@ -92,7 +94,7 @@ impl Picture {
     #[cfg(test)]
     pub(crate) fn size(self) -> [u32; 2] {
         match self {
-            Self::LookSjk => LOOK_SIZE,
+            Self::LookSjk | Self::LookEjk => LOOK_SIZE,
             _ => PRESET_SIZE,
         }
     }
@@ -101,6 +103,7 @@ impl Picture {
     fn bytes(self) -> &'static [u8] {
         match self {
             Self::LookSjk => bundled!("look-sjk"),
+            Self::LookEjk => bundled!("look-ejk"),
             Self::Vanilla => bundled!("preset-vanilla"),
             Self::VanillaPlus => bundled!("preset-vanilla-plus"),
             Self::SolarLow => bundled!("preset-solar-low"),

@@ -1257,8 +1257,8 @@ the download's progress, Check again and Download
 
 ### First setup
 
-At start (until it is ticked off) and from the `firstsetup` command, First setup
-is a pop-up card over the map, not the Settings screen (Sol's request,
+At start (until it is finished or ticked off) and from the `firstsetup` command, First
+setup is a pop-up card over the map, not the Settings screen (Sol's request,
 08/10/2026, with the tick that stops it opening always in view at its foot). Since
 23/11/2026 it asks one thing at a time, in steps with pictures (Sol: "we should have
 steps in the first setup with images", and a button with an image for EJK mode, which
@@ -1266,41 +1266,83 @@ was a small switch lost in a list of thirty rows).
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs) draws it; the rail's
 First setup category still shows every row in one list in the Settings screen.
 
+It is the pop-up over the main menu in every menu style, at start and from the command
+(it is a page with only an SJK look, and a look picked on it changes the style under
+it): until 23/11/2026 the classic style got the classic Setup page's list instead, so a
+player who had picked EJK in step 1 never saw the pop-up again. That list is still what
+the classic Setup page's First setup opens, what the pop-up's All settings shows under
+the classic style, and what `firstsetup` opens in a game.
+
+**It finishes.** Done on the last step (or Page Down there) closes it and sets
+`ui_hideFirstSetup`, the "Don't show at start" tick's own setting, so it no longer
+opens at start; opened again by `firstsetup`, the tick shows ticked and can be taken
+off. Closed before its end (Escape, All settings), it is offered again at the next
+start, unless the tick was set by hand. No second setting records the finish: the tick
+says what will happen, and a player who ticked it before is never shown the pop-up
+again by an update.
+
 - **Card:** 1240 wide and 950 tall, centred, over the map darkened all over
   (78 %), with the browser prompts' glass, shadow and holo edge (`kit::card`). It is
-  the same size on every step; a step that does not fill it sits a little lower.
+  the same size on every step; a step that does not fill it sits a little lower, and a
+  step whose pictures are drawn (the themes, the icons) draws them taller first.
 - **Steps strip,** across the top: each step a numbered disc and its name, a line
   running on to the next. The step on show is gold, those before it lit. A click on a
   step shows it.
 - **Title and sentence:** what the step asks (Rajdhani 40) and one sentence under it.
+- **Field** (the Player step's name): a label, a text field and, for a name, the name
+  as the game draws it beside the field and a chip for each colour `^1` to `^7` under
+  it. The field shows what is typed, the colour codes as their two characters (drawn a
+  piece at a time so that no piece holds a whole code); a click on a chip types its
+  code. The setting is written as it is typed, an emptied field keeps the name the
+  field was entered with, and a name stops at the game's 31 bytes
+  (`player_menu::append_legacy_name`, the Character page's rule). It follows the
+  [text field rule](#sjk-ui): Ctrl+A, Ctrl+C, Ctrl+V and a held Backspace come from the
+  menu's one handler for a page's open field (`SettingsMenu::typing`, `field_text`,
+  [text_entry.rs](../crates/sjk-viewer/src/text_entry.rs)), a double click selects all.
 - **Picture buttons,** side by side, every one of a step the same size: a picture at
   the top, the name, a few short lines of what choosing it means. The one in use has a
   gold edge and "In use"; the one under the keyboard or the pointer a white edge, and
-  the keyboard's also a ring round it. A click chooses at once.
+  the keyboard's also a ring round it. A click chooses at once. Where one button of a
+  step has choices under its words (the Solar Renderer's levels), the others write on
+  in that room.
 - **Rows:** the few rows that belong with the step, as Settings draws them, in a
   column centred in the card. No step scrolls. The focused row's help sits in two lines
-  under them (left out while a list is open, or while a picture button has the
-  keyboard); a step may instead write what each row does under it.
-- **Aside:** one sentence in gold under a step's buttons (under its rows when it has
-  no buttons), which may show only while a setting is on.
+  under them (left out while a list is open, or while a picture button or the field
+  has the keyboard); a step may instead write what each row does under it.
+- **Recap** (the last step): under "Your setup", a tile for each step before it with
+  what it holds now (the look, the theme, the name in its colours, the preset and its
+  level; a step whose buttons are none of them in use has none). A click on a tile
+  shows its step.
+- **Aside:** one sentence in gold under a step's buttons (under its rows and recap when
+  it has no buttons), which may show only while a setting is on.
 - **Foot,** always in view under a rule: the "Don't show at start" tick box
   (`kit::tick`, gold with a dark tick when ticked) and its name on the left; All
   settings, Back and Next (gold) on the right, Done in Next's place on the last step.
-- **Keys:** under the card, right-aligned with it.
+- **Keys:** under the card, right-aligned with it. In the field keys type, Enter goes
+  on to the next step, Down or Tab to the buttons and Up to the tick; on the buttons
+  Left and Right (or Tab) move, Enter chooses and Enter on the one in use goes on, Down
+  goes to the rows and Up to the field (the tick on a step without one); Page Up and
+  Page Down change step, F2 opens all settings, Escape closes.
 
 The steps are a table, [setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)
-(`STEPS`): a step is its name, title, sentence, buttons, rows (by cvar) and aside, and
-the pop-up draws whatever the table holds, so a step is added or changed there, not in
-the drawing code. As of 23/11/2026:
+(`STEPS`): a step is its name, title, sentence, field, buttons, rows (by cvar), aside and
+whether it closes on the recap, and the pop-up draws whatever the table holds, so a step
+is added or changed there, not in the drawing code. As of 23/11/2026:
 
 | Step | Asks | Picture buttons | Rows |
 | --- | --- | --- | --- |
 | 1 Look | Choose your look | SJK, EJK (EJK mode off, on) | Menu style, HUD look |
 | 2 Colours | Pick your colours | Solar, Sith, Jedi, Custom | Theme hue, Theme saturation |
-| 3 Import | Coming from another client? | Import my setup, Start fresh | Gameplay FPS |
+| 3 Player | Your player | Import my setup, Choose a character, Start fresh, under the Name field | none |
 | 4 Graphics | Graphics | Vanilla, Vanilla Plus, Solar Renderer (Low, Medium, High, Ultra under it) | Resolution, Display mode, Vertical sync |
-| 5 Play | How you play | none | Camera style, Field of view, Mouse sensitivity, Invert mouse, Always run, Crosshair, HUD scale, Effects volume, Music volume |
-| 6 Online | Online | none | SJK identity, Check for updates, See & share nameplates, each with what it does under it |
+| 5 Play | How you play | none | Gameplay FPS, Camera style, Field of view, Mouse sensitivity, Invert mouse, Always run, Crosshair, HUD scale, Effects volume, Music volume |
+| 6 Online | Online | none | SJK identity, Check for updates, See & share nameplates, each with what it does under it; then the recap |
+
+The Player step asks the name because a new player who starts fresh otherwise plays as
+"Padawan" (Sol, 23/11/2026); an import brings a name over, so the two stand together.
+Choose a character opens the Character page on its own (not the Profile screen's tabs),
+and closing it shows the pop-up on that step again (`ClientMenu::first_setup_resume`).
+Gameplay FPS, which the import step held, is the first row of Play.
 
 A button stands for a row of First setup too (the two looks for EJK mode, the themes for
 Theme, the presets for Graphics preset, Import for Import from a client), so every row of
@@ -1312,27 +1354,38 @@ duels' players.
 
 What the buttons show (`Art`):
 
-- **SJK** and the **presets:** the client's own off-screen renders, bundled as small
-  JPEGs ([setup_pictures.rs](../crates/sjk-viewer/src/setup_pictures.rs),
-  `assets/setup_pictures/`, 960x540 for the look and 768x432 a preset, about 0.5 MB in
-  all): the SJK UI's main page over mp/duel6, and mp/duel6 from one camera under each of
-  the six presets, as the menu pictures are bundled renders of the same map
-  ([The map behind](#the-map-behind)). Each has a texture of its own outside the icon
-  atlas, decoded on a worker the first time the pop-up draws one and uploaded into the
-  menu's renderer. Take them again with `setup_pictures_generate`
+- The **looks** and the **presets:** the client's own off-screen renders, bundled as
+  small JPEGs ([setup_pictures.rs](../crates/sjk-viewer/src/setup_pictures.rs),
+  `assets/setup_pictures/`, 960x540 a look and 768x432 a preset, under 1 MB in all, a
+  test). The two looks are the same view of a match on mp/duel6, the player on one
+  spot of a local server (alone: a bot fights the moment it finds the player, and a
+  fight would make the two pictures differ more than the looks do), as SJK draws it on
+  a new profile and as EJK mode does (every setting of `ejk_mode::values`): what
+  differs is what a player sees in a match, the HUD's type, the status bar, the timer,
+  the image. The presets are mp/duel6 from
+  one camera under each of the six, as the menu pictures are bundled renders of the
+  same map ([The map behind](#the-map-behind)). Each picture has a texture of its own
+  outside the icon atlas, decoded on a worker the first time the pop-up draws one and
+  uploaded into the menu's renderer. Take them again with `setup_pictures_generate`
+  (the presets) and `setup_look_pictures_generate` (the looks, on a local server)
   ([world_shot_setup_pictures.rs](../crates/sjk-viewer/src/world_shot_setup_pictures.rs))
-  after a menu, the renderer's look or a preset changes.
-- **EJK:** the classic menus' main page itself, laid out for a screen the size of the
-  picture by the code that draws it full size (`classic::view::build`), in the retail
-  look with the player's own menu artwork, then moved onto the button
-  (`MenuCanvas::draw_canvas`); its text is drawn in the pop-up's type. It is not a
-  bundled picture because that page is the game's own artwork and logo, which SJK never
-  ships (it reads them from the player's files, [client.md](client.md#menu-style)); a
-  game data without them shows the page's drawn stand-in.
+  after the renderer's look, a preset, the HUD or what EJK mode sets changes.
+- **What is bundled, and why** (23/11/2026). Renders of the game being played are
+  bundled, as the menu pictures and the site's screenshots are; files of the game are
+  not. The looks' pictures are frames of a match: the map, the default player's model
+  and the HUD at its small size in the corners, a screenshot of play. They are taken
+  with the retail archives only (`assets0.pk3` to `assets3.pk3`), so no HUD pack, model
+  or font of whoever took them is in them; the only name in them is the default
+  player's, Padawan, and no key or chat. Until then the EJK button drew the classic menus'
+  main page live from the player's own files, because a picture of that page would
+  have been the game's logo and frame artwork almost whole, which is the game's art
+  rather than a view of it being played; that page is no longer shown, since a player
+  choosing a look cares for the match more than for the menu.
 - **Themes:** each in its own colours whatever theme is worn (`theme::preview`): its
   ground, a panel of its lit glass with strokes of its text and line-work and a pill of
   its gold, its name in its text colour.
-- **Import my setup** and **Start fresh:** a settings picture, large, on a disc.
+- **Import my setup**, **Choose a character** and **Start fresh:** a settings picture,
+  large, on a disc.
 - A **preset** button also says how it should run on this PC, in the rating's colour
   (`graphics_quality::Rating`), and carries "Recommended" when it holds the preset
   recommended for the card. The Solar Renderer's four levels are chips under its words,
@@ -1350,21 +1403,24 @@ Colours step an aside says, while EJK mode is on, that the theme colours SJK's p
 the classic menus. On the Graphics step a preset stays the player's choice under EJK mode,
 which opens on Vanilla.
 
-The keyboard is on a picture button or on a row. A step with buttons opens on the
-button in use: Left and Right (or Tab) move through the buttons and a button's chips,
-Enter chooses, and Enter on the one in use goes on to the next step, so Enter alone
-walks a new player through. Down goes to the step's first row, Up to the tick; from
-the rows, Up past the first and Down past the tick come back to the buttons. A step of
-rows opens on its first row and wraps as Settings does. Page Up and Page Down change
-step from anywhere, F2 opens All settings, Escape closes. The pointer on a button or a
-row takes the keyboard there.
+The keyboard is in the step's field, on a picture button or on a row. A step with a
+field opens in it, else on its button in use: Left and Right (or Tab) move through the
+buttons and a button's chips, Enter chooses, and Enter on the one in use goes on to the
+next step, so Enter alone walks a new player through (in the field Enter goes on too).
+Down goes to the step's first row, Up to the field or the tick; from the rows, Up past
+the first comes back to the buttons and Down past the tick to the top of the step. A step
+of rows opens on its first row and wraps as Settings does. Page Up and Page Down change
+step from anywhere (Page Down on the last step is Done), F2 opens All settings, Escape
+closes. The pointer on a button or a row takes the keyboard there, but not from the
+field, which keeps it until a click elsewhere.
 
 The tick is First setup's own last row (`ui_hideFirstSetup`), pinned out of the
 lines (`ClassicRows::pinned`) on every step: Enter or a click flips it, Backspace
-returns it to its default. Done or Escape goes back to the main page; All
-settings or F2 opens the Settings screen on First setup (Advanced, for the
-visit, in Simple). The pop-up has no search. Under the classic menu style First setup
-opens as that style's panel, the whole list ([client.md](client.md#first-setup)), and
+returns it to its default, and Done on the last step sets it. Done or Escape goes back
+to the main page; All settings or F2 opens the Settings screen on First setup (Advanced,
+for the visit, in Simple), under the classic menu style that style's panel with the
+whole list ([client.md](client.md#first-setup)), where picking the SJK UI comes back to
+the pop-up. The pop-up has no search. In a game First setup is still the classic panel.
 picking the SJK UI there comes back to the pop-up. In a game the SJK UI's First setup is
 still the classic panel.
 

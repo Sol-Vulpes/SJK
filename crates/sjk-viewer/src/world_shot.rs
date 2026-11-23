@@ -927,6 +927,62 @@ mod tests {
         }
     }
 
+    /// First setup's pop-up on a 4K screen (the look, the player's name typed, the
+    /// graphics with a Solar level under the keyboard, the last step's recap), and a
+    /// first start under the classic menu style, where it opens by itself as well.
+    #[test]
+    #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+    fn first_setup_4k_and_classic_start() {
+        on_big_stack(|| {
+            let menu = menu::ClientMenu::new(true, String::new());
+            let quiet = [(crate::discord_presence::CVAR, "0")];
+            let Some((mut gpu, _profile)) =
+                open("maps/mp/duel6.bsp", [3840, 2160], Some(menu), &quiet)
+            else {
+                return;
+            };
+            gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+            println!("{}", shoot(&mut gpu, 60, "first-setup-4k-1-look").display());
+            for (step, target, typed) in [
+                (2, None, Some("^1Kyle^7Katarn")),
+                (3, Some(3), None),
+                (5, None, None),
+            ] {
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_mut())
+                {
+                    menu.first_setup_step_for_shot(console, step, target);
+                    if let Some(typed) = typed {
+                        menu.first_setup_type_for_shot(console, typed);
+                    }
+                }
+                let name = format!("first-setup-4k-{}", step + 1);
+                println!("{}", shoot(&mut gpu, 8, &name).display());
+            }
+            drop(gpu);
+            // The classic menus saved: the pop-up still opens at start, over their map.
+            let menu = menu::ClientMenu::new(true, String::new());
+            let cvars = [
+                (crate::menu::style::CVAR, "classic"),
+                (crate::discord_presence::CVAR, "0"),
+            ];
+            let Some((mut gpu, _profile)) =
+                open("maps/mp/ffa3.bsp", [1920, 1080], Some(menu), &cvars)
+            else {
+                return;
+            };
+            gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
+            let path = shoot(&mut gpu, 60, "first-setup-classic-start");
+            println!("{}", path.display());
+            assert!(
+                gpu.client_menu
+                    .as_ref()
+                    .is_some_and(|menu| menu.first_setup_popup_on_show()),
+                "the pop-up opened by itself under the classic style"
+            );
+        });
+    }
+
     /// A new profile's first start: no menu style saved, so the SJK UI, and
     /// First setup's pop-up opening by itself on its first step; each of its steps;
     /// the menu style switched to classic under it (the pop-up stays), and First
@@ -970,9 +1026,10 @@ mod tests {
             }
             let path = shoot(&mut gpu, 20, "duel6-first-setup-over-classic");
             println!("{}", path.display());
-            // Opened again under the classic style: that style's panel.
+            // Its list under the classic style (the pop-up's All settings): that style's
+            // panel.
             if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
-                menu.open_first_setup(console, crate::player_menu::ReturnTarget::MainMenu);
+                menu.open_first_setup_list(console, crate::player_menu::ReturnTarget::MainMenu);
             }
             let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
             println!("{}", path.display());
