@@ -14,7 +14,7 @@ use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId, 
 use std::time::Instant;
 
 /// How high over a box's base its words stand (over what floats out of it).
-const RISE: f32 = 70.0;
+const RISE: f32 = 84.0;
 /// Farthest a label is read from, and where it starts to fade.
 const RANGE: f32 = 1_400.0;
 const FADE_FROM: f32 = 1_000.0;

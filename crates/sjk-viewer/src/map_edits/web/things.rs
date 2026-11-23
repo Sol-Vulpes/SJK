@@ -79,20 +79,18 @@ impl GpuState {
                 label: format!("Mystery box {id}"),
                 mine: false,
                 origin,
-                parts: vec![
-                    (
-                        crate::mystery_box::MODEL.to_owned(),
-                        origin,
-                        [0.0, yaw, 0.0],
-                        1.0,
-                    ),
-                    (
-                        crate::mystery_box::LID_MODEL.to_owned(),
-                        crate::mystery_box::lid_origin(origin, yaw),
-                        [0.0, yaw, 0.0],
-                        1.0,
-                    ),
-                ],
+                parts: std::iter::once((
+                    crate::mystery_box::MODEL.to_owned(),
+                    origin,
+                    [0.0, yaw, 0.0],
+                    1.0,
+                ))
+                .chain(
+                    crate::mystery_box::lid_slabs(origin, yaw, 0.0).map(|(at, angles)| {
+                        (crate::mystery_box::LID_MODEL.to_owned(), at, angles, 1.0)
+                    }),
+                )
+                .collect(),
             });
         }
         for toy in self.toy_master.hidden() {
