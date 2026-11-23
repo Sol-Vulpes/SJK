@@ -163,6 +163,13 @@ impl ViewerConsole {
                         lines.push(format!("Field of view: {fov}"));
                     }
                 }
+                Item::Brightness => {
+                    if let Some(gamma) = &found.gamma
+                        && self.set_cvar("r_gamma", gamma)
+                    {
+                        lines.push(format!("Brightness: {gamma}"));
+                    }
+                }
                 Item::FpsCap => {
                     if let Some(fps) = found.max_fps
                         && self.set_cvar("com_maxfps", &fps.to_string())
@@ -336,6 +343,21 @@ mod tests {
         assert_eq!(console.shell.binds.get("ESCAPE").map(str::to_owned), escape);
         // +forward lost its key to the file, so it is not given one back on W.
         assert!(console.keys_for_command("+forward").is_empty());
+    }
+
+    #[test]
+    fn the_brightness_is_copied_and_a_bad_one_left_out() {
+        let (_directory, mut console) = console();
+        let found = parse("seta r_gamma \"1.311622\"\n");
+        let lines = console.import_config(&found, &[Item::Brightness]);
+        assert_eq!(lines, ["Brightness: 1.311622"]);
+        assert!((console.float_cvar("r_gamma").unwrap() - 1.311622).abs() < 1e-6);
+        for bad in ["0", "-1", "bright", "nan"] {
+            assert!(
+                !parse(&format!("seta r_gamma {bad}\n")).has(Item::Brightness),
+                "{bad}"
+            );
+        }
     }
 
     #[test]

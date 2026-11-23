@@ -462,6 +462,9 @@ mod classic_chat_shots;
 #[path = "world_shot_chat_sounds.rs"]
 mod chat_sounds_shots;
 #[cfg(test)]
+#[path = "world_shot_ejk_look.rs"]
+mod ejk_look_shots;
+#[cfg(test)]
 #[path = "world_shot_footprints.rs"]
 mod footprints_shots;
 #[cfg(test)]

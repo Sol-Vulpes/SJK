@@ -3013,7 +3013,7 @@ Explorer's Copy as path gives them: the path is taken as typed, without the
 console's backslash escapes, and one pair of surrounding quotes is dropped), and
 `firstsetup import` alone opens the page without a file. The file is read, never run: only `seta`/`set`/`sets`/`setu`, a
 bare `name`, `model` or `cg_fov`, `bind`, `unbind` and `unbindall` count (of the
-cvars, `name`, `model`, the `char_color_*` tint, `cg_fov`, `com_maxfps` and JoF EJK's
+cvars, `name`, `model`, the `char_color_*` tint, `cg_fov`, `r_gamma`, `com_maxfps` and JoF EJK's
 `cl_cmdratecap`), `//`
 comments are skipped, and a file that is not UTF-8 is read as Latin-1, as the
 legacy game wrote names. Files over 1 MB, other extensions, and configs holding
@@ -3021,7 +3021,10 @@ none of the parts are refused with the reason.
 
 The page lists the parts found, each ticked at first: Name (`name`), Model
 (`model`, with `char_color_red`/`_green`/`_blue` when the file sets them), Field
-of view (`cg_fov`), FPS cap (`com_maxfps`, the frames drawn) and Key bindings.
+of view (`cg_fov`), Brightness (`r_gamma`, the same curve as EternalJK's, so an
+EternalJK player's raised gamma, its lighter, washed-out look, comes with them; EJK
+mode leaves brightness alone, as stock EJK runs at 1), FPS cap (`com_maxfps`, the
+frames drawn) and Key bindings.
 Space, Left/Right or a click ticks a row; Enter copies the ticked parts into the
 profile (also logged to the console), then asks for the gameplay FPS with what the
 file's frame rate meant for its movement picked ([Gameplay FPS](#gameplay-fps)):
