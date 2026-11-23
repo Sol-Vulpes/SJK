@@ -118,11 +118,8 @@ Credits, any whole number in the range, equally likely:
 | Legendary | 80 to 120 | 100 |
 | Mythical | 250 to 350 | 300 |
 
-The averages below describe the legacy built-in fallback, before a supporting hub
-supplies its tag/banner shares. The live loot table recalculates from the hub's
-actual odds. [Profile banners](profile-banners.md#echo-rewards-and-ownership) use a
-proposed 10% share taken from cards, with no card or credits on a banner opening.
-This reduces card frequency and average credits; shader/tag/shard-pile shares stay.
+The averages below describe the built-in fallback, shown until the hub sends its own
+tables. The live loot table recalculates from the hub's actual odds.
 
 Under those fallback tables, about 35 credits a card opening on average; counting the openings that bring a kyber or a
 pile of kyber shards instead (no credits), about 17.5 credits a holocron found, so about 140
@@ -191,14 +188,14 @@ Rare, Legendary and above all a Mythical holocron always feels worth it.
 ### Beta tables
 
 Every holocron gives **guaranteed prizes**; what were alternatives to the card (tag,
-pile of kyber shards, banner) become **bonus rolls** on top.
+pile of kyber shards) become **bonus rolls** on top.
 
 | Holocron | Guaranteed | Bonus rolls |
 | --- | --- | --- |
 | Uncommon | As in Alpha: one prize (a kyber, or a card and credits) | As in Alpha |
 | Rare | A card, **Uncommon or better**, and credits; a kyber, **Uncommon or better** | One: tag 25 %, shard pile 25 %, nothing 50 % |
-| Legendary | A card, **Rare or better**, and credits; a kyber, **Rare or better** | One: tag, shard pile or banner |
-| Mythical | A card, **Holo or better**, and credits; a kyber, **Legendary or better** | Two: tag, shard pile, banner or a second card |
+| Legendary | A card, **Rare or better**, and credits; a kyber, **Rare or better** | One: tag or shard pile |
+| Mythical | A card, **Holo or better**, and credits; a kyber, **Legendary or better** | Two: tag, shard pile or a second card |
 
 Card rarity and finish (Beta; Uncommon as Alpha):
 
@@ -235,7 +232,7 @@ a Beta holocron's hover card and on the loot table's Beta page:
 
 A natural one resets its counter. The last opening of a run rolls its prize's tier from
 the floor up: the guaranteed kyber's (every Beta tier from Rare has one since 10/11). A Beta Uncommon holocron counts but is never raised, so a run it would end
-waits for the next Rare or better one. Tags, banners and shards do not count.
+waits for the next Rare or better one. Tags and shards do not count.
 
 ### No duplicate faces
 
@@ -256,9 +253,10 @@ the shard bank. Watch the shop's Legendary sales after a week.
 
 - Hub `src/seasons.rs` (tables, floors, bonus shares, pity), `src/db/seasons.rs` (the
   opening), table `holocron_pity`; Beta openings need the economy on. Bonus shares: a
-  Legendary holocron's tag, shard pile or banner a third each, a Mythical one's tag, pile,
-  banner or second card a quarter each (the second card without credits); while banners
-  do not drop their share is shared out among the others. A guaranteed kyber is one the
+  Legendary holocron's tag or shard pile a third each, a Mythical one's tag, pile or
+  second card a quarter each (the second card without credits); the hub's tables still
+  hold a banner share, which is not rolled (profile banners were removed from the client
+  on 23/11/2026, and the client skips a bonus of kind `banner`). A guaranteed kyber is one the
   person lacks first (the rolled tier, then above, then below to the floor). A Beta card
   copy is stamped `beta`. Wire: the hub's `PROTOCOL.md`, "Seasons".
 - Client: `Prize::all` shows each prize of a Beta holocron as its own reveal, its best

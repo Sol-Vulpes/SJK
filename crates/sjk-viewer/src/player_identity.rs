@@ -1836,9 +1836,9 @@ pub(crate) fn avatar_version(key_id: &str) -> Option<String> {
     known
 }
 
-/// Avatar from presence first, with a static banner from the cached profile.
+/// A player's picture for a card: from presence first, else from the cached profile.
 /// Unknown profiles are requested once without delaying a known presence avatar.
-pub(crate) fn card_appearance(key_id: &str) -> Option<(String, &'static str)> {
+pub(crate) fn card_appearance(key_id: &str) -> Option<String> {
     let mut runtime = lock();
     let runtime = &mut *runtime;
     let service = runtime.service.as_ref()?;
@@ -1870,15 +1870,10 @@ pub(crate) fn card_appearance(key_id: &str) -> Option<(String, &'static str)> {
 fn appearance(
     presence_avatar: Option<&str>,
     profile: Option<&sjk_identity::Profile>,
-) -> Option<(String, &'static str)> {
+) -> Option<String> {
     presence_avatar
         .or_else(|| profile.map(|profile| profile.avatar.as_str()))
-        .map(|avatar| {
-            (
-                avatar.to_owned(),
-                crate::profile_card::banner::equipped(profile),
-            )
-        })
+        .map(str::to_owned)
 }
 
 /// Ask the hub for another player's profile (their bio).
@@ -1903,11 +1898,8 @@ mod tests {
 
     #[test]
     fn a_presence_avatar_is_available_without_a_profile_and_overrides_stale_cache() {
-        assert_eq!(
-            appearance(Some("current"), None),
-            Some(("current".into(), ""))
-        );
-        assert_eq!(appearance(Some(""), None), Some(("".into(), "")));
+        assert_eq!(appearance(Some("current"), None), Some("current".into()));
+        assert_eq!(appearance(Some(""), None), Some(String::new()));
         assert_eq!(appearance(None, None), None);
         let profile: sjk_identity::Profile = serde_json::from_str(
             r#"{"key_id":"aa","key":"bb","name":"Player","bio":"","verified":false,"created":5,"avatar":"cached"}"#,
@@ -1915,12 +1907,9 @@ mod tests {
         .unwrap();
         assert_eq!(
             appearance(Some("current"), Some(&profile)),
-            Some(("current".into(), ""))
+            Some("current".into())
         );
-        assert_eq!(
-            appearance(None, Some(&profile)),
-            Some(("cached".into(), ""))
-        );
+        assert_eq!(appearance(None, Some(&profile)), Some("cached".into()));
     }
 
     #[test]

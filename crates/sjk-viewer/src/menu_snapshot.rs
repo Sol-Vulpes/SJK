@@ -19,9 +19,6 @@
 //! as on screen. The in-game menus are drawn over a retail levelshot standing for
 //! the match.
 
-#[path = "menu_snapshot_banners.rs"]
-mod profile_banners;
-
 use crate::keybind_editor::{Category, KeybindEditor};
 use crate::menu::art::{ArtPiece, ArtSet};
 use crate::menu::classic::layout::{Entry, Page, Panel, Span};
@@ -1565,7 +1562,6 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
             key_id: "44f3d0b36c9b2510".to_owned(),
             key: String::new(),
             name: name.to_owned(),
-            banner: "".into(),
             bio: String::new(),
             verified: false,
             tick: sjk_identity::Tick::None,
@@ -1651,8 +1647,6 @@ fn identity_page(shots: &Snapshot, art: ArtSet) {
         kyber_find: None,
         catch_quests: None,
         wheel_of_doom: None,
-        wheel_of_doom_revision: 0,
-        wheel_of_doom_spin: None,
         mystery_box_doom: None,
         box_hunt: None,
         quests: None,
@@ -1941,7 +1935,6 @@ fn player_card_profile(shots: &mut Snapshot) {
         key_id: "0123456789abcdef".to_owned(),
         key: String::new(),
         name: "Sol".to_owned(),
-        banner: "".into(),
         bio: "Fox of the JoF and maker of SJK, the fast clean JKA client.".to_owned(),
         verified: true,
         tick: sjk_identity::Tick::None,
@@ -3702,7 +3695,6 @@ fn medals_snapshot() {
             key_id: "44f3d0b36c9b2510".to_owned(),
             key: String::new(),
             name: "^1Sol".to_owned(),
-            banner: "".into(),
             bio: String::new(),
             verified: true,
             tick: sjk_identity::Tick::None,
@@ -3750,8 +3742,6 @@ fn medals_snapshot() {
         kyber_find: None,
         catch_quests: None,
         wheel_of_doom: None,
-        wheel_of_doom_revision: 0,
-        wheel_of_doom_spin: None,
         mystery_box_doom: None,
         box_hunt: None,
         quests: None,

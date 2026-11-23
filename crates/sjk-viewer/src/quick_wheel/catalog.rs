@@ -683,7 +683,7 @@ pub(crate) const ACTIONS: &[Action] = &[
         State::Quests,
         Some("quests"),
     ),
-    // Tells the player's DOOM coins and the WHEELS OF DOOM of the map (spun with Use).
+    // Tells the player's DOOM coins and where to roll one (a Force box).
     action(
         "wheel_of_doom",
         "WHEEL OF DOOM",

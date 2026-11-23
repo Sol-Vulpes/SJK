@@ -316,8 +316,6 @@ mod petals;
 mod ragdoll_shots;
 #[path = "world_shot_toy_master.rs"]
 mod toy_master_shots;
-#[path = "world_shot_wheel_of_doom.rs"]
-mod wheel_of_doom_shots;
 
 #[path = "world_shot_blade_cards.rs"]
 mod blade_cards;
@@ -1416,7 +1414,6 @@ mod tests {
             key_id: "44f3d0b36c9b2510".to_owned(),
             key: String::new(),
             name: "^1Sol^7Vulpes".to_owned(),
-            banner: "".into(),
             bio: "Saber duelist, mostly staff and yellow. On JoF most evenings.
 
 Found the fog bug, ask me about it!"
@@ -1499,8 +1496,6 @@ Found the fog bug, ask me about it!"
             kyber_find: None,
             catch_quests: None,
             wheel_of_doom: None,
-            wheel_of_doom_revision: 0,
-            wheel_of_doom_spin: None,
             mystery_box_doom: None,
             box_hunt: None,
             quests: None,
@@ -1652,7 +1647,6 @@ like this one.",
             key_id: key.to_owned(),
             key: String::new(),
             name: name.to_owned(),
-            banner: "".into(),
             bio: String::new(),
             verified: false,
             tick: sjk_identity::Tick::None,
@@ -4363,6 +4357,3 @@ like this one.",
         });
     }
 }
-
-#[path = "world_shot_banners.rs"]
-mod profile_banners;

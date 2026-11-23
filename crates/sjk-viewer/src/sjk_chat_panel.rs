@@ -413,7 +413,7 @@ impl Panel {
     pub(crate) fn place_card(
         &mut self,
         place: impl FnOnce(Option<&str>, &str) -> crate::sender_card::Place,
-        picture: impl FnOnce(&str) -> Option<(String, &'static str)>,
+        picture: impl FnOnce(&str) -> Option<String>,
     ) {
         let Some(card) = self.card.as_mut() else {
             return;
@@ -424,10 +424,9 @@ impl Panel {
         }
         if card.person.avatar.is_none()
             && let Some(key_id) = &card.person.key_id
-            && let Some((avatar, banner)) = picture(key_id)
+            && let Some(avatar) = picture(key_id)
         {
             card.person.avatar = Some(avatar);
-            card.person.banner = banner;
         }
     }
 
@@ -1616,7 +1615,7 @@ mod tests {
         let pictures = std::cell::Cell::new(0);
         let picture = |answer: Option<&str>| {
             let pictures = &pictures;
-            let answer = answer.map(|version| (version.to_owned(), ""));
+            let answer = answer.map(str::to_owned);
             move |key: &str| {
                 assert_eq!(key, format!("{:016x}", 2));
                 pictures.set(pictures.get() + 1);

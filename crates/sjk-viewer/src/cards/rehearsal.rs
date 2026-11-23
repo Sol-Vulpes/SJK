@@ -151,7 +151,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Vec<Opened>, String> {
                     continue;
                 };
                 opened.push(Opened {
-                    banner: None,
                     holocron: crate::holocrons::rehearsal::FIRST_ID + at as u64,
                     tier: tier.id.to_owned(),
                     card: None,
@@ -171,7 +170,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Vec<Opened>, String> {
             if shards {
                 let (least, most) = crate::loot_odds::current().shards[tier.index];
                 opened.push(Opened {
-                    banner: None,
                     holocron: crate::holocrons::rehearsal::FIRST_ID + at as u64,
                     tier: tier.id.to_owned(),
                     card: None,
@@ -189,7 +187,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Vec<Opened>, String> {
                     .collect();
                 let skin = skins[at % skins.len()];
                 opened.push(Opened {
-                    banner: None,
                     holocron: crate::holocrons::rehearsal::FIRST_ID + at as u64,
                     tier: tier.id.to_owned(),
                     card: None,
@@ -218,7 +215,6 @@ pub(crate) fn parse(args: &[String]) -> Result<Vec<Opened>, String> {
             // The card pack's shards, made up the same way.
             let (few, many) = crate::loot_odds::current().card_shards[tier.index];
             opened.push(Opened {
-                banner: None,
                 holocron: crate::holocrons::rehearsal::FIRST_ID + at as u64,
                 tier: tier.id.to_owned(),
                 card: Some(OpenedCard {

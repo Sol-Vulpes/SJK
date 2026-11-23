@@ -1132,9 +1132,9 @@ fn cooldown_left(last: Option<Instant>, cooldown: u64, now: Instant) -> Option<u
 /// How an opening reads for the opener: [`result_text`], or for a box that blew up or
 /// gave a holocron, what became of it.
 fn prize_text(outcome: &str, prize: &Prize) -> String {
-    // The teddy bear brings a DOOM coin (11/11/2026), the WHEEL OF DOOM's only price.
+    // The teddy bear brings a DOOM coin (11/11/2026), rolled at a Force box.
     let coin = if prize.doom_coins.is_some() {
-        ". ^1+1 DOOM coin^7: spin a WHEEL OF DOOM"
+        ". ^1+1 DOOM coin^7: hold Use at a Force box to roll it"
     } else {
         ""
     };
@@ -1677,9 +1677,6 @@ impl GpuState {
             }
             Ok(BoxDone::Removed(id)) => {
                 self.mystery_box_print(format!("Mystery box {id} removed"));
-            }
-            Ok(BoxDone::WheelPlaced(id)) => {
-                self.mystery_box_print(format!("WHEEL OF DOOM {id} placed"));
             }
             Ok(BoxDone::WheelRemoved(id)) => {
                 self.mystery_box_print(format!("WHEEL OF DOOM {id} removed"));

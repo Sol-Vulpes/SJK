@@ -3,7 +3,7 @@
 # Sun JK (SJK)
 
 <p align="center">
-  <a href="https://sol-vulpes.github.io/SJK/"><img alt="Website" src="https://img.shields.io/badge/Website-Sol%20JK-D4AF37?style=for-the-badge"></a>
+  <a href="https://sol-vulpes.github.io/SJK/"><img alt="Website" src="https://img.shields.io/badge/Website-Sun%20JK-D4AF37?style=for-the-badge"></a>
   <a href="https://github.com/Sol-Vulpes/SJK/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/Sol-Vulpes/SJK?style=for-the-badge&label=Download&color=D4AF37"></a>
   <a href="https://sol-vulpes.github.io/SJK/#launcher"><img alt="SJK Launcher" src="https://img.shields.io/badge/SJK%20Launcher-Get%20it-D4AF37?style=for-the-badge"></a>
   <a href="https://discord.gg/dGBdMygvJw"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>

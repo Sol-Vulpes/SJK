@@ -2495,7 +2495,7 @@ holds the table (`id`, full name, short tag); a new edition is one line there.
 one is the Beta collection"). The editions are the Collection's collections:
 
 - **Alpha Edition**: every blade before Creyon's round (blades 1 to 169), and every
-  medal, achievement, banner, tag, finisher and toy so far.
+  medal, achievement, tag, finisher and toy so far.
 - **Beta Edition**: Creyon's round, PR #370, blades 170 to 299 (`edition:
   crate::editions::BETA` on each; `unlockables.rs` tests that exactly those 130 are
   Beta), and what comes after it.
@@ -2507,7 +2507,7 @@ one is the Beta collection"). The editions are the Collection's collections:
 given (a play drop, a staff or operator gift, a purchase, a mystery box, a toy, an
 achievement's dormant kyber) and kept for good, through trades too. Opening (or attuning) one brings only
 things of its edition or an older one: an Alpha holocron or dormant kyber only Alpha things, a
-Beta one Beta or Alpha: the hub picks its kybers, tags, banners and a dormant kyber's kyber
+Beta one Beta or Alpha: the hub picks its kybers, tags and a dormant kyber's kyber
 among those `editions::within(item, holocron)` allows. Cards are not gated yet: every
 card face is the SJK Alpha set. The Holocrons tab says each one's: the recent list puts it
 before the date
@@ -2556,17 +2556,17 @@ holocron's colour, with its blade if the hub's pack brought one, the crate spin 
 "?" tile; it reads "update SJK to see it in your Collection". The Collection lists it once
 the client knows it. Since 03/11/2026 any prize the client does not know is shown the same
 way, by its kind (Kushina, 30/10/2026: such a kyber came out as a dark, empty blade card):
-the kind is read from the hub's id (`saber_`, `tag_`, `banner_`, `toy_`; "prize" for
+the kind is read from the hub's id (`saber_`, `tag_`, `toy_`; "prize" for
 anything else, `opening::unknown_kind`), the strip's tile says "New tag", "New kyber"...,
 and without a blade from the pack the card shows a "?" in a ring and "Update SJK to see
 it" instead of an empty swatch. A card of a rarity or finish the client does not know is
 no longer left out: it shows as "A new card".
 
-## Profile covers
+## Profile covers (removed)
 
-[Profile banners](profile-banners.md) share the hub's counted unlock inventory but
-have their own catalogue and Collection tab. They are identity equipment, not saber
-skins or game-server looks; blade-only trade, craft and shatter actions exclude them.
+Profile banners, collectible covers kept in the hub's counted unlock inventory, were
+removed from the client on 23/11/2026
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)).
 
 - **Round 18 and 19** (4/11/2026): a new blade's effects in the air (`@raycache fast`; the blades already in the client draw as before) are drawn into a half-size layer in a view (`saber_volume.rs`, `SIG_SPLIT`, `fragment_volume`), scaled up with a Catmull-Rom filter; a body picture can be sampled with `skinBody`. A generated extra for every blade and generated "great moments" were tried and taken out again (Creyon: they made the blades alike): extras are to be made by hand for each blade (`gx*` in `lab.glsl` holds pieces for that). God Ki's Scythe form is gone. Hard distance switches in the fast rays and early cuts of effects that still shone are gone.
 - **Round 20** (5/11/2026): the round lights and orbiting arcs that stood on most new blades are gone; `gxKin` in `lab.glsl` throws off what a blade's world would (grains, flecks, drops, threads, flashing leaf, smoke, bristles, panes, streaks), chosen per blade, with crystals kept for blades of crystal. Anything measured along a curve is continuous now (`bW`), because the nearest piece alone jumped where a curve folds in the view and drew a hard line in the air; mist marches only inside its own height; the effect layer fades by the ray's distance to the blade.

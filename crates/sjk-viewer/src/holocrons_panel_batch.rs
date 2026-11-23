@@ -121,22 +121,12 @@ pub(super) fn finest_first(shown: &[Prize]) -> [usize; sjk_identity::OPEN_MAX] {
     order
 }
 
-fn bonus_batch(shown: &[Prize]) -> bool {
-    shown
-        .iter()
-        .all(|prize| matches!(prize.item(), strip::Item::Banner(_)))
-}
-
 fn batch_label(shown: &[Prize], opened: bool) -> String {
-    if bonus_batch(shown) {
-        format!("{} bonus banners", shown.len())
-    } else {
-        crate::terms::say_owned(format!(
-            "{} holocrons{}",
-            shown.len(),
-            if opened { " opened" } else { "" }
-        ))
-    }
+    crate::terms::say_owned(format!(
+        "{} holocrons{}",
+        shown.len(),
+        if opened { " opened" } else { "" }
+    ))
 }
 
 impl Panel {
@@ -190,11 +180,7 @@ impl Panel {
                 "{}",
                 crate::terms::say(&format!(
                     "{} {} to {} of {}",
-                    if bonus_batch(shown) {
-                        "Bonus banners"
-                    } else {
-                        "Holocrons"
-                    },
+                    "Holocrons",
                     first + 1,
                     first + these.len(),
                     shown.len()
@@ -550,12 +536,7 @@ impl Panel {
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "{}",
-                if bonus_batch(shown) {
-                    "Bonus covers are on the Collection's Banners tab."
-                } else {
-                    "Cards are on the Collection's Cards tab, kybers on its Kybers tab; kyber shards craft kybers."
-                }
+                "Cards are on the Collection's Cards tab, kybers on its Kybers tab; kyber shards craft kybers."
             ),
             frame.rect(MIDDLE_X - 600.0, 836.0, 1_200.0, 26.0),
             17.0 * s,
@@ -563,12 +544,11 @@ impl Panel {
             FontWeight::Regular,
             TextAlign::Center,
         );
-        let done_label = self.done_label();
         kit::button(
             &mut self.ui,
             frame,
             [MIDDLE_X - 110.0, 880.0, 220.0, 48.0],
-            done_label,
+            "Done",
             true,
             true,
             true,

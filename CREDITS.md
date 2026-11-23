@@ -849,7 +849,9 @@ merged into SJK
 - #274 each predicted rider and vehicle leaves out its own pilot or chassis, as in OpenJK.
 - #316 SJK chat: six shared emoji reactions on public messages.
 - #319 profile banners: collectible covers on the Profile and player card, Collection >
-  Banners, a bonus roll on holocron openings once the hub turns them on.
+  Banners, a bonus roll on holocron openings once the hub turns them on. Taken out of
+  the game on 08/11/2026 as unfinished and removed from the client on 23/11/2026, ahead
+  of v1; the work is credited as it was done.
 - #287 Lugormod v3 servers: own movement predicted as the server moves the player (scale,
   stand-up clearance, FFA admin jetpack, baton rolls).
 
@@ -1088,7 +1090,8 @@ into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author
 - #355 Loadouts on the Shaders tab opens its card again (hub report #245).
 - #357 sharpening (`r_sharpen`, RCAS), after Lex's idea.
 - #358 console aliases (`alias`, `unalias`, `aliases.cfg`), after Lex's idea.
-- #359 profile card and page: no cover for the neutral banner, round corners for a worn one.
+- #359 profile card and page: no cover for the neutral banner, round corners for a worn one
+  (banners removed 23/11/2026; the card without a cover stays).
 - #360 the whisper recipient on its own line, stepping and picking between whisperers, after
   Creo's idea.
 - #382 the Toys page's heading counted from the toys, so a new one cannot leave it behind
@@ -1121,7 +1124,8 @@ into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author
 - #365 the Quests toy: social quests among players who opt in, won as an Echo within the
   day's caps, after wonner67's idea.
 - #376 chroma shader blades take a white, grey or pale custom colour, after Dante's idea.
-- #369 banners break down for kyber shards, after headshotsmcgee117's idea.
+- #369 banners break down for kyber shards, after headshotsmcgee117's idea (banners
+  removed 23/11/2026).
 
 His Peek work in #199 (closed 24/10/2026, not merged) shaped the Drone toy: a player is
 asked before being peeked, told who watches, and can end it. His #206 (closed 25/10/2026,

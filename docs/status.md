@@ -1974,33 +1974,59 @@ is 0.62 MB and the others under 200 KB. Viewer tests and the map change world sh
 pass; offline joins of a local server did not reproduce the crash (their frames are
 not called from `window_event`). Not yet confirmed on the JoF server in the client.
 
-## Static profile banners
+## Clean-up ahead of v1: the sweep (23/11/2026)
 
-**Out of the game since 08/11/2026** (Sol: unfinished): no drops, no Banners tab,
-no covers shown; see [profile-banners.md](profile-banners.md).
+Branch `personal/v1-cleanup`, based on `main` `482f891dd`. Besides the two removals
+below, the client was swept for dead things (scripts over `git ls-files`): every `.rs`
+under a crate's `src` is named by a `mod`, `#[path]` or `include!`; every bundled asset is
+named by the code that embeds it (the picture, settings icon and holocron files through
+their macros; two font licence texts are kept on purpose); every registered cvar has a
+reader but three stock names kept so a saved config keeps its values (`in_raw`,
+`r_swapInterval`, `s_khz`); no entry of `debug_panel.txt` names a command or cvar that is
+gone, other than the entries that say so. Fixed: the site's toy list still offered the
+toys removed on 20/11/2026 (Hax, Order 66, cardboard box, banana peels, Fishing and
+Mining) and the Monitor by its old name; a link in client.md to a script that went with
+the Force Throw rework; README's website badge. Left for Sol to decide, as players can
+still reach them or a contributor owns them: the classic menus' own look (first step),
+the Log book of the removed Fishing and Mining toys with their hub plumbing, the shelved
+Support SJK line and Supporter medal, the Saber Lab, the showcase tools, all access, and
+`toy_wheelofdoom` itself.
 
-31/10/2026, `feat/profile-banners`, client code `56a9b774` (including `main`
-`677a6073`) and matching hub PR #6 `3c77a2f`: five collectible covers and a
-neutral fallback, with Collection equip/unequip, profile headers and player cards.
-An independent 10% banner roll adds a cover to the ordinary Echo prize; card
-frequency, credits, Solar blade bonuses and other prizes retain their rules.
-The hub defaults banner drops to disabled until a supporting minimum release is
-configured; older clients keep ordinary rewards and see zero bonus odds.
-Ordinary rewards reveal first, then bonus covers, each group within the existing
-batch limit. Banners cannot use blade-only trade/craft/shatter operations.
+Verified on Windows 11 x64 at the branch's tip: `cargo fmt --all --check`, `cargo build
+--locked --workspace` and `--all-targets` (no warning), `cargo clippy --locked --workspace
+--all-targets`, `cargo test --locked --workspace`, the menu snapshots and the Collection,
+Profile, opening and Force box world shots (looked at), and the startup stack check.
+Not run in the client.
 
-Windows x64 formatting, locked workspace build/tests and all-target clippy passed.
-Focused checks cover old JSON, a presence avatar without a fetched profile,
-retained ordinary rewards/Solar bonuses, independent odds and twenty openings
-with twenty bonus covers, including both summaries' canvas capacity at two
-window sizes. The hub's complete suite passed (491 library, 174 signed API,
-19 CLI, 3 donation and 41 panel tests), including client gates, duplicates,
-replay refusal, atomic bonus failure and last-copy removal. Offline GPU fixtures
-for Collection, profile and the bonus reveal were refreshed and inspected after
-the main merge. Remote cards use cached profiles rather than live equipment
-broadcasts. Deployment, live interoperability, other platforms and performance
-remain unverified; Sol's remaining design decisions and rollout are still pending.
-See [profile-banners.md](profile-banners.md).
+## WHEEL OF DOOM: the placed wheels removed (23/11/2026)
+
+Clean-up ahead of v1 (Sol: "the Wheel of Doom ... was merged with the Mystery Box, so that
+needs cleaning up too"). Since 20/11/2026 the client took no placed wheel
+(`take(&[], ...)`), so everything that drew or spun one was unreachable; it is removed:
+the two models, their two pictures and shader, the tick, stop and fanfare sounds (bundled
+files, 445 KB), the spin and its music cue, the Use prompt and drops panel of a wheel,
+the words over it, the "out of order" path, `POST /v1/wheel-of-doom/spin` and
+`/v1/creator/wheel-of-doom` from the hub client, the `land_` feed event,
+`wheelofdoom_place`, `wheelofdoom_list` and the wheel's world shots. Still there, used
+by the Force box's DOOM coin roll: the outcome table, the effects, Mirror, the HUD line,
+the quack, the coin read, `toy_wheelofdoom` (it tells the coins) with its Toys row, quick
+wheel entry, key and status bar piece, `s_toyWheelOfDoomSound`, and
+`wheelofdoom_remove <id>` for the wheels the hub still stores
+([wheel-of-doom.md](wheel-of-doom.md)). The hub is untouched: its wheel routes and
+switch stay for older clients, and its coin roll route is still on branch `force-box`.
+
+## Static profile banners (removed 23/11/2026)
+
+Profile banners (#319, Lumaya, 02/11/2026; #359 and #369 after it) were out of the game
+since 08/11/2026 as unfinished. On 23/11/2026, in the clean-up ahead of v1 (Sol: "the
+banners, we drop them"), they were removed from the client: the catalogue and its art,
+the Collection's Banners page, the cover on the profile card, the Profile page and the
+sender card, the bonus reveal of openings, the loot table's banner odds, the break-down
+action, `PUT /v1/profile/banner`, the wire fields, the fixtures and `profile-banners.md`.
+The hub keeps its switch off and its stored ownership; a hub that still sends banner
+fields or a banner bonus is read without them
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)). The work stays credited as
+done in CREDITS.md and on the credits page.
 
 ## Ghost editor
 
