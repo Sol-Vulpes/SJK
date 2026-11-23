@@ -1493,6 +1493,18 @@ impl ClientMenu {
         self.settings.select_cvar(cvar);
     }
 
+    /// Show step `step` of First setup's pop-up, the keyboard on its picture button
+    /// `target` or on its rows (world shots).
+    #[cfg(test)]
+    pub(crate) fn first_setup_step_for_shot(
+        &mut self,
+        console: &ViewerConsole,
+        step: usize,
+        target: Option<usize>,
+    ) {
+        self.settings.setup_step_for_shot(console, step, target);
+    }
+
     /// Open the resolution list from the Resolution row of the settings on
     /// show, as Enter there does (world shots).
     #[cfg(test)]

@@ -1,3 +1,40 @@
+## First setup in steps with pictures (23/11/2026)
+
+Sol's request ("have a button with an image in first step, I think we should have steps
+in the first setup with images"; EJK mode was a small switch in a list of thirty rows).
+Branch `personal/first-setup-steps`, based on `main` `eea8ebba0`. The SJK UI's First setup
+pop-up asks one thing at a time: six steps (Look, Colours, Import, Graphics, Play,
+Online) named across the top of a 1240x950 card, each with picture buttons and the few
+rows that belong with them, none scrolling ([sjk-ui.md](sjk-ui.md#first-setup)). The steps
+are a table (`settings/setup_steps.rs`), drawn by `settings/sjk_popup.rs`, which knows no
+step by name. Step 1 offers SJK and EJK (`ui_ejkMode`) side by side; the pop-up stays open
+when a look changes the menu style under it, and reads settings changed elsewhere the
+frame they change.
+
+Pictures: the SJK look and the six graphics presets are the client's own renders of
+mp/duel6, bundled as JPEGs (`assets/setup_pictures/`, 501 KiB in all, taken by
+`setup_pictures_generate`), as the menu pictures are. The EJK look is not bundled: that
+page is the game's own menu artwork and logo, which SJK never ships, so the pop-up lays
+the classic main page out small with the player's own files at run time.
+
+Seven rows of the old list are left out of the steps on purpose (`setup_steps::LEFT_OUT`:
+the nameplates' range, bars, icons and duel rows, the Force aura and Protect+Absorb shell,
+other duels' players); they stay in Settings and in its First setup category, which keeps
+the whole list, as does the classic style's First setup panel.
+
+Verified on Windows x64 (a 15.6 GB graphics card): `cargo fmt --all --check`, `cargo build
+--locked --workspace`, `cargo clippy --locked --workspace --all-targets` and `cargo test
+--locked --workspace` (the step table against `quick.rs`, every step fitting the card,
+the keyboard's order, the pointer, EJK and the pop-up staying, the tick, the pictures'
+textures, sizes and weight); the startup check; `sjk_first_setup_snapshot` (every step,
+step 1 in the four themes and with EJK chosen, 4:3 and 21:9) and
+`world_shot::tests::duel6_first_setup` (the real renderer: the bundled pictures uploaded,
+the classic page drawn small from the game's artwork, the pop-up over the classic style,
+the classic panel), all looked at. Not verified: nothing was run in the client's window,
+so the pointer, the keys and the graphics reload a preset or EJK asks for have not been
+tried by hand; no 4K frame was rendered; the classic page's picture uses the pop-up's
+type, not the game's fonts.
+
 ## EJK mode (22/11/2026)
 
 Sol's request before the release: one switch that makes SJK look and feel like JoF EJK.
@@ -16,8 +53,9 @@ change, the restart; the settings groups, sections, help and search tests). Not 
 nothing was run in the client, so the look with the mode on has not been compared with JoF
 EJK on screen. Known differences left: the chat composer and its channel buttons are
 SJK's, the chat box keeps SJK's place and line spacing, the SJK scoreboard extras without
-a setting stay, other players' emotes still play, and `cg_hudFiles 3` shows JoF EJK's HUD
-only where its files are installed.
+a setting stay, other players' emotes still play, and the HUD files stay the player's (`cg_hudFiles 3`
+is JoF EJK's own HUD where its files are installed; the mode no longer sets it, so a
+HUD pack keeps working, 23/11/2026).
 
 ## Classic menus' own look: the menu's proportions, the logo, Aurebesh (22/11/2026)
 

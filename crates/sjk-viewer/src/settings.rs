@@ -26,6 +26,7 @@ mod resolution_list;
 mod search;
 mod section_icons;
 mod sections;
+mod setup_steps;
 mod sjk_popup;
 pub(crate) mod sjk_view;
 pub(crate) mod slider_peek;
@@ -34,8 +35,6 @@ mod usage;
 mod wheel_editor;
 mod wheel_editor_view;
 
-#[cfg(test)]
-pub(crate) use catalog::IMPORT_ROW;
 use catalog::*;
 pub(crate) use catalog::{FIRST_SETUP_CAPTION, RESOLUTIONS};
 pub(crate) use display::{
@@ -74,25 +73,14 @@ pub(crate) enum SettingsResult {
     AllSettings,
 }
 
-/// What First setup's pop-up does with `key` before its rows see it: Tab
-/// leaves for the whole Settings screen; the search's and the groups' keys do
-/// nothing, as it has neither.
-fn popup_key(key: KeyCode) -> Option<SettingsResult> {
-    match key {
-        KeyCode::Tab => Some(SettingsResult::AllSettings),
-        KeyCode::Slash | KeyCode::NumpadDivide | KeyCode::BracketLeft | KeyCode::BracketRight => {
-            Some(SettingsResult::None)
-        }
-        _ => None,
-    }
-}
-
 /// One line of a classic option panel: a heading (a group of search
-/// results) or a setting row.
+/// results), a setting row, or a sentence under the row before it (First
+/// setup's pop-up says what a row does there, `setup_steps.rs`).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Line {
     Heading(&'static str),
     Row(usize),
+    Note(&'static str),
 }
 
 /// The lines a classic option panel shows: a span of the tab, or a search's
@@ -133,7 +121,7 @@ impl ClassicRows {
             .iter()
             .filter_map(|line| match line {
                 Line::Row(row) => Some(*row),
-                Line::Heading(_) => None,
+                Line::Heading(_) | Line::Note(_) => None,
             })
             .chain(self.pinned)
     }
@@ -355,6 +343,8 @@ pub(crate) struct SettingsMenu {
     /// The row peeking this frame and how far the rest has faded, while the
     /// SJK UI draws the rows; `None` outside that.
     peek_draw: Option<(usize, f32)>,
+    /// First setup's pop-up: the step on show and where the keyboard is.
+    setup: sjk_popup::Wizard,
 }
 
 impl SettingsMenu {
@@ -435,6 +425,7 @@ impl SettingsMenu {
             peek: slider_peek::SliderPeek::default(),
             peek_world: false,
             peek_draw: None,
+            setup: sjk_popup::Wizard::default(),
         }
     }
 
@@ -748,9 +739,9 @@ impl SettingsMenu {
             return SettingsResult::None;
         }
         let classic = self.classic.is_some();
-        // Up from the pop-up's first row wraps to its foot, as it has no search.
+        // First setup's pop-up has its own keys: its picture buttons, its steps.
         if self.popup() {
-            if let Some(result) = popup_key(key) {
+            if let Some(result) = self.popup_key(key, console) {
                 return result;
             }
         } else if classic {
@@ -954,6 +945,7 @@ impl SettingsMenu {
         for line in &classic.lines {
             match line {
                 Line::Heading(_) => after_heading = true,
+                Line::Note(_) => {}
                 Line::Row(row) => {
                     if after_heading {
                         firsts.push(*row);
@@ -1111,6 +1103,7 @@ impl SettingsMenu {
         if let Some(before) = before {
             self.record_change(&before);
         }
+        self.read_setup(console);
     }
 
     /// What `key` (with Ctrl held when `control`) asks of the screen around

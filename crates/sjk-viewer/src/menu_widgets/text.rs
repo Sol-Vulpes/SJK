@@ -306,6 +306,44 @@ impl MenuCanvas {
         self.resolve(id)
     }
 
+    /// Draw what `page` holds here too, moved by `offset` window pixels: its shapes
+    /// and pictures as they are, its text again in this canvas's family, runs
+    /// smaller than `least` pixels left out. For a page laid out small and shown
+    /// inside another (First setup's picture of the classic menus); `page`'s
+    /// pointer areas stay its own.
+    pub(crate) fn draw_canvas(&mut self, page: &MenuCanvas, offset: [f32; 2], least: f32) {
+        let [dx, dy] = offset;
+        for command in page.draw.commands() {
+            if let DrawCommand::Text {
+                rect,
+                text,
+                size,
+                color,
+                align,
+                weight,
+                letter_spacing,
+                ..
+            } = *command
+            {
+                if size >= least {
+                    self.text_aligned(
+                        page.resolve(text),
+                        rect.translated(dx, dy),
+                        size,
+                        color,
+                        weight,
+                        letter_spacing,
+                        align,
+                    );
+                }
+            } else {
+                let mut moved = *command;
+                moved.translate(dx, dy);
+                let _ = self.draw.push(moved);
+            }
+        }
+    }
+
     fn resolve(&self, id: TextId) -> &str {
         self.text
             .get(id.0 as usize)

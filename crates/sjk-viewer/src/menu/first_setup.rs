@@ -1,9 +1,8 @@
-//! The First setup screen: Settings' FIRST SETUP tab (a pop-up in the SJK UI),
-//! offered at every start until its "Don't show at start" row is ticked, and
-//! opened by the `firstsetup` command;
-//! `firstsetup import` opens the Import page (`config_import.rs`). Its first row
-//! picks the graphics quality, its second the menu style. The command's old name `quicksetup` is gone, so that `quit`
-//! is the only command a `q` completes to.
+//! The First setup screen: Settings' FIRST SETUP tab (in the SJK UI a pop-up that asks
+//! one thing at a time, `settings/sjk_popup.rs`), offered at every start until its
+//! "Don't show at start" row is ticked, and opened by the `firstsetup` command;
+//! `firstsetup import` opens the Import page (`config_import.rs`). The command's old
+//! name `quicksetup` is gone, so that `quit` is the only command a `q` completes to.
 
 use super::classic::layout::{Entry, Page};
 use super::classic::panel::Frame;
@@ -121,19 +120,46 @@ mod tests {
         );
     }
 
-    /// Picking another style on the screen's Menu style row keeps First setup
-    /// on show in the new style.
+    /// The pop-up is the SJK UI's in every menu style: a look picked on it changes
+    /// the style under it (EJK mode turns the classic menus on) and it stays open, on
+    /// its step, in either direction. Done then goes back to the main menu.
     #[test]
-    fn the_menu_style_is_picked_on_the_screen_and_the_screen_stays() {
-        let (_directory, console) = console();
+    fn the_popup_stays_when_the_menu_style_changes_under_it() {
+        use crate::settings::SettingsResult;
+        let (_directory, mut console) = console();
         let mut menu = ClientMenu::new(true, String::new());
         menu.open_first_setup(&console, ReturnTarget::MainMenu);
-        assert!(menu.sjk_settings_on_show());
-        // SJK UI to classic: the classic Setup page's First setup panel.
+        menu.settings.setup_step_for_shot(&console, 3, None);
+        assert!(menu.sjk_settings_on_show() && menu.settings.popup());
         menu.set_menu_style(MenuStyle::Classic, &console);
+        assert!(menu.classic_panel.is_none());
+        assert!(menu.sjk_settings_on_show() && menu.settings.popup());
+        assert!(menu.sjk_screen(), "it is drawn as the SJK UI's");
+        assert_eq!(menu.settings.setup_step(), 3);
+        assert_eq!(*menu.state.phase(), ClientPhase::Settings);
+        menu.set_menu_style(MenuStyle::Sjk, &console);
+        assert!(menu.sjk_settings_on_show() && menu.settings.popup());
+        assert_eq!(menu.settings.setup_step(), 3);
+        // EJK mode itself: its switch, the mode applying, the style following.
+        console.set_cvar(crate::ejk_mode::CVAR, "1");
+        crate::ejk_mode::follow(&mut console);
+        let style = MenuStyle::from_cvar(console.text_value(crate::menu::style::CVAR));
+        assert_eq!(style, MenuStyle::Classic);
+        menu.set_menu_style(style, &console);
+        assert!(menu.sjk_settings_on_show() && menu.settings.popup());
+        assert_eq!(menu.settings.setup_step(), 3);
+        // All settings under the classic style: that style's panel, the whole list.
+        menu.settings_result(SettingsResult::AllSettings, &mut console);
         let panel = menu.classic_panel.expect("a classic panel");
         assert_eq!((panel.page, panel.entry), (Page::Setup, Entry::FirstSetup));
-        assert_eq!(*menu.state.phase(), ClientPhase::Settings);
+        assert!(!menu.settings.popup() && !menu.sjk_settings_on_show());
+        menu.settings_result(SettingsResult::Back, &mut console);
+        assert_eq!(*menu.state.phase(), ClientPhase::MainMenu);
+        // Opened again under the classic style, First setup is that panel too.
+        menu.open_first_setup(&console, ReturnTarget::MainMenu);
+        let panel = menu.classic_panel.expect("a classic panel");
+        assert_eq!((panel.page, panel.entry), (Page::Setup, Entry::FirstSetup));
+        assert!(!menu.settings.popup());
     }
 
     /// All settings (or Tab) leaves the pop-up for the whole screen on First

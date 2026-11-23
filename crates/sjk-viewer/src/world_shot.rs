@@ -478,6 +478,9 @@ mod portable_shield_shots;
 mod render_scale_shots;
 #[path = "world_shot_scene_views.rs"]
 mod scene_views_shots;
+#[cfg(test)]
+#[path = "world_shot_setup_pictures.rs"]
+mod setup_pictures_shots;
 #[path = "world_shot_sharpen.rs"]
 mod sharpen_shots;
 #[path = "world_shot_solar_presets.rs"]
@@ -925,8 +928,9 @@ mod tests {
     }
 
     /// A new profile's first start: no menu style saved, so the SJK UI, and
-    /// First setup opening by itself on its Menu style row; then the style
-    /// switched to classic from there, First setup staying.
+    /// First setup's pop-up opening by itself on its first step; each of its steps;
+    /// the menu style switched to classic under it (the pop-up stays), and First
+    /// setup opened again under that style, the classic panel.
     #[test]
     #[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
     fn duel6_first_setup() {
@@ -938,16 +942,37 @@ mod tests {
                 return;
             };
             gpu.ui_epoch -= std::time::Duration::from_millis(2_000);
-            let path = shoot(&mut gpu, 20, "duel6-first-setup-sjk");
+            // Long enough for its pictures to decode and the menu art to load.
+            let path = shoot(&mut gpu, 60, "duel6-first-setup-sjk");
             println!("{}", path.display());
-            // The row that imports another client's config.
-            if let Some(menu) = gpu.client_menu.as_mut() {
-                menu.select_setting_for_shot(crate::settings::IMPORT_ROW);
+            // Its other steps: the keyboard on a picture button, or on the rows.
+            for (step, target) in [
+                (1, Some(0)),
+                (2, Some(0)),
+                (3, Some(1)),
+                (4, None),
+                (5, None),
+            ] {
+                if let (Some(menu), Some(console)) =
+                    (gpu.client_menu.as_mut(), gpu.console.as_ref())
+                {
+                    menu.first_setup_step_for_shot(console, step, target);
+                }
+                let name = format!("duel6-first-setup-step-{}", step + 1);
+                println!("{}", shoot(&mut gpu, 8, &name).display());
             }
-            let path = shoot(&mut gpu, 6, "duel6-first-setup-import");
-            println!("{}", path.display());
+            // The classic style under it: the pop-up stays on its step.
             if let Some(console) = gpu.console.as_mut() {
                 console.set_cvar(crate::menu::style::CVAR, "classic");
+            }
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.first_setup_step_for_shot(console, 0, Some(1));
+            }
+            let path = shoot(&mut gpu, 20, "duel6-first-setup-over-classic");
+            println!("{}", path.display());
+            // Opened again under the classic style: that style's panel.
+            if let (Some(menu), Some(console)) = (gpu.client_menu.as_mut(), gpu.console.as_ref()) {
+                menu.open_first_setup(console, crate::player_menu::ReturnTarget::MainMenu);
             }
             let path = shoot(&mut gpu, 20, "duel6-first-setup-classic");
             println!("{}", path.display());

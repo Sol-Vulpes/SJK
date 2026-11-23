@@ -27,9 +27,10 @@ const IMPORT_ROW: Setting = Setting {
     kind: ValueKind::ImportPage,
 };
 
-/// The look, which the tab opens on: the SJK UI's theme (the pop-up shows its
-/// choices as tiles too, `sjk_popup.rs`), the custom theme's colour, the menu style, and
-/// EJK mode (`ejk_mode.rs`) for a player who wants JoF EJK's look at once.
+/// The look, which the tab opens on: the SJK UI's theme, the custom theme's colour, the
+/// menu style, and EJK mode (`ejk_mode.rs`) for a player who wants JoF EJK's look at
+/// once. The SJK UI's pop-up shows the rows a step at a time, the theme, EJK mode, the
+/// import and the graphics preset as picture buttons (`setup_steps.rs`).
 const LOOK: &[&str] = &[
     crate::menu::sjk::theme::CVAR,
     crate::menu::sjk::theme::HUE_CVAR,

@@ -1066,7 +1066,9 @@ show.
 switch that makes SJK look and feel like JoF EJK (EternalJK, of OpenJK's lineage), as close
 as SJK's own settings get. It is archived and off by default; the EJK mode row leads
 Settings > Interface > Menus (SJK UI, Advanced and Simple's General, and the classic+
-Interface group), stands in First setup's Look after Menu style, and the Settings search
+Interface group), stands in First setup's Look after Menu style (in the SJK UI's First
+setup pop-up it is the first step's two picture buttons, SJK and EJK,
+[sjk-ui.md](sjk-ui.md#first-setup)), and the Settings search
 finds it by `ejk`, `eternal`, `jof`, `openjk`, `ojk`, `classic` and `retail`. The `ejkmode
 [on|off|list]` console command names or sets it, and `ejkmode list` prints every setting
 it sets with its value and the reason.
@@ -1081,7 +1083,7 @@ own row in Settings and can be changed again there.
 | --- | --- |
 | Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_classicLook retail`, `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
 | Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
-| HUD | `cg_hudStyle game`, `cg_hudFiles 3` (JoF EJK's default, its own HUD; the retail HUD where its files are not installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
+| HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
 | Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
 | Chat | `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
 | Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
@@ -2906,8 +2908,7 @@ Force aura and the combined Protect+Absorb shell, and the update and identity
 opt-ins, then its own "Don't show at start" row (`ui_hideFirstSetup`), ending in a
 Key bindings row. Its other rows are the catalogue's own, looked up by cvar, so a
 change there is the same change the other tabs make; it is the last tab so the
-other tabs keep their numbers. The SJK UI pop-up's line under its title points at
-the first row.
+other tabs keep their numbers.
 
 With the classic menus the same rows are the first group of the
 Setup page, FIRST SETUP (`Group::Quick`, [groups.rs](../crates/sjk-viewer/src/settings/groups.rs)),
@@ -2915,12 +2916,19 @@ drawn as a classic+ option panel like the others, with search, descriptions and
 defaults, and opens the FIRST SETUP tab only if that panel cannot open. The SJK UI shows
 them as a pop-up card over the map (since 08/10/2026,
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs),
-[sjk-ui.md](sjk-ui.md#first-setup)): the rows scroll inside it, and "Don't show
-at start" is a tick box pinned at its foot, always in view, beside All settings
-(the Settings screen on its First setup category, which keeps the rows too) and
-Done. Picking another menu style on its Menu style row keeps First setup on show in
-the new style: the classic Setup page's FIRST SETUP group or the SJK UI's
-pop-up.
+[sjk-ui.md](sjk-ui.md#first-setup)), which since 23/11/2026 asks one thing at a time:
+six steps (the look, with a picture button each for SJK and for EJK mode; the colours;
+importing from another client; the graphics preset, each one a picture of the same spot;
+how you play; online), each with its picture buttons and the few rows that belong with
+them, none scrolling. The steps and what each shows are a table
+([setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)); seven rows of the
+list are left out of the steps on purpose and listed there. "Don't show at start" is a
+tick box pinned at its foot, always in view, beside All settings (the Settings screen on
+its First setup category, which keeps every row in one list), Back and Next. The pop-up
+is the SJK UI's whatever the menu style: picking EJK (or Classic on its Menu style row)
+turns the classic menus on under it and it stays open on its step. Opened under the
+classic style, First setup is the classic Setup page's FIRST SETUP group, and picking the
+SJK UI there goes on as the pop-up.
 
 At every start, the first time the main menu is up and the menu style is known, it
 opens in the active style, until the player ticks "Don't show at start"
@@ -2935,7 +2943,8 @@ command a `q` completes to. Not yet run in a game window.
 ### Importing from another client
 
 First setup's first row, Import from a client (its `firstsetup import` row, in
-every menu style), opens the Import page on the configs the clients installed beside
+every menu style; the Import my setup button of the SJK UI pop-up's third step), opens
+the Import page on the configs the clients installed beside
 SJK wrote, newest first, at most four: retail Jedi Academy and JA+
 (`jampconfig.cfg`), OpenJK (`openjk.cfg`), EternalJK and JoF EJK (`eternaljk.cfg`)
 and TaystJK (`taystjk.cfg`), in any folder of GameData (portable installs) or of

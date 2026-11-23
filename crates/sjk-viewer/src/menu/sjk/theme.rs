@@ -490,7 +490,8 @@ pub(crate) fn preview(theme: Theme) -> Palette {
     palette(theme, hue as f32, saturation as f32)
 }
 
-/// The theme [`sync`] last applied.
+/// The theme [`sync`] last applied (tests).
+#[cfg(test)]
 pub(crate) fn current() -> Theme {
     let key = APPLIED.load(Ordering::Relaxed);
     Theme::ALL
