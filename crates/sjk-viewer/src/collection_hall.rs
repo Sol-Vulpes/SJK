@@ -1287,6 +1287,7 @@ impl Panel {
         for (caps, action) in keys {
             x = key_hint(&mut self.ui, caps, action, x, y, s) + gap;
         }
+        self.bake_notice(frame);
     }
 
     /// Choose `tile` on the hall (the Holocrons page's way back comes to its tile).

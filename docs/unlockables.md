@@ -2070,7 +2070,14 @@ tier's colour and the kyber worn glows gold from its foot
   in the live pictures' pass, a signature waiting for its own pipelines (asked for at
   once, so no loop keeps the shared look a build stands in with); with nothing on screen
   waiting, the other loaded kybers are baked one loop at a time while the Collection is
-  open, so a scroll finds them on disk. With the menu pictures on (a card short of video
+  open, so a scroll finds them on disk. While that first baking runs (a bake in the last
+  1.5 s, a loaded kyber not on disk), the hall and every page show a slim glass line at
+  the bottom left, "Preparing kyber pictures · N / M" (the loaded kybers kept on disk, of
+  how many), with "Once only: the Collection may be slow until they are done"
+  (`blade_stills::progress`, `Panel::bake_notice`; 23/11/2026, after players' reports of
+  single-digit FPS in the Collection on 2026.1123.1, the first release with the loops,
+  gone after a restart once the loops were kept). Checked by the world shot
+  `duel6_collection_bake_notice` at 1080p and 4K, a progress pretended. With the menu pictures on (a card short of video
   memory) a kyber shows its first picture only, still, from an atlas of 48 of them
   (3072 x 576, 6.75 MiB), one baked a frame and not kept, and nothing is live. The chosen
   swatch shows its loop until its live picture is drawn with its own pipelines; the live

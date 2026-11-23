@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- The first time the Collection bakes the kybers' looping pictures (once per kyber, then kept on disk), a line at the bottom says "Preparing kyber pictures" with how many are done, as the Collection can run slowly meanwhile on a modest graphics card _(Sol)_
+
 ## 2026.1123.2 (Beta) | 23/11/2026
 
 The Beta season is on, and Creyon's Beta blades are found in holocrons.
