@@ -1,3 +1,26 @@
+## The Force box is a Sith tomb (23/11/2026)
+
+Sol's request ("update the model of the mystery box to be more of an ancient sith tomb
+thing, dark, and with red effects, stone door sound when it opens ... you can change the
+shape size of it freely"). Branch `personal/sith-tomb`, based on `main` `5f546e8b5`.
+`scripts/mystery_box_model.py` is rewritten: a basalt sarcophagus on two steps with
+leaning walls, four horns, pilasters, a sigil and random glyphs glowing red, a normal map,
+a lid in two slabs and a fire model ([mystery-boxes.md](mystery-boxes.md), the assets'
+README). The client draws the lid's half twice and parts the two (`lid_slabs`, lift, slide
+and tilt over 2.3 s), stretches the fire up with them, plays the retail stone door sounds
+(start, move, and stop once the slabs rest: `Lid::settles`), keeps what the roll shows
+inside for 0.9 s and floats it at 58 units, the words at 84. The halo's and the fire's
+pictures are squared: the client adds them in linear light, where the old fade's faint
+greys showed as a flat pane with a hard top edge (the blue halo had the same fault, less
+visibly).
+
+Verified on Windows x64: `cargo fmt --all --check`, `cargo clippy -p sjk-viewer
+--all-targets` (nothing in the touched files), `cargo test -p sjk-viewer mystery_box`
+(38 passed) and `things`; the world shot `duel6_mystery_box_tomb` (shut, parting, open;
+its boxes hang over duel6's lawn, as the other box shots' do). Not run in the client: the
+sounds were chosen by name and length, not heard; the size on the maps where boxes stand
+is not checked. Merged into `main` on Sol's word ("epic, merge it into main I love it").
+
 ## First setup in steps with pictures (23/11/2026)
 
 Sol's request ("have a button with an image in first step, I think we should have steps
