@@ -30,7 +30,13 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1123.2 (Beta) | 23/11/2026
+
+The Beta season is on, and Creyon's Beta blades are found in holocrons.
+
+> Beta season: Holocrons and dormant kybers you get now are Beta, with guaranteed prizes, bonus rolls and pity.
+> Beta blades: Creyon's 131 Beta blades, the Moon too, come from Beta holocrons and kybers, and are crafted, bought and traded like the others.
+> Alpha stays Alpha: The holocrons and kybers you held before the Beta season open as they always did.
 
 - Creyon's 130 Beta blades now say "Found in holocrons.": Beta holocrons drop them since the Beta season opened, and they can be crafted, bought and traded like the others. Holocrons you held before the Beta season stay Alpha _(Sol; the blades are Creyon's, PR #370)_
 
