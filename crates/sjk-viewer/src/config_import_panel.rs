@@ -492,6 +492,12 @@ impl Panel {
                 }
             }
             Item::Fov => found.fov.clone().unwrap_or_default(),
+            Item::Brightness => found
+                .gamma
+                .as_deref()
+                .and_then(|gamma| gamma.parse::<f64>().ok())
+                .map(|gamma| format!("{:.2}", crate::frame_target::aa::color::clamp_gamma(gamma)))
+                .unwrap_or_default(),
             Item::FpsCap => match found.max_fps {
                 Some(0) => "uncapped".to_owned(),
                 Some(fps) => format!("{fps} frames a second"),

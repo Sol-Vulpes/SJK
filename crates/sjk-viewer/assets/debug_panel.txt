@@ -123,6 +123,15 @@ test: EJK mode on, change the HUD look by hand, EJK mode off: the HUD you picked
 test: Update with EJK mode or Tactical already on from the release before: off gives your own back.
 note: A profile where the old build already handed back Vanilla wrongly stays as that build left it.
 
+[import-brightness]
+area: Menus & settings
+title: Config import copies Brightness (r_gamma)
+change: First setup Import / firstsetup import: new row Brightness, from the cfg's r_gamma.
+change: EJK's washed-out look is its gamma (yours 1.31); EJK mode still leaves gamma alone.
+test: firstsetup import on EternalJK/eternaljk.cfg: Brightness row reads 1.31.
+test: Import it: r_gamma is 1.311622, the picture lighter as in EJK.
+test: A cfg without r_gamma shows no Brightness row.
+
 [ejk-mode]
 area: Menus & settings
 title: EJK mode: one switch for JoF EJK's look (ui_ejkMode)
