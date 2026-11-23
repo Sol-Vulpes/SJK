@@ -95,12 +95,7 @@ pub(crate) const TABLE: &[Entry] = &[
     entry(
         crate::menu_hud::STYLE_CVAR,
         "game",
-        "The game-data HUD, not one of SJK's layouts",
-    ),
-    entry(
-        crate::menu_hud::FILES_CVAR,
-        "3",
-        "JoF EJK's cg_hudFiles default, its own HUD; the retail HUD where its files are missing",
+        "The game-data HUD, not one of SJK's layouts; the HUD files and a HUD pack stay the player's",
     ),
     entry(
         "cg_classicHudFont",
@@ -431,11 +426,9 @@ mod tests {
         for (cvar, value) in values() {
             assert!(console.cvar(cvar).is_some(), "{cvar} is registered");
             assert!(crate::settings::has_row(cvar), "{cvar} has a Settings row");
-            // The HUD row opens a picker of the styles and its files' row is typed:
-            // neither lists its values.
-            let hud = (cvar == crate::menu_hud::STYLE_CVAR
-                && crate::menu_hud::HudStyle::NAMES.contains(&value))
-                || cvar == crate::menu_hud::FILES_CVAR;
+            // The HUD row opens a picker of the styles: it does not list its values.
+            let hud = cvar == crate::menu_hud::STYLE_CVAR
+                && crate::menu_hud::HudStyle::NAMES.contains(&value);
             assert!(
                 hud || crate::settings::row_takes(cvar, value),
                 "{cvar}'s Settings row offers {value:?}"
@@ -582,7 +575,10 @@ mod tests {
         assert_eq!(run(&mut console, &["1"]).unwrap().len(), 1);
         let list = run(&mut console, &["list"]).unwrap();
         assert_eq!(list.len(), TABLE.len() + 1);
-        assert!(list.iter().any(|line| line.contains("cg_hudFiles \"3\"")));
+        assert!(
+            list.iter()
+                .any(|line| line.contains("con_style \"classic\""))
+        );
         run(&mut console, &["OFF"]).unwrap();
         assert!(!asked(&console) && !applied(&console));
         assert_eq!(text(&console, crate::menu::style::CVAR), "sjk");

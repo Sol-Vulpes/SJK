@@ -53,8 +53,9 @@ change, the restart; the settings groups, sections, help and search tests). Not 
 nothing was run in the client, so the look with the mode on has not been compared with JoF
 EJK on screen. Known differences left: the chat composer and its channel buttons are
 SJK's, the chat box keeps SJK's place and line spacing, the SJK scoreboard extras without
-a setting stay, other players' emotes still play, and `cg_hudFiles 3` shows JoF EJK's HUD
-only where its files are installed.
+a setting stay, other players' emotes still play, and the HUD files stay the player's (`cg_hudFiles 3`
+is JoF EJK's own HUD where its files are installed; the mode no longer sets it, so a
+HUD pack keeps working, 23/11/2026).
 
 ## Classic menus' own look: the menu's proportions, the logo, Aurebesh (22/11/2026)
 

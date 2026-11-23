@@ -1083,7 +1083,7 @@ own row in Settings and can be changed again there.
 | --- | --- |
 | Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_classicLook retail`, `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
 | Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
-| HUD | `cg_hudStyle game`, `cg_hudFiles 3` (JoF EJK's default, its own HUD; the retail HUD where its files are not installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
+| HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
 | Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
 | Chat | `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
 | Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
