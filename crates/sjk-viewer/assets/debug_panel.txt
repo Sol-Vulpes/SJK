@@ -24,12 +24,27 @@
 
 # ---- Console & chat ----
 
+[v1-leftovers]
+area: Menus & settings
+title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved
+change: No toy_wheelofdoom (toy, key, quick wheel, status bar piece) and no wheelofdoom_remove.
+change: No Fishing/Mining Log book (tile, tab, Share) or junk selling; retired achievements stay.
+change: No Support SJK line; Settings > Interface has no Classic menus' look row.
+test: Collection > Toys: 7 toys, no WHEEL OF DOOM row; Earn and win holds Box hunt, Quests.
+test: Quick wheel catalogue (Add a choice, Toys) and Key bindings: no WHEEL OF DOOM entry.
+test: A Force box: Hold Use with a coin rolls; the status bar and Inventory show your coins.
+test: Collection hall: no Log book tile, even with fishing_log.txt holding a catch.
+test: Achievements > Hobbies (a holder of a fishing one): retired, No longer obtainable.
+test: SJK UI main page: no Support SJK line; the launcher notice still shows without it.
+test: ui_menuStyle classic, ui_classicLook sjk: the classic menus stay in the retail look.
+test: toy_wheelofdoom or wheelofdoom_remove in the console: unknown command.
+
 [wheel-of-doom-removed]
 area: Gameplay
 title: WHEEL OF DOOM: the placed wheels' code and assets removed (v1 clean-up)
 change: No wheel model, spin, music, ticks or words in the client; the outcomes stay for the box.
-change: wheelofdoom_place and wheelofdoom_list are gone; wheelofdoom_remove <id> stays (creator).
-test: toy_wheelofdoom (bind, quick wheel, Collection > Toys): your coins, Hold Use at a Force box.
+change: wheelofdoom_place and wheelofdoom_list are gone (toy and remove: see v1-leftovers).
+test: Hold Use at a Force box with a coin: the DOOM coin roll starts as before.
 test: A DOOM coin roll at a Force box (local hub, branch force-box): an effect strikes, HUD line.
 test: Quack effect: every swing quacks; WHEEL OF DOOM sounds off in Settings silences it.
 test: A map where a wheel stood: nothing stands there; no error in the console at map load.
@@ -148,6 +163,8 @@ test: Title: the game's Star Wars / Jedi Academy logo, letters only, no blue box
 test: Sides: columns of Aurebesh letters, climbing slowly; four of them on 16:9.
 test: Other pages: the page bar is a band from edge to edge between two rules.
 note: Entries and panels are still placed on the 4:3 canvas; moving them out is next.
+note: Shelved for v1 on 23/11/2026 (v1-leftovers): no Settings row, retail whatever the cvar.
+note: To look at it: SJK_CLASSIC_LOOK=sjk on menu_snapshot.
 
 [first-setup-themes]
 area: Menus & settings
@@ -401,7 +418,7 @@ change: tags and cards, each with its tier in colour and how many, under a headi
 test: collection, Ctrl+Tab to Inventory: credits and shards match the Forge; holocrons the tab's.
 test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip the headings.
 test: / opens the search: type, held Backspace, Ctrl+A/C/V work; Esc clears; wheel scrolls.
-note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
+note: DOOM coins show only once the hub said them (read with the Force boxes).
 
 [tier-frame]
 area: Menus & settings
@@ -3457,27 +3474,6 @@ test: Esc menu: the Credits icon is a grey disc with a silver laurel.
 test: Settings rail: every category icon is grey; Chat, Mods and Quick wheel have one too.
 test: What's new card: the headings' icons are grey discs.
 
-[shelve-support-links]
-area: Menus & settings
-title: Support SJK shelved: no donation links on the main page
-change: The GitHub Sponsors and Ko-fi line at the top left of the SJK UI main page is hidden.
-change: Settings > Interface no longer has a Support SJK row.
-test: SJK UI main page: no Support SJK line top left, at 1080p and 4K (150 %).
-test: Settings > Interface: no Support SJK row.
-test: ui_supportLinks 1 in the console: the line still stays hidden.
-
-[support-links]
-area: Menus & settings
-title: Support SJK on the main page: GitHub Sponsors and Ko-fi, x hides it for good
-change: SJK UI main page, top left: "Support SJK", GitHub Sponsors and Ko-fi pills, and x.
-change: x sets ui_supportLinks 0; Settings > Interface > Support SJK shows it again.
-change: The old donation goal card and its hub request are gone; Supporter still holders only.
-test: Main page: the line sits top left, clear of the ring, at 1080p and 4K (150 %).
-test: GitHub Sponsors opens github.com/sponsors/Sol-Vulpes; Ko-fi opens ko-fi.com/soljk.
-test: Hover x: a quiet line says where to bring it back. Click x: the line goes at once.
-test: Restart: still hidden. Settings > Interface > Support SJK on: it comes back.
-test: Classic+ menus: no Support SJK line.
-
 [staff-tools-2]
 area: Menus & settings
 title: Staff page: kyber crystal gifts, second presses, and key ids never shown in game
@@ -5583,7 +5579,7 @@ test: With a coin: prompt says Tap: 100 credits and Hold Use: DOOM coin roll (N 
 test: Hold Use 1 s: Keep holding, then the box rolls; a holocron, coins, bolts or the teddy bear.
 test: A punishment (mirror, drunk...) strikes you; the teddy bear blows you up; 15 s to roll again.
 test: A 2nd SJK player sees the roll; their prompt says Someone rolls a DOOM coin.
-test: toy_wheelofdoom: your coins and Hold Use at a Force box; no wheel stands on its old map.
+test: Status bar: your DOOM coins; no wheel stands on its old map.
 note: The coin roll needs hub branch force-box (1b9fd35) on a local hub; not deployed.
 
 [force-throw]
@@ -10693,13 +10689,3 @@ change: The hub's odds change ships with the release (hub branch no-raygun).
 test: Open boxes: no Ray Gun rolls by; the drops panel lists no Ray Gun once the hub is updated.
 test: Monitor: a hit player still falls as a ragdoll and gets up as before.
 test: First person: your weapon and saber show as before (no prop gun in the hand).
-
-[fishing-mining-removed]
-area: Menus & settings
-title: Fishing and Mining removed; their logs stay in the Collection's Log book
-change: No toy_fishing or toy_mining, no selling, glints, daily goals or rare catch banners.
-change: Collection: a Log book tile after History and a tab, only with a catch in the logs.
-change: Both books read only: ??? for none caught, count and first day, rare ones in gold.
-test: With a fishing_log.txt holding a catch: the Log book tile and tab show, both books fit.
-test: Share under a book with a catch: one line in SJK chat; again at once: a moment ago.
-test: A profile with no logs: no Log book tile, no tab; Toys shows 8 rows, all fit.

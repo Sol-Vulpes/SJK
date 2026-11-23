@@ -553,7 +553,6 @@ impl Group {
             Self::Interface => &[
                 crate::ejk_mode::CVAR,
                 crate::menu::style::CVAR,
-                crate::menu::classic::own_look::CVAR,
                 crate::launcher_notice::CVAR,
                 crate::menu_pictures::CVAR,
                 super::slider_peek::CVAR,

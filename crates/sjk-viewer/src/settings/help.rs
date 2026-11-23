@@ -100,8 +100,6 @@ pub(super) fn classic_label<'a>(cvar: &str, label: &'a str) -> (&'a str, Timing)
 /// a code: each `(cvar, value, name)`. A value not listed is shown as it is
 /// written ([`super::classic_view::choice_label`]).
 const CHOICE_NAMES: &[(&str, &str, &str)] = &[
-    (crate::menu::classic::own_look::CVAR, "retail", "Retail"),
-    (crate::menu::classic::own_look::CVAR, "sjk", "SJK"),
     ("cg_crosshair", "0", "Off"),
     ("cg_crosshair", "1", "Crosshair 1"),
     ("cg_crosshair", "2", "Crosshair 2"),
@@ -1533,10 +1531,6 @@ const HELP: &[(&str, &str)] = &[
     (
         crate::menu::style::CVAR,
         "The SJK UI, SJK's own menus over the live map; or classic menus after the original game's.",
-    ),
-    (
-        crate::menu::classic::own_look::CVAR,
-        "How the classic menus are drawn: Retail, the game's own artwork and colours; or SJK, drawn sharp at any size in the theme's colours.",
     ),
     (
         crate::menu::sjk::theme::CVAR,

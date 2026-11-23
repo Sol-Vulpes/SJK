@@ -1678,9 +1678,6 @@ impl GpuState {
             Ok(BoxDone::Removed(id)) => {
                 self.mystery_box_print(format!("Mystery box {id} removed"));
             }
-            Ok(BoxDone::WheelRemoved(id)) => {
-                self.mystery_box_print(format!("WHEEL OF DOOM {id} removed"));
-            }
             Err(why) if asked.is_some() => self.mystery_box_centre(why),
             Err(why) => self.mystery_box_print(format!("Mystery box: {why}")),
         }

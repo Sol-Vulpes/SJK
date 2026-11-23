@@ -3,9 +3,10 @@
 The WHEEL OF DOOM is no longer a thing on a map. Its outcomes are what a **DOOM coin**
 rolls at a [Force box](mystery-boxes.md#the-doom-coin-roll): Use held 1 s at a box with a
 coin (the teddy bear in a box brings one) asks the hub (`POST /v1/mystery-box/doom`), and
-a punishment strikes the roller through the effects below (`wheel_of_doom_strike`).
-`toy_wheelofdoom` (Collection > Toys, its "Coins" switch; the quick wheel; a key in
-Settings > Controls) says the player's DOOM coins and points at the Force box. Code:
+a punishment strikes the roller through the effects below (`wheel_of_doom_strike`). The
+player's DOOM coins are read with the Force boxes (`GET /v1/wheel-of-doom`, of which only
+`coins` is read) and after each box or coin roll, and show in the status bar
+(`cg_statusBarCoins`) and the Collection's Inventory. Code:
 [wheel_of_doom.rs](../crates/sjk-viewer/src/wheel_of_doom.rs) (the outcome table, the
 coins, the quack), [effects.rs](../crates/sjk-viewer/src/wheel_of_doom/effects.rs) (what
 an outcome does to the roller), [draw.rs](../crates/sjk-viewer/src/wheel_of_doom/draw.rs)
@@ -27,10 +28,14 @@ an outcome does to the roller), [draw.rs](../crates/sjk-viewer/src/wheel_of_doom
   cue, the spin, its Use prompt and drops panel, the words over a wheel, the "out of
   order" path (the hub's `open` flag and `wheel_off` wording for a wheel), the spin
   request (`POST /v1/wheel-of-doom/spin`) and its feed event (`land_<wheel>_<outcome>`),
-  `wheelofdoom_place` and `wheelofdoom_list`, and the world shots of a wheel. Kept:
-  `wheelofdoom_remove <id>` (SJK's creator; the hub still stores the wheels placed before,
-  for older clients, until it deletes them), the coin read (`GET /v1/wheel-of-doom`, of
-  which only `coins` is read) and everything below.
+  `wheelofdoom_place` and `wheelofdoom_list`, and the world shots of a wheel. Then, the
+  same day, the last leftovers: the `toy_wheelofdoom` toy (which only told the coins: its
+  Toys row, quick wheel entry, key, status bar piece and icon), the creator's
+  `wheelofdoom_remove <id>` (`POST /v1/creator/wheel-of-doom/remove`: the wheels the hub
+  still stores for older clients are cleared on the hub itself) and the wheel model's
+  script. Kept: the coin read
+  and everything below. A key still bound to `toy_wheelofdoom` only says the command is
+  unknown.
 
 ## The outcomes
 
@@ -77,8 +82,8 @@ it is; the controls are still mirrored.
 
 The Quack effect's quack is `sound/sjk/wheel_of_doom/quack.wav`, SJK's own, synthesized by
 [wheel_of_doom_assets.py](../scripts/wheel_of_doom_assets.py) and bundled in
-[assets/wheel_of_doom](../crates/sjk-viewer/assets/wheel_of_doom/README.md) with the toy's
-icon; it plays in the roller's ears. Settings > Sound > Toys, "WHEEL OF DOOM sounds"
+[assets/wheel_of_doom](../crates/sjk-viewer/assets/wheel_of_doom/README.md); it plays in the
+roller's ears. Settings > Sound > Toys, "WHEEL OF DOOM sounds"
 (`s_toyWheelOfDoomSound`, on by default), silences it. The roll's own sounds are the
 Force box's ([mystery-boxes.md](mystery-boxes.md)).
 

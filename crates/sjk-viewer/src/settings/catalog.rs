@@ -1846,11 +1846,6 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Choice(&crate::menu::style::MenuStyle::NAMES),
     },
     Setting {
-        label: "Classic menus' look",
-        cvar: crate::menu::classic::own_look::CVAR,
-        kind: ValueKind::Choice(&crate::menu::classic::own_look::NAMES),
-    },
-    Setting {
         label: "Theme",
         cvar: crate::menu::sjk::theme::CVAR,
         kind: ValueKind::Choice(&crate::menu::sjk::theme::Theme::NAMES),

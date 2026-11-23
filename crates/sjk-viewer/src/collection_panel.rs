@@ -56,8 +56,6 @@ pub(crate) mod inventory;
 mod inventory_view;
 #[path = "collection_loadouts.rs"]
 pub(crate) mod loadouts;
-#[path = "collection_log_book.rs"]
-mod log_book;
 #[path = "collection_marks_view.rs"]
 mod marks_view;
 #[path = "collection_medals.rs"]
@@ -137,8 +135,6 @@ const MONITOR_TOKEN: u16 = 1_303;
 const BOX_HUNT_TOKEN: u16 = 1_304;
 /// Quests' niche on Toys.
 const QUESTS_TOKEN: u16 = 1_397;
-/// The WHEEL OF DOOM's niche on Toys.
-const WHEEL_OF_DOOM_TOKEN: u16 = 1_396;
 /// Each toy's place among the toys (`collection_toys::TOYS`, [`TOY_TOKENS`],
 /// [`Panel::toy`]): named, so a toy removed (the Banana peel, 20/11/2026) moves only
 /// these.
@@ -148,8 +144,7 @@ const DRONE_TOY: usize = 2;
 const BOOMBOX_TOY: usize = 3;
 const MONITOR_TOY: usize = 4;
 const BOX_HUNT_TOY: usize = 5;
-const WHEEL_OF_DOOM_TOY: usize = 6;
-const QUESTS_TOY: usize = 7;
+const QUESTS_TOY: usize = 6;
 /// The Toys tab's "?", the Toy Master's (`collection_toys::Panel::toy_master_badge`): its
 /// hover card tells of the toys hidden on maps and names those the player found.
 const TOY_MASTER_TOKEN: u16 = 1_376;
@@ -167,8 +162,8 @@ const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
 /// The toys the Toys tab shows: Illuminate, the Ragdoll, the Drone,
-/// the Boombox, the Monitor, Box hunt, then the WHEEL OF DOOM and Quests.
-const TOY_COUNT: usize = 8;
+/// the Boombox, the Monitor, Box hunt, then Quests.
+const TOY_COUNT: usize = 7;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
@@ -177,18 +172,13 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
     BOOMBOX_TOKEN,
     MONITOR_TOKEN,
     BOX_HUNT_TOKEN,
-    WHEEL_OF_DOOM_TOKEN,
     QUESTS_TOKEN,
 ];
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`TOY_SWITCH_END`]. From 1_360 they ran into
 /// [`FAVOURITE_TOKEN`] at the thirteenth toy (08/11/2026); no other token of the panel lies
-/// between 1_400 and 3_000 but the Log book's Share buttons ([`BRAG_TOKEN`]).
+/// between 1_400 and 3_000.
 const TOY_SWITCH_BASE: u16 = 1_460;
-/// The Log book page's Share buttons ([`crate::catch_book`]): the fish book's, then the
-/// mining book's.
-const BRAG_TOKEN: u16 = 1_441;
-const BRAG_MINING_TOKEN: u16 = 1_442;
 const TOY_SWITCH_END: u16 = 1_500;
 const _: () = assert!(TOY_SWITCH_BASE + TOY_COUNT as u16 <= TOY_SWITCH_END);
 /// The chosen toy's key, which a click or K waits for a key to bind, and its second (the
@@ -450,14 +440,6 @@ pub(crate) enum PanelAction {
     BoxHunt(bool),
     /// Turn Quests on (`true`) or off: the same as `toy_quests`, set rather than toggled.
     Quests(bool),
-    /// Press the WHEEL OF DOOM's switch: the same as `toy_wheelofdoom` (the first shows
-    /// the price, a second spins).
-    WheelOfDoom,
-    /// Share a log book's rarest catch in the SJK chat (the Log book page's Share): the
-    /// fish book's, or the mining book's (`mining`).
-    Brag {
-        mining: bool,
-    },
     /// Set `cg_tag` to this tag's id: the one `toy_tag` sticks.
     /// Pick a tag (or a card) for `toy_tag`, in a finish (`cg_tag`, `cg_tagFinish`).
     ChooseTag(String, &'static str),
@@ -652,11 +634,6 @@ pub(crate) struct Inputs<'a> {
     pub(crate) box_hunt: bool,
     /// Quests are on now (kept as [`Self::illuminate`] is).
     pub(crate) quests: bool,
-    /// A WHEEL OF DOOM of the player's spins, or one of its effects runs.
-    pub(crate) wheel_of_doom: bool,
-    /// The Fishing and Mining log books, as read when the Collection opened
-    /// ([`crate::catch_book::load`]); none shows nothing.
-    pub(crate) log_books: Option<&'a crate::catch_book::Books>,
     /// The stock blade's colour (`color1`), for its swatch.
     pub(crate) stock: sjk_ui::Color,
     /// [`SHADER_VIEW_CVAR`]: the Shaders tab shows the grid of cards.
@@ -1369,7 +1346,6 @@ impl Panel {
             Tab::Toys if self.toy == BOOMBOX_TOY => PanelAction::Boombox(!self.boombox_on),
             Tab::Toys if self.toy == MONITOR_TOY => PanelAction::Monitor(!self.monitor_on),
             Tab::Toys if self.toy == BOX_HUNT_TOY => PanelAction::BoxHunt(!self.box_hunt_on),
-            Tab::Toys if self.toy == WHEEL_OF_DOOM_TOY => PanelAction::WheelOfDoom,
             Tab::Toys if self.toy == QUESTS_TOY => PanelAction::Quests(!self.quests_on),
             Tab::Toys => PanelAction::Illuminate(!illuminate),
             Tab::Tags => self.choose_tag(),
@@ -2691,8 +2667,6 @@ impl Panel {
             GRID_VIEW_TOKEN => self.set_grid(true),
             WEAR_TOKEN | TOY_SWITCH_TOKEN => self.activate(illuminate),
             TOY_SIGHT_TOKEN => self.toy_sight(),
-            BRAG_TOKEN => PanelAction::Brag { mining: false },
-            BRAG_MINING_TOKEN => PanelAction::Brag { mining: true },
             loadouts::OPEN_TOKEN => {
                 self.loadouts.open();
                 PanelAction::None
@@ -2724,7 +2698,7 @@ impl Panel {
             EXTRAS_BODY_TOKEN => PanelAction::None,
             // A toy's row chooses it; its own switch runs it.
             TOY_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN | BOOMBOX_TOKEN | MONITOR_TOKEN
-            | BOX_HUNT_TOKEN | WHEEL_OF_DOOM_TOKEN | QUESTS_TOKEN => {
+            | BOX_HUNT_TOKEN | QUESTS_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
             }
@@ -2955,8 +2929,6 @@ mod tests {
             monitor: false,
             box_hunt: false,
             quests: false,
-            wheel_of_doom: false,
-            log_books: None,
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
             grid: false,
             options: "",

@@ -41,9 +41,7 @@ impl GpuState {
         // The boombox checks who may carry it, so it is switched once the console is let
         // go.
         let boombox_request = console.take_boombox_request();
-        let wheel_of_doom = console.take_wheel_of_doom_request();
         let servers = console.take_servers_request();
-        let brag = console.take_brag_request();
         let mut actions = [None; MAX_ACTIONS_PER_FRAME];
         console.advance_command_frame();
         console.pump_console_socket();
@@ -81,15 +79,8 @@ impl GpuState {
         {
             self.toggle_boombox();
         }
-        if wheel_of_doom {
-            self.wheel_of_doom_command();
-        }
         if servers {
             self.open_servers_from_collection();
-        }
-        // The Log book's Share (`catch_book`).
-        if let Some(mining) = brag {
-            self.share_log_book(mining);
         }
         // `toy_illuminate` may have flipped it: tell the Toys tab. The Drone, the Monitor,
         // Box hunt and Quests stay as last switched, across
@@ -110,7 +101,6 @@ impl GpuState {
             console.set_boombox_on(self.boombox.on());
             console.set_monitor_on(self.monitor.on());
             console.set_box_hunt_on(self.box_hunt.on());
-            console.set_wheel_of_doom_on(self.wheel_of_doom.running());
             console.set_quests_on(self.quests.on());
         }
         let connection = self

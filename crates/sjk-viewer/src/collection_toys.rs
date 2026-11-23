@@ -37,7 +37,7 @@ const SWITCH_ROOM: f32 = 130.0;
 
 /// The list's sections (Sol's pick of 09/11/2026, once there were fourteen toys): each
 /// head and how many toys of [`ORDER`] stand under it.
-const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 1), ("Earn and win", 3)];
+const SECTIONS: [(&str, usize); 3] = [("Around you", 4), ("With others", 1), ("Earn and win", 2)];
 /// The toys in the list's order, as indices into [`TOYS`] (whose order the panel, the
 /// tokens and the bits keep): around you, the ones that need others with them on, and
 /// the ones that earn or win something.
@@ -49,7 +49,6 @@ pub(super) const ORDER: [usize; TOY_COUNT] = [
     MONITOR_TOY,
     BOX_HUNT_TOY,
     QUESTS_TOY,
-    WHEEL_OF_DOOM_TOY,
 ];
 
 /// Where each toy's row stands, in the order of [`TOYS`].
@@ -124,7 +123,7 @@ const SIGHT_ROW: f32 = 48.0;
 
 /// Every command a toy is run by, in the order the page is told their keys
 /// ([`Inputs::toy_keys`]): each toy's switch, the Monitor's throw (held, it charges) after its own.
-pub(crate) const COMMANDS: [&str; 9] = [
+pub(crate) const COMMANDS: [&str; 8] = [
     "toy_illuminate",
     "toy_ragdoll",
     "toy_drone",
@@ -132,7 +131,6 @@ pub(crate) const COMMANDS: [&str; 9] = [
     "toy_monitor",
     "+monitor_throw",
     "toy_boxhunt",
-    crate::wheel_of_doom::COMMAND,
     crate::quests::COMMAND,
 ];
 
@@ -162,8 +160,7 @@ struct Toy {
     options: &'static [(&'static str, &'static str)],
     token: u16,
     /// Who made it, signed on its row and its card (Sol's list of 09/11/2026: Illuminate
-    /// to Box hunt and the WHEEL OF DOOM are Sol's), and whose idea it was when that is
-    /// someone else's.
+    /// to Box hunt are Sol's), and whose idea it was when that is someone else's.
     author: &'static str,
     idea: Option<&'static str>,
 }
@@ -264,23 +261,6 @@ const TOYS: [Toy; TOY_COUNT] = [
         sight: None,
         options: &[],
         token: BOX_HUNT_TOKEN,
-        author: "Sol",
-        idea: None,
-    },
-    Toy {
-        icon: "wheel_of_doom",
-        name: "WHEEL OF DOOM",
-        tag: "Roll a DOOM coin at a Force box: a holocron, or doom.",
-        title: "WHEEL OF DOOM",
-        what: "Hold Use at a Force box to roll a DOOM coin instead of credits (the teddy bear in a Force box brings one): better loot than credits, a holocron of any tier 60% of the time, your coin back, nothing, or something terrible: your keys or mouse turned against you, the world mirrored or upside down, darkness, no saber, quacks, a curse, or a blast. Everyone near sees the box roll.",
-        more: Some(
-            "Its switch tells your DOOM coins. One coin roll every 15 seconds. What it does lasts a few seconds and ends on a new map or when you die.",
-        ),
-        commands: &[(crate::wheel_of_doom::COMMAND, "Your key")],
-        switch: "Coins",
-        sight: None,
-        options: &[],
-        token: WHEEL_OF_DOOM_TOKEN,
         author: "Sol",
         idea: None,
     },
@@ -393,7 +373,6 @@ pub(super) fn states(inputs: &Inputs<'_>) -> [bool; TOY_COUNT] {
         inputs.boombox,
         inputs.monitor,
         inputs.box_hunt,
-        inputs.wheel_of_doom,
         inputs.quests,
     ]
 }

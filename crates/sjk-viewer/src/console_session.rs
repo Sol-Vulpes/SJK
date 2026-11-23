@@ -677,11 +677,7 @@ impl ViewerConsole {
             pending_boombox: None,
             quests_on: false,
             pending_quests: None,
-            wheel_of_doom_on: false,
-            pending_wheel_of_doom: false,
-            log_books: Default::default(),
             pending_servers: false,
-            pending_brag: None,
             monitor_on: false,
             pending_monitor: None,
             box_hunt_on: false,
@@ -1183,7 +1179,7 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         // The weapon icon on nameplates, removed on 28/10/2026 (Sol: it told nothing).
         "cg_nameplateWeapon",
         // The Fishing and Mining toys' sounds and bite cue, removed on 20/11/2026 (their
-        // logs stay: the Collection's Log book reads them).
+        // Log book went on 23/11/2026).
         "s_toyFishingSound",
         "s_toyMiningSound",
         "cg_fishingBiteCue",
@@ -1208,6 +1204,9 @@ fn retire_modern_ui(cvars: &mut CvarRegistry) {
         "cl_toyBanana",
         "s_toyBananaSound",
         "cg_toyBananaShow",
+        // Support SJK's switch, the shelved donation line of the main page, removed on
+        // 23/11/2026.
+        "ui_supportLinks",
     ] {
         let _ = cvars.unset(retired);
     }

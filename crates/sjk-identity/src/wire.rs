@@ -612,16 +612,6 @@ pub struct ActivityState {
     /// The distance a claim's moves must add up to, in game units, to count as moving.
     #[serde(default)]
     pub move_min: u64,
-    /// When the key last hooked a fishing bite, unix seconds; 0 never (04/11/2026).
-    #[serde(default)]
-    pub last_bite: i64,
-    /// How long a hooked bite keeps a player standing at the water earning, in seconds;
-    /// 0 from hubs that do not count fishing.
-    #[serde(default)]
-    pub fishing_window: i64,
-    /// The percent a claim earns while fishing.
-    #[serde(default)]
-    pub fishing: u32,
 }
 
 /// What the player did since the last accepted claim, sent with an active claim
@@ -641,14 +631,6 @@ pub struct PlaySignals {
     pub kills: u64,
     /// Deaths at another player's hand.
     pub deaths: u64,
-    /// Bites of the fishing toy hooked in time (04/11/2026): standing at the water earns
-    /// while they come.
-    #[serde(default)]
-    pub bites: u64,
-    /// Boulders of the mining toy broken (15/11/2026): the hub counts them for kyber
-    /// finds and the daily catch quests; they set no pace.
-    #[serde(default)]
-    pub rocks: u64,
 }
 
 impl PlaySignals {
@@ -660,8 +642,6 @@ impl PlaySignals {
         self.hurt = self.hurt.saturating_add(other.hurt);
         self.kills = self.kills.saturating_add(other.kills);
         self.deaths = self.deaths.saturating_add(other.deaths);
-        self.bites = self.bites.saturating_add(other.bites);
-        self.rocks = self.rocks.saturating_add(other.rocks);
     }
 
     /// Whether any fight shows: a hit, a hurt, a kill or a death.

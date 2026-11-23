@@ -1,3 +1,41 @@
+## Clean-up ahead of v1: the last leftovers (23/11/2026)
+
+Branch `personal/v1-leftovers`, based on `main` `632a3f521`, Sol's approval of the
+half-finished things the sweep below left for Sol to decide:
+
+- **`toy_wheelofdoom`** (it only told the DOOM coins, which the status bar and the
+  Inventory show, read with the Force boxes): the toy's command, Toys row, quick wheel
+  entry and picture, key binding row and icon, `toy_help` line, status bar piece, and
+  the creator's `wheelofdoom_remove` with `POST /v1/creator/wheel-of-doom/remove`. The
+  DOOM coin roll, its outcomes and effects, the quack and `s_toyWheelOfDoomSound` stay
+  ([wheel-of-doom.md](wheel-of-doom.md)). `scripts/wheel_of_doom_model.py` went (it drew
+  the removed icon and model); `wheel_of_doom_assets.py` writes the quack only, byte for
+  byte as bundled.
+- **Fishing and Mining's leftovers:** the Collection's Log book (tile, tab, Share), the
+  catch tables and log reading (`fishing.rs`, `mining.rs`, `catch_book.rs`,
+  `collection_log_book.rs`), `sjk_identity::junk` and `sjk_identity::catch` with the
+  junk routes, a claim's kyber finds and catch quests, the claims' `bites` and `rocks`,
+  and the hub's fishing pace fields and their "fight or fish" line. The retired
+  achievements stay displayable: their goals (12 fish, 6 junk, 9 ores) are constants in
+  `achievements.rs` ([client.md](client.md#fishing-and-mining-removed)).
+- **Support SJK:** `support_links.rs`, the main page's line and its targets, and
+  `ui_supportLinks` (dropped at load); the launcher notice keeps the same corner
+  ([sjk.md](sjk.md#donations)). The site's own donation section is untouched.
+- **The classic menus' own look** is shelved, not removed (`own_look::SHELVED`): its code
+  (`own_look.rs`, `own_art.rs`, `own_writing.rs`, some 850 lines, and the logo cut in the
+  art set) is tied into the classic view and the canvas, far more than the row it served,
+  and is a first step Sol may take up again. The Settings row, its help, search
+  place and requirement rule and its EJK mode entry are gone; the cvar stays registered
+  and is read as `retail` whatever it says ([classic-plus.md](classic-plus.md#the-own-look)).
+- Docs: the Force Throw section of client.md rewritten to the current toy; the
+  CHANGELOG's Unreleased lines that had landed inside the format comment (eleven of them,
+  invisible on the changelog page) moved under Unreleased, without the classic look's.
+
+Verified on Windows 11 x64: `cargo fmt --all --check`, `cargo build -p sjk-viewer` (no
+warning), `cargo test --workspace` (5843 passed, 340 ignored; the viewer's 4369), Clippy
+(no warning on a changed line), the release startup stack check, and the trimmed quack
+script's output against the bundled `quack.wav`. Not run in the client.
+
 ## The chat has a classic style, JoF EJK's (23/11/2026)
 
 Sol's request ahead of v1: with EJK mode on, the chat was the largest thing still SJK's.

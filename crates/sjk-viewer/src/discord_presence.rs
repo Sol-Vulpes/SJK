@@ -195,7 +195,6 @@ fn tab_words(tab: Tab) -> &'static str {
         // The Saber Lab is a development tab: told as the shaders are.
         Tab::Shaders | Tab::SaberLab => "Looking at kybers",
         Tab::Toys => "Looking at toys",
-        Tab::LogBook => "Reading their log book",
         Tab::Tags => "Looking at tags",
         Tab::Holocrons if crate::terms::renamed() => "Opening echoes",
         Tab::Holocrons => "Opening holocrons",

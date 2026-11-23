@@ -224,7 +224,8 @@ includes:
   map's MD3 models as a note's subject;
 - donations (13/10/2026): the Supporter medal, given on its own for more than 1 euro on
   Ko-fi; since 26/10/2026, Support SJK at the top left of the main page, with links to
-  SJK's GitHub Sponsors and Ko-fi pages and a cross that hides it for good;
+  SJK's GitHub Sponsors and Ko-fi pages and a cross that hides it for good (shelved
+  07/11/2026, removed 23/11/2026);
 - footprints and dust on sand, snow and mud, steps on jumps and landings, and props a
   map hangs on movers drawn, such as t2_rancor's bar tables (13/10/2026);
 - material maps generation 7 (13/10/2026): the generator finds its overrides again and
@@ -530,7 +531,7 @@ includes:
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
 - the classic menus' own look (21/11/2026): `ui_classicLook sjk` draws the classic pages
   without retail artwork and in the theme's colours, by one colour table and a pass over
-  each finished page;
+  each finished page (shelved for v1 on 23/11/2026);
 - EJK mode (22/11/2026): `ui_ejkMode`, one switch that sets JoF EJK's look from one
   table of settings and gives the player's own back, and `cg_finishers`;
 - the classic chat style (23/11/2026): `cg_chatStyle classic`, JoF EJK's message field and

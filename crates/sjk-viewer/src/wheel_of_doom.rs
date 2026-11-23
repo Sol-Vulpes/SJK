@@ -4,8 +4,9 @@
 //! (`mystery_box.rs`, `docs/mystery-boxes.md`), for the same outcomes, and the wheels,
 //! their spin, sounds and words left the client on 23/11/2026. What stays here: the
 //! outcome table the hub's ids name ([`OUTCOMES`]), the [`effects`] on the roller's own
-//! input and view with their HUD line, the coin count `toy_wheelofdoom` tells, the Quack
-//! effect's quack, and the creator's command that removes a wheel the hub still keeps.
+//! input and view with their HUD line, the DOOM coins the hub says ([`GpuState::doom_coins`])
+//! and the Quack effect's quack. The `toy_wheelofdoom` toy, which told the coins, and the
+//! creator's `wheelofdoom_remove` left on 23/11/2026 too.
 
 mod draw;
 mod effects;
@@ -15,16 +16,8 @@ pub(crate) use effects::{Effect, Effects, Saber};
 
 use crate::GpuState;
 use glam::{Quat, Vec3};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
-/// The toy's command: it tells the player's DOOM coins and where to roll one (a Force
-/// box, since 20/11/2026).
-pub(crate) const COMMAND: &str = "toy_wheelofdoom";
-/// Its line in `cmdlist`.
-pub(crate) const HELP: &str = "Toy: your DOOM coins. Hold Use at a Force box to roll one for the WHEEL OF DOOM's outcomes (the teddy bear in a Force box brings a coin)";
-
-/// The toy's icon (key bindings; Collection > Toys draws the quick wheel atlas's copy).
-pub(crate) const ICON: &str = "gfx/sjk/toy_wheelofdoom.png";
 /// The outcomes (20 since 11/11/2026: the holocron of every tier and the coin back
 /// joined the 16), once the wheel's segments.
 pub(crate) const SEGMENTS: usize = 20;
@@ -42,27 +35,12 @@ macro_rules! bundled {
 }
 
 /// The bundled files at their game paths.
-const FILES: [(&str, &[u8]); 2] = [
-    (ICON, bundled!("toy_wheelofdoom.png")),
-    (QUACK, bundled!("quack.wav")),
-];
+const FILES: [(&str, &[u8]); 1] = [(QUACK, bundled!("quack.wav"))];
 
 /// Mount the bundled files.
 pub(crate) fn mount(vfs: &mut sjk_vfs::VirtualFileSystem) -> Result<(), sjk_vfs::VfsError> {
     vfs.mount_memory("SJK wheel of doom", FILES.iter().copied())?;
     Ok(())
-}
-
-/// The creator's console command, with its help: the hub still keeps the wheels placed
-/// before 20/11/2026 for older clients.
-pub(crate) const COMMANDS: &[(&str, &str)] = &[(
-    "wheelofdoom_remove",
-    "SJK creator: remove the WHEEL OF DOOM with the id given from the hub",
-)];
-
-/// Whether `name` is one of [`COMMANDS`].
-pub(crate) fn is_command(name: &str) -> bool {
-    COMMANDS.iter().any(|(command, _)| *command == name)
 }
 
 /// What a segment does.
@@ -228,8 +206,6 @@ fn seed() -> u32 {
 pub(crate) struct WheelOfDoom {
     /// The roller's own effect and curse.
     pub(crate) effects: Effects,
-    /// When the coins were last asked of the hub.
-    read_at: Option<Instant>,
     /// The server and map the effects began on: another ends them.
     place: Option<(std::net::SocketAddr, String)>,
     sounds_registered: Option<u64>,
@@ -238,11 +214,6 @@ pub(crate) struct WheelOfDoom {
 }
 
 impl WheelOfDoom {
-    /// An effect or a curse runs: the Toys tab's switch shows on.
-    pub(crate) fn running(&self) -> bool {
-        self.effects.any()
-    }
-
     /// The player's own view from `eye` at `target` with `up`, turned at `now` by the
     /// effect running (Upside down's roll, Drunk's sway): the new target and up. The aim
     /// is not turned, only what is seen.
@@ -285,34 +256,6 @@ impl GpuState {
             snapshot.wheel_of_doom.as_ref().map(|wheel| wheel.coins)
         })
         .flatten()
-    }
-
-    /// `toy_wheelofdoom`: the player's DOOM coins and where to spend them, in the centre
-    /// of the screen.
-    pub(crate) fn wheel_of_doom_command(&mut self) {
-        let now = Instant::now();
-        self.read_wheel_of_doom(now);
-        let coins = match self.doom_coins() {
-            Some(1) => "You hold 1 DOOM coin".to_owned(),
-            Some(coins) => format!("You hold {coins} DOOM coins"),
-            None => "Asking the hub for your DOOM coins".to_owned(),
-        };
-        self.wheel_of_doom_centre(format!(
-            "{coins}. Hold Use at a Force box to roll one. The teddy bear in a Force box brings a coin"
-        ));
-    }
-
-    /// Ask the hub for the coins, at most every 5 seconds.
-    fn read_wheel_of_doom(&mut self, now: Instant) {
-        if self
-            .wheel_of_doom
-            .read_at
-            .is_some_and(|at| now.saturating_duration_since(at) < Duration::from_secs(5))
-        {
-            return;
-        }
-        self.wheel_of_doom.read_at = Some(now);
-        let _ = crate::player_identity::with_service(|service| service.read_wheel_of_doom());
     }
 
     /// The frame's WHEEL OF DOOM logic, after the looks: the effects, which end on a new
@@ -378,29 +321,6 @@ impl GpuState {
             }
             None => self.wheel_of_doom_outcome(None, id, "a newer hub's outcome", now),
         }
-    }
-
-    /// `wheelofdoom_remove <id>`: the hub takes a wheel it still keeps away.
-    pub(crate) fn wheel_of_doom_creator_command(
-        &mut self,
-        name: &str,
-        args: &[String],
-    ) -> Result<Vec<String>, String> {
-        if name != "wheelofdoom_remove" {
-            return Err(format!("Unknown command {name}"));
-        }
-        if !crate::player_identity::is_creator() {
-            return Err("Only SJK's creator removes wheels of doom".into());
-        }
-        let id: i64 = match args.first() {
-            Some(id) => id.parse().map_err(|_| format!("Not a wheel id: {id}"))?,
-            None => {
-                return Err("Usage: wheelofdoom_remove <id> (the hub's panel lists them)".into());
-            }
-        };
-        crate::player_identity::with_service(|service| service.remove_wheel_of_doom(id))
-            .ok_or("Not connected to the SJK hub")?;
-        Ok(vec![format!("Removing WHEEL OF DOOM {id}...")])
     }
 
     /// Play the Quack effect's quack; the sound is handed to the audio the first time.
@@ -489,10 +409,10 @@ mod tests {
     fn a_new_map_or_a_death_ends_the_effects() {
         let mut toy = WheelOfDoom::default();
         let now = Instant::now();
-        assert!(!toy.running());
+        assert!(!toy.effects.any());
         toy.effects.start(Effect::Walk, now);
-        assert!(toy.running());
+        assert!(toy.effects.any());
         toy.effects.clear();
-        assert!(!toy.running());
+        assert!(!toy.effects.any());
     }
 }

@@ -61,11 +61,6 @@ pub(crate) const TABLE: &[Entry] = &[
         "The retail menus' pages and flow; the loading screen and the in-game menu follow it",
     ),
     entry(
-        crate::menu::classic::own_look::CVAR,
-        "retail",
-        "The game's own menu artwork and colours, not the theme's",
-    ),
-    entry(
         crate::game_font::CVAR,
         "1",
         "The game's own fonts in the menus, chat, HUD text, scoreboard and console",

@@ -239,7 +239,6 @@ const INTERFACE: &[Section] = &[
         &[
             "ui_ejkMode",
             "ui_menuStyle",
-            "ui_classicLook",
             "ui_textScale",
             "ui_letterSpacing",
             "ui_gameFont",
