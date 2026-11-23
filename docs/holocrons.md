@@ -683,10 +683,12 @@ Collection's Forge ([cards.md](cards.md#the-forge)).
 Kybers drop already
 ([unlockables.md](unlockables.md#holocron-kyber-drops)).
 
-## Profile banner prizes
+## Profile banner prizes (removed)
 
-Openings may award a counted profile banner instead of a card and credits, when
-the hub supplies a banner share. Other prize shares stay unchanged, and dormant kybers
-still give kybers only. The reveal shows the cover and links its use to Collection
-> Banners. See [profile banners](profile-banners.md#echo-rewards-and-ownership) for
-the first catalogue, proposed balance and inventory rules.
+Profile banners (collectible profile covers, a bonus roll on openings; #319, 02/11/2026)
+were taken out of the game on 08/11/2026 and removed from the client on 23/11/2026. The
+hub keeps their switch off (`--banner-min-client`); should it still send one, the client
+leaves it out without a word: an opening's `banner`, a Beta extra of kind `banner`, a
+tier's `banner` odds, a profile's `banner` and the economy's `banners` table are not
+read (`holocrons_panel_opening.rs` `a_hub_that_still_sends_banners_is_shown_without_them`,
+`loot_odds.rs` `a_hubs_banner_odds_are_ignored`, `sjk-identity` `wire.rs`).

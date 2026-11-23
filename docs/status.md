@@ -1938,33 +1938,18 @@ is 0.62 MB and the others under 200 KB. Viewer tests and the map change world sh
 pass; offline joins of a local server did not reproduce the crash (their frames are
 not called from `window_event`). Not yet confirmed on the JoF server in the client.
 
-## Static profile banners
+## Static profile banners (removed 23/11/2026)
 
-**Out of the game since 08/11/2026** (Sol: unfinished): no drops, no Banners tab,
-no covers shown; see [profile-banners.md](profile-banners.md).
-
-31/10/2026, `feat/profile-banners`, client code `56a9b774` (including `main`
-`677a6073`) and matching hub PR #6 `3c77a2f`: five collectible covers and a
-neutral fallback, with Collection equip/unequip, profile headers and player cards.
-An independent 10% banner roll adds a cover to the ordinary Echo prize; card
-frequency, credits, Solar blade bonuses and other prizes retain their rules.
-The hub defaults banner drops to disabled until a supporting minimum release is
-configured; older clients keep ordinary rewards and see zero bonus odds.
-Ordinary rewards reveal first, then bonus covers, each group within the existing
-batch limit. Banners cannot use blade-only trade/craft/shatter operations.
-
-Windows x64 formatting, locked workspace build/tests and all-target clippy passed.
-Focused checks cover old JSON, a presence avatar without a fetched profile,
-retained ordinary rewards/Solar bonuses, independent odds and twenty openings
-with twenty bonus covers, including both summaries' canvas capacity at two
-window sizes. The hub's complete suite passed (491 library, 174 signed API,
-19 CLI, 3 donation and 41 panel tests), including client gates, duplicates,
-replay refusal, atomic bonus failure and last-copy removal. Offline GPU fixtures
-for Collection, profile and the bonus reveal were refreshed and inspected after
-the main merge. Remote cards use cached profiles rather than live equipment
-broadcasts. Deployment, live interoperability, other platforms and performance
-remain unverified; Sol's remaining design decisions and rollout are still pending.
-See [profile-banners.md](profile-banners.md).
+Profile banners (#319, Lumaya, 02/11/2026; #359 and #369 after it) were out of the game
+since 08/11/2026 as unfinished. On 23/11/2026, in the clean-up ahead of v1 (Sol: "the
+banners, we drop them"), they were removed from the client: the catalogue and its art,
+the Collection's Banners page, the cover on the profile card, the Profile page and the
+sender card, the bonus reveal of openings, the loot table's banner odds, the break-down
+action, `PUT /v1/profile/banner`, the wire fields, the fixtures and `profile-banners.md`.
+The hub keeps its switch off and its stored ownership; a hub that still sends banner
+fields or a banner bonus is read without them
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)). The work stays credited as
+done in CREDITS.md and on the credits page.
 
 ## Ghost editor
 

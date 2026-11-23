@@ -679,7 +679,6 @@ impl Panel {
             Tab::Shaders => self.shaders(&frame, inputs, seconds),
             Tab::Toys => self.toys(&frame, inputs),
             Tab::Tags => self.tags(&frame, inputs),
-            Tab::Banners => self.banners(&frame, inputs),
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
             Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
@@ -1019,10 +1018,6 @@ impl Panel {
                     Some(_) => keys.push((&["Enter"], "equip")),
                     None => {}
                 }
-            }
-            Tab::Banners => {
-                keys.push((&["Arrows"], "choose"));
-                keys.push((&["Enter"], "equip / unequip"));
             }
             Tab::Tags => {
                 keys.push((&["Arrows"], "choose"));

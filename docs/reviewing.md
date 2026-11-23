@@ -49,7 +49,7 @@ or Sol's word.
 ## Golden rule 2: be very careful with the economy
 
 The economy is everything a player earns, keeps, spends or trades: credits, kyber
-shards, holocrons, dormant kybers, cards, kybers and finishers, tags, banners,
+shards, holocrons, dormant kybers, cards, kybers and finishers, tags,
 the shop, crafting and shattering, trading, mystery boxes and the box hunt, achievements
 that pay, and anything new that gives or moves value ([cards.md](cards.md),
 [holocrons.md](holocrons.md), [unlockables.md](unlockables.md)). Players have put

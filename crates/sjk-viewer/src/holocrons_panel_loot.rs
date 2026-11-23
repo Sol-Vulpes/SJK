@@ -80,9 +80,8 @@ const BACK_WIDTH: f32 = 150.0;
 const EDITION_NOTE: &str = "Alpha holocrons bring Alpha things only; Beta ones, Beta or Alpha.";
 
 /// The notes on how the rolls are made, and the rarest card.
-fn notes() -> [String; 7] {
+fn notes() -> [String; 6] {
     let (rarity, finish, chance) = loot::rarest();
-    let table = crate::loot_odds::current();
     [
         "A card's rarity and its finish are rolled apart, so a kind of card is the two chances multiplied, weighed by how often each holocron drops."
             .to_owned(),
@@ -95,12 +94,6 @@ fn notes() -> [String; 7] {
         ),
         "The card is picked evenly among the cards of its rarity; a rarity with no card yet stays sealed.".to_owned(),
         "Gifts from the SJK team are given, not found; they open the same way.".to_owned(),
-        // Said only while the hub drops banners (off since 08/11/2026: unfinished).
-        if table.banner.iter().all(|odds| *odds == 0) {
-            String::new()
-        } else {
-            format!("Bonus banner, on top: {} / {} / {} / {} (Uncommon to Mythical).", loot::percent(f64::from(table.banner[0])/1000.0), loot::percent(f64::from(table.banner[1])/1000.0), loot::percent(f64::from(table.banner[2])/1000.0), loot::percent(f64::from(table.banner[3])/1000.0))
-        },
         EDITION_NOTE.to_owned(),
     ]
     .map(crate::terms::say_owned)
@@ -1084,21 +1077,21 @@ mod tests {
         }
     }
 
-    /// The Beta season's tables as a hub sends them (its `seasons::wire`, banners off).
+    /// The Beta season's tables as a hub sends them (its `seasons::wire`).
     fn beta_tables() -> sjk_identity::SeasonTables {
         serde_json::from_value(serde_json::json!({"beta":[
             {"tier":"rare","rarity":[0,700,250,40,10],"finish":[880,120,0],"credits":[30,50],
              "shader_floor":"uncommon","shader_tier":[0,650,280,60,10],
-             "bonus":[{"shader":0,"tag":250,"shards":250,"banner":0,"card":0,"scale":1000}],
+             "bonus":[{"shader":0,"tag":250,"shards":250,"card":0,"scale":1000}],
              "fresh_faces":false},
             {"tier":"legendary","rarity":[0,0,700,250,50],"finish":[650,330,20],"credits":[80,120],
              "shader_floor":"rare","shader_tier":[0,0,550,350,100],
-             "bonus":[{"shader":0,"tag":333,"shards":333,"banner":0,"card":0,"scale":666}],
+             "bonus":[{"shader":0,"tag":333,"shards":333,"card":0,"scale":666}],
              "fresh_faces":true},
             {"tier":"mythical","rarity":[0,0,500,380,120],"finish":[0,850,150],"credits":[250,350],
              "shader_floor":"legendary","shader_tier":[0,0,0,600,400],
-             "bonus":[{"shader":0,"tag":250,"shards":250,"banner":0,"card":250,"scale":750},
-                      {"shader":0,"tag":250,"shards":250,"banner":0,"card":250,"scale":750}],
+             "bonus":[{"shader":0,"tag":250,"shards":250,"card":250,"scale":750},
+                      {"shader":0,"tag":250,"shards":250,"card":250,"scale":750}],
              "fresh_faces":true}],
             "pity":{"grand":{"every":15,"since":4},"mythical":{"every":80,"since":30}}}))
         .unwrap()

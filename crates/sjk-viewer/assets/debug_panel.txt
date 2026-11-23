@@ -24,6 +24,16 @@
 
 # ---- Console & chat ----
 
+[banners-removed]
+area: Menus & settings
+title: Profile banners removed from the client (v1 clean-up)
+change: No Banners page, covers, bonus reveal, banner odds or break down left in the client.
+change: A hub that still sends banner fields or a banner bonus is read without them.
+test: Collection: no Banners tile or tab; Profile page and player card show no cover.
+test: Chat: rest on a name: the sender card's head is the same dark blue as before.
+test: Open holocrons (one, then a batch): prizes, then Done; no "Bonus banners" step.
+test: Holocrons > loot odds: six notes, none about banners; History shows no error.
+
 [first-setup-steps]
 area: Menus & settings
 title: First setup in steps with pictures (the pop-up, in every menu style)
@@ -715,16 +725,6 @@ test: Without a coin: "No DOOM coin". With one: it spins to the music, lands at 
 test: A friend at the same wheel during a spin: "Someone is spinning it".
 note: Music from zz_sjk_wheel_of_doom_sounds_local.pk3; hub box-rework branch needed.
 
-[banners-off]
-area: Menus & settings
-title: Profile banners out of the game for now (unfinished)
-change: Collection has no Banners tab; holocron odds no longer mention bonus banners.
-change: The hub drops none, shows no worn or held banner and refuses equipping one.
-test: Collection row: Cards then History, no Banners; Tab cycles past it.
-test: Profile header, player card and chat sender cards: no cover, even one worn before.
-test: Holocrons > loot odds: no "Bonus banner" note.
-note: Needs the hub's banners-off change deployed and SJK_HUB_BANNER_MIN_CLIENT off.
-
 [spawn-panel]
 area: Console & chat
 title: Spawn list: NPCs, vehicles and cheats picked from a list (spawn_panel)
@@ -967,7 +967,7 @@ note: Hub branch box-hunt-1103 must be deployed for the 09:00 day and the gift c
 [unknown-prize-card]
 area: Menus & settings
 title: Holocrons: loot this build does not know shows a "?" card, not a dark empty one
-change: An unknown shader, tag, toy, banner or card shows "?" in a ring and "Update SJK to see it".
+change: An unknown shader, tag, toy or card shows "?" in a ring and "Update SJK to see it".
 change: The strip tile says New tag / New shader / New card; batch finds say the kind too.
 test: Open holocrons with an older build while the hub drops a newer shader: "?" card, its name.
 test: A known shader still shows its blade swatch; a known tag its picture.
@@ -1084,27 +1084,6 @@ test: Left/Right filter: Credits keeps buys, boxes and openings that paid credit
 test: Scroll to the end with more than 100 lines: Load older adds older lines once.
 test: On a hub without the endpoint: "History unavailable", "keeps no history yet".
 note: Needs the hub's history branch deployed.
-
-[banners]
-area: Menus & settings
-title: Profile banners (#319, Lumaya): covers on Profile and cards, Collection > Banners
-change: Collection > Banners previews six covers (one free), wears one through the hub.
-change: Holocron openings may add a banner on top of the prize, once the hub enables them.
-test: Collection > Banners: the free cover wears; held covers show copies; Profile header.
-test: Player card and SJK chat sender cards show the worn cover; unknown ids fall back.
-test: Holocron odds: Banner bonus row only on a hub with banners on, 0 otherwise.
-note: Hub banner drops stay off until SJK_HUB_BANNER_MIN_CLIENT is set (hub shared #6).
-
-[banner-breakdown]
-area: Menus & settings
-title: Banner break down (Slash, after headshotsmcgee117's idea): banners into kyber shards
-change: Collection > Banners: Break down a copy (press twice) turns a held banner into shards.
-change: Last copy too on a shatter_last hub, with a warning; it comes off the profile if worn.
-test: Hub with --banner-shatter staff and you staff: hold 2+ Jedi Archives, Break down a copy.
-test: First press arms (Confirm...), second within 5 s sends; "+5 kyber shards" line, count -1.
-test: Last copy: warning line, then it leaves Collection and the profile; History "Shattered".
-test: Switch off (or not staff): no Break down button; the Forge shows no banner answer.
-note: Needs hub shared #18 deployed first; --banner-shatter is off by default (client #369).
 
 [creyon-new-blades-370]
 area: Rendering & effects

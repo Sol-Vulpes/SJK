@@ -395,7 +395,7 @@ did: #331 One switch for the away chat bubble, unfocused or minimized
 did: #332 Save game chat logs, a switch in Settings > Chat
 did: #274 Riders and vehicles predicted with their own collision exclusions
 did: #316 Emoji reactions on SJK chat messages
-did: #319 Profile banners: covers to collect, wear and show on your card
+did: #319 Profile banners: covers to collect, wear and show on your card (removed 23/11)
 did: #287 Lugormod v3: own movement predicted as the server moves you
 link: Lumaya's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3Alumayaa
 
@@ -535,7 +535,7 @@ did: #354 Server remaps chosen per map
 did: #355 Loadouts button on the Shaders tab opens its card
 did: #357 Sharpening slider (r_sharpen)
 did: #358 Console aliases (alias)
-did: #359 Rounded banner covers on the profile card and page
+did: #359 Rounded banner covers on the profile card and page (banners removed 23/11)
 did: #360 Whisper recipient on its own line, pick between whisperers
 did: #278 The Fishing toy: rod, bucket, 12 fish, Echoes on the line
 did: #382 The Toys page's heading counts the toys
@@ -556,7 +556,7 @@ did: #363 The Mining toy: a pickaxe, boulders, ores and five achievements
 did: #364 Mining's rubble sells to the hub, under the junk's cap
 did: #365 The Quests toy: social quests won as an Echo
 did: #376 Chroma shader blades take a pale custom colour
-did: #369 Banners break down for kyber shards
+did: #369 Banners break down for kyber shards (banners removed 23/11)
 did: #390 MP camera: third person damping is honoured in the ejk style
 did: #391 A double click selects the search text in the cvar list, Settings and the server list
 did: #392 Profile: the model turns in the main menu too, the right button zooms it

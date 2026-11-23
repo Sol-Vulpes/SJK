@@ -1682,8 +1682,8 @@ page (its arc holds five entries), the in-game SJK menu and the `identity` comma
 Achievements a dedicated server would vouch for, and pictures for the achievements,
 are not made yet.
 
-## Profile banners
+## Profile banners (removed)
 
-A profile may equip an owned static cover, shared by its profile header and player
-cards. Choose it in Collection > Banners; the hub validates and saves equipment.
-Old or unknown covers use the neutral fallback. See [profile banners](profile-banners.md).
+Profile banners were removed from the client on 23/11/2026
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)). A profile's `banner` field
+is no longer read, and `PUT /v1/profile/banner` is no longer sent.

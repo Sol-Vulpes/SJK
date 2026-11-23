@@ -87,9 +87,6 @@ pub(crate) enum Tab {
     Forge,
     /// The cards opening holocrons brought, and the credits.
     Cards,
-    /// Collectible profile covers from Echo openings: off the row while banners are
-    /// out of the game (Sol, 08/11/2026: unfinished), its page kept for fixtures.
-    Banners,
     /// What came, was opened, spent and traded, newest first (31/10/2026).
     History,
     /// One list of everything the player owns, with counts (15/11/2026).
@@ -233,7 +230,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 18] = [
+    pub(crate) const ALL: [Self; 17] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -246,7 +243,6 @@ impl Tab {
         Self::Holocrons,
         Self::Forge,
         Self::Cards,
-        Self::Banners,
         Self::History,
         Self::Inventory,
         Self::LogBook,
@@ -280,8 +276,7 @@ impl Tab {
             Self::SaberLab if crate::catch_book::shown() => 11,
             Self::SaberLab => 10,
             // Off the row: after its end.
-            Self::Banners => 12,
-            Self::Hall => 13,
+            Self::Hall => 12,
         }
     }
 
@@ -291,7 +286,6 @@ impl Tab {
             // Named whether the lab is on or not: a page may still show it as it stops.
             Self::SaberLab => SABER_LAB,
             Self::LogBook => LOG_BOOK,
-            Self::Banners => "Banners",
             Self::Hall => COLLECTION,
             _ => self.screen().labels()[self.index()],
         }
