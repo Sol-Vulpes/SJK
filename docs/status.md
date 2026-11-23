@@ -21,6 +21,68 @@ its boxes hang over duel6's lawn, as the other box shots' do). Not run in the cl
 sounds were chosen by name and length, not heard; the size on the maps where boxes stand
 is not checked. Merged into `main` on Sol's word ("epic, merge it into main I love it").
 
+## First setup: the name, the finish, every menu style; modes in any order (23/11/2026)
+
+Follow-up to the two entries below, branch `personal/first-setup-polish`, based on
+`main` `5f546e8b5`. Sol's review of the steps and of EJK mode
+([sjk-ui.md](sjk-ui.md#first-setup), [client.md](client.md#modes-that-hold-settings)):
+
+- **The name.** Step 3 is now Player: a name field over Import my setup, Choose a
+  character and Start fresh, since a new player who started fresh stayed "Padawan". The
+  field shows what is typed (colour codes as characters), the name as the game draws it
+  beside it, and a chip for each colour; it writes `name` as it is typed, and uses the
+  menu's one handler for Ctrl+A, Ctrl+C, Ctrl+V and a held Backspace. The Character page
+  comes back to the step. Gameplay FPS moved to Play (ten rows, still no scrolling).
+- **It finishes, in every menu style.** Done on the last step sets `ui_hideFirstSetup`
+  (the tick's setting), so the pop-up no longer comes back at every start; `firstsetup`
+  still opens it. Over the main menu it is the pop-up in every menu style, at start and by
+  the command; the classic list stays for the classic Setup page, the pop-up's All
+  settings under that style, and in a game.
+- **Step 1 shows the game.** Both looks are a frame of the same view of a match on
+  mp/duel6 (a local server, the player alone), under a new profile's settings and under
+  everything EJK mode sets, taken by `setup_look_pictures_generate` with the retail
+  archives only. The classic main page drawn live is gone, with its code.
+- **Modes in any order.** EJK mode, Tactical and `renderer vanilla` shared the Vanilla
+  graphics and each kept "what was there when I came on", so A on, B on, A off, B off
+  could leave the player on a mode's values. `cvar_restore.rs` now tells them of one
+  another: a record holds only the player's own value, a mode going off hands a setting
+  to the mode still holding it, and each keeps its own way of going off. The records
+  keep their format; a profile an older build crossed is set right where the two records
+  tell the player's value from a mode's.
+- **Polish.** The last step closes on a recap of the steps before it (a click goes back
+  to one); drawn pictures (themes, icons) grow into room a step would leave empty; the
+  Vanilla and Vanilla Plus buttons write on where the Solar Renderer has its levels; the
+  level chips have room for "Medium" at 4:3.
+
+Changed outside those: `renderer sjk` typed while EJK mode or Tactical holds the Vanilla
+graphics no longer sets Vanilla Plus under the mode, it lets go of `renderer vanilla`'s
+own claim and says which mode still holds the graphics; `renderer vanilla` typed while
+one of them holds Vanilla is kept, so Vanilla stays when that mode goes off. The SJK
+look's lines say "a status bar, a kill feed" rather than nameplates, which are off on a
+new profile.
+
+Verified on Windows x64 (a 15.6 GB graphics card): `cargo fmt --all --check`, `cargo
+build --locked --workspace`, `cargo clippy --locked --workspace --all-targets`, `cargo
+test --locked --workspace` (every order of on and off of the three modes at each
+Tactical level, any two and each alone, a restart between the steps, each mode's own way
+of going off beside another, records an older build saved and crossed; the name field's
+keys, pointer and colours, Done and the next start in both menu styles, the Character
+page's return, the recap, every step fitting the card) and the startup check;
+`sjk_first_setup_snapshot` (every step, 4:3, 21:9 and 4K layouts) and the world shots
+`first_setup_4k_and_classic_start` (the real renderer at 3840x2160, and a start under
+the classic style) and `duel6_first_setup`, all looked at. The pictures bundled weigh
+690 KiB (706 158 bytes; the cap is 1 MB). Not verified: nothing was run in the client's
+window, so the name field has not been typed in by hand, nor Ctrl+A, Ctrl+C, Ctrl+V and a
+held Backspace through the real key events (they go through the menu's handler that the
+other fields use); the Character page was not looked at when opened from the pop-up.
+Known limits: the looks' pictures show the player alone (no opponent, chat, scoreboard or
+nameplates, which a new profile has off), so the two differ by the status bar, the
+timer, the HUD's type and the image only; the recap has no tile for graphics that match
+no preset; a profile where an older build already gave a mode's values back keeps them.
+Seen while taking the pictures, not looked into: the game's spawn effect is a column
+that whites out a third of the screen under Vanilla Plus, and a player put by
+`setviewpos` on duel6's spawn at 0 -1024 slides some 160 units before standing.
+
 ## First setup in steps with pictures (23/11/2026)
 
 Sol's request ("have a button with an image in first step, I think we should have steps

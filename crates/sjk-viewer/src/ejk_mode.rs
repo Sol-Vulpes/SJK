@@ -11,8 +11,8 @@
 //! change the switch makes can be seen, and changed again, on its own row in Settings.
 //!
 //! Turning it on puts the player's value of each of those settings aside ([`RESTORE_CVAR`],
-//! as `renderer vanilla` and Tactical do, `cvar_restore.rs`) and sets JoF EJK's; turning it
-//! off gives them back. The switch writes only as it flips ([`follow`]): a setting the
+//! as `renderer vanilla` and Tactical do, `cvar_restore.rs`, which tells the three of one
+//! another) and sets JoF EJK's; turning it off gives them back. The switch writes only as it flips ([`follow`]): a setting the
 //! player changes by hand while the mode is on stays as they set it, after a restart too,
 //! and turning the mode off leaves that one alone, since it is no longer the mode's value
 //! but theirs. What was put aside tells whether the mode has been applied, so the console
@@ -24,7 +24,6 @@
 //! sensitivity, HUD scale, brightness) and anything without a setting of its own.
 
 use crate::console::ViewerConsole;
-use sjk_shell::CvarValue;
 
 /// Archived, off by default: SJK looks and feels like JoF EJK.
 pub(crate) const CVAR: &str = "ui_ejkMode";
@@ -286,9 +285,22 @@ pub(crate) fn asked(console: &ViewerConsole) -> bool {
     console.cvar(CVAR).is_some_and(crate::settings::switch_on)
 }
 
+/// The mode as the settings put aside know it (`cvar_restore.rs`): it leaves alone a
+/// setting the player changed by hand while it was on.
+pub(crate) const MODE: crate::cvar_restore::Mode = crate::cvar_restore::Mode {
+    name: "EJK mode",
+    record: RESTORE_CVAR,
+    values: held,
+    keeps_hand_changes: true,
+};
+
+fn held(_: &ViewerConsole) -> Vec<(&'static str, &'static str)> {
+    values()
+}
+
 /// Whether the mode has been applied: something is put aside.
 pub(crate) fn applied(console: &ViewerConsole) -> bool {
-    matches!(console.cvar(RESTORE_CVAR), Some(CvarValue::Text(kept)) if !kept.is_empty())
+    crate::cvar_restore::applied(console, &MODE)
 }
 
 /// Follow [`CVAR`]: apply the mode when it is asked for and not applied yet, give the
@@ -303,36 +315,18 @@ pub(crate) fn follow(console: &mut ViewerConsole) {
 }
 
 /// Put the player's value of each setting aside and set JoF EJK's. Settings this client
-/// does not have (a build without a toy) are skipped.
+/// does not have (a build without a toy) are skipped. A setting another mode already
+/// holds (Tactical, `renderer vanilla`) keeps the player's value that mode put aside.
 fn turn_on(console: &mut ViewerConsole) {
-    let values: Vec<_> = values()
-        .into_iter()
-        .filter(|(cvar, _)| console.cvar(cvar).is_some())
-        .collect();
-    let kept = crate::cvar_restore::kept(console, values.iter().map(|(cvar, _)| *cvar));
-    console.set_cvars(values.into_iter().chain([(RESTORE_CVAR, kept.as_str())]));
+    crate::cvar_restore::put_aside(console, &MODE, &values());
 }
 
 /// Give back what [`turn_on`] put aside. A setting that no longer holds the mode's value
 /// was changed by hand since: it is the player's choice and stays. One the table no
-/// longer names (put aside by an earlier version) is given back as it was.
+/// longer names (put aside by an earlier version) is given back as it was, and one
+/// another mode still holds stays on that mode's value.
 fn turn_off(console: &mut ViewerConsole) {
-    let kept = console
-        .cvar(RESTORE_CVAR)
-        .map(CvarValue::as_text)
-        .unwrap_or_default();
-    let values = values();
-    let restored: Vec<(&str, &str)> = crate::cvar_restore::pairs(&kept)
-        .filter(|(cvar, _)| console.cvar(cvar).is_some())
-        .filter(|(cvar, _)| {
-            values
-                .iter()
-                .find(|(known, _)| known.eq_ignore_ascii_case(cvar))
-                .is_none_or(|(_, value)| crate::graphics_quality::holds(console, cvar, value))
-        })
-        .chain([(RESTORE_CVAR, "")])
-        .collect();
-    console.set_cvars(restored);
+    crate::cvar_restore::give_back(console, &MODE);
 }
 
 /// `ejkmode [on|off|list]`: name the mode, set it, or list what it sets and why.
@@ -409,7 +403,7 @@ mod tests {
     fn text(console: &ViewerConsole, cvar: &str) -> String {
         console
             .cvar(cvar)
-            .map(CvarValue::as_text)
+            .map(sjk_shell::CvarValue::as_text)
             .unwrap_or_default()
     }
 

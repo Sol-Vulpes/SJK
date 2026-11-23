@@ -142,9 +142,7 @@ impl crate::GpuState {
         if let Some(menu) = &mut self.client_menu {
             menu.set_menu_style(style, console);
             menu.set_menu_art(art);
-            // First setup's pop-up draws the classic menus small from the artwork the
-            // files gave, whatever look is worn, and reads settings changed elsewhere.
-            menu.settings.set_retail_art(self.ui_shapes.menu_art());
+            // First setup's pop-up reads settings changed elsewhere.
             menu.settings.follow_console(console);
         }
         self.in_game_menu.set_style(style, art);

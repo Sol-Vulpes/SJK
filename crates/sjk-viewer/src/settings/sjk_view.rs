@@ -1008,8 +1008,12 @@ impl SettingsMenu {
         } else if self.searching {
             keys.extend([(&["Enter"][..], "results"), (&["Esc"][..], "clear")]);
         } else {
-            // First setup's pop-up with the keyboard on a picture button.
-            if let Some(used) = self.popup_on_button() {
+            // First setup's pop-up with the keyboard in its field, or on a picture
+            // button.
+            if self.popup_on_field() {
+                keys.push((&["Enter"][..], "next step"));
+                keys.push((&["Down"][..], "choices"));
+            } else if let Some(used) = self.popup_on_button() {
                 keys.push((&["Left", "Right"][..], "choose"));
                 keys.push((&["Enter"][..], if used { "next step" } else { "use" }));
             } else if let Some(setting) = self

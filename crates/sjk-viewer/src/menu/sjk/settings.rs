@@ -613,7 +613,7 @@ impl ClientMenu {
                 if self.menu_style == super::super::MenuStyle::Sjk {
                     self.open_sjk_settings(console, FIRST_SETUP, target);
                 } else {
-                    self.open_first_setup(console, target);
+                    self.open_first_setup_list(console, target);
                 }
                 Some(MenuAction::None)
             }

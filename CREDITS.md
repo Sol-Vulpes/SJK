@@ -533,11 +533,15 @@ includes:
   each finished page;
 - EJK mode (22/11/2026): `ui_ejkMode`, one switch that sets JoF EJK's look from one
   table of settings and gives the player's own back, and `cg_finishers`;
-- First setup in steps with pictures (23/11/2026): the SJK UI's pop-up asks one thing at
-  a time from a table of steps, with picture buttons for the two looks (EJK mode's is the
-  player's own classic menu drawn small), the themes and the graphics presets (the
-  client's own renders of one spot under each), and keeps open when a look changes the
-  menu style under it;
+- First setup in steps with pictures (23/11/2026): the pop-up asks one thing at a time
+  from a table of steps, with picture buttons for the two looks (the same moment of a
+  match as SJK and as EJK mode draw it), the themes and the graphics presets (the
+  client's own renders of one spot under each), the player's name typed in it with its
+  colours, a recap before Done, which finishes it; it opens in every menu style and
+  keeps open when a look changes the style under it;
+- the modes that hold settings told of one another (23/11/2026): EJK mode, Tactical and
+  `renderer vanilla` come on and go off in any order and the player's own settings come
+  back (`cvar_restore.rs`);
 - the named themes and First setup's look (21/11/2026): Solar, Sith (a new red palette),
   Jedi and Custom, shown as four tiles in their own colours at the top of First setup,
   which opens on the look (theme, hue, saturation, menu style);

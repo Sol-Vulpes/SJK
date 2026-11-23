@@ -1049,8 +1049,9 @@ The settings a level changes are put aside first, as `cvar=value` pairs in
 `cg_tacticalRestore`, and given back when the level drops, as `renderer vanilla` does: off
 leaves the player's settings as they were, and a profile saved at a level comes back at it
 with the originals still put aside. A setting changed by hand while Tactical holds it goes
-back when Tactical lets go. Some graphics settings take a graphics reload (`vid_restart`),
-remaps the next map; the rest is live.
+back when Tactical lets go. EJK mode and `renderer vanilla` hold some of the same settings;
+[the three are told of one another](#modes-that-hold-settings). Some graphics settings
+take a graphics reload (`vid_restart`), remaps the next map; the rest is live.
 
 `r_flatWorld` ([flat_world.rs](../crates/sjk-viewer/src/flat_world.rs), also a switch of its
 own) draws each world surface in its texture's smallest mip, its average colour, under the
@@ -1107,10 +1108,42 @@ behind the main page changes at the next start, as with the Menu style row.
 What it leaves alone: the SJK hub's features (the SJK chat and its buttons, the identity,
 the Collection, trading, notifications), gameplay and the network, other players' emotes,
 the player's own numbers (field of view, sensitivity, HUD scale, brightness, text sizes
-other than the chat's) and whatever has no setting of its own. Tactical mode and
-`renderer vanilla` put the same graphics settings aside in their own cvars: switching two
-of them on and then off in another order can give back the other's values rather than the
-player's, which the Graphics preset row sets right.
+other than the chat's) and whatever has no setting of its own.
+
+### Modes that hold settings
+
+EJK mode, [Tactical](#tactical-mode) and `renderer vanilla` each set a group of settings
+and put the player's own values aside in a record of their own (`ui_ejkModeRestore`,
+`cg_tacticalRestore`, `r_ultraLowRestore`), and all three set the Vanilla graphics. Until
+23/11/2026 each kept "what the setting held when I came on", so with EJK mode on and then
+Tactical, Tactical's record held EJK mode's values, and turning EJK mode off and then
+Tactical left the player on Vanilla. Since then the three are told of one another in one
+place, [cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs) (`MODES`, `put_aside`,
+`give_back`):
+
+- A record only ever holds the player's own value. A mode coming on over a setting another
+  applied mode already holds copies that mode's record of it.
+- A mode going off gives a setting to the mode that still holds it (that mode's value)
+  when one does, else back to the player. So the modes can come on and go off in any
+  order and the player ends on their own settings (a test runs every order of the three,
+  at each Tactical level).
+- Each keeps its own way of going off: EJK mode leaves alone a setting changed by hand
+  while it was on, Tactical gives everything back. A setting counts as changed by hand
+  when it holds the value of none of the modes holding it; EJK mode then lets go of it,
+  and Tactical, when it goes off, gives the player's own value back.
+- `renderer vanilla` asked for while EJK mode or Tactical already holds Vanilla is kept
+  too: Vanilla stays when that mode goes off, until `renderer sjk`. `renderer sjk` while
+  another mode holds Vanilla only lets go of its own claim, and says which mode still
+  holds the graphics (before, it set Vanilla Plus under the mode).
+
+The records keep the format every release wrote (`cvar=value` pairs joined by `;`), so a
+profile saved with a mode on reads as it is and nothing saved is lost, and an older build
+still reads what this one writes. A profile an older build saved with two modes on has
+the second's record crossed; both are read, and of two records of a setting that differ,
+the one that is no mode's value is taken as the player's (`cvar_restore::own`), which
+sets such a profile right whichever mode goes off first. What cannot be told is a profile
+where the older build already gave the wrong values back (one mode turned off in the
+crossed order before the update): its settings are what that build left.
 
 Finishers gained their viewer's switch with it: `cg_finishers` (archived, on by default;
 Settings > Gameplay > Finishers) plays them on this PC; off, a saber kill leaves the body
@@ -2913,29 +2946,35 @@ other tabs keep their numbers.
 With the classic menus the same rows are the first group of the
 Setup page, FIRST SETUP (`Group::Quick`, [groups.rs](../crates/sjk-viewer/src/settings/groups.rs)),
 drawn as a classic+ option panel like the others, with search, descriptions and
-defaults, and opens the FIRST SETUP tab only if that panel cannot open. The SJK UI shows
-them as a pop-up card over the map (since 08/10/2026,
+defaults, and opens the FIRST SETUP tab only if that panel cannot open. Over the main
+menu First setup is a pop-up card over the map (since 08/10/2026,
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs),
 [sjk-ui.md](sjk-ui.md#first-setup)), which since 23/11/2026 asks one thing at a time:
-six steps (the look, with a picture button each for SJK and for EJK mode; the colours;
-importing from another client; the graphics preset, each one a picture of the same spot;
-how you play; online), each with its picture buttons and the few rows that belong with
-them, none scrolling. The steps and what each shows are a table
+six steps (the look, with a picture button each for SJK and for EJK mode, the same
+moment of a match drawn both ways; the colours; the player, with the name typed in a
+field, an import from another client and the Character page; the graphics preset, each
+one a picture of the same spot; how you play; online, closing on a recap), each with its
+picture buttons and the few rows that belong with them, none scrolling. The steps and
+what each shows are a table
 ([setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)); seven rows of the
 list are left out of the steps on purpose and listed there. "Don't show at start" is a
 tick box pinned at its foot, always in view, beside All settings (the Settings screen on
-its First setup category, which keeps every row in one list), Back and Next. The pop-up
-is the SJK UI's whatever the menu style: picking EJK (or Classic on its Menu style row)
-turns the classic menus on under it and it stays open on its step. Opened under the
-classic style, First setup is the classic Setup page's FIRST SETUP group, and picking the
-SJK UI there goes on as the pop-up.
+its First setup category, which keeps every row in one list; under the classic style
+the classic Setup page's FIRST SETUP group), Back and Next. The pop-up has the SJK UI's
+look whatever the menu style, and since 23/11/2026 it is what opens over the main menu
+in every style, at start and by the command: picking EJK (or Classic on its Menu style
+row) turns the classic menus on under it and it stays open on its step, and a player on
+the classic menus gets it too. The classic Setup page's First setup still opens the
+list, and picking the SJK UI there goes on as the pop-up.
 
 At every start, the first time the main menu is up and the menu style is known, it
-opens in the active style, until the player ticks "Don't show at start"
-(`ui_hideFirstSetup` 1, archived); Escape leaves it for that run. (Before
-07/10/2026 it opened once, on the first start, marked by `ui_quickSetup`, which is
-no longer read.) The `firstsetup` console command opens it too, over the main
-menu or from a running game, in the active style
+opens, until the player finishes it (Done on its last step) or ticks "Don't show at
+start": both set `ui_hideFirstSetup` 1 (archived), so the tick shows what will happen
+and can be taken off again; Escape leaves it for that run and it is offered at the next
+start. (Before 23/11/2026 only the tick stopped it, so it came back at every start for
+a player who never found the tick. Before 07/10/2026 it opened once, on the first
+start, marked by `ui_quickSetup`, which is no longer read.) The `firstsetup` console
+command always opens it: the pop-up over the main menu, the list from a running game
 ([first_setup.rs](../crates/sjk-viewer/src/menu/first_setup.rs)). Its old name
 `quicksetup` was removed on 08/10/2026, with no hidden alias, so `quit` is the only
 command a `q` completes to. Not yet run in a game window.

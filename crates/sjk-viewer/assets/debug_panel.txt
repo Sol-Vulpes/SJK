@@ -26,25 +26,51 @@
 
 [first-setup-steps]
 area: Menus & settings
-title: First setup in steps with pictures (SJK UI pop-up)
-change: Six steps across the top: Look, Colours, Import, Graphics, Play, Online. No scrolling.
-change: Picture buttons: SJK / EJK (ui_ejkMode), the themes, Import, the graphics presets.
-change: Picking EJK keeps the pop-up open; the classic style still gets its list panel.
+title: First setup in steps with pictures (the pop-up, in every menu style)
+change: Six steps: Look, Colours, Player (your name), Graphics, Play, Online. Picture buttons.
+change: Done on the last step finishes it: it no longer opens at start. firstsetup reopens it.
+change: It opens with the classic menus too (at start and by firstsetup), not the old list.
 test: New profile (or firstsetup): step 1 shows SJK and EJK with pictures, SJK in use.
-test: The EJK picture is your game's classic main menu, small. The SJK one is SJK's menu.
+test: Both pictures are the same match view: SJK has the status bar and timer, EJK the retail HUD.
 test: Click EJK: In use moves, the pop-up stays, Menu style and HUD rows follow in a moment.
 test: Click SJK again: your settings come back. Enter on the one in use goes to step 2.
 test: Step 2: click each theme, the whole card changes colour. With EJK on, a gold note shows.
-test: Step 3: Import my setup opens the Import page; Start fresh goes to step 4.
+test: Step 3 opens in the Name field: type, the name changes at once (check the main page after).
+test: Step 3: ^ and a digit show in the field as typed; In game shows the colours. Click a chip.
+test: Step 3: Ctrl+A then type replaces; Ctrl+C / Ctrl+V; hold Backspace; double click selects all.
+test: Step 3: empty the field and leave it: the name you had is back, not an empty one.
+test: Step 3: Enter in the field goes to step 4. Down reaches the buttons, Up the field again.
+test: Step 3: Import my setup opens the Import page; an imported name shows in the field.
+test: Step 3: Choose a character opens the Character page; Esc there returns to step 3.
 test: Step 4: three pictures of the same spot; ratings and Recommended fit your card.
 test: Step 4: Low/Medium/High/Ultra chips under Solar Renderer set that level and its picture.
+test: Step 5: Gameplay FPS is the first row; all ten rows and the help fit, nothing scrolls.
+test: Step 6: Your setup shows Look, Colours, Player, Graphics; a click on a tile opens its step.
 test: Left/Right/Tab move over buttons and chips, Down reaches the rows, then the tick.
-test: PgUp/PgDn, Back/Next and a click on a step's name change step. Done on step 6.
+test: PgUp/PgDn, Back/Next and a click on a step's name change step.
+test: Done on step 6 (or PgDn there), restart: First setup does not open. firstsetup: it does.
+test: Esc on any step, restart: it opens again. Tick Don't show at start, restart: it does not.
 test: F2 or All settings opens Settings > First setup with the whole list. Esc closes.
-test: Tick Don't show at start on any step, restart: First setup does not open.
-test: ui_menuStyle classic, then firstsetup: the classic panel with the whole list opens.
+test: ui_menuStyle classic and ui_hideFirstSetup 0, restart: the pop-up opens over the classic menu.
+test: Classic menus, firstsetup: the pop-up. Its All settings: the classic list panel.
+test: Classic menus > Setup > First setup: still the classic list.
+test: In a game, firstsetup: still the list panel over the game.
 test: At 4:3, ultrawide and 4K nothing is cut, overlaps or leaves the card.
 note: Not in the steps any more: nameplate range/bars/icons/duel, Force shells, duel ghost.
+
+[modes-any-order]
+area: Menus & settings
+title: EJK mode, Tactical and renderer vanilla on together, off in any order
+change: Each keeps your own values, never another mode's; off hands a setting to the mode still on.
+test: Note your graphics preset and a few custom values (shadows, stock blades, fog).
+test: ejkmode on, tactical medium, ejkmode off: graphics stay Vanilla (Tactical holds them).
+test: tactical off: your own preset and values are back, not Vanilla.
+test: tactical max, ejkmode on, tactical off, ejkmode off: your own values again.
+test: renderer vanilla, ejkmode on, renderer sjk: it says EJK mode still holds the graphics.
+test: ejkmode off after that: your own graphics are back.
+test: EJK mode on, change the HUD look by hand, EJK mode off: the HUD you picked stays.
+test: Update with EJK mode or Tactical already on from the release before: off gives your own back.
+note: A profile where the old build already handed back Vanilla wrongly stays as that build left it.
 
 [ejk-mode]
 area: Menus & settings
