@@ -560,6 +560,12 @@ pub(crate) enum CodePalette {
     /// dark outline ([`Self::Outlined`] or [`Self::DarkOutlined`] with
     /// [`DARK_OUTLINE_CVAR`] on).
     TwoTone,
+    /// The game's own colours over the retail font renderer's drop shadow
+    /// ([`Edge::RetailFont`]): the classic chat box (`cg_chatStyle classic`).
+    RetailFont,
+    /// The game's own colours over the retail character set's drop shadow
+    /// ([`Edge::RetailChars`]): the classic chat field.
+    RetailChars,
 }
 
 /// `cg_darkTextOutline`: dark letters of names and chat edged in a white outline
@@ -577,6 +583,34 @@ pub(crate) enum Edge {
     Shadow,
     /// Eight copies a step out all round, each in this colour (its alpha the copy's).
     Ring([f32; 4]),
+    /// The drop shadow of retail's font renderer (`RE_Font_DrawString`, JoF EJK
+    /// `rd-common/tr_font.cpp:1560-1596` at `beta` 10b940314, `STYLE_DROPSHADOW`): the text again in dark
+    /// grey (0.15), `Round(point size x scale x 0.075)` virtual 640x480 units right and
+    /// down ([`retail_font_shadow_units`]).
+    RetailFont,
+    /// The drop shadow of retail's character set strings (`SCR_DrawStringExt2`, JoF EJK
+    /// `client/cl_scrn.cpp:320-363`): the text again in black,
+    /// [`RETAIL_CHARS_SHADOW_UNITS`] virtual units right and down.
+    RetailChars,
+}
+
+/// The grey of the retail font renderer's drop shadow (`v4DKGREY2`).
+pub(crate) const RETAIL_FONT_SHADOW: f32 = 0.15;
+/// How far the character set's drop shadow lies from its text, in virtual 640x480
+/// units each way. Retail's is 2 (`SCR_DrawChar2(xx + 2, y + 2, ...)`) under bitmap
+/// letters whose strokes are about 2 units thick; the console's vector letters
+/// (JetBrains Mono) are half as thick, and 2 units under them read as a second line of
+/// text beside the first (seen in the world shots, 23/11/2026), so theirs is half.
+pub(crate) const RETAIL_CHARS_SHADOW_UNITS: f32 = 1.0;
+
+/// How far the retail font renderer's drop shadow lies from text whose line box is
+/// `line` pixels tall in a frame `viewport_height` pixels tall, in virtual 640x480
+/// units each way: `Round(GetPointSize() * fScale * 0.075)`, for `ocr_a` (point size
+/// 18, line 21), the font SJK Chat stands for. 1 at EternalJK's chat size, 0 under
+/// 0.57 of it, 2 from 1.71.
+pub(crate) fn retail_font_shadow_units(line: f32, viewport_height: f32) -> f32 {
+    let scale = line / (21.0 * viewport_height / 480.0).max(f32::EPSILON);
+    (18.0 * scale * 0.075).round()
 }
 
 /// A dark glyph's pale halo, and how opaque each of its copies is: faint (Sol,
@@ -609,7 +643,7 @@ impl CodePalette {
                 luminance(color) < HALO_BELOW
             }
             Self::DarkOutlined => luminance(color) < OUTLINE_BLACK_BELOW,
-            Self::Game | Self::Legible => false,
+            Self::Game | Self::Legible | Self::RetailFont | Self::RetailChars => false,
         }
     }
 
@@ -624,6 +658,8 @@ impl CodePalette {
             (Self::Outlined | Self::DarkOutlined | Self::TwoTone, false) => {
                 ring(OUTLINE_TINT, OUTLINE_ALPHA)
             }
+            (Self::RetailFont, _) => Edge::RetailFont,
+            (Self::RetailChars, _) => Edge::RetailChars,
             _ => Edge::Shadow,
         }
     }

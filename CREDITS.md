@@ -533,6 +533,9 @@ includes:
   each finished page;
 - EJK mode (22/11/2026): `ui_ejkMode`, one switch that sets JoF EJK's look from one
   table of settings and gives the player's own back, and `cg_finishers`;
+- the classic chat style (23/11/2026): `cg_chatStyle classic`, JoF EJK's message field and
+  chat box drawn from its source (`cl_console.cpp`, `cg_draw.c`, its `beta`'s SJK chat
+  lines), set by EJK mode; SJK's own chat stays the default;
 - First setup in steps with pictures (23/11/2026): the pop-up asks one thing at a time
   from a table of steps, with picture buttons for the two looks (the same moment of a
   match as SJK and as EJK mode draw it), the themes and the graphics presets (the

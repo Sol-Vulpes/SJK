@@ -179,7 +179,8 @@ impl GpuState {
             return;
         }
         let Some(event) = normalize_button_event(button, state, self.cursor_position) else {
-            if self.pointer_captured {
+            // An open chat field takes the keys, the mouse's extra buttons with them.
+            if self.pointer_captured && !self.chat.is_typing() {
                 self.route_stock_mouse_button(button, state == ElementState::Pressed);
             }
             return;
@@ -341,18 +342,18 @@ impl GpuState {
 
     /// Keyboard catchers also advertise BUTTON_TALK, as CL_CmdButtons does.
     pub(crate) fn key_catcher_active(&self) -> bool {
-        self.catcher_active(true)
+        self.catcher_active(true, true)
     }
 
-    /// [`Self::key_catcher_active`], the console counted or not.
-    fn catcher_active(&self, console: bool) -> bool {
+    /// [`Self::key_catcher_active`], the console and the open chat field counted or not.
+    fn catcher_active(&self, console: bool, chat: bool) -> bool {
         self.game_menu
             || self.hud_edit.is_open()
             || self.text_dialog.is_open()
             // The SJK team's window, which may show in the middle of play.
             || self.official.window.is_open()
             || self.news.is_open()
-            || self.chat.is_typing()
+            || (chat && self.chat.is_typing())
             || (console
                 && self
                     .console
@@ -368,7 +369,7 @@ impl GpuState {
     /// (alt-tabbed or minimised, see [`crate::console::ViewerConsole::window_talk`]).
     /// With `cl_consoleMove` the open console alone does not ([`crate::console_move`]).
     pub(crate) fn talk_button(&self) -> bool {
-        self.catcher_active(!self.console_keeps_moving())
+        self.catcher_active(!self.console_keeps_moving(), true)
             || self
                 .console
                 .as_ref()
@@ -376,7 +377,9 @@ impl GpuState {
     }
 
     pub(crate) fn sync_cursor_policy(&mut self) {
-        let overlay = self.key_catcher_active();
+        // The classic chat field catches the keys and leaves the pointer to the game
+        // (`ChatOverlay::takes_keys_only`): alone, it does not free the cursor.
+        let overlay = self.catcher_active(true, !self.chat.takes_keys_only());
         let desired = self.cursor_policy.desired(
             self.live_session.is_some() || self.resident.exploring(),
             overlay,

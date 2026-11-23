@@ -253,6 +253,7 @@ did: The Solar, Sith, Jedi and Custom themes, picked from tiles in First setup
 did: The classic menus' own look: drawn sharp at any size, in the theme's colours
 did: EJK mode: one switch for JoF EJK's look, your own settings back when it is off
 did: First setup in steps with pictures: the two looks, the themes and the graphics presets shown
+did: The classic chat style: JoF EJK's message field and chat box (after JoF EJK)
 link: https://github.com/Sol-Vulpes/SJK
 link: https://sol-vulpes.github.io/SJK/
 

@@ -114,6 +114,9 @@ impl ChatOverlay {
             {
                 self.step_pm(if key == KeyCode::ArrowLeft { -1 } else { 1 });
             }
+            // JoF EJK's box has no history to page through.
+            KeyCode::PageUp | KeyCode::ArrowUp | KeyCode::PageDown | KeyCode::ArrowDown
+                if self.options.style == super::style::Style::Classic => {}
             KeyCode::PageUp | KeyCode::ArrowUp => self.scroll_by(3),
             KeyCode::PageDown | KeyCode::ArrowDown => self.scroll_by(-3),
             // With nothing typed the caret has nowhere to go: the bare arrows walk the
@@ -199,7 +202,8 @@ impl ChatOverlay {
     }
 
     pub(crate) fn pointer(&mut self, event: InputEvent) {
-        if !self.is_typing() {
+        // The classic field leaves the pointer to the game ([`Self::takes_keys_only`]).
+        if !self.is_typing() || self.takes_keys_only() {
             return;
         }
         if let InputEvent::PointerMove(position)
@@ -351,6 +355,7 @@ impl ChatOverlay {
     /// draft with no menu or list of whisperers open.
     fn arrows_walk_tabs(&self) -> bool {
         self.modifiers.is_empty()
+            && self.options.style == super::style::Style::Sjk
             && self.input.as_ref().is_some_and(|input| {
                 input.text.is_empty() && input.menu.is_none() && !input.pm_list
             })

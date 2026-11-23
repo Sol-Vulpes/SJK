@@ -57,6 +57,7 @@ pub(crate) fn append_bounded(
                             palette.edge(color),
                             clip,
                             viewport,
+                            font.height * scale,
                         );
                         cursor[0] += ellipsis_width / 3.0;
                     }
@@ -65,7 +66,17 @@ pub(crate) fn append_bounded(
             }
         }
         let edge = palette.edge(color);
-        glyph_quad(vertices, glyph, cursor, scale, color, edge, clip, viewport);
+        glyph_quad(
+            vertices,
+            glyph,
+            cursor,
+            scale,
+            color,
+            edge,
+            clip,
+            viewport,
+            font.height * scale,
+        );
         cursor[0] += advance;
         if overflow == TextOverflow::Clip && cursor[0] >= clip.right() {
             break;
@@ -83,6 +94,7 @@ fn glyph_quad(
     edge: super::Edge,
     clip: Rect,
     viewport: [f32; 2],
+    line: f32,
 ) {
     let rect = Rect::new(
         cursor[0] + glyph.offset_x * scale,
@@ -108,6 +120,33 @@ fn glyph_quad(
         ] {
             let ring = Rect::new(rect.x + dx, rect.y + dy, rect.width, rect.height);
             clipped_quad(vertices, ring, glyph.uv, tint, clip, viewport);
+        }
+    } else if matches!(edge, super::Edge::RetailFont | super::Edge::RetailChars) {
+        // Retail's shadows lie whole virtual 640x480 units away, in the stretched
+        // frame's units each way; a shadow of no units is under its text.
+        let (units, grey) = if edge == super::Edge::RetailFont {
+            (
+                super::retail_font_shadow_units(line, viewport[1]),
+                super::RETAIL_FONT_SHADOW,
+            )
+        } else {
+            (super::RETAIL_CHARS_SHADOW_UNITS, 0.0)
+        };
+        if units > 0.0 {
+            let shadow = Rect::new(
+                rect.x + units * viewport[0] / 640.0,
+                rect.y + units * viewport[1] / 480.0,
+                rect.width,
+                rect.height,
+            );
+            clipped_quad(
+                vertices,
+                shadow,
+                glyph.uv,
+                [grey, grey, grey, color[3]],
+                clip,
+                viewport,
+            );
         }
     } else {
         let shadow = Rect::new(rect.x + step, rect.y + step, rect.width, rect.height);

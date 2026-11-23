@@ -35,6 +35,12 @@ pub(super) struct Geometry {
 }
 
 impl Geometry {
+    /// What the classic chat box gives each row of a message
+    /// ([`super::style::classic::ITEM_ROW`]), from the text's line box.
+    pub(super) fn item_row(&self) -> f32 {
+        self.font * super::style::classic::ITEM_ROW / super::style::classic::LINE
+    }
+
     pub(super) fn new(viewport: [f32; 2]) -> Self {
         let scale = crate::ui_scale::height_scale(viewport[1]);
         let left = 40.0 * scale;
