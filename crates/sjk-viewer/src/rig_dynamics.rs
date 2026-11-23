@@ -113,6 +113,10 @@ pub(crate) struct Settings {
     /// gravity is heavier towards the root ([`Chains::load`]), so a styled strand droops as
     /// a whole and keeps its curve instead of being pulled flat.
     pub(crate) shape: bool,
+    /// How thick the chain's bones are to other chains that give one, game units: two
+    /// such chains keep their bones the sum of their thicknesses apart, as strands of
+    /// hair that do not pass through each other. 0, the default, lets others through.
+    pub(crate) thickness: f32,
 }
 
 impl Default for Settings {
@@ -130,6 +134,7 @@ impl Default for Settings {
             head: false,
             breeze: 0.0,
             shape: false,
+            thickness: 0.0,
         }
     }
 }
@@ -428,6 +433,22 @@ pub(super) struct Chains {
     levers: Vec<Option<Vec3A>>,
     /// The other chain's bone each joint stays on one side of (`layer` lines).
     layers: Vec<Option<Layer>>,
+    /// The bones of other chains each joint keeps off, both with a [`Settings::thickness`].
+    strands: Vec<Vec<Strand>>,
+    /// The slot of each joint's parent, when that is a chain joint too.
+    parent_slot: Vec<Option<usize>>,
+}
+
+/// A bone of another chain a joint keeps off ([`Chains::apart`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Strand {
+    /// The other chain's joint, whose bone (from its parent to it) is kept off.
+    pub(super) other: usize,
+    /// How far the joint stays from that bone: the two chains' thicknesses, or as far as
+    /// it lies at rest if less (0: not at all, as it lies right on it).
+    pub(super) reach: f32,
+    /// The same for the middle of the joint's own bone.
+    pub(super) reach_middle: f32,
 }
 
 /// Where a joint lies against a chain it is layered over: the plane through that chain's
@@ -501,7 +522,72 @@ impl Chains {
             reach_middle: Vec::new(),
             levers: vec![None; found.len()],
             layers: vec![None; found.len()],
+            strands: vec![Vec::new(); found.len()],
+            parent_slot: vec![None; found.len()],
         }
+    }
+
+    /// Keep the bones of chains with a [`Settings::thickness`] off one another: each
+    /// joint, and the middle of its bone, stays the two chains' thicknesses away from
+    /// every bone of another such chain, or as far as it lies at rest if that is less, so
+    /// standing still moves nothing. Joints of one chain never push each other. Call
+    /// this after [`Self::layer`], which puts the joints in another order.
+    pub(super) fn apart(&mut self, joints: &[Joint]) {
+        let count = self.joints.len();
+        self.parent_slot = self
+            .joints
+            .iter()
+            .map(|&joint| {
+                let parent = joints[joint].parent?;
+                self.joints.iter().position(|&other| other == parent)
+            })
+            .collect();
+        self.strands = (0..count)
+            .map(|slot| {
+                let thickness = self.settings[slot].thickness;
+                if thickness <= 0.0 {
+                    return Vec::new();
+                }
+                let joint = &joints[self.joints[slot]];
+                let point = joint.bind.translation;
+                let middle = joint.parent.map_or(point, |parent| {
+                    (joints[parent].bind.translation + point) / 2.0
+                });
+                (0..count)
+                    .filter(|&other| {
+                        self.anchor[other] != self.anchor[slot]
+                            && self.settings[other].thickness > 0.0
+                    })
+                    .filter_map(|other| {
+                        let to = joints[self.joints[other]].bind.translation;
+                        let from = joints[self.joints[other]]
+                            .parent
+                            .map_or(to, |parent| joints[parent].bind.translation);
+                        let wanted = thickness + self.settings[other].thickness;
+                        let held = |at: Vec3A| {
+                            let distance = (at - closest(from, to, at)).length();
+                            if distance < MIN_BONE {
+                                0.0
+                            } else {
+                                wanted.min(distance)
+                            }
+                        };
+                        let strand = Strand {
+                            other,
+                            reach: held(point),
+                            reach_middle: held(middle),
+                        };
+                        (strand.reach > 0.0 || strand.reach_middle > 0.0).then_some(strand)
+                    })
+                    .collect()
+            })
+            .collect();
+    }
+
+    /// The bones of other chains each joint keeps off.
+    #[cfg(test)]
+    pub(super) fn strands(&self) -> &[Vec<Strand>] {
+        &self.strands
     }
 
     /// Keep the chains under each pair's first anchor outside those under its second, as
@@ -764,6 +850,9 @@ pub(crate) struct State {
     /// The ground under the player in the model's space, a point on it and its upward
     /// normal: colliding chains stay above it.
     pub(super) ground: Option<(Vec3A, Vec3A)>,
+    /// Where each chain joint was drawn last frame: the bones of chains not yet moved this
+    /// frame, which others keep off ([`Chains::apart`]).
+    drawn: Vec<Vec3A>,
     /// The animated pose before the chain moved it (scratch).
     animated: Vec<Affine3A>,
     aimed: Vec<bool>,
@@ -808,6 +897,7 @@ pub(super) fn simulate(
         state.velocities = vec![Vec3A::ZERO; count];
         state.pushes = vec![Vec3A::ZERO; count];
         state.lags = vec![Vec3A::ZERO; count];
+        state.drawn = vec![Vec3A::ZERO; count];
     } else {
         for slot in (0..count).filter(|slot| !chains.settings[*slot].shape) {
             spring(
@@ -902,6 +992,36 @@ pub(super) fn simulate(
         {
             point = at_length(point);
         }
+        // Off the other chains' bones: those already moved this frame where they now
+        // stand, the rest where they were drawn last frame (on a restart, animated).
+        let mut moved = false;
+        for strand in &chains.strands[slot] {
+            let stands = |other: usize| {
+                if restart || other < slot {
+                    pose[chains.joints[other]].translation
+                } else {
+                    state.drawn[other]
+                }
+            };
+            let to = stands(strand.other);
+            let from = match chains.parent_slot[strand.other] {
+                Some(parent) => stands(parent),
+                None => joints[chains.joints[strand.other]]
+                    .parent
+                    .map_or(to, |parent| pose[parent].translation),
+            };
+            moved |= push_off_bone(
+                origin,
+                &mut point,
+                &mut state.velocities[slot],
+                (from, to),
+                strand.reach,
+                strand.reach_middle,
+            );
+        }
+        if moved {
+            point = at_length(point);
+        }
         if let Some(layer) = chains.layers[slot] {
             let outward = (pose[layer.from].matrix3 * layer.outward).normalize_or_zero();
             let depth = (point - pose[layer.from].translation).dot(outward);
@@ -968,6 +1088,7 @@ pub(super) fn simulate(
         if !limited {
             state.points[slot] = pose[index].translation;
         }
+        state.drawn[slot] = pose[index].translation;
     }
 }
 
@@ -1073,43 +1194,60 @@ fn push_out(
         if !tip && !middle {
             continue;
         }
-        let (from, to) = capsule.ends(&pose[capsule.from], &pose[capsule.to]);
-        let along = to - from;
-        let squared = along.length_squared();
-        let per_squared = if squared <= f32::EPSILON {
-            0.0
-        } else {
-            squared.recip()
-        };
-        // As [`closest`], with the division shared. This runs for most pairs of joint and
-        // capsule, and most of them are far apart, so they take no square root.
-        let mut push = |share: f32, leverage: f32, radius: f32| {
-            let sample = origin + (*point - origin) * share;
-            let from_start = sample - from;
-            let offset = from_start - along * (from_start.dot(along) * per_squared).clamp(0.0, 1.0);
-            let apart = offset.length_squared();
-            if apart >= radius * radius || apart <= 1e-8 {
-                return false;
-            }
-            let distance = apart.sqrt();
-            let normal = offset / distance;
-            *point += normal * (radius - distance) * leverage;
-            let into = velocity.dot(normal);
-            if into < 0.0 {
-                *velocity -= normal * into;
-            }
-            true
-        };
-        // The tip, then the middle: moving the tip moves the middle half as far, so the
-        // middle's way out asks for twice its depth.
-        if tip {
-            moved |= push(1.0, 1.0, reach[bit]);
-        }
-        if middle {
-            moved |= push(0.5, 2.0, reach_middle[bit]);
-        }
+        moved |= push_off_bone(
+            origin,
+            point,
+            velocity,
+            capsule.ends(&pose[capsule.from], &pose[capsule.to]),
+            if tip { reach[bit] } else { 0.0 },
+            if middle { reach_middle[bit] } else { 0.0 },
+        );
     }
     moved
+}
+
+/// Push `point`, and the middle of its bone from `origin`, `reach` and `reach_middle` out
+/// from the segment `bone` (0: that one is not pushed), and stop its `velocity` going
+/// further in. Whether it moved.
+fn push_off_bone(
+    origin: Vec3A,
+    point: &mut Vec3A,
+    velocity: &mut Vec3A,
+    (from, to): (Vec3A, Vec3A),
+    reach: f32,
+    reach_middle: f32,
+) -> bool {
+    let along = to - from;
+    let squared = along.length_squared();
+    let per_squared = if squared <= f32::EPSILON {
+        0.0
+    } else {
+        squared.recip()
+    };
+    // As [`closest`], with the division shared. This runs for most pairs of joint and
+    // bone, and most of them are far apart, so they take no square root.
+    let mut push = |share: f32, leverage: f32, radius: f32| {
+        let sample = origin + (*point - origin) * share;
+        let from_start = sample - from;
+        let offset = from_start - along * (from_start.dot(along) * per_squared).clamp(0.0, 1.0);
+        let apart = offset.length_squared();
+        if apart >= radius * radius || apart <= 1e-8 {
+            return false;
+        }
+        let distance = apart.sqrt();
+        let normal = offset / distance;
+        *point += normal * (radius - distance) * leverage;
+        let into = velocity.dot(normal);
+        if into < 0.0 {
+            *velocity -= normal * into;
+        }
+        true
+    };
+    // The tip, then the middle: moving the tip moves the middle half as far, so the
+    // middle's way out asks for twice its depth. A reach of 0 never pushes.
+    let tip = push(1.0, 1.0, reach);
+    let middle = push(0.5, 2.0, reach_middle);
+    tip || middle
 }
 
 #[cfg(test)]
@@ -1438,6 +1576,115 @@ mod tests {
         // Its length held.
         let length = (pose[4].translation - pose[3].translation).length();
         assert!((length - 20.0).abs() < 1e-2, "{length}");
+    }
+
+    /// Two 20-unit strands hanging 10 units apart, each with `thickness`; then the
+    /// second's anchor steps to 1 unit from the first's. Their tips at rest, then after
+    /// two seconds.
+    fn strands_brought_together(thickness: f32) -> ([Vec3A; 2], [Vec3A; 2]) {
+        let first = Vec3A::new(0.0, 0.0, 40.0);
+        let second = Vec3A::new(10.0, 0.0, 40.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, Vec3A::ZERO),
+            joint(Some(0), Vec3A::ZERO, first),
+            joint(Some(1), first, Vec3A::new(0.0, 0.0, 20.0)),
+            joint(Some(0), Vec3A::ZERO, second),
+            joint(Some(3), second, Vec3A::new(10.0, 0.0, 20.0)),
+        ];
+        let strand = Settings {
+            gravity: 0.0,
+            wag: 0.0,
+            collide: false,
+            thickness,
+            ..Settings::default()
+        };
+        let mut chains = Chains::under(&joints, &[0, 1, 2, 3, 4], &[(1, strand), (3, strand)]);
+        chains.apart(&joints);
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut state = State::default();
+        let mut pose = rest.clone();
+        simulate(&joints, &chains, &mut pose, &mut state, None);
+        for _ in 0..30 {
+            pose.clone_from(&rest);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+        }
+        let at_rest = [pose[2].translation, pose[4].translation];
+        let mut moved = rest;
+        moved[3].translation.x = 1.0;
+        moved[4].translation.x = 1.0;
+        for _ in 0..120 {
+            pose.clone_from(&moved);
+            simulate(&joints, &chains, &mut pose, &mut state, Some(1.0 / 60.0));
+        }
+        (at_rest, [pose[2].translation, pose[4].translation])
+    }
+
+    #[test]
+    fn strands_with_a_thickness_keep_off_each_other() {
+        let (at_rest, [first, second]) = strands_brought_together(1.5);
+        // Standing still nothing moves.
+        assert!((at_rest[0] - Vec3A::new(0.0, 0.0, 20.0)).length() < 1e-3);
+        assert!((at_rest[1] - Vec3A::new(10.0, 0.0, 20.0)).length() < 1e-3);
+        // Brought together, the tips stay about the two thicknesses apart.
+        let gap = second.x - first.x;
+        assert!(gap > 2.5, "{gap} {first:?} {second:?}");
+        // Each bone keeps its length.
+        let length = (second - Vec3A::new(1.0, 0.0, 40.0)).length();
+        assert!((length - 20.0).abs() < 1e-2, "{length}");
+        // Without a thickness they pass as close as their anchors.
+        let (_, [first, second]) = strands_brought_together(0.0);
+        assert!(
+            (second.x - first.x - 1.0).abs() < 0.05,
+            "{first:?} {second:?}"
+        );
+    }
+
+    #[test]
+    fn a_strand_keeps_off_only_other_chains_and_not_more_than_at_rest() {
+        let top = Vec3A::new(0.0, 0.0, 40.0);
+        let near = Vec3A::new(1.0, 0.0, 40.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, Vec3A::ZERO),
+            joint(Some(0), Vec3A::ZERO, top),
+            joint(Some(1), top, Vec3A::new(0.0, 0.0, 30.0)),
+            joint(
+                Some(2),
+                Vec3A::new(0.0, 0.0, 30.0),
+                Vec3A::new(0.0, 0.0, 20.0),
+            ),
+            joint(Some(0), Vec3A::ZERO, near),
+            joint(Some(4), near, Vec3A::new(1.0, 0.0, 30.0)),
+            joint(Some(0), Vec3A::ZERO, Vec3A::new(30.0, 0.0, 40.0)),
+            joint(
+                Some(6),
+                Vec3A::new(30.0, 0.0, 40.0),
+                Vec3A::new(30.0, 0.0, 30.0),
+            ),
+        ];
+        let thick = Settings {
+            thickness: 2.0,
+            ..Settings::default()
+        };
+        let mut chains = Chains::under(
+            &joints,
+            &[0, 1, 2, 3, 4, 5, 6, 7],
+            &[(1, thick), (4, thick), (6, Settings::default())],
+        );
+        chains.apart(&joints);
+        let strands = chains.strands();
+        // The first chain's joints keep off the second's bone only: not each other,
+        // nor the chain without a thickness, which keeps off nothing.
+        assert_eq!(chains.joints, [2, 3, 5, 7]);
+        assert!(strands[0].iter().all(|strand| strand.other == 2));
+        assert!(strands[1].iter().all(|strand| strand.other == 2));
+        assert!(strands[3].is_empty());
+        // Lying 1 unit off it at rest, it is held no further than that.
+        assert_eq!(strands[0].len(), 1);
+        assert!((strands[0][0].reach - 1.0).abs() < 1e-4, "{:?}", strands[0]);
+        // The lower joint is 10 units below its end: the full four.
+        assert!((strands[1][0].reach - 4.0).abs() < 1e-4, "{:?}", strands[1]);
+        // And the second chain keeps off both of the first's bones.
+        assert_eq!(strands[2].len(), 2);
     }
 
     /// A strand stacked on its anchor with its vertices 10 units below, the anchor

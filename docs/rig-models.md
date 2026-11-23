@@ -247,6 +247,20 @@ one way: the cape pushes the hair and not the other way. The log names a `layer`
 does nothing or something odd when the model loads: a joint with no `dynamic` line, a chain
 over itself, or lines that go round in a circle.
 
+Chains whose lines give a `thickness <units>` keep off one another, as strands of hair
+that do not pass through each other: a ponytail swinging into the back hair, a ribbon
+into a lock. Each joint of such a chain, and the middle of its bone, stays the two
+chains' thicknesses away from every bone of another chain with a thickness, or as far
+as it lies at rest if that is less, so standing still moves nothing and strands that
+start side by side are not shoved apart. Its speed towards the other bone stops, as at
+the body. The joints of one chain never push each other, and a chain without the word
+neither pushes nor is pushed. Both chains move: each joint keeps off the bones already
+moved this frame where they now stand, and the others where they were drawn the frame
+before. It is the bones that collide, as with the body, so the cloth between two bones
+far apart can still meet another strand. The check is a few vector operations per pair
+of joint and bone, run in the frame only for chains that ask; it works with or without
+`nocollide`, which is about the body.
+
 A chain kept out of the body (no `nocollide`) is kept off the ground too, so a long tail,
 cape or plait lies on the floor when the player kneels or crouches rather than going
 through it. Each frame a line traced straight down from the player's origin (`MASK_SOLID`,
@@ -330,7 +344,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
 | `eyes <joint> [<joint> ...]` | these joints look at the player's look target (see [Eyes](#eyes)) | none |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
-| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [shape] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, keeping their modelled curve as they hang with `shape`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0, no shape |
+| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [shape] [thickness <units>] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, keeping their modelled curve as they hang with `shape`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0, no shape |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
 | `map <joint> <bone> <joint end> <bone end>` | ... aimed along the bone | |
 | `map <joint> <bone> as <other joint>` | ... with another joint's alignment (finger chains) | |
@@ -338,7 +352,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`, `shape`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`, `shape`, `thickness`) does not load at all,
 rather than dropping that line.
 
 ### Variants

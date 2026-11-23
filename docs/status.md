@@ -1,3 +1,18 @@
+## Rig model chains keep off each other (23/11/2026)
+
+23/11/2026, `feat/rig-chain-mutual-collision` based on `main` `1ae63030`. A `dynamic` line
+can give its chain a `thickness <units>`: chains that have one keep their bones the sum of
+the two thicknesses apart (each joint and the middle of its bone, no further than they lie
+at rest), so a ponytail swinging into the back hair or a ribbon into a lock no longer goes
+through it. A chain's own joints never push each other; a chain without the word is left as
+it was. Each joint keeps off the bones moved this frame where they stand and the rest
+where they were drawn last frame. The body capsules' push now goes through the same
+segment push. Older clients reject a manifest with the new word
+([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Tests: two strands brought to
+a unit apart stay the two thicknesses apart (and pass through without the word), nothing
+moves at rest, the pairs and their at-rest reach, the manifest word. Not run locally (left to
+CI), not tried in a game.
+
 ## help_prediction, and "the prediction feels different" in the betas (24/11/2026)
 
 Branch `personal/help-prediction`, based on `main` `3abe77908`. A player told Sol the
