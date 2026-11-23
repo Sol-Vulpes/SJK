@@ -20,14 +20,26 @@ pub(crate) const LOW_FPS_NIGHT_CVAR: &str = "r_lowFpsNight";
 /// The sky's hour in Low FPS Night.
 pub(crate) const LOW_FPS_NIGHT_HOUR: f32 = 22.;
 
-/// Low FPS Night's factor on baked light whose brightest linear channel is `peak`:
-/// `level` (as seen: the linear factor is its 2.2 power), rising to 1 for the brightest
-/// bake (lamp hot spots, linear 0.45 to 1) by `lamps`. The shaders' twin is
-/// `night_factor` in `world_lighting_mode.wgsl`.
-pub(crate) fn night_factor([level, lamps]: [f32; 2], peak: f32) -> f32 {
-    let dark = level.clamp(0., 1.).powf(2.2);
+/// Low FPS Night's moonlight: the darkened bake's colour, cool blue at about the same
+/// brightness (Rec. 709 luma 0.99), leaning in as the night darkens. Green is 1, so the
+/// green channel of [`night_factor`] is the plain darkening. The shaders' twin is
+/// `NIGHT_MOON` in `world_lighting_mode.wgsl`.
+pub(crate) const NIGHT_MOON: [f32; 3] = [0.85, 1., 1.3];
+
+/// Low FPS Night's factor, per channel, on baked light whose brightest linear channel is
+/// `peak`: `level` (as seen: the linear factor is its 2.2 power) under the
+/// [`NIGHT_MOON`] blue, rising to 1 (the bake's own colour) for the brightest bake (lamp
+/// hot spots, linear 0.45 to 1) by `lamps`. The shaders' twin is `night_factor` in
+/// `world_lighting_mode.wgsl`.
+pub(crate) fn night_factor([level, lamps]: [f32; 2], peak: f32) -> [f32; 3] {
+    let seen = level.clamp(0., 1.);
+    let dark = seen.powf(2.2);
     let t = ((peak - 0.45) / 0.55).clamp(0., 1.);
-    dark + (1. - dark) * lamps * t * t * (3. - 2. * t)
+    let keep = lamps * t * t * (3. - 2. * t);
+    NIGHT_MOON.map(|moon| {
+        let night = dark * (1. + (moon - 1.) * (1. - seen));
+        night + (1. - night) * keep
+    })
 }
 /// How often the PC's clock is read while [`PC_CLOCK_CVAR`] is on, in milliseconds: the
 /// sun moves a quarter of a degree a minute, so once a second is plenty, and the frame
@@ -301,13 +313,16 @@ mod tests {
         assert_eq!(clock.night_tint(), 1.);
         let night = clock.night().expect("on");
         assert_eq!(night, [LOW_FPS_NIGHT_LEVEL, LOW_FPS_NIGHT_LAMPS]);
-        let dark = night_factor(night, 0.2);
+        let [red, dark, blue] = night_factor(night, 0.2);
         assert!(
             (dark - 0.2_f32.powf(2.2)).abs() < 1e-6,
             "sunlit ground goes dark: {dark}"
         );
-        assert!(night_factor(night, 1.) > dark * 3., "lamp spots keep light");
-        assert_eq!(night_factor([1., 0.], 0.5), 1., "level 1 leaves the bake");
+        assert!(red < dark && dark < blue, "under a moonlit blue: {red} {blue}");
+        let lamp = night_factor(night, 1.);
+        assert!(lamp[1] > dark * 3., "lamp spots keep light");
+        assert!(lamp[2] / lamp[0] < blue / red, "and more of their own colour");
+        assert_eq!(night_factor([1., 0.], 0.5), [1.; 3], "level 1 leaves the bake");
         clock.store(13, &CvarValue::Float(0.));
         assert_eq!(clock.night().expect("on")[0], 0.05, "never pitch black");
         clock.store(12, &CvarValue::Integer(0));

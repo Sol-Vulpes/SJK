@@ -65,7 +65,7 @@ impl GpuState {
                     encoder,
                     target_view,
                     &self.depth.view,
-                    frame_target::world_load(self.world_materials.fogs().global_color()),
+                    frame_target::world_load(self.world_materials.fog_clear_color()),
                     if depth_primed {
                         wgpu::LoadOp::Load
                     } else {

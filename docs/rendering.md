@@ -4670,6 +4670,14 @@ shadow cascades being drawn every frame even with the sun below the horizon.
   sees. The brightest bake (linear peak 0.45 to 1, lamp hot spots) keeps up to
   `r_lowFpsNightLamps` (default 0.1) more. Textures, emission, additive stages and glow
   are untouched, so lamp fixtures and signs still shine.
+- Moonlight (23/11/2026): the darkened bake leans cool blue (`NIGHT_MOON` 0.85, 1, 1.3,
+  Rec. 709 luma 0.99, so about as bright), the more the darker the level (none at 1);
+  the lamps' kept light keeps the bake's own colour, so lamp pools stay warm. Models'
+  grid light takes the same per-channel factor.
+- Fog (23/11/2026): the map's fog volumes and global fog, and the clear colour taken
+  from it, are darkened to the level as seen, so fog does not glow in the dark map
+  (`FogGpu::set_night`, `fog_gpu.rs`). The fog table is rewritten only when the level
+  changes, never per frame.
 - Dynamic lights (sabers, shots, explosions) on the world are divided by the level
   (`dynamic_light_modulation` in `point_lights.wgsl`), so they light the dark as brightly
   as by day. Models take the darkened light grid, minimum ambient included, before the
@@ -4679,9 +4687,10 @@ shadow cascades being drawn every frame even with the sun below the horizon.
   eye adaptation does not brighten the view back (`max_ev` 0, `post_exposure.rs`).
 - The switch rides the model word of the scene-light block
   (`dynamic_light_settings::night_bits`: bit 5, level bits 8 to 15, lamps 16 to 23).
-- Cost: a few multiplies a pixel and one per entity; no pass, texture or allocation.
+- Cost: a few multiplies a pixel and one per entity; no pass, texture or allocation. The
+  fog table is written again only when the level changes.
 - Limits: the lamp test goes by brightness, so the brightest sunlit bake of a map keeps
-  some light too (lower Lamp light kept); fog volumes keep their authored colour.
+  some light too (lower Lamp light kept).
 
 ## Weather
 

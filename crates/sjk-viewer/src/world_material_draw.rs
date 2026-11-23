@@ -38,6 +38,17 @@ impl Runtime {
         &self.fog.table
     }
 
+    /// Low FPS Night's level (as seen) on the map's fog colours; `None`: their own.
+    pub(crate) fn set_fog_night(&self, queue: &crate::frame_queue::FrameQueue, level: Option<f32>) {
+        self.fog.set_night(queue, level);
+    }
+
+    /// The colour the world pass clears to: the map's global fog, darkened in Low FPS
+    /// Night ([`Self::set_fog_night`]).
+    pub(crate) fn fog_clear_color(&self) -> Option<[f32; 3]> {
+        self.fog.clear_color()
+    }
+
     /// Draw the Q3 sky before ordinary opaque world geometry.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn draw_sky<'pass>(

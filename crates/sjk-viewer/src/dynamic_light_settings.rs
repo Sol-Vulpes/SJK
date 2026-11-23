@@ -124,6 +124,7 @@ impl Settings {
         world.set_gap_close(self.3.gap_close());
         world.set_ambient_fill(self.3.ambient_fill());
         world.set_indirect_readability(self.3.indirect_readability());
+        world.set_fog_night(queue, self.night(baked).map(|[level, _]| level));
         world.update_scene_lighting_mode(
             queue,
             lights,

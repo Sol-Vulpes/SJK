@@ -2,7 +2,7 @@
 use super::*;
 use crate::fog_volumes::{FOG_SLOTS, Mode, Table};
 use sjk_shader::{FogPass, ShaderCull, ShaderDefinition};
-use std::cell::OnceCell;
+use std::cell::{Cell, OnceCell};
 
 /// The fog key's depth-bias bit for a `polygonOffset` shader. rd-vanilla runs
 /// `RB_FogPass` before `RB_StageIteratorGeneric` disables `GL_POLYGON_OFFSET_FILL`, so
@@ -19,6 +19,11 @@ pub(super) fn polygon_offset(definition: Option<&ShaderDefinition>) -> u8 {
 /// GPU resources allocated once, with selectors aligned for dynamic uniform offsets.
 pub(super) struct FogGpu {
     pub(super) table: Table,
+    /// The table's GPU copy: rewritten only when Low FPS Night's level changes.
+    buffer: wgpu::Buffer,
+    /// Low FPS Night's level (as seen) the GPU copy's colours are scaled by; `None`: the
+    /// map's own colours.
+    night: Cell<Option<f32>>,
     group: wgpu::BindGroup,
     stride: u32,
     device: wgpu::Device,
@@ -45,7 +50,7 @@ impl FogGpu {
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("SJK map fog table"),
             contents: bytemuck::cast_slice(&table.entries),
-            usage: wgpu::BufferUsages::UNIFORM,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
         let stride = device.limits().min_uniform_buffer_offset_alignment.max(16);
         let mut selectors = vec![0_u8; stride as usize * FOG_SLOTS * 2];
@@ -95,6 +100,8 @@ impl FogGpu {
         });
         Self {
             table,
+            buffer,
+            night: Cell::new(None),
             group,
             stride,
             device: device.clone(),
@@ -105,6 +112,27 @@ impl FogGpu {
             mover: Vec::new(),
             entity: Vec::new(),
         }
+    }
+
+    /// Low FPS Night (`r_lowFpsNight`): the fog colours darkened to `level` (as seen, the
+    /// bake's level), so fog does not glow in the dark map; `None` gives the map's own
+    /// back. The table is rewritten only when the level changes, never per frame.
+    pub(super) fn set_night(&self, queue: &crate::frame_queue::FrameQueue, level: Option<f32>) {
+        if self.night.get() == level {
+            return;
+        }
+        self.night.set(level);
+        let entries = night_fogs(&self.table, level);
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&entries));
+    }
+
+    /// The colour the world pass clears to: the map's global fog
+    /// ([`Table::global_color`]) under Low FPS Night's level.
+    pub(super) fn clear_color(&self) -> Option<[f32; 3]> {
+        let scale = self.night.get().unwrap_or(1.);
+        self.table
+            .global_color()
+            .map(|color| color.map(|value| value * scale))
     }
 
     pub(super) fn pipeline_with_geometry(
@@ -246,5 +274,42 @@ fn uniform_entry(binding: u32, dynamic: bool) -> wgpu::BindGroupLayoutEntry {
             min_binding_size: None,
         },
         count: None,
+    }
+}
+
+/// The fog table's entries with every fog's colour scaled by Low FPS Night's `level`
+/// (none: as the map has them).
+fn night_fogs(table: &Table, level: Option<f32>) -> [crate::fog_volumes::GpuFog; FOG_SLOTS] {
+    let mut entries = table.entries;
+    let scale = level.unwrap_or(1.).clamp(0., 1.);
+    for fog in &mut entries[1..=table.count] {
+        for value in &mut fog.color[..3] {
+            *value *= scale;
+        }
+    }
+    entries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytemuck::Zeroable;
+
+    /// Low FPS Night darkens every fog's colour, global or brush, and leaves its density,
+    /// bounds and marker alone; no level gives the map's own back.
+    #[test]
+    fn low_fps_night_darkens_the_fog_colours_only() {
+        let mut table = Table {
+            entries: [crate::fog_volumes::GpuFog::zeroed(); FOG_SLOTS],
+            count: 2,
+        };
+        table.entries[1].color = [0.8, 0.6, 0.4, 1.0];
+        table.entries[1].bounds_min = [1.0, 2.0, 3.0, 0.25];
+        table.entries[2].color = [0.2, 0.4, 1.0, 0.0];
+        let night = night_fogs(&table, Some(0.5));
+        assert_eq!(night[1].color, [0.4, 0.3, 0.2, 1.0]);
+        assert_eq!(night[1].bounds_min, table.entries[1].bounds_min);
+        assert_eq!(night[2].color, [0.1, 0.2, 0.5, 0.0]);
+        assert_eq!(night_fogs(&table, None)[1].color, table.entries[1].color);
     }
 }

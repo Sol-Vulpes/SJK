@@ -7,24 +7,34 @@ fn night_on() -> bool {
     return (point_lights.metadata.y & 32u) != 0u;
 }
 
+// The night's level as seen (`r_lowFpsNightLevel`), never under 0.05.
+fn night_seen() -> f32 {
+    return max(f32((point_lights.metadata.y >> 8u) & 255u) / 255.0, 0.05);
+}
+
 // The night's linear share of the bake on dark and middling light: the level as seen,
 // to the power 2.2.
 fn night_level() -> f32 {
-    let level = max(f32((point_lights.metadata.y >> 8u) & 255u) / 255.0, 0.05);
-    return pow(level, 2.2);
+    return pow(night_seen(), 2.2);
 }
 
-// Baked light `light` (linear) at night: darkened to the level, the brightest bake (lamp
-// hot spots) keeping more by the lamps.
+// Moonlight: the darkened bake leans cool blue at about the same brightness (Rec. 709
+// luma 0.99), the more the darker the night; green is 1, so it carries the plain factor.
+// Twin of `day_live::NIGHT_MOON`.
+const NIGHT_MOON: vec3<f32> = vec3<f32>(0.85, 1.0, 1.3);
+
+// Baked light `light` (linear) at night: darkened to the level under a moonlit blue, the
+// brightest bake (lamp hot spots) keeping more of its own colour by the lamps.
 fn night_bake(light: vec3<f32>) -> vec3<f32> {
     return light * night_factor(max(light.r, max(light.g, light.b)));
 }
 
-// The factor on baked light whose brightest linear channel is `peak`; twin of
-// `day_live::night_factor`.
-fn night_factor(peak: f32) -> f32 {
+// The factor on baked light whose brightest linear channel is `peak`, per channel; twin
+// of `day_live::night_factor`.
+fn night_factor(peak: f32) -> vec3<f32> {
     let lamps = f32((point_lights.metadata.y >> 16u) & 255u) / 255.0;
-    return mix(night_level(), 1.0, lamps * smoothstep(0.45, 1.0, peak));
+    let moon = mix(vec3(1.0), NIGHT_MOON, 1.0 - night_seen());
+    return mix(night_level() * moon, vec3(1.0), lamps * smoothstep(0.45, 1.0, peak));
 }
 
 // One material-composition hook. Zero keeps the previous arithmetic and blend ordering.

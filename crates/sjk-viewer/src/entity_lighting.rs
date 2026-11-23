@@ -159,8 +159,10 @@ fn finish(
             .fold(0.0_f32, f32::max)
             .powf(2.2);
         let factor = crate::world_materials::shadows::day::live::night_factor(night, peak);
-        grid.ambient.iter_mut().for_each(|value| *value *= factor);
-        grid.directed.iter_mut().for_each(|value| *value *= factor);
+        for axis in 0..3 {
+            grid.ambient[axis] *= factor[axis];
+            grid.directed[axis] *= factor[axis];
+        }
     }
     let magnitude = length(grid.directed);
     let mut direction = grid.direction.map(|value| value * magnitude);
