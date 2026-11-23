@@ -1938,6 +1938,30 @@ is 0.62 MB and the others under 200 KB. Viewer tests and the map change world sh
 pass; offline joins of a local server did not reproduce the crash (their frames are
 not called from `window_event`). Not yet confirmed on the JoF server in the client.
 
+## Clean-up ahead of v1: the sweep (23/11/2026)
+
+Branch `personal/v1-cleanup`, based on `main` `482f891dd`. Besides the two removals
+below, the client was swept for dead things (scripts over `git ls-files`): every `.rs`
+under a crate's `src` is named by a `mod`, `#[path]` or `include!`; every bundled asset is
+named by the code that embeds it (the picture, settings icon and holocron files through
+their macros; two font licence texts are kept on purpose); every registered cvar has a
+reader but three stock names kept so a saved config keeps its values (`in_raw`,
+`r_swapInterval`, `s_khz`); no entry of `debug_panel.txt` names a command or cvar that is
+gone, other than the entries that say so. Fixed: the site's toy list still offered the
+toys removed on 20/11/2026 (Hax, Order 66, cardboard box, banana peels, Fishing and
+Mining) and the Monitor by its old name; a link in client.md to a script that went with
+the Force Throw rework; README's website badge. Left for Sol to decide, as players can
+still reach them or a contributor owns them: the classic menus' own look (first step),
+the Log book of the removed Fishing and Mining toys with their hub plumbing, the shelved
+Support SJK line and Supporter medal, the Saber Lab, the showcase tools, all access, and
+`toy_wheelofdoom` itself.
+
+Verified on Windows 11 x64 at the branch's tip: `cargo fmt --all --check`, `cargo build
+--locked --workspace` and `--all-targets` (no warning), `cargo clippy --locked --workspace
+--all-targets`, `cargo test --locked --workspace`, the menu snapshots and the Collection,
+Profile, opening and Force box world shots (looked at), and the startup stack check.
+Not run in the client.
+
 ## WHEEL OF DOOM: the placed wheels removed (23/11/2026)
 
 Clean-up ahead of v1 (Sol: "the Wheel of Doom ... was merged with the Mystery Box, so that

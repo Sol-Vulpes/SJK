@@ -6581,8 +6581,8 @@ sends them flying, the way the monitor struck them.
 - **Getting up:** a fall a monitor began ends by itself 2.5 seconds after the body came
   to rest, once the real body has walked to it (or 6 seconds later whatever it did);
   `toy_ragdoll` gets up at once, and being hurt does as for the Ragdoll.
-- **The sounds** are SJK's own, synthesized by
-  [monitor_assets.py](../scripts/monitor_assets.py): a whoosh as it leaves the hand
+- **The sounds** (as the monitor had them until the Force Throw rework above, which
+  took them and their script `monitor_assets.py` away) were SJK's own, synthesized: a whoosh as it leaves the hand
   (`sound/sjk/monitor/throw.wav`), a hollow plastic thunk with the glass ringing when it
   strikes a body (`bonk.wav`), a clunk and rattle when it knocks on the world harder than
   160 units a second (`knock.wav`, at most every 120 ms a monitor, louder the harder:
