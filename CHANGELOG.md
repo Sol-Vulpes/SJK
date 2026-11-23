@@ -14,6 +14,7 @@ tests check this file):
 - "## <version> | <dd/mm/yyyy>" starts a release ("## Unreleased" for main
   after the last release, without a date);
 - The Force box is an ancient Sith tomb: a sarcophagus of black basalt on two steps, a horn of stone at each corner, a sigil and glyphs cut into it that glow red, and a lid in two slabs that grind apart with the game's stone door sounds, red fire rising from the embers inside while it is open _(Sol)_
+- The Box hunt wears the tomb's look and never tags a player who is away: the mark's card is a plate of black basalt edged in glowing red that arrives as an alert, big, before it settles at the top (the mark's own screen flushes red at its edges), to Force rage's roar; and a player typing, in a menu or 15 seconds off the keys and the mouse is passed over, a mark found away as they are picked handing it on at once _(Sol)_
 - Mimic walks the way the leader does and follows their turns and their look up or down: it read the leader's facing from where they had spawned instead of where they look, so a walk to the left could come out as a walk forward _(Sol)_
 - Mimic with a staff or two sabers keeps its blades: it no longer presses the stance cycle to match a single saber's stance (which put a blade away at each swing), and one blade off no longer counts as a holstered saber _(Sol)_
 - Mimic keeps its view through moves that lock it (lunges, DFAs, back attacks, katas, knockdowns): it no longer looks at the ground or walks the wrong way after them; the view turns like a mouse, 6 degrees a command at most _(Sol)_

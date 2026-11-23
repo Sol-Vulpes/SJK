@@ -1,3 +1,33 @@
+## Box hunt: the tomb's look, and nobody away is tagged (23/11/2026)
+
+Sol's request ("give a new look to the hunt, the alert, avoid ever getting someone afk or
+typing getting tagged for the hunt, and make this sith themed"). Branch
+`personal/sith-hunt`, based on `main` `c95428c2a`; hub branch `hunt-in-play` (`dfe36aa`).
+[mystery-boxes.md](mystery-boxes.md#box-hunt) has both parts.
+
+The look (`mystery_box/label.rs` `push_card`, `alert`): the hunt's card is drawn from
+polygons, a pointed basalt plate with a glowing red edge, lines of light and the tomb's
+split diamond; it arrives 1.9 times its size and lower, holds 2.6 s and settles in 0.5;
+the mark's screen flushes red at its edges meanwhile. Words: "THE TOMB'S MARK", "THE TOMB
+HAS CHOSEN", "MARKED" over the head, a barbed blade for the arrow; the alarm is Force
+rage (`sound/weapons/force/rage.mp3`), chosen by name, not heard. The quest's plate is
+untouched.
+
+Away: the client calls its player away for the hunt after 15 s without input
+(`hunt::IDLE`; two minutes before). The hub hands a mark found away within 20 s of the
+pick on at once (`FRESH_SWAP`), or calls it off under 3 others in play and tries again
+60 s later, and picks only hunters whose last read is 30 s old at most (`PICK_FRESH`).
+
+Verified on Windows x64: client `cargo fmt --all --check`, `cargo clippy -p sjk-viewer
+--all-targets` (nothing in the touched files), `cargo test -p sjk-viewer mystery_box`
+(38 passed; the card's place, size, alert and red edges, the words, the idle rule), the
+startup stack check; hub `cargo test` (the two new box hunt tests and the 14 before; one
+unrelated holocron test fails now and then in the whole suite and passes alone, on hub
+`main` too). The card was not rendered by the client: the HUD's words are not drawn in
+world shots, so the picture shown to Sol is a mock-up drawn from the same numbers. Not
+run in the client. The hub branch is merged into hub `main` locally, not pushed or
+deployed.
+
 ## The Force box is a Sith tomb (23/11/2026)
 
 Sol's request ("update the model of the mystery box to be more of an ancient sith tomb

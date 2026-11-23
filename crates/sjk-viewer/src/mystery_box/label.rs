@@ -26,6 +26,15 @@ const CARD_WIDTH: f32 = 380.0;
 const CARD_HEIGHT: f32 = 66.0;
 const CARD_TOP: f32 = 56.0;
 const CARD_PULSE: f32 = 2.0;
+/// The hunt's card arrives as an alert (Sol, 23/11/2026): [`ALERT_SCALE`] times its size
+/// and [`ALERT_DROP`] pixels lower for [`ALERT_HOLD`] seconds, then it shrinks up into
+/// its place over [`ALERT_SETTLE`]. The mark's own screen also flushes red from its
+/// edges ([`ALERT_EDGE`] pixels in) while it holds.
+const ALERT_SCALE: f32 = 1.9;
+const ALERT_DROP: f32 = 120.0;
+const ALERT_HOLD: f32 = 2.6;
+const ALERT_SETTLE: f32 = 0.5;
+const ALERT_EDGE: f32 = 190.0;
 /// The arrow to the mark, in pixels at 1080 lines: its size and the ring round the
 /// crosshair it runs on (when the mark is out of view); how far into the view the mark
 /// must be for the arrow over them instead (1.0 is the screen's edge).
@@ -62,7 +71,7 @@ impl Tone {
             Self::Win => Color::new(0.55, 0.95, 0.6, alpha),
             Self::Jackpot => Color::new(1.0, 0.45, 0.3, alpha),
             Self::Empty => Color::new(0.72, 0.72, 0.72, alpha),
-            Self::Mark => Color::new(1.0, 0.3, 0.25, alpha),
+            Self::Mark => Color::new(1.0, 0.2, 0.12, alpha),
             Self::Quest => Color::new(1.0, 0.76, 0.2, alpha),
         }
     }
@@ -85,9 +94,9 @@ pub(crate) struct Labels {
 impl Default for Labels {
     fn default() -> Self {
         Self {
-            // Each label two lines over their shadows, the hunt's card and the arrow to
-            // the mark, the quest's card and its arrows.
-            list: DrawList::new(MOST * 4 + 12 + 6 + 2 * QUEST_ARROWS),
+            // Each label two lines over their shadows, the hunt's card ([`SITH_PLATE`])
+            // and the arrow to the mark, the quest's card and its arrows.
+            list: DrawList::new(MOST * 4 + 12 + SITH_PLATE + 2 + 2 * QUEST_ARROWS),
             lines: Vec::new(),
         }
     }
@@ -363,11 +372,22 @@ fn push_arrow(
     };
     let across = [-dir[1], dir[0]];
     let back = [tip[0] - dir[0] * size * 1.6, tip[1] - dir[1] * size * 1.6];
-    let corners = [
+    let along = |from: [f32; 2], by: f32| [from[0] + dir[0] * by, from[1] + dir[1] * by];
+    let aside = |from: [f32; 2], by: f32| [from[0] + across[0] * by, from[1] + across[1] * by];
+    // The mark's is a blade: a long point with a short barbed tail. A quest's stays the
+    // plain triangle.
+    let blade = [
         tip,
-        [back[0] + across[0] * size, back[1] + across[1] * size],
-        [back[0] - across[0] * size, back[1] - across[1] * size],
+        aside(along(back, size * 0.25), size * 0.62),
+        along(back, -size * 0.7),
+        aside(along(back, size * 0.25), -size * 0.62),
     ];
+    let triangle = [tip, aside(back, size), aside(back, -size)];
+    let corners: &[[f32; 2]] = if tone == Tone::Mark {
+        &blade
+    } else {
+        &triangle
+    };
     for (offset, color) in [
         (2.0 * unit, Color::new(0.0, 0.0, 0.0, 0.6)),
         (0.0, tone.colour(0.95)),
@@ -409,38 +429,187 @@ fn card_words(card: &Card) -> (String, String) {
         .map(|(alive, all)| format!(" \u{b7} {alive} OF {all} HUNTERS LEFT"))
         .unwrap_or_default();
     if card.own {
-        (format!("BOX HUNT{left}"), "YOU ARE THE MARK".to_owned())
+        (
+            format!("THE TOMB HAS CHOSEN{left}"),
+            "YOU ARE THE MARK".to_owned(),
+        )
     } else if card.out {
         (
-            "BOX HUNT \u{b7} YOU'RE OUT".to_owned(),
+            "THE TOMB'S MARK \u{b7} YOU'RE OUT".to_owned(),
             format!("{}^7", card.name),
         )
     } else {
-        (
-            format!("BOX HUNT \u{b7} THE MARK{left}"),
-            format!("{}^7", card.name),
-        )
+        (format!("THE TOMB'S MARK{left}"), format!("{}^7", card.name))
     }
 }
 
-/// Push the box hunt's card, `since` seconds after it arrived: a dark plate edged in red
-/// at the top centre (red itself when the player is the mark), its edge flashing for
-/// [`CARD_PULSE`] seconds.
+/// How far the hunt's card is from its place `since` seconds after it arrived: 1 while
+/// the alert holds, easing to 0 as it settles.
+fn alert(since: f32) -> f32 {
+    let t = ((since - ALERT_HOLD) / ALERT_SETTLE).clamp(0.0, 1.0);
+    1.0 - t * t * (3.0 - 2.0 * t)
+}
+
+/// The most draw commands [`push_card`] pushes: the mark's red edges (4), the plate's
+/// glow, edge and face (3), its two lines of light in halves (4), a split diamond at
+/// each end (4) and two lines of words over their shadows (4).
+const SITH_PLATE: usize = 19;
+
+/// Push the box hunt's card, `since` seconds after it arrived, in the Sith tomb's look
+/// (Sol, 23/11/2026: "give a new look to the hunt, the alert ... sith themed"): a plate
+/// of black basalt pointed at both ends (blood red when the player is the mark), edged
+/// in glowing red that flashes for [`CARD_PULSE`] seconds, a line of light along its top
+/// and bottom, the tomb's split diamond at each end. It arrives as an alert ([`alert`]),
+/// big and lower down, and the mark's own screen flushes red from its edges meanwhile.
 fn push_card(labels: &mut Labels, card: &Card, since: f32, viewport: [f32; 2], unit: f32) {
     let (caption, line) = card_words(card);
-    let fill = if card.own {
-        Color::new(0.42, 0.05, 0.04, 0.88)
+    let alert = alert(since);
+    let scale = 1.0 + (ALERT_SCALE - 1.0) * alert;
+    let pulse = (1.0 - since / CARD_PULSE).clamp(0.0, 1.0);
+    let flash = pulse * (0.5 + 0.5 * (since * std::f32::consts::TAU * 2.0).cos());
+    let ember = |alpha: f32| Color::new(1.0, 0.2, 0.12, alpha);
+    // The mark's screen flushes red from its edges while the alert holds.
+    if card.own && alert > 0.0 {
+        let depth = ALERT_EDGE * unit;
+        let glow = 0.42 * alert * (0.7 + 0.3 * (since * std::f32::consts::TAU).cos());
+        let (lit, dark) = (
+            Color::new(0.9, 0.05, 0.03, glow),
+            Color::new(0.9, 0.05, 0.03, 0.0),
+        );
+        let [w, h] = viewport;
+        for (rect, start, end, vertical) in [
+            (Rect::new(0.0, 0.0, w, depth), lit, dark, true),
+            (Rect::new(0.0, h - depth, w, depth), dark, lit, true),
+            (Rect::new(0.0, 0.0, depth, h), lit, dark, false),
+            (Rect::new(w - depth, 0.0, depth, h), dark, lit, false),
+        ] {
+            let _ = labels.list.push(DrawCommand::GradientRect {
+                rect,
+                radius: 0.0,
+                gradient: sjk_ui::Gradient {
+                    start,
+                    end,
+                    vertical,
+                },
+            });
+        }
+    }
+    let height = CARD_HEIGHT * unit * scale;
+    let point = height * 0.42;
+    let width = (CARD_WIDTH * unit * scale).min(viewport[0] - 2.0 * point - 16.0 * unit);
+    let rect = Rect::new(
+        (viewport[0] - width) * 0.5,
+        (CARD_TOP + ALERT_DROP * alert) * unit,
+        width,
+        height,
+    );
+    let middle = rect.y + height * 0.5;
+    // The plate, pointed at both ends, `grow` pixels larger all round.
+    let plate = |grow: f32, color: Color| {
+        let (left, right) = (rect.x - grow, rect.x + width + grow);
+        let (top, bottom) = (rect.y - grow, rect.y + height + grow);
+        DrawCommand::Polygon {
+            points: [
+                [left - point - grow * 0.6, middle],
+                [left, top],
+                [right, top],
+                [right + point + grow * 0.6, middle],
+                [right, bottom],
+                [left, bottom],
+            ],
+            count: 6,
+            color,
+            texture: None,
+        }
+    };
+    let face = if card.own {
+        Color::new(0.3, 0.02, 0.02, 0.92)
     } else {
-        Color::new(0.06, 0.04, 0.04, 0.82)
+        Color::new(0.045, 0.03, 0.035, 0.9)
     };
-    let plate = Plate {
-        caption,
-        line,
-        fill,
-        edge: Tone::Mark,
-        top: CARD_TOP,
+    let _ = labels
+        .list
+        .push(plate((7.0 + 6.0 * flash) * unit, ember(0.16 + 0.3 * flash)));
+    let _ = labels
+        .list
+        .push(plate((2.0 + 3.0 * flash) * unit, ember(0.6 + 0.4 * flash)));
+    let _ = labels.list.push(plate(0.0, face));
+    // A line of light along the top and the bottom, dying towards the ends.
+    let thin = (1.5 * unit * scale).max(1.0);
+    let inset = 5.0 * unit * scale;
+    for y in [rect.y + inset, rect.y + height - inset - thin] {
+        for (x, start, end) in [
+            (rect.x, ember(0.0), ember(0.85)),
+            (rect.x + width * 0.5, ember(0.85), ember(0.0)),
+        ] {
+            let _ = labels.list.push(DrawCommand::GradientRect {
+                rect: Rect::new(x, y, width * 0.5, thin),
+                radius: 0.0,
+                gradient: sjk_ui::Gradient {
+                    start,
+                    end,
+                    vertical: false,
+                },
+            });
+        }
+    }
+    // The tomb's sigil at each end: a tall diamond split down its middle.
+    let (tall, wide, gap) = (height * 0.3, 5.5 * unit * scale, 1.2 * unit * scale);
+    for x in [rect.x - point * 0.22, rect.x + width + point * 0.22] {
+        for side in [-1.0, 1.0] {
+            let mut points = [[0.0; 2]; sjk_ui::POLYGON_POINTS];
+            points[0] = [x + side * gap, middle - tall];
+            points[1] = [x + side * (gap + wide), middle];
+            points[2] = [x + side * gap, middle + tall];
+            let _ = labels.list.push(DrawCommand::Polygon {
+                points,
+                count: 3,
+                color: Color::new(1.0, 0.42 + 0.3 * flash, 0.3 + 0.3 * flash, 0.95),
+                texture: None,
+            });
+        }
+    }
+    let id = labels.lines.len() as u32;
+    // Each line's shadow is the line without its colour codes, all of it dark.
+    let plain = crate::text::Plain(&line).to_string();
+    labels.lines.push(caption);
+    labels.lines.push(line);
+    labels.lines.push(plain);
+    let pad = 14.0 * unit * scale;
+    let small = 14.0 * unit * scale;
+    let big = 28.0 * unit * scale;
+    let top = rect.y + 8.0 * unit * scale;
+    let name = if card.own {
+        Color::new(1.0, 0.9, 0.84, 1.0)
+    } else {
+        Color::new(1.0, 1.0, 1.0, 1.0)
     };
-    push_plate(labels, plate, since, viewport, unit);
+    let rows = [
+        (top, small, id, id, Color::new(1.0, 0.4, 0.3, 1.0), 2.0),
+        (top + small * 1.35, big, id + 1, id + 2, name, 0.0),
+    ];
+    for (y, size, text, shadow, colour, spacing) in rows {
+        for (offset, text, color) in [
+            (1.5 * unit, shadow, Color::new(0.0, 0.0, 0.0, 0.7)),
+            (0.0, text, colour),
+        ] {
+            let _ = labels.list.push(DrawCommand::Text {
+                rect: Rect::new(
+                    rect.x + pad + offset,
+                    y + offset,
+                    width - 2.0 * pad,
+                    size * 1.3,
+                ),
+                text: TextId(text),
+                size,
+                color,
+                align: TextAlign::Center,
+                overflow: TextOverflow::Ellipsis,
+                weight: FontWeight::Semibold,
+                letter_spacing: spacing * unit * scale,
+            });
+        }
+    }
 }
 
 /// A card at the top centre: a small caption over a line (colour codes kept), on a plate
@@ -626,7 +795,7 @@ mod tests {
             out: false,
         };
         let (caption, line) = card_words(&card(false));
-        assert!(caption.ends_with("THE MARK"));
+        assert_eq!(caption, "THE TOMB'S MARK");
         // The hunters left, and a player out of the chase.
         let counted = Card {
             hunters: Some((2, 3)),
@@ -635,7 +804,7 @@ mod tests {
         assert!(
             card_words(&counted)
                 .0
-                .ends_with("THE MARK \u{b7} 2 OF 3 HUNTERS LEFT")
+                .ends_with("THE TOMB'S MARK \u{b7} 2 OF 3 HUNTERS LEFT")
         );
         let out = Card {
             out: true,
@@ -645,25 +814,58 @@ mod tests {
         // The name's colours do not run past it.
         assert_eq!(line, "^1Ky^7le^7");
         assert_eq!(card_words(&card(true)).1, "YOU ARE THE MARK");
-        // A plate, its edge, then two lines over their shadows, at the top centre.
-        let mut labels = Labels::default();
-        push_card(&mut labels, &card(false), 0.0, [1920.0, 1080.0], 1.0);
-        let commands = labels.list.commands();
-        assert_eq!(commands.len(), 6);
-        let DrawCommand::RoundedRect { rect, .. } = commands[0] else {
-            panic!("{:?}", commands[0]);
-        };
-        assert_eq!((rect.x + rect.width * 0.5, rect.y), (960.0, CARD_TOP));
-        // The edge is widest as the card arrives and settles once it has pulsed.
-        let edge = |since| {
+        // The plate's face (after its glow and its edge): its top left and top right
+        // corners, `since` seconds after it arrived.
+        let face = |own, since| {
             let mut labels = Labels::default();
-            push_card(&mut labels, &card(false), since, [1920.0, 1080.0], 1.0);
-            match labels.list.commands()[1] {
-                DrawCommand::Border { width, .. } => width,
+            push_card(&mut labels, &card(own), since, [1920.0, 1080.0], 1.0);
+            let commands = labels.list.commands();
+            assert!(commands.len() <= SITH_PLATE, "{}", commands.len());
+            let at = if own && alert(since) > 0.0 { 4 } else { 0 };
+            match commands[at + 2] {
+                DrawCommand::Polygon {
+                    points, count: 6, ..
+                } => (points[1], points[2]),
                 other => panic!("{other:?}"),
             }
         };
-        assert_eq!(edge(0.0), 5.0);
-        assert_eq!(edge(CARD_PULSE + 1.0), 2.0);
+        // Settled: at the top centre, its own size.
+        let settled = ALERT_HOLD + ALERT_SETTLE;
+        let (left, right) = face(false, settled);
+        assert_eq!(((left[0] + right[0]) * 0.5, left[1]), (960.0, CARD_TOP));
+        assert_eq!(right[0] - left[0], CARD_WIDTH);
+        // Arriving: the alert, bigger and lower, on the middle still.
+        let (left, right) = face(false, 0.0);
+        assert_eq!((left[0] + right[0]) * 0.5, 960.0);
+        assert_eq!(left[1], CARD_TOP + ALERT_DROP);
+        assert!((right[0] - left[0] - CARD_WIDTH * ALERT_SCALE).abs() < 0.01);
+        // The mark's own screen flushes red from its four edges meanwhile, and no longer
+        // once the card has settled.
+        let edges = |own, since| {
+            let mut labels = Labels::default();
+            push_card(&mut labels, &card(own), since, [1920.0, 1080.0], 1.0);
+            let whole = |command: &&DrawCommand| {
+                matches!(command, DrawCommand::GradientRect { rect, .. }
+                    if rect.width == 1920.0 || rect.height == 1080.0)
+            };
+            labels.list.commands().iter().filter(whole).count()
+        };
+        assert_eq!((edges(true, 0.0), edges(true, settled)), (4, 0));
+        assert_eq!(edges(false, 0.0), 0);
+        face(true, 0.0);
+        // The edge glows widest as the card arrives and settles once it has pulsed.
+        let edge = |since| {
+            let mut labels = Labels::default();
+            push_card(&mut labels, &card(false), since, [1920.0, 1080.0], 1.0);
+            match (labels.list.commands()[1], labels.list.commands()[2]) {
+                (
+                    DrawCommand::Polygon { points: outer, .. },
+                    DrawCommand::Polygon { points: inner, .. },
+                ) => inner[1][1] - outer[1][1],
+                other => panic!("{other:?}"),
+            }
+        };
+        assert!((edge(0.0) - 5.0).abs() < 0.01);
+        assert!((edge(settled + 1.0) - 2.0).abs() < 0.01);
     }
 }

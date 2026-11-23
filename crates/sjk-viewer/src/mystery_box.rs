@@ -74,7 +74,7 @@ const JACKPOT: &str = "sound/interface/secret_area.mp3";
 const EMPTY: &str = "sound/weapons/force/noforce.mp3";
 /// Played to every hunter, the mark too, when the box hunt picks a new mark (Sol's
 /// pick, 28/10/2026).
-const HUNT_MARK: &str = "sound/effects/mpalarm.wav";
+const HUNT_MARK: &str = "sound/weapons/force/rage.mp3";
 /// Played, with [`BLAST_EFFECT`], where a box's opener stands when it blows up.
 const BLAST_SOUND: &str = "sound/weapons/detpack/explode.mp3";
 const BLAST_EFFECT: &str = "detpack/explosion";
