@@ -1082,7 +1082,7 @@ own row in Settings and can be changed again there.
 
 | Subject | Settings set |
 | --- | --- |
-| Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_classicLook retail`, `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
+| Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
 | Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
 | HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
 | Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
@@ -4121,7 +4121,7 @@ The bottom bar carries what the player has and wears:
 | Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
 | Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
 | To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
-| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub has said them (`toy_wheelofdoom` asks, as a Force box does) |
+| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub has said them (read with the Force boxes) |
 | New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
 | Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
@@ -6130,7 +6130,7 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Ragdoll | See others fall limp | `cg_toyRagdollShow` | their falls: their bodies as the game shows them |
 | Drone | See others' drones | `cg_toyDroneShow` | their drones, names and sounds (who peeks at you is still told) |
 | Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo (on the shoulder or the floor) and its music |
-| Monitor | See monitors | `cg_toyMonitorShow` | every monitor and its sounds, yours too ([Monitor](#monitor)) |
+| Force Throw | See thrown junk | `cg_toyMonitorShow` | every throw and its sounds, yours too ([Force Throw](#force-throw)) |
 
 Box hunt acts only on players who have it on, so it has none.
 The holocron, the box and the boombox are hidden as if those players had them off here
@@ -6499,165 +6499,154 @@ it. The stereo's model, picture, shader and icon are bundled, made by
 game), and mounted below all game data, so a PK3 with the same paths replaces them. See
 [boombox.rs](../crates/sjk-viewer/src/boombox.rs).
 
-## Monitor
+<a id="monitor"></a>
 
-**Since 21/11/2026 Force Throw** (Sol: the Monitor kept and given a Star Wars theme):
-the same throw, charge, flight, hits and immunity, its commands, cvars and look id kept
-(`toy_monitor`, `monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `toy_saved`), only
-what a player sees and hears is new. Each throw hurls one of Jedi Academy's own models by
-path, by its thrower and number so every client draws the same (`monitor::junk_of`): a
-banded crate (`models/map_objects/imperial/crate_banded.md3`), a wrecked R5 or a wrecked
-GONK droid (`r5destroyed`, `gonkdestroyed`), each drawn about 24 units across and centred on
-the flight's eight corners, so it flies and strikes as the monitor did. A crate bursts where
-it comes to rest into eight of JA's crate pieces (`models/chunks/crate/crate1_*.md3`), flung
-out and up, lying 2 seconds and fading (not at a hit: the throw flies on after one, for Two
-for One and Strike!). Its sounds are JA's: a Force push throws (a charged throw too), Force
-jump's build-up charges, `debris1` strikes a body, `smalldebris` knocks on the world,
-`cratebust1` bursts a crate, Force Absorb raises the Screen Saver, now named the **Force
-Barrier**, and `noforce` ends it; the thrower's hit tick and the icon (a banded crate pushed
-by blue rings of the Force) are SJK's, made by `scripts/force_throw_assets.py`. The
-monitor's model, picture, shader and synthesized sounds are gone. Its seven achievements are
-back, ids kept: Rebound (was Payback), Force Surge (Power Surge), Telekinetic (Tech
-Support), Reach of the Force (Long Distance Call), Two for One, Strike! and the Drone's
-Special Delivery. What follows is the Monitor as it was built; its mechanics still hold.
+## Force Throw
 
-The Monitor (Sol's idea, 26/10/2026, after the old sandbox-game joke of hurling a big CRT
-monitor at someone) is a toy for every SJK player: throw an old square monitor, and one
-that hits a player who has the toy on too knocks them down as a [ragdoll](#ragdoll) and
-sends them flying, the way the monitor struck them.
+Force Throw (Sol's toy; the Monitor from 26/10/2026, after the old sandbox-game joke of
+hurling a big CRT monitor at someone, given a Star Wars theme on 21/11/2026) is a toy for
+every SJK player: hurl junk with the Force, and what hits a player who has the toy on too
+knocks them down as a [ragdoll](#ragdoll) and sends them flying, the way it struck them.
+Its commands, cvars, look id and code keep the Monitor's name (`toy_monitor`,
+`monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `s_toyMonitorSound`, the look's
+`monitor`, [monitor.rs](../crates/sjk-viewer/src/monitor.rs)), so binds and saved settings
+carry over; Settings still calls its rows "Monitor sounds" and "Show monitors", and the
+quick wheel its entries "Monitor" and "Throw monitor".
 
 - **`toy_monitor`** (a bind, the quick wheel's Toys page, Collection > Toys, "Hit me")
   is the switch, both the right to throw and the consent to be hit (Sol's rule: always
   opt in). It stays as last switched, across maps, servers and restarts
-  (`cl_toyMonitor`, archived). A monitor passes through a player without it.
-- **`monitor_throw`** (the Toys page's Throw monitor, the console) throws one from the
+  (`cl_toyMonitor`, archived). Thrown junk passes through a player without it.
+- **What flies:** each throw hurls one of Jedi Academy's own models, read from the
+  player's game by path and never shipped, chosen by its thrower and number so every
+  client draws the same (`monitor::junk_of`): a banded crate
+  (`models/map_objects/imperial/crate_banded.md3`), a wrecked R5 or a wrecked GONK droid
+  (`r5destroyed`, `gonkdestroyed`), each scaled to the flight's body (about 22 units)
+  and centred on it. A crate bursts where it comes to rest into eight of JA's crate
+  pieces (`models/chunks/crate/crate1_*.md3`), flung out and up, lying 2 seconds and
+  fading over the last half second; it does not burst at a hit, as the throw flies on
+  after one (for Two for One and Strike!).
+- **`monitor_throw`** (the quick wheel's Throw monitor, the console) throws from the
   eyes, the way the player looks, at 1,100 units a second plus the player's own speed,
   tumbling end over end; one every 1.2 seconds at most, four of a player's out at once
-  (the oldest goes). Without the toy on it says "Turn the Monitor toy on to throw one";
+  (the oldest goes). Without the toy on it says "Turn the Force Throw toy on to throw";
   nobody throws while limp, dead, spectating, in a duel, with the flag, hacked, held by
-  the server or in a vehicle ("No monitor right now"), and nobody in a vehicle is
+  the server or in a vehicle ("No Force throw right now"), and nobody in a vehicle is
   knocked down.
-- **The charged throw** (Sol's ask, 26/10/2026): `+monitor_throw`, the held bind
-  (Settings > Key bindings > Interaction > Throw monitor, the Collection's Throw key),
-  charges while held and throws on the release, from 1,100 units a second for a tap to
-  2,600 once held a second. A ring round the crosshair fills clockwise from the top,
-  yellow turning orange, white when full, and the thrower hears a tube's hum rise to a
-  ready ping (`charge.wav`), stopped on the release. Pressed during the cooldown, it
-  begins charging once the cooldown ends; it is put down when the player may no longer
-  throw, or held 6 seconds (a release lost to the window). A throw leaving the hand
-  faster than 1,800 is heard by everyone as a charged one, a thump and a deep whoosh
-  (`throw_hard.wav`), from the speed its event carries: no new event, so the clients
-  before it see the same flight (they hear the plain whoosh). A key bound to the plain
-  `monitor_throw` alone before is bound to `+monitor_throw` when the profile loads; a
-  bind running it among other commands stays, throwing at once.
-- **The monitor** is a solid of eight corners held by sticks between every two
+- **The charged throw:** `+monitor_throw`, the held bind (Settings > Key bindings >
+  Interaction > Force throw, the Collection's Throw key), charges while held and throws
+  on the release, from 1,100 units a second for a tap to 2,600 once held a second. A
+  ring round the crosshair fills clockwise from the top, yellow turning orange, white
+  when full, and the thrower hears Force jump's build-up (`jumpbuild.mp3`), stopped on
+  the release. Pressed during the cooldown, it begins charging once the cooldown ends;
+  it is put down when the player may no longer throw, or held 6 seconds (a release lost
+  to the window). A key bound to the plain `monitor_throw` alone is bound to
+  `+monitor_throw` when the profile loads; a bind running it among other commands
+  stays, throwing at once.
+- **The flight** is a solid of eight corners held by sticks between every two
   ([flight.rs](../crates/sjk-viewer/src/monitor/flight.rs)), the same Verlet steps as the
-  Ragdoll's body: it bounces off the world (more than a body, plastic and glass), slides
-  with friction, topples over an edge and comes to rest on a face. It lies 10 seconds,
-  then shrinks away; one still flying after 20 seconds stops.
+  Ragdoll's body: it bounces off the world, slides with friction, topples over an edge
+  and comes to rest on a face. It lies 10 seconds, then fades; one still flying after 20
+  seconds stops.
 - **The hit** is decided by the struck player's client alone, against its own body: a
-  standing player's box (lower crouched), or a limp one's ragdoll points. The monitor
-  must come at them, faster than 250 units a second against their own speed. The body
-  falls limp (if standing) and takes a [blow](#ragdoll) at its point nearest the
-  monitor: the monitor's speed against the body's times 1.5, 260 upwards, 3,000 units a
-  second at most (the hardest blow a ragdoll takes, 2,600 before the charged throw). A
-  monitor thrown at someone standing still sends them off at about 1,650 units a second,
-  a fully charged one at 3,000. The monitor's way over each step is tried every 6 units,
-  so a fast one does not pass through a limb between two steps. A ragdoll can be struck again where it lies or flies (not for
-  0.2 seconds after a blow, nor by the same monitor for 0.6). The thrower's own monitor
-  can hit them once it is 0.4 seconds out of the hand. The monitor bounces back off the
-  body (half the body's push, back, and 150 up).
-- **Busy players are not hit** (Sol's ask, 26/10/2026): a player typing (a key catcher
-  open: the chat, the console or a menu, what sends the talk balloon's `BUTTON_TALK`,
+  standing player's box (lower crouched), or a limp one's ragdoll points. The junk must
+  come at them faster than 250 units a second against their own speed. The body falls
+  limp (if standing) and takes a [blow](#ragdoll) at its point nearest the junk: its
+  speed against the body's times 1.5, 260 upwards, 3,000 units a second at most (the
+  hardest blow a ragdoll takes). A throw at someone standing still sends them off at
+  about 1,650 units a second, a fully charged one at 3,000. Its way over each step is
+  tried every 6 units, so a fast throw does not pass through a limb between two steps. A
+  ragdoll can be struck again where it lies or flies (not for 0.2 seconds after a blow,
+  nor by the same throw for 0.6). The thrower's own throw can hit them once it is 0.4
+  seconds out of the hand. The junk bounces back off the body (half the body's push,
+  back, and 150 up).
+- **Busy players are not hit:** a player typing (a key catcher open: the chat, the
+  console or a menu, what sends the talk balloon's `BUTTON_TALK`,
   `GpuState::talk_button`) or away (alt-tabbed or idle as the away emote counts it, or an
-  away tag in their name: `GpuState::own_away`, `toy_rules.rs`) is not struck; the monitor passes
-  through. Other clients foresee no hit on a player showing the talk balloon
+  away tag in their name: `GpuState::own_away`, `toy_rules.rs`) is not struck; the junk
+  passes through. Other clients foresee no hit on a player showing the talk balloon
   (`EF_TALK`) or whom their scoreboard counts away (`seen_away`).
-- **Foreseen hits** (Sol's ask, 26/10/2026, after hits showed a ping or more late):
-  the struck player's client alone decides a hit, and its word reaches the others a
-  ping or more later (and after its turn in the relay's 35 ms queue). So every SJK
-  client also tries each monitor against the other players who have the toy on (their
-  look lists `monitor` since then), as it shows them (the presented body's box, or
-  their ragdoll), with the same rules (a step no older than 0.3 seconds, the same
+- **Foreseen hits:** the struck player's client alone decides a hit, and its word
+  reaches the others a ping or more later (and after its turn in the relay's 35 ms
+  queue). So every SJK client also tries each throw against the other players who have
+  the toy on (their look lists `monitor`), as it shows them (the presented body's box,
+  or their ragdoll), with the same rules (a step no older than 0.3 seconds, the same
   immunity, never the thrower themselves, nobody dead, in a duel or blocked). On a hit
   it knocks the body down there and then (a fall from where it shows them, with the
-  blow), bounces the monitor and plays the bonk. Their own word then takes its place:
-  their `fall_` replaces the foreseen fall, keeping the foreseen blow until their
-  `hit_` replaces it (`Body::without`), and the monitor's foreseen bounce gives way to
-  the real one (`Flight::without`). Without their word within 1.2 seconds
-  (`ragdoll::GUESS_WAIT`: they dodged on their screen, carry the flag, or stand where
-  the client did not show them), the blow is undone: a foreseen fall ends and they
-  stand again, a foreseen blow leaves a fall they were already in. One foreseen blow
-  waits at a time for a player.
+  blow), bounces the junk and plays the strike. Their own word then takes its place:
+  their `fall_` replaces the foreseen fall, keeping the foreseen blow until their `hit_`
+  replaces it (`Body::without`), and the foreseen bounce gives way to the real one
+  (`Flight::without`). Without their word within 1.2 seconds (`ragdoll::GUESS_WAIT`:
+  they dodged on their screen, carry the flag, or stand where the client did not show
+  them), the blow is undone: a foreseen fall ends and they stand again, a foreseen blow
+  leaves a fall they were already in. One foreseen blow waits at a time for a player.
 - **The hit marker:** when the struck player's blow reaches the thrower's client (the
   `hit_` event, so a ping or so after the hit), or at once when the thrower's client
-  foresees it, four short strokes stand out diagonally
-  from the crosshair and fade over 0.35 seconds, spreading a little, red for a blow of
-  2,400 or more (a charged throw), white otherwise, and the thrower hears a bright tick
-  (`hit.wav`). Not for a hit on themselves, nor one heard more than 1.5 seconds after it
-  happened. The marks go with the crosshair (`cg_drawCrosshair` 0 hides them)
+  foresees it, four short strokes stand out diagonally from the crosshair and fade over
+  0.35 seconds, spreading a little, red for a blow of 2,400 or more (a charged throw),
+  white otherwise, and the thrower hears a bright tick (`sound/sjk/monitor/hit.wav`).
+  Not for a hit on themselves, nor one heard more than 1.5 seconds after it happened.
+  The marks go with the crosshair (`cg_drawCrosshair` 0 hides them)
   ([monitor_marks.rs](../crates/sjk-viewer/src/hud/monitor_marks.rs)).
-- **Unseen in duels, or on request** (Sol's ask, 26/10/2026): while the player, or the
-  player they follow, is in a private duel, and on Duel and Power Duel servers, no monitor
-  is drawn or heard, and no charge ring or hit marker shows (nobody throws or is hit in a
-  duel anyway; this hides the monitors of the players around it). Settings > Game options >
-  Toys, "Show monitors", and the Monitor's card in the Collection's Toys tab, "See
-  monitors" (`cg_toyMonitorShow`, archived, default 1), at 0 hides every
-  monitor and its sounds in the world on this PC, the player's own too; their charge ring,
-  charge hum, hit marker and tick stay. Neither changes who may be hit: a player with the
-  toy on and monitors hidden can still be struck.
-- **The Screen Saver** (Sol's idea, 29/10/2026): a player struck by 5 monitors of other
-  players within 20 seconds is untouchable by monitors for 30 seconds, and may still
-  throw their own ([saver.rs](../crates/sjk-viewer/src/monitor/saver.rs)). A monitor counts
-  once however often it strikes (one juggling a body), the player's own never, and the
-  count starts afresh once it rises. The fifth hit still lands; from then every monitor
-  passes through the player, standing or limp, as through a player without the toy. The
-  centre of the screen says "SCREEN SAVER: monitors pass through you for 30 seconds".
-  A gold shell wraps the body: Force Absorb's (`gfx/misc/personalshield`) tinted gold,
-  as many passes as `cg_shieldBrightness`, fading in, pulsing gently, and flickering
-  over its last 3 seconds. A CRT's degauss is heard as it rises (`saver_on.wav`) and its
-  power-off as it ends (`saver_off.wav`), the player's own in both ears, another's where
-  they are. It ends at its time, or sooner with the player's death or a new map (the
-  game clock going back). Others learn of it through a feed
+- **Unseen in duels, or on request:** while the player, or the player they follow, is in
+  a private duel, and on Duel and Power Duel servers, no thrown junk is drawn or heard,
+  and no charge ring or hit marker shows (nobody throws or is hit in a duel anyway; this
+  hides the throws of the players around it). Settings > Game options > Toys, "Show
+  monitors", and Force Throw's card in the Collection's Toys tab, "See thrown junk"
+  (`cg_toyMonitorShow`, archived, default 1), at 0 hides every throw and its sounds in
+  the world on this PC, the player's own too; their charge ring, charge sound, hit marker
+  and tick stay. Neither changes who may be hit: a player with the toy on and throws
+  hidden can still be struck.
+- **The Force Barrier** ([saver.rs](../crates/sjk-viewer/src/monitor/saver.rs), the
+  Screen Saver in the code and its events): a player struck by 5 throws of other players
+  within 20 seconds is untouchable by thrown junk for 30 seconds, and may still throw
+  their own. A throw counts once however often it strikes (one juggling a body), the
+  player's own never, and the count starts afresh once it rises. The fifth hit still
+  lands; from then every throw passes through the player, standing or limp, as through
+  a player without the toy. The centre of the screen says "FORCE BARRIER: thrown junk
+  passes through you for 30 seconds". A gold shell wraps the body: Force Absorb's
+  (`gfx/misc/personalshield`) tinted gold, as many passes as `cg_shieldBrightness`,
+  fading in, pulsing gently, and flickering over its last 3 seconds. Force Absorb's sound
+  is heard as it rises (`absorb.mp3`) and `noforce.mp3` as it ends, the player's own in
+  both ears, another's where they are. It ends at its time, or sooner with the player's
+  death or a new map (the game clock going back). Others learn of it through a feed
   [toy event](hub-chat.md#toy-events) the player sends to the one who raised it
   (`monitor` `saver_<until>`, the game server time it ends; `saver_off` if the player
   dies first): their clients draw the shell and foresee no hit on the player meanwhile,
-  and drop it at its time or the player's death. Clients from before it see no shell
-  and may foresee a hit that the player's own client refuses, which they undo as any
-  hit whose word does not come. No shell shows in a duel or with `cg_toyMonitorShow` 0.
-  It brings two achievements ([identity.md](identity.md#achievements)): Payback and
-  the hidden Power Surge.
-- **Getting up:** a fall a monitor began ends by itself 2.5 seconds after the body came
-  to rest, once the real body has walked to it (or 6 seconds later whatever it did);
+  and drop it at its time or the player's death. No shell shows in a duel or with
+  `cg_toyMonitorShow` 0.
+- **Getting up:** a fall a throw began ends by itself 2.5 seconds after the body came to
+  rest, once the real body has walked to it (or 6 seconds later whatever it did);
   `toy_ragdoll` gets up at once, and being hurt does as for the Ragdoll.
-- **The sounds** (as the monitor had them until the Force Throw rework above, which
-  took them and their script `monitor_assets.py` away) were SJK's own, synthesized: a whoosh as it leaves the hand
-  (`sound/sjk/monitor/throw.wav`), a hollow plastic thunk with the glass ringing when it
-  strikes a body (`bonk.wav`), a clunk and rattle when it knocks on the world harder than
-  160 units a second (`knock.wav`, at most every 120 ms a monitor, louder the harder:
-  from 0.55 to full at 600). A knock carries farther than the game's own sounds, at full
-  volume to 768 units and silent past about 2,000 (`KNOCK_REACH`): with the game's
-  falloff (silent past 1,500, half at 900) the knocks of a monitor landing far from
-  the listener went unheard (Sol, 28/10/2026). Tests throw a monitor at a floor and a
-  wall, in shapes and in a map's brushes, and count the knocks heard.
-  Settings > Sound > Toys, "Monitor sounds" (`s_toyMonitorSound`), silences them.
+- **The sounds** are Jedi Academy's own but for the hit tick: a Force push as the junk
+  leaves the hand (`sound/weapons/force/push.mp3`, a charged throw too), `debris1` when
+  it strikes a body, `smalldebris` when it knocks on the world harder than 160 units a
+  second (at most every 120 ms a throw, louder the harder: from 0.55 to full at 600) and
+  `cratebust1` when a crate bursts. A knock carries farther than the game's own sounds,
+  at full volume to 768 units and silent past about 2,000 (`KNOCK_REACH`), so a throw
+  landing far from the listener is still heard. Settings > Sound > Toys, "Monitor
+  sounds" (`s_toyMonitorSound`), silences them.
+- **Achievements** ([identity.md](identity.md#achievements)), the Monitor's ids kept:
+  Rebound (strike the player whose throw raised your Force Barrier, while it holds), the
+  hidden Force Surge (strike three different players while it holds), Telekinetic, Reach
+  of the Force, Two for One, Strike! and the Drone's Special Delivery.
 
 No game server knows of it: the struck player's real body stays where it was and walks
 to the ragdoll, as for the Ragdoll; players on stock clients see nothing. Every SJK client
 on the server sees the same throw: the thrower's client relays
-`throw_<number>_<moment>_<x>_<y>_<z>_<vx>_<vy>_<vz>` (the monitor's number among the
+`throw_<number>_<moment>_<x>_<y>_<z>_<vx>_<vy>_<vz>` (the throw's number among the
 thrower's, 0 to 99; the game server time; where it leaves the hand and how fast, whole
 units) through the [toy relay](hub-chat.md#toy-relay) to each SJK player in turn, the
 nearest first, one every 40 ms, and each runs the same flight from it in 16 ms steps of
 the game server's clock, fast-forwarding a throw heard late (up to 8 seconds). A hit
-travels as the Ragdoll's `hit_` event, which names the monitor, so every client bounces
-it off the body at the same step (a flight that already ran past it runs again from its
+travels as the Ragdoll's `hit_` event, which names the throw, so every client bounces it
+off the body at the same step (a flight that already ran past it runs again from its
 throw). A sender counts only when the game shows the name they claimed, and never one
-blocked here. The model (a beige CRT, 20 x 17 x 18 units), its picture, shader, icon and
-sounds are bundled, made by the script from shapes, noise and synthesized tones (nothing
-taken from another game), and mounted below all game data, so a PK3 with the same paths
-replaces them. World shots: `world_shot::monitor_shots::monitor_on_a_demo` (with
-`SJK_TEST_DEMO`). See [monitor.rs](../crates/sjk-viewer/src/monitor.rs).
+blocked here. Only the icon (a banded crate pushed by blue rings of the Force) and the
+hit tick are SJK's, bundled and made by `scripts/force_throw_assets.py` from shapes and
+synthesized sound ([assets/monitor](../crates/sjk-viewer/assets/monitor/README.md)), and
+mounted below all game data, so a PK3 with the same paths replaces them. World shots:
+`world_shot::monitor_shots::monitor_on_a_demo` (with `SJK_TEST_DEMO`).
 
 ## Banana peel (removed)
 
@@ -6801,7 +6790,7 @@ from the card faces' textures. See [tags.rs](../crates/sjk-viewer/src/tags.rs),
 [tags_frame.rs](../crates/sjk-viewer/src/tags_frame.rs) and
 [collection_tags.rs](../crates/sjk-viewer/src/collection_tags.rs).
 
-## Fishing and Mining (removed), and the Log book
+## Fishing and Mining (removed)
 
 Fishing (Sanji's idea, 29/10/2026, Slash's design: a rod, a bucket and a float, bites
 hooked with `+use`, Echo bites, junk and the catch market) and Mining (vinry's idea,
@@ -6810,18 +6799,16 @@ rubble) were removed on 20/11/2026 in Sol's cleanup before the release, with the
 kyber glints, daily catch goals, selling commands and rare catch banners. Their saved
 settings (`s_toyFishingSound`, `s_toyMiningSound`, `cg_fishingBiteCue`) are dropped
 from the profile at load; a bind on `toy_fishing`, `toy_mining` or their selling and
-log commands only says the command is unknown. Their achievements are retired
-([identity.md](identity.md)).
+log commands only says the command is unknown. Their achievements are retired, kept and
+shown to the players who hold them ([identity.md](identity.md)).
 
-Their logs (`fishing_log.txt`, `mining_log.txt` in the profile folder) stay the
-player's own record: the Collection's **Log book** (a tile in the hall after History,
-a tab on the row) shows both, read only, for a player whose logs hold a catch
-([catch_book.rs](../crates/sjk-viewer/src/catch_book.rs),
-[collection_log_book.rs](../crates/sjk-viewer/src/collection_log_book.rs)): every fish
-and junk, every ore and rubble, two to a row, the ones never caught as "???", the others
-with their count and first day, the rare ones in gold, and each book's Share button,
-which says its rarest catch in the SJK chat (once a minute). A player with no catch sees
-neither the tile nor the tab.
+Their last leftovers went on 23/11/2026, in the clean-up ahead of v1 (Sol's approval):
+the Collection's Log book, which showed the two logs read only with a Share button for
+the rarest catch; the catch tables and log reading behind it (`fishing.rs`, `mining.rs`,
+`catch_book.rs`); and the hub plumbing (junk selling, `GET /v1/fishing/junk` and `POST
+/v1/fishing/junk/sell`, a claim answer's kyber finds and catch quests, the claims'
+`bites` and `rocks` signals, and the "fight or fish" holocron pace line). The logs
+(`fishing_log.txt`, `mining_log.txt`) stay in the profile folder, unread.
 
 ## Toy sounds
 
@@ -7262,13 +7249,13 @@ per toy, so a toy deleted from the page is added again in Settings > Quick wheel
 is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
 Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
 state; no cvar holds it). Since 23/10/2026 the default page also has the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
-while the player is limp), and since 26/10/2026 the [Monitor](#monitor) (`toy_monitor`,
+while the player is limp), and since 26/10/2026 the Monitor, now [Force Throw](#force-throw) (`toy_monitor`,
 marked while it is on, then Throw monitor, `monitor_throw`); a wheel saved before keeps
 its Toys page as it was, and gains them from Add a choice, Toys. The page holds ten, so
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
-(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026), the Tag (`toy_tag`)
-and since 07/11/2026 the [WHEEL OF DOOM](wheel-of-doom.md) (`toy_wheelofdoom`, a press:
-it tells the player's DOOM coins, rolled at a Force box).
+(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026) and the Tag
+(`toy_tag`). The WHEEL OF DOOM's entry (`toy_wheelofdoom`, 07/11/2026 to 23/11/2026, which
+told the player's DOOM coins) is gone; a wheel that saved it drops the unknown choice.
 
 ### GIF wheel
 

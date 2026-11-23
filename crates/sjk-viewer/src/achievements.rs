@@ -123,10 +123,11 @@ pub(crate) enum Counter {
     MonitorBestThrow,
     /// Players struck with a monitor thrown from [`MONITOR_FAR`] away or more.
     MonitorFar,
-    // The Fishing toy's (Slash, 29/10/2026; [`crate::fishing`]).
+    // The Fishing toy's (Slash, 29/10/2026; removed with its catch table on 20/11/2026
+    // and 23/11/2026).
     /// Fish landed with the Fishing toy.
     FishCaught,
-    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
+    /// Kinds of fish landed (bits by place among the fish of the toy's catch table).
     FishKinds,
     /// Echoes landed on the line.
     EchoesLanded,
@@ -136,12 +137,12 @@ pub(crate) enum Counter {
     JunkKinds,
     /// The most fish bites hooked in a row, none let go between (04/11/2026).
     HookStreak,
-    // The Mining toy's (vinry's toy, Slash, 05/11/2026; [`crate::mining`]).
+    // The Mining toy's (vinry's toy, Slash, 05/11/2026; removed as Fishing was).
     /// Boulders broken with the Mining toy.
     BouldersBroken,
     /// Clean strikes on them (a blow on the glint).
     CleanStrikes,
-    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
+    /// Kinds of ore dug (bits by place among the ores of the toy's finds).
     OreKinds,
     /// The Heart of the Mountain dug.
     MountainHearts,
@@ -151,6 +152,13 @@ pub(crate) enum Counter {
 /// it was thrown to its centre where it met the body): 40 metres as the world ping shows
 /// them (39.37 units a metre, `world_ping`); 1500 (38 metres) until 31/10/2026.
 pub(crate) const MONITOR_FAR: f32 = 1_575.0;
+
+/// The goals of the retired Fishing and Mining "every kind" achievements, as the toys'
+/// tables held them when they were removed: 12 fish, 6 kinds of junk (Beachcomber) and
+/// 9 ores, the Heart of the Mountain among them (Prospector).
+const FISH_KINDS: u64 = 12;
+const JUNK_KINDS: u64 = 6;
+const ORE_KINDS: u64 = 9;
 
 impl Counter {
     const COUNT: usize = 50;
@@ -1077,7 +1085,7 @@ pub(crate) const ALL: [Kind; 80] = [
         "fish_kinds",
         "Every Fish in the Pond",
         "Land every kind of fish.",
-        crate::fishing::FISH_KINDS as u64,
+        FISH_KINDS,
         Fishing,
         Client(C::FishKinds),
     )
@@ -1108,7 +1116,7 @@ pub(crate) const ALL: [Kind; 80] = [
         "junk_kinds",
         "Beachcomber",
         "Fish up every kind of junk.",
-        crate::fishing::JUNK_KINDS as u64,
+        JUNK_KINDS,
         Fishing,
         Client(C::JunkKinds),
     )
@@ -1155,7 +1163,7 @@ pub(crate) const ALL: [Kind; 80] = [
         "mine_kinds",
         "Prospector",
         "Dig every kind of ore.",
-        crate::mining::ORE_KINDS as u64,
+        ORE_KINDS,
         Mining,
         Client(C::OreKinds),
     )
@@ -1351,11 +1359,11 @@ pub(crate) struct Record {
     partners: BTreeSet<String>,
     /// Kinds of weapon (bits of [`tracker::weapon_kind`]).
     weapons: u32,
-    /// Kinds of fish landed (bits by place among the fish of [`crate::fishing::CATCHES`]).
+    /// Kinds of fish landed (bits by place among the fish of the toy's catch table).
     fish: u32,
     /// Kinds of junk fished up (bits by place among the junk).
     junk: u32,
-    /// Kinds of ore dug (bits by place among the ores of [`crate::mining::FINDS`]).
+    /// Kinds of ore dug (bits by place among the ores of the toy's finds).
     ores: u32,
     /// The toys' sets of players ([`Counter::is_named`]), by the counter's key: names
     /// without colours, lower case.

@@ -60,10 +60,20 @@ A classic+ page must still read as the retail menu it stands for.
 
 ## The own look
 
+**Shelved for v1 since 23/11/2026** (Sol's call in the clean-up ahead of v1: a first
+step, not finished). The Settings row is gone, EJK mode no longer sets it, and
+`own_look::SHELVED` makes the classic menus draw the retail look whatever
+`ui_classicLook` says (the cvar stays registered and saved, unread). For work on it,
+`SJK_CLASSIC_LOOK=sjk` on `menu_snapshot` still draws it. To bring it back: `SHELVED` to
+false, and the row back in `settings/catalog.rs`, `settings/groups.rs` (Interface),
+`settings/sections.rs` (Menus), with its lines in `settings/help.rs` and
+`settings/requires_rules.rs`, and its `retail` entry in `ejk_mode.rs`. What follows is
+the look as built.
+
 Since 21/11/2026 (Sol's request: a classic style of our own that is neat on large
 screens) the classic menus have a second look, `ui_classicLook sjk` (archived; Settings
-> Interface > Menus > Classic menus' look, Retail or SJK; `retail` is the default, the
-stock look being the default look). It keeps every page, entry and key of the classic
+> Interface > Menus > Classic menus' look, Retail or SJK, until it was shelved; `retail`
+is the default, the stock look being the default look). It keeps every page, entry and key of the classic
 style, so the rules of this page still say where things are, and changes only what is
 drawn ([own_look.rs](../crates/sjk-viewer/src/menu/classic/own_look.rs)):
 

@@ -158,8 +158,6 @@ pub(crate) fn row_labels(
         monitor: false,
         box_hunt: false,
         quests: false,
-        wheel_of_doom: false,
-        log_books: None,
         stock: color::holo(),
         grid: false,
         options: "",
@@ -682,7 +680,6 @@ impl Panel {
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
             Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
-            Tab::LogBook => self.log_book_tab(&frame, inputs),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);

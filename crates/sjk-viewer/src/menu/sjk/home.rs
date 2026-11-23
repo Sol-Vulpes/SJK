@@ -9,9 +9,7 @@
 //! quit.
 //!
 //! Under the servers, the SJK chat is docked (`docs/hub-chat.md`): its last lines,
-//! who is online, a field to type in and Open chat for its page. Top left, Support SJK
-//! (`crate::support_links`): a link to each of SJK's donation pages, opened in the
-//! browser, and × to hide it for good (`ui_supportLinks 0`). In its place for a player
+//! who is online, a field to type in and Open chat for its page. Top left, for a player
 //! without the SJK Launcher (`crate::launcher_notice`): the launcher is out, a link to
 //! its release page and × (`ui_launcherNotice 0`).
 //!
@@ -50,9 +48,6 @@ const SENDER_NAME_TOKEN: u16 = 60;
 const SENDER_CARD_TOKEN: u16 = 70;
 const SENDER_MUTE_TOKEN: u16 = 71;
 const SENDER_BAN_TOKEN: u16 = 72;
-/// Support SJK's links ([`crate::support_links::Link::ALL`]'s order) and its ×.
-const SUPPORT_TOKENS: [u16; 2] = [80, 81];
-const HIDE_SUPPORT_TOKEN: u16 = 82;
 /// The launcher notice's link and its ×.
 const LAUNCHER_TOKEN: u16 = 83;
 const HIDE_LAUNCHER_TOKEN: u16 = 84;
@@ -122,10 +117,6 @@ pub(crate) enum Action {
     /// Mute, on this PC, the player whose sender card the dock showed (its Mute,
     /// [`Home::take_mute`]).
     Mute,
-    /// Open a donation page in the browser (a link of Support SJK).
-    Support(crate::support_links::Link),
-    /// Hide Support SJK for good (its ×).
-    HideSupport,
     /// Open the SJK Launcher's release page (the launcher notice's link).
     Launcher,
     /// Hide the launcher notice for good (its ×).
@@ -257,10 +248,8 @@ pub(crate) struct HomeView<'a> {
     pub(crate) chat: Option<ChatDock<'a>>,
     /// What the profile card says of the player's SJK profile.
     pub(crate) summary: &'a crate::profile_card::Summary,
-    /// Support SJK shows top left (not with `ui_supportLinks 0`).
-    pub(crate) support: bool,
-    /// The launcher notice shows top left, in Support SJK's place (no SJK Launcher on
-    /// this computer, and not `ui_launcherNotice 0`).
+    /// The launcher notice shows top left (no SJK Launcher on this computer, and not
+    /// `ui_launcherNotice 0`).
     pub(crate) launcher: bool,
 }
 
@@ -506,14 +495,10 @@ impl Home {
                 self.focus = Focus::Card;
                 return activate.then_some(Action::Open(MainDestination::Profile));
             }
-            HIDE_SUPPORT_TOKEN => return activate.then_some(Action::HideSupport),
             LAUNCHER_TOKEN => return activate.then_some(Action::Launcher),
             HIDE_LAUNCHER_TOKEN => return activate.then_some(Action::HideLauncher),
             UPDATE_TOKEN => return activate.then_some(Action::Update),
             _ => {}
-        }
-        if let Some(index) = SUPPORT_TOKENS.iter().position(|&link| link == token) {
-            return activate.then_some(Action::Support(crate::support_links::Link::ALL[index]));
         }
         let index = usize::from(token.checked_sub(SERVER_TOKEN)?);
         if index >= servers {
@@ -729,8 +714,6 @@ pub(crate) fn build(
     servers(canvas, &frame, home, view);
     if view.launcher {
         launcher(canvas, &frame);
-    } else if view.support {
-        support(canvas, &frame);
     }
     if let Some(dock) = &view.chat {
         let focused = home.focus == Focus::Chat;
@@ -949,78 +932,22 @@ fn servers(canvas: &mut MenuCanvas, frame: &Frame, home: &Home, view: &HomeView<
     }
 }
 
-/// Support SJK's place, top left: its left edge, its top and its height; then the
-/// width of each link's pill and of ×.
-const SUPPORT: [f32; 3] = [96.0, 58.0, 36.0];
-const SUPPORT_LINKS: [f32; 2] = [176.0, 88.0];
-const SUPPORT_HIDE: f32 = 36.0;
-
-/// Support SJK, top left, clear of the ring: its name, an outlined pill for each
-/// donation page and ×, which hides it for good. While × is under the pointer, a quiet
-/// line under them says where to bring it back.
-fn support(canvas: &mut MenuCanvas, frame: &Frame) {
-    use crate::support_links::Link;
-    let s = frame.s;
-    let [left, top, height] = SUPPORT;
-    text(
-        canvas,
-        TextFamily::Display,
-        format_args!("Support SJK"),
-        frame.rect(left, top + (height - 30.0) * 0.5, 110.0, 30.0),
-        22.0 * s,
-        color::muted(),
-        FontWeight::Regular,
-        TextAlign::Start,
-    );
-    let mut x = left + 110.0;
-    for ((link, width), token) in Link::ALL.into_iter().zip(SUPPORT_LINKS).zip(SUPPORT_TOKENS) {
-        super::kit::button(
-            canvas,
-            frame,
-            [x, top, width, height],
-            link.label(),
-            false,
-            true,
-            false,
-            token,
-        );
-        x += width + 10.0;
-    }
-    super::kit::button(
-        canvas,
-        frame,
-        [x, top, SUPPORT_HIDE, height],
-        "\u{d7}",
-        false,
-        true,
-        false,
-        HIDE_SUPPORT_TOKEN,
-    );
-    if canvas.token_hovered(HIDE_SUPPORT_TOKEN) {
-        text(
-            canvas,
-            TextFamily::Body,
-            format_args!("Hides it for good: Settings > Interface > Support SJK brings it back"),
-            frame.rect(left, top + height + 10.0, 720.0, 22.0),
-            15.0 * s,
-            color::quiet(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
-    }
-}
+/// The launcher notice's place, top left: its left edge, its top and its height; then
+/// the width of its ×.
+const NOTICE: [f32; 3] = [96.0, 58.0, 36.0];
+const NOTICE_HIDE: f32 = 36.0;
 
 /// The launcher notice's link pill.
 const LAUNCHER_LINK: f32 = 190.0;
 /// Its words' width before the pill.
 const LAUNCHER_WORDS: f32 = 250.0;
 
-/// The launcher notice, top left in Support SJK's place: "The SJK Launcher is out", a
+/// The launcher notice, top left, clear of the ring: "The SJK Launcher is out", a
 /// gold pill to its release page and ×, which hides it for good. Under them, a quiet
 /// line on what the launcher does (on ×, where to bring the notice back).
 fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
     let s = frame.s;
-    let [left, top, height] = SUPPORT;
+    let [left, top, height] = NOTICE;
     text(
         canvas,
         TextFamily::Display,
@@ -1045,7 +972,7 @@ fn launcher(canvas: &mut MenuCanvas, frame: &Frame) {
     super::kit::button(
         canvas,
         frame,
-        [x + LAUNCHER_LINK + 10.0, top, SUPPORT_HIDE, height],
+        [x + LAUNCHER_LINK + 10.0, top, NOTICE_HIDE, height],
         "×",
         false,
         true,
@@ -1405,25 +1332,22 @@ mod tests {
             seconds: 1.0,
             chat,
             summary: &crate::profile_card::NOBODY,
-            support: false,
             launcher: false,
         }
     }
 
-    // Support SJK and its hint line stay above the ring's top.
-    const _: () = assert!(SUPPORT[1] + SUPPORT[2] + 10.0 + 22.0 < RING[1] - RING_RADIUS - 40.0);
+    // The launcher notice and its hint line stay above the ring's top.
+    const _: () = assert!(NOTICE[1] + NOTICE[2] + 10.0 + 22.0 < RING[1] - RING_RADIUS - 40.0);
 
     #[test]
-    fn the_launcher_notice_links_its_page_and_hides_in_support_sjks_place() {
+    fn the_launcher_notice_links_its_page_and_hides() {
         let mut home = Home::default();
         let servers = [server("JoF")];
         let mut with = view(&servers, None);
-        with.support = true;
         with.launcher = true;
         let mut canvas = MenuCanvas::new();
         build(&mut canvas, [1920.0, 1080.0], &mut home, &with, 1.0);
         assert!(canvas.rect_for(LAUNCHER_TOKEN).is_some());
-        assert!(canvas.rect_for(SUPPORT_TOKENS[0]).is_none());
         assert_eq!(home.pointer(LAUNCHER_TOKEN, false, 1), None);
         assert_eq!(
             home.pointer(LAUNCHER_TOKEN, true, 1),
@@ -1442,36 +1366,6 @@ mod tests {
             1.0,
         );
         assert!(canvas.rect_for(LAUNCHER_TOKEN).is_none());
-    }
-
-    #[test]
-    fn support_sjk_opens_each_page_and_hides() {
-        use crate::support_links::Link;
-        let mut home = Home::default();
-        let servers = [server("JoF")];
-        let mut with = view(&servers, None);
-        with.support = true;
-        let mut canvas = MenuCanvas::new();
-        build(&mut canvas, [1920.0, 1080.0], &mut home, &with, 1.0);
-        for (token, link) in SUPPORT_TOKENS.into_iter().zip(Link::ALL) {
-            assert!(canvas.rect_for(token).is_some());
-            assert_eq!(home.pointer(token, false, 1), None);
-            assert_eq!(home.pointer(token, true, 1), Some(Action::Support(link)));
-        }
-        assert_eq!(
-            home.pointer(HIDE_SUPPORT_TOKEN, true, 1),
-            Some(Action::HideSupport)
-        );
-        let mut canvas = MenuCanvas::new();
-        build(
-            &mut canvas,
-            [1920.0, 1080.0],
-            &mut home,
-            &view(&servers, None),
-            1.0,
-        );
-        assert!(canvas.rect_for(SUPPORT_TOKENS[0]).is_none());
-        assert!(canvas.rect_for(HIDE_SUPPORT_TOKEN).is_none());
     }
 
     #[test]

@@ -23,7 +23,7 @@ general contributor rules.
   ([mods.md](mods.md)).
 - Every toy is a `toy_<name>` command (`toy_help` lists them all; `toy_illuminate`,
   `toy_ragdoll`, `toy_drone`, `toy_boombox`, `toy_monitor`,
-  `toy_boxhunt`, `toy_wheelofdoom`, `toy_quests`); a
+  `toy_boxhunt`, `toy_quests`); a
   toy has no Force wheel entry, and one with a setting names it `cg_toy<Name>...`.
   Illuminate has none: it is always available and
   on only for the client's run. A toy others see has an id in the look's `toys`
@@ -104,7 +104,6 @@ migrated, except where the table says so. Where each is documented:
 | `ui_sliderPeek` | on: over a match, a Settings slider held a moment fades the rest of the screen away | [Settings](sjk-ui.md#settings) |
 | `cl_sjkChatJof`, `cl_sjkChatS` | -1, Auto: a verified JoF or S player reads their own clan's chat, staff both (Sol's spec, 03/11/2026); the other only when chosen | [Clan chats](hub-chat.md#clan-chats) |
 | `ui_launcherNotice` | on: without the SJK Launcher on the computer, the main page says it is out, with a link | [Main page](sjk-ui.md#main-page) |
-| `ui_supportLinks` | on, but shelved since 07/11/2026: Support SJK's links never show ([Donations](#donations)) | [Main page](sjk-ui.md#main-page) |
 
 The HUD look (`cg_hudStyle game`) and the console (`con_style auto`: the SJK UI's
 console with its menus, else the classic one; a saved `classic` moved once to
@@ -318,20 +317,14 @@ mistake is fixed by a new commit, and a bad release by the next release
 
 SJK takes donations on two pages: Sol's GitHub Sponsors page,
 https://github.com/sponsors/Sol-Vulpes (since 25/10/2026), and Ko-fi,
-https://ko-fi.com/soljk (Sol's page, 13/10/2026). They are offered in two places:
-
-- the GitHub repository's Sponsor button, GitHub Sponsors only (Sol's choice), through
-  [.github/FUNDING.yml](../.github/FUNDING.yml), with "Sponsorships" ticked in the
-  repository's settings (General, Features);
-- Support SJK, a small line at the top left of the SJK UI's main page (since
-  26/10/2026, Sol's request; [sjk-ui.md](sjk-ui.md#main-page)): a link to each page and
-  ×, which hides it for good (`ui_supportLinks 0`; Settings, Interface, "Support SJK"
-  shows it again). Both addresses are in
-  [support_links.rs](../crates/sjk-viewer/src/support_links.rs); it asks no server
-  anything. Shelved since 07/11/2026 (Sol's request): `support_links::SHELVED` hides
-  the line for everyone and its Settings row is gone. To bring it back, set `SHELVED`
-  to false and restore the "Support SJK" row in `settings/catalog.rs`, its place in
-  `settings/groups.rs` (Interface) and its line in `settings/help.rs`.
+https://ko-fi.com/soljk (Sol's page, 13/10/2026). They are offered in one place: the
+GitHub repository's Sponsor button, GitHub Sponsors only (Sol's choice), through
+[.github/FUNDING.yml](../.github/FUNDING.yml), with "Sponsorships" ticked in the
+repository's settings (General, Features). The client offers none: Support SJK, a small
+line at the top left of the SJK UI's main page with a link to each page (26/10/2026,
+Sol's request), was shelved on 07/11/2026 and removed on 23/11/2026 in the clean-up
+ahead of v1 (`support_links.rs` and `ui_supportLinks` are in git history before that
+date; a saved `ui_supportLinks` is dropped at load).
 
 Nothing is sold: a donation brings no feature and no advantage in the game, and
 neither place promises anything for one.

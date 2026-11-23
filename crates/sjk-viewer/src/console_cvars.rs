@@ -314,7 +314,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::menu::classic::own_look::CVAR,
             crate::menu::classic::own_look::NAMES[0],
             archive,
-            "The classic menus' look: retail (the game's own artwork and colours) or sjk (drawn sharp at any size, in the theme's colours)",
+            "The classic menus' look: retail (the game's own artwork and colours); sjk, the own look, is shelved for now and draws retail's too",
         ),
         CvarDefinition::new(
             crate::menu::sjk::theme::CVAR,
@@ -1377,12 +1377,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Show the SJK Launcher notice at the top left of the SJK UI's main page when this computer has no SJK Launcher: a link to its release page (0 hides it, as its x does)",
-        ),
-        CvarDefinition::new(
-            crate::support_links::CVAR,
-            true,
-            archive,
-            "Show Support SJK at the top left of the SJK UI's main page: links to SJK's GitHub Sponsors and Ko-fi pages (0 hides it, as its x does)",
         ),
         CvarDefinition::new(
             crate::playstyle_card::CVAR,

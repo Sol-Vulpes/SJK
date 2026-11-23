@@ -227,7 +227,6 @@ impl ClientMenu {
                 seconds: super::art::motion::seconds(),
                 chat,
                 summary,
-                support: crate::support_links::shown(console),
                 launcher: crate::launcher_notice::shown(console),
             };
             home::build(&mut self.ui, viewport, &mut self.home, &view, reveal);
@@ -316,14 +315,6 @@ impl ClientMenu {
             home::Action::Open(destination) => self.open_main_destination(destination, console),
             home::Action::Quit => MenuAction::Quit,
             home::Action::ReportBug => MenuAction::ReportBug,
-            home::Action::Support(link) => {
-                crate::support_links::open(link);
-                MenuAction::None
-            }
-            home::Action::HideSupport => {
-                crate::support_links::hide(console);
-                MenuAction::None
-            }
             home::Action::Launcher => {
                 crate::launcher_notice::open();
                 MenuAction::None

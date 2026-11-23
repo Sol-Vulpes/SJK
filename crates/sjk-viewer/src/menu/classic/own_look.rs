@@ -17,6 +17,13 @@
 //!
 //! `ui_classicLook retail` (the default: the stock look is the default look, Sol's
 //! rule of 30/10/2026) keeps the retail pictures and colours.
+//!
+//! Shelved for v1 since 23/11/2026 ([`SHELVED`], Sol's call: a first step, not finished):
+//! the Settings row is gone and the classic menus keep the retail look whatever the
+//! cvar says. `SJK_CLASSIC_LOOK=sjk` on `menu_snapshot` still draws it for work on it.
+//! To bring it back: `SHELVED` to false, and the row back in `settings/catalog.rs`,
+//! `settings/groups.rs` (Interface), `settings/sections.rs` (Menus) and its lines in
+//! `settings/help.rs`, `settings/requires_rules.rs` and `ejk_mode.rs` (`retail`).
 
 use crate::menu::art::{ArtPiece, ArtSet};
 use crate::menu::sjk::theme::Token;
@@ -25,16 +32,24 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// The classic menus' look: `retail` or `sjk`.
 pub(crate) const CVAR: &str = "ui_classicLook";
-/// Values the settings offer.
+/// Values the cvar takes.
 pub(crate) const NAMES: [&str; 2] = ["retail", "sjk"];
+/// The own look is shelved: the classic menus draw retail's, whatever [`CVAR`] says.
+pub(crate) const SHELVED: bool = true;
 
 /// Whether the own look is on, read by the canvases as they finish a page.
 static OWN: AtomicBool = AtomicBool::new(false);
 
 /// Whether `value` of [`CVAR`] asks for the own look (`sjk`, any case); anything
 /// else, a missing or mistyped value included, is retail's.
-pub(crate) fn from_cvar(value: Option<&str>) -> bool {
+fn from_cvar(value: Option<&str>) -> bool {
     value.is_some_and(|text| text.trim().eq_ignore_ascii_case(NAMES[1]))
+}
+
+/// Whether the classic menus draw the own look for `value` of [`CVAR`]: never while it
+/// is [`SHELVED`].
+pub(crate) fn chosen(value: Option<&str>) -> bool {
+    !SHELVED && from_cvar(value)
 }
 
 /// Turn the own look on or off for the pages drawn from now on.
@@ -168,6 +183,9 @@ mod tests {
     fn the_cvar_reads_retail_unless_it_says_sjk() {
         assert!(from_cvar(Some("sjk")) && from_cvar(Some(" SJK ")));
         assert!(!from_cvar(Some("retail")) && !from_cvar(Some("1")) && !from_cvar(None));
+        // Shelved, `sjk` draws retail's look too.
+        assert_eq!(chosen(Some("sjk")), !SHELVED);
+        assert!(!chosen(Some("retail")) && !chosen(None));
     }
 
     #[test]

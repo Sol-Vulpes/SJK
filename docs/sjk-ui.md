@@ -373,19 +373,10 @@ one (4:3, 5:4) scales the frame down to its width.
   Down past the last server reaches the field
   (the gold arc turns to it); Enter types and every key goes to the field until Enter
   sends or Escape stops. Not shown with `cl_sjkChat 0`.
-- **Support SJK:** top left, clear of the ring (x 96 to 526, from y 58;
-  [support_links.rs](../crates/sjk-viewer/src/support_links.rs), since 26/10/2026, Sol's
-  request; it took the place of the donation goal shelved on 14/10/2026,
-  [sjk.md](sjk.md#donations)): "Support SJK" in muted print, then two outlined pills,
-  GitHub Sponsors and Ko-fi, each opening that page in the browser, and a round × that
-  hides the line for good (`ui_supportLinks 0`). While × is under the pointer, a quiet
-  line under them says that Settings, Interface, "Support SJK" brings it back. It asks
-  no server anything. Pointer only: its targets are the page's 80 and 81 (the links)
-  and 82 (×). Shelved since 07/11/2026 (Sol's request,
-  `support_links::SHELVED`): it never shows and its setting is out of Settings.
-  Snapshot `sjk-home` (`menu_snapshot::sjk_home_snapshot`) and world shot
-  `duel6-menu` (`world_shot::duel6_sjk_menu`).
-- **SJK Launcher notice:** in Support SJK's place, before it, for a player without
+- **Support SJK** (26/10/2026 to 23/11/2026): a line top left with links to SJK's
+  donation pages, shelved from 07/11/2026 and removed in the clean-up ahead of v1
+  ([sjk.md](sjk.md#donations)); a saved `ui_supportLinks` is dropped at load.
+- **SJK Launcher notice:** top left, clear of the ring (from x 96, y 58), for a player without
   the SJK Launcher ([launcher_notice.rs](../crates/sjk-viewer/src/launcher_notice.rs),
   08/11/2026, Sol's request): "The SJK Launcher is out" in plain print, a gold pill
   "Get it on GitHub" opening the launcher's latest release
@@ -2222,19 +2213,19 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   model's blade following at once and, worn, every SJK player's view of it
   ([unlockables.md](unlockables.md#options)).
 - **Toys** (rows since 25/10/2026,
-  [collection_toys.rs](../crates/sjk-viewer/src/collection_toys.rs)): "10 toys" (counted from the toys, as the tab's count is, hub report #265), things
+  [collection_toys.rs](../crates/sjk-viewer/src/collection_toys.rs)): "7 toys" (counted from the toys, as the tab's count is, hub report #265), things
   to use in a match, and how many are on now. Illuminate's holocron, the
   Ragdoll (since 23/10/2026), the Drone (since 24/10/2026), the Boombox (since
   25/10/2026, verified players), the Monitor (since 26/10/2026), Box hunt (since
-  27/10/2026), Quests (since 05/11/2026, [quests.md](quests.md)) and the WHEEL OF DOOM
-  (Fishing and Mining until 20/11/2026: their logs are the Log book's). Since 09/11/2026 (Sol's pick,
+  27/10/2026) and Quests (since 05/11/2026, [quests.md](quests.md)); Fishing and Mining
+  until 20/11/2026, the WHEEL OF DOOM until 23/11/2026. Since 09/11/2026 (Sol's pick,
   once there were fourteen) the rows stand in three sections, each under its head and a
   rule: **Around you** (Illuminate, Ragdoll, Drone, Boombox), **With
-  others** (Monitor) and **Earn and win** (Box hunt, Quests,
-  WHEEL OF DOOM); the first head's line names the columns (By, Your key,
+  others** (Force Throw, the Monitor until 21/11/2026) and **Earn and win** (Box hunt,
+  Quests); the first head's line names the columns (By, Your key,
   On). A row of 42, 2 apart (`ORDER` and `SECTIONS` in the file; the toys keep their own
   order for the panel, the tokens and the bits, named `*_TOY` in `collection_panel.rs`): its icon, its name and a line of what it
-  does, who made it (the By column: Sol for Illuminate to Box hunt and the WHEEL OF DOOM, Slash for Quests), the key bound to its command
+  does, who made it (the By column: Sol for Illuminate to Box hunt, Slash for Quests), the key bound to its command
   ("Not bound" when none) and its own switch, which runs that toy in place and chooses
   it; the chosen row framed gold on a soft gold ground. The arrows and Tab choose in the
   list's order; a click on a row chooses it.
@@ -2265,14 +2256,9 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   "Enter: light" or "Enter: put out", "Enter: turn
   on" or "Enter: turn off", "Enter: play" or "Enter: put away", and "K: bind a key" (while a key waits: "Esc: cancel", "Backspace: clear the
   key").
-- **Log book** (20/11/2026, Sol's pick when the Fishing and Mining toys went;
-  [collection_log_book.rs](../crates/sjk-viewer/src/collection_log_book.rs)): a tile in
-  the hall after History and a tab on the row, for a player whose logs hold a catch
-  (`catch_book::shown`, read as the Collection opens). The fish book on the left, the
-  mining book on the right, each under its head with "N of M found": every kind two to
-  a row, "???" for one never caught, its count and first day for the others, the rare
-  ones in gold, then its "Share in SJK chat" button (greyed with nothing to share).
-  The lead line counts the kinds found of both; the hall's tile says the same.
+- **Log book** (20/11/2026 to 23/11/2026): a tile and a tab that showed the removed
+  Fishing and Mining toys' logs, read only. It went in the clean-up ahead of v1
+  ([client.md](client.md#fishing-and-mining-removed)).
 - **Nameplates** (10/10/2026 to 15/11/2026): a tab between Tags and Holocrons with
   empty places for nameplate ornaments, a showcase of the player's plate, a Style row and
   a See & share nameplates switch. It is gone (Sol, 15/11/2026): no ornaments were made,
@@ -2487,7 +2473,7 @@ Holocrons tab's Shop, a blade card's Forge link) open that kind directly.
   15/11/2026, Sol's request: "plain and simple, one list of everything the player owns";
   pictured rows and the item card the same day, idea 1 of the Collection's ideas round):
   "Inventory", then the wallet strip (y 268): the credits, kyber shards and, once the hub
-  said them, DOOM coins (`Snapshot::wheel_of_doom`, read when the toy asks), each with its
+  said them, DOOM coins (`Snapshot::wheel_of_doom`, read with the Force boxes), each with its
   mark, its figure and how it is earned ("credits, from opening Holocrons", "kyber shards,
   from Holocrons and kybers broken down", "DOOM coins, from the WHEEL OF DOOM"), and at the right "N spare copies worth M kyber
   shards", what Break down all duplicates would give (one copy of each kept, never a locked

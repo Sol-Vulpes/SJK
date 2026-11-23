@@ -109,9 +109,6 @@ impl ViewerConsole {
         self.sjk_chat_panel.close();
         self.holocrons_panel.close();
         self.dead_key.settle();
-        // The Log book's books, and whether it shows (`catch_book`), before the hall is
-        // drawn.
-        self.log_books = crate::catch_book::load(self.config_directory());
         self.collection_panel.open(tab, owns_console, hub, back);
         let store = super::collection_panel::loadouts::Store::load(self.config_directory());
         self.collection_panel.set_loadouts(&store, Some(""));
@@ -218,8 +215,6 @@ impl ViewerConsole {
                 self.pending_boombox = Some(on);
                 self.boombox_on = on;
             }
-            PanelAction::WheelOfDoom => self.pending_wheel_of_doom = true,
-            PanelAction::Brag { mining } => self.pending_brag = Some(mining),
             PanelAction::Monitor(on) => {
                 self.pending_monitor = Some(on);
                 self.monitor_on = on;
@@ -322,24 +317,9 @@ impl ViewerConsole {
         self.pending_quests.take()
     }
 
-    /// The viewer says whether a WHEEL OF DOOM of the player's runs, once a frame.
-    pub(crate) fn set_wheel_of_doom_on(&mut self, on: bool) {
-        self.wheel_of_doom_on = on;
-    }
-
-    /// The Toys tab pressed the WHEEL OF DOOM's switch, once.
-    pub(crate) fn take_wheel_of_doom_request(&mut self) -> bool {
-        std::mem::take(&mut self.pending_wheel_of_doom)
-    }
-
     /// An empty Collection or Holocrons page asked for the server list, once.
     pub(crate) fn take_servers_request(&mut self) -> bool {
         std::mem::take(&mut self.pending_servers)
-    }
-
-    /// The Log book's Share button was pressed, once: Mining's (`true`) or Fishing's.
-    pub(crate) fn take_brag_request(&mut self) -> Option<bool> {
-        self.pending_brag.take()
     }
 
     /// The viewer says whether the Monitor toy is on, once a frame.
@@ -487,8 +467,6 @@ impl ViewerConsole {
         let monitor = self.monitor_on;
         let box_hunt = self.box_hunt_on;
         let quests = self.quests_on;
-        let wheel_of_doom = self.wheel_of_doom_on;
-        let log_books = self.log_books.clone();
         let stock = self.stock_blade();
         // Tiles unless the list is chosen (`ui_shaderList 1`).
         let grid = self.integer_cvar(super::collection_panel::SHADER_VIEW_CVAR) != Some(1);
@@ -548,8 +526,6 @@ impl ViewerConsole {
                 monitor,
                 box_hunt,
                 quests,
-                wheel_of_doom,
-                log_books: Some(&log_books),
                 stock,
                 grid,
                 options: &options,
@@ -581,8 +557,6 @@ impl ViewerConsole {
             monitor,
             box_hunt,
             quests,
-            wheel_of_doom,
-            log_books: Some(&log_books),
             stock,
             grid,
             options: &options,

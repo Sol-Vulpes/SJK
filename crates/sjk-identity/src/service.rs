@@ -149,8 +149,6 @@ pub enum BoxDone {
     Placed(i64),
     /// SJK's creator removed box `id`.
     Removed(i64),
-    /// SJK's creator removed WHEEL OF DOOM `id`.
-    WheelRemoved(i64),
 }
 /// How often the hub's list of asset packs is read while registered.
 const ASSETS_EVERY: Duration = Duration::from_secs(6 * 3_600);
@@ -310,20 +308,8 @@ pub struct Snapshot {
     /// The answer to the last mystery box request, by serial, or why it was refused
     /// (in the player's words).
     pub mystery_box: Option<(u64, Result<BoxDone, String>)>,
-    /// Fished junk selling as the hub last said ([`Service::read_junk`]): `None` until
-    /// read, and when the hub has none or could not be asked (no Sell button then).
-    pub junk: Option<crate::junk::JunkStatus>,
-    /// The answer to the last junk sale ([`Service::sell_junk`]), by serial, or why it
-    /// was refused (in the player's words).
-    pub junk_sale: Option<(u64, Result<crate::junk::JunkSold, String>)>,
-    /// The last kyber find a claim's answer brought (`crate::catch`, since 15/11/2026),
-    /// by a count that rises with each: the toys show it once.
-    pub kyber_find: Option<(u64, crate::catch::KyberFind)>,
-    /// The day's catch quests as the last claim's answer said them (`None` from a hub
-    /// without them, or before the player fished or mined that day).
-    pub catch_quests: Option<crate::catch::CatchQuests>,
-    /// The player's DOOM coins as the hub last said
-    /// ([`Service::read_wheel_of_doom`]): `None` until read, or with a hub that has none.
+    /// The player's DOOM coins as the hub last said (read with the mystery boxes, and
+    /// after a box or a coin roll): `None` until read, or with a hub that has none.
     pub wheel_of_doom: Option<crate::wheel_of_doom::Wheel>,
     /// The answer to the last [`Service::doom_mystery_box`], by serial, or why it was
     /// refused (in the player's words, with the seconds left to wait).
@@ -791,10 +777,6 @@ impl Snapshot {
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,
-            junk: None,
-            junk_sale: None,
-            kyber_find: None,
-            catch_quests: None,
             wheel_of_doom: None,
             mystery_box_doom: None,
             box_hunt: None,
@@ -968,19 +950,11 @@ enum Command {
     PlaceMysteryBox(crate::mystery_box::MysteryBox),
     /// SJK's creator: remove mystery box `id`.
     RemoveMysteryBox(i64),
-    /// Ask the hub about junk selling.
-    ReadJunk,
-    /// Read the player's DOOM coins.
-    ReadWheelOfDoom,
-    /// SJK's creator: remove WHEEL OF DOOM `id`.
-    RemoveWheelOfDoom(i64),
     /// The player on `server` was struck by the Ray Gun of the player on slot `by`.
     RaygunHit {
         server: String,
         by: u8,
     },
-    /// Sell these pieces of fished junk, by id.
-    SellJunk(std::collections::BTreeMap<String, u32>),
     /// Read the box hunt on `server`, the player away or not.
     BoxHunt {
         server: String,
@@ -1226,8 +1200,6 @@ struct Worker {
     /// When the hub's mystery boxes are next read, and the last request's serial.
     due_mystery_boxes: Instant,
     mystery_box_serial: u64,
-    /// The last junk sale's serial.
-    junk_serial: u64,
     wheel_serial: u64,
     box_hunt_serial: u64,
     quests_serial: u64,
@@ -1526,23 +1498,6 @@ fn outcome_of(serial: u64, outcome: Result<String, HubError>) -> ReportOutcome {
     }
 }
 
-/// Keep what a claim's answer brought beside its `ttl` (`crate::catch`): a kyber find
-/// for the toys to show once, with the shards it left; the day's catch quests.
-fn note_claim_extras(snapshot: &Mutex<Snapshot>, extras: crate::catch::ClaimExtras) {
-    let mut snapshot = lock(snapshot);
-    if let Some(find) = extras.kyber_find {
-        if let Some(me) = snapshot.me.as_mut() {
-            me.shards = u64::try_from(find.balance).unwrap_or(me.shards);
-            snapshot.me_revision += 1;
-        }
-        let count = snapshot.kyber_find.as_ref().map_or(0, |(count, _)| *count) + 1;
-        snapshot.kyber_find = Some((count, find));
-    }
-    if extras.catch_quests.is_some() {
-        snapshot.catch_quests = extras.catch_quests;
-    }
-}
-
 fn lock(snapshot: &Mutex<Snapshot>) -> MutexGuard<'_, Snapshot> {
     snapshot
         .lock()
@@ -1620,7 +1575,6 @@ impl Worker {
             map_edits_serial: 0,
             due_mystery_boxes: now,
             mystery_box_serial: 0,
-            junk_serial: 0,
             wheel_serial: 0,
             box_hunt_serial: 0,
             quests_serial: 0,
@@ -2144,14 +2098,7 @@ impl Worker {
                 hub.remove_mystery_box(identity, id)
                     .map(|_| (BoxDone::Removed(id), None))
             }),
-            Command::ReadJunk => self.read_junk(),
-            Command::ReadWheelOfDoom => self.read_wheel_of_doom(),
-            Command::RemoveWheelOfDoom(id) => self.mystery_box(now, |hub, identity| {
-                hub.remove_wheel_of_doom(identity, id)
-                    .map(|_| (BoxDone::WheelRemoved(id), None))
-            }),
             Command::RaygunHit { server, by } => self.raygun_hit(&server, by),
-            Command::SellJunk(held) => self.sell_junk(&held),
             Command::UseSecret {
                 id,
                 server,
@@ -3662,7 +3609,7 @@ impl Worker {
             _ => Err(self.not_connected()),
         };
         let reread = match &outcome {
-            Ok((BoxDone::Placed(_) | BoxDone::Removed(_) | BoxDone::WheelRemoved(_), _)) => true,
+            Ok((BoxDone::Placed(_) | BoxDone::Removed(_), _)) => true,
             Err(HubError::Rejected { code, .. }) => code == "no_such_box",
             _ => false,
         };
@@ -3700,8 +3647,6 @@ impl Worker {
         });
     }
 
-    /// Ask the hub about junk selling: [`Snapshot::junk`] is what it said, `None` when it
-    /// could not be asked or has none (an older hub).
     /// Ask the hub for the WHEEL OF DOOM: [`Snapshot::wheel_of_doom`] is what it said,
     /// kept as it was when it could not be asked.
     fn read_wheel_of_doom(&mut self) {
@@ -3755,59 +3700,6 @@ impl Worker {
                 Err(error) => Err(crate::wheel_of_doom::box_refusal(&error)),
             };
             snapshot.mystery_box_doom = Some((serial, outcome));
-        });
-    }
-
-    fn read_junk(&mut self) {
-        let status = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.junk_status(&self.identity).ok(),
-            _ => None,
-        };
-        self.update(|snapshot| snapshot.junk = status);
-    }
-
-    /// Sell `held` (pieces of junk by id): the answer goes in [`Snapshot::junk_sale`],
-    /// what is still payable in [`Snapshot::junk`] and the credits in the profile.
-    fn sell_junk(&mut self, held: &std::collections::BTreeMap<String, u32>) {
-        self.junk_serial += 1;
-        let serial = self.junk_serial;
-        let outcome = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.sell_junk(&self.identity, held),
-            _ => Err(self.not_connected()),
-        };
-        self.update(|snapshot| {
-            let outcome = match outcome {
-                Ok(sold) => {
-                    if let Some(status) = snapshot.junk.as_mut() {
-                        status.left = sold.left;
-                        status.balance = sold.balance;
-                    }
-                    let credits = u64::try_from(sold.balance).unwrap_or(0);
-                    if let Some(shop) = snapshot.shop.as_mut() {
-                        shop.day.credits = credits;
-                    }
-                    if let Some(me) = snapshot.me.as_mut() {
-                        me.credits = credits;
-                        snapshot.me_revision += 1;
-                    }
-                    Ok(sold)
-                }
-                Err(error) => {
-                    if crate::junk::unsupported(&error) {
-                        snapshot.junk = None;
-                    } else if let HubError::Rejected { code, .. } = &error
-                        && let Some(status) = snapshot.junk.as_mut()
-                    {
-                        match code.as_str() {
-                            "junk_cap" => status.left = 0,
-                            "junk_selling_off" => status.open = false,
-                            _ => {}
-                        }
-                    }
-                    Err(crate::junk::refusal(&error))
-                }
-            };
-            snapshot.junk_sale = Some((serial, outcome));
         });
     }
 
@@ -4389,8 +4281,7 @@ impl Worker {
                     self.active,
                     Some(&self.play),
                 ) {
-                    Ok(extras) => {
-                        note_claim_extras(&self.snapshot, extras);
+                    Ok(()) => {
                         // What was sent is counted: the next claim starts afresh. An
                         // inactive claim sent nothing, so what it held waits.
                         if self.active {
@@ -4887,32 +4778,9 @@ impl Service {
         let _ = self.commands.send(Command::RemoveMysteryBox(id));
     }
 
-    /// Ask the hub whether the player may sell fished junk, at what prices and how much
-    /// it still pays today: the answer arrives in [`Snapshot::junk`].
-    pub fn read_junk(&self) {
-        let _ = self.commands.send(Command::ReadJunk);
-    }
-
-    /// Ask the hub for the player's DOOM coins: the answer
-    /// arrives in [`Snapshot::wheel_of_doom`].
-    pub fn read_wheel_of_doom(&self) {
-        let _ = self.commands.send(Command::ReadWheelOfDoom);
-    }
-
-    /// SJK's creator: remove WHEEL OF DOOM `id`.
-    pub fn remove_wheel_of_doom(&self, id: i64) {
-        let _ = self.commands.send(Command::RemoveWheelOfDoom(id));
-    }
-
     /// The player on `server` was struck by the Ray Gun of the player on slot `by`.
     pub fn raygun_hit(&self, server: String, by: u8) {
         let _ = self.commands.send(Command::RaygunHit { server, by });
-    }
-
-    /// Sell `held`, pieces of fished junk by id: what the hub took arrives in
-    /// [`Snapshot::junk_sale`], the credits after in the profile.
-    pub fn sell_junk(&self, held: std::collections::BTreeMap<String, u32>) {
-        let _ = self.commands.send(Command::SellJunk(held));
     }
 
     /// The player pressed Use `presses` times on the Toy Master's toy `id` on `server` in

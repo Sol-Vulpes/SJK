@@ -13,8 +13,8 @@
 //!   are not counted.
 //! - **kills** and **deaths**: obituaries of the player killing another client, and of
 //!   another client killing the player.
-//! - **bites** and **rocks** (the Fishing and Mining toys' bites hooked and boulders
-//!   broken, 04/11/2026 to 20/11/2026) are sent as 0 since the toys went.
+//! - (**bites** and **rocks**, the Fishing and Mining toys' bites hooked and boulders
+//!   broken, were sent from 04/11/2026 to 23/11/2026; the hub reads a claim without them.)
 //!
 //! Only counted while the player is actively playing ([`super::activity`]): the viewer
 //! sets [`set_counting`] twice a second with the activity it tells the hub. The counts

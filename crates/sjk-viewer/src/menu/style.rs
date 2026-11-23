@@ -134,8 +134,9 @@ impl crate::GpuState {
             art::request(vfs);
         }
         self.ui_shapes.install_menu_art(&self.device, &self.queue);
-        // The classic menus' own look draws every piece: no retail picture.
-        super::classic::own_look::set(super::classic::own_look::from_cvar(
+        // The classic menus' own look draws every piece: no retail picture (shelved:
+        // never, `own_look::SHELVED`).
+        super::classic::own_look::set(super::classic::own_look::chosen(
             console.text_value(super::classic::own_look::CVAR),
         ));
         let art = super::classic::own_look::art(self.ui_shapes.menu_art());
