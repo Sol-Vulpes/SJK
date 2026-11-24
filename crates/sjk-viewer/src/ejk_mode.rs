@@ -243,13 +243,9 @@ pub(crate) const TABLE: &[Entry] = &[
     entry(crate::tags::SHOW_CVAR, "0", "No tags on the walls"),
     entry(crate::tags::GIF_SHOW_CVAR, "0", "No GIF tags on the walls"),
     // The image and the weather, past the Vanilla preset.
-    // A fixed exposure (`r_autoExposure 0`) is the Vanilla preset's since 24/11/2026.
+    // A fixed exposure (`r_autoExposure 0`) and no sharpening are the Vanilla preset's
+    // since 24/11/2026.
     entry("r_toneCurve", "0", "No filmic curve over the image"),
-    entry(
-        crate::frame_target::aa::color::SHARPEN_CVAR,
-        "0",
-        "No sharpening",
-    ),
     entry(
         crate::weather::FORCE_CVAR,
         "0",
