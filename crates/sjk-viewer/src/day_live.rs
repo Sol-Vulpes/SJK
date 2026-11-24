@@ -11,6 +11,36 @@ pub(crate) const PC_CLOCK_CVAR: &str = "r_dayClock";
 /// `r_daySky`: without the live sun, the sky still shows the hour (`r_dayHour`, turning
 /// with `r_dayMinutes`): dawn, dusk and night tint it, and the night darkens the view.
 pub(crate) const SKY_CVAR: &str = "r_daySky";
+/// `r_lowFpsNight`: Low FPS Night, a fixed night on baked lighting alone (real-time
+/// lighting off): the sky held at [`LOW_FPS_NIGHT_HOUR`], the map's bake darkened to
+/// `r_lowFpsNightLevel` with its brightest (lamp) light kept by `r_lowFpsNightLamps`,
+/// dynamic lights (sabers, shots, explosions) and emission at full strength. It costs a
+/// few multiplies a pixel, never turns real-time lighting on and does nothing under it.
+pub(crate) const LOW_FPS_NIGHT_CVAR: &str = "r_lowFpsNight";
+/// The sky's hour in Low FPS Night.
+pub(crate) const LOW_FPS_NIGHT_HOUR: f32 = 22.;
+
+/// Low FPS Night's moonlight: the darkened bake's colour, cool blue at about the same
+/// brightness (Rec. 709 luma 0.99), leaning in as the night darkens. Green is 1, so the
+/// green channel of [`night_factor`] is the plain darkening. The shaders' twin is
+/// `NIGHT_MOON` in `world_lighting_mode.wgsl`.
+pub(crate) const NIGHT_MOON: [f32; 3] = [0.7, 1., 1.8];
+
+/// Low FPS Night's factor, per channel, on baked light whose brightest linear channel is
+/// `peak`: `level` (as seen: the linear factor is its 2.2 power) under the
+/// [`NIGHT_MOON`] blue, rising to 1 (the bake's own colour) for the brightest bake (lamp
+/// hot spots, linear 0.45 to 1) by `lamps`. The shaders' twin is `night_factor` in
+/// `world_lighting_mode.wgsl`.
+pub(crate) fn night_factor([level, lamps]: [f32; 2], peak: f32) -> [f32; 3] {
+    let seen = level.clamp(0., 1.);
+    let dark = seen.powf(2.2);
+    let t = ((peak - 0.45) / 0.55).clamp(0., 1.);
+    let keep = lamps * t * t * (3. - 2. * t);
+    NIGHT_MOON.map(|moon| {
+        let night = dark * (1. + (moon - 1.) * (1. - seen));
+        night + (1. - night) * keep
+    })
+}
 /// How often the PC's clock is read while [`PC_CLOCK_CVAR`] is on, in milliseconds: the
 /// sun moves a quarter of a degree a minute, so once a second is plenty, and the frame
 /// never asks the time zone rules itself.
@@ -86,10 +116,10 @@ impl PcClock {
 /// diagnostics bitmask, contact shadows, gap closure, ambient readability fill and
 /// indirect-light controls and whether the hour follows the PC's clock.
 #[derive(Clone)]
-pub(crate) struct Clock(Arc<[AtomicU32; 12]>, Arc<PcClock>);
+pub(crate) struct Clock(Arc<[AtomicU32; 15]>, Arc<PcClock>);
 
 /// Names in slot order; every slot is a live cvar registered by `day::register`.
-pub(crate) const LIVE_CVARS: [&str; 12] = [
+pub(crate) const LIVE_CVARS: [&str; 15] = [
     "r_dayHour",
     "r_dayMinutes",
     "r_volumetricClarity",
@@ -102,6 +132,9 @@ pub(crate) const LIVE_CVARS: [&str; 12] = [
     "r_ambientFillOcclusion",
     PC_CLOCK_CVAR,
     SKY_CVAR,
+    LOW_FPS_NIGHT_CVAR,
+    "r_lowFpsNightLevel",
+    "r_lowFpsNightLamps",
 ];
 
 impl Default for Clock {
@@ -120,6 +153,9 @@ impl Default for Clock {
                 AtomicU32::new(1_f32.to_bits()),
                 AtomicU32::new(0),
                 AtomicU32::new(0),
+                AtomicU32::new(0),
+                AtomicU32::new(LOW_FPS_NIGHT_LEVEL.to_bits()),
+                AtomicU32::new(LOW_FPS_NIGHT_LAMPS.to_bits()),
             ]),
             Arc::default(),
         )
@@ -161,7 +197,9 @@ impl Clock {
             7 => value.clamp(0., 0.2),
             8 => value.clamp(0., 4.),
             9 => value.clamp(0., 1.),
-            10 | 11 => f32::from(u8::from(value != 0.)),
+            10..=12 => f32::from(u8::from(value != 0.)),
+            13 => value.clamp(0.05, 1.),
+            14 => value.clamp(0., 1.),
             _ => value.clamp(0., 4095.),
         };
         self.0[index].store(value.to_bits(), Ordering::Relaxed);
@@ -184,7 +222,9 @@ impl Clock {
     /// else noon, where the sky's tint leaves the authored sky as it is; so switching both
     /// off gives the map its own sky back at once, whatever `r_dayHour` says.
     pub(crate) fn sky_values(&self) -> [f32; 2] {
-        if self.on(10) {
+        if self.on(12) {
+            [LOW_FPS_NIGHT_HOUR, 0.]
+        } else if self.on(10) {
             [self.1.hour(), 0.]
         } else if self.on(11) {
             [0, 1].map(|i| f32::from_bits(self.0[i].load(Ordering::Relaxed)))
@@ -217,7 +257,10 @@ impl Clock {
     /// [`PC_CLOCK_CVAR`] is on, else 1: what stands for the sun's hour when the live sun
     /// is off.
     pub(crate) fn night_tint(&self) -> f32 {
-        if self.on(10) {
+        // Low FPS Night darkens the bake itself, not the whole picture.
+        if self.on(12) {
+            1.
+        } else if self.on(10) {
             night_tint(self.1.hour())
         } else if self.on(11) {
             // A turning day's hour is the sky shader's; the set hour stands for it here.
@@ -225,6 +268,18 @@ impl Clock {
         } else {
             1.
         }
+    }
+
+    /// Whether Low FPS Night ([`LOW_FPS_NIGHT_CVAR`]) is on; the caller checks that
+    /// real-time lighting is off.
+    pub(crate) fn low_fps_night(&self) -> bool {
+        self.on(12)
+    }
+
+    /// Low FPS Night's `[level, lamps]` for [`night_factor`] while it is on.
+    pub(crate) fn night(&self) -> Option<[f32; 2]> {
+        self.on(12)
+            .then(|| [13, 14].map(|i| f32::from_bits(self.0[i].load(Ordering::Relaxed))))
     }
 
     /// `r_dayDebug` plus the contact shadow toggle folded into bit 2: which real-time
@@ -236,9 +291,53 @@ impl Clock {
     }
 }
 
+/// `r_lowFpsNightLevel`'s default: how bright the bake stays, as seen (linear 0.029).
+pub(crate) const LOW_FPS_NIGHT_LEVEL: f32 = 0.2;
+/// `r_lowFpsNightLamps`'s default.
+pub(crate) const LOW_FPS_NIGHT_LAMPS: f32 = 0.1;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Low FPS Night holds the sky at 22:00 over the PC clock and `r_daySky`, leaves the
+    /// exposure alone and keeps lamp hot spots brighter than the rest of the bake.
+    #[test]
+    fn low_fps_night_holds_the_sky_and_darkens_only_the_bake() {
+        let clock = Clock::default();
+        assert_eq!(clock.night(), None);
+        clock.store(10, &CvarValue::Integer(1));
+        clock.store(11, &CvarValue::Integer(1));
+        clock.store(12, &CvarValue::Integer(1));
+        assert_eq!(clock.sky_values(), [LOW_FPS_NIGHT_HOUR, 0.]);
+        assert_eq!(clock.night_tint(), 1.);
+        let night = clock.night().expect("on");
+        assert_eq!(night, [LOW_FPS_NIGHT_LEVEL, LOW_FPS_NIGHT_LAMPS]);
+        let [red, dark, blue] = night_factor(night, 0.2);
+        assert!(
+            (dark - 0.2_f32.powf(2.2)).abs() < 1e-6,
+            "sunlit ground goes dark: {dark}"
+        );
+        assert!(
+            red < dark && dark < blue,
+            "under a moonlit blue: {red} {blue}"
+        );
+        let lamp = night_factor(night, 1.);
+        assert!(lamp[1] > dark * 3., "lamp spots keep light");
+        assert!(
+            lamp[2] / lamp[0] < blue / red,
+            "and more of their own colour"
+        );
+        assert_eq!(
+            night_factor([1., 0.], 0.5),
+            [1.; 3],
+            "level 1 leaves the bake"
+        );
+        clock.store(13, &CvarValue::Float(0.));
+        assert_eq!(clock.night().expect("on")[0], 0.05, "never pitch black");
+        clock.store(12, &CvarValue::Integer(0));
+        assert_eq!(clock.night(), None);
+    }
 
     fn at(hour: u8, minute: u8, second: u8) -> LocalTime {
         LocalTime {

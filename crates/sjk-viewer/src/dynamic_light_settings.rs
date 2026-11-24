@@ -103,12 +103,20 @@ impl Settings {
         self.1.toon()
     }
 
+    /// Low FPS Night's `[level, lamps]` (`r_lowFpsNight`) while it is on and `baked`
+    /// (real-time lighting off): it never acts under real-time lighting.
+    pub(crate) fn night(&self, baked: bool) -> Option<[f32; 2]> {
+        self.3.night().filter(|_| baked)
+    }
+
     /// Publish the same gated scene lights to world shading and subsequent entity lighting.
+    /// `baked`: real-time lighting is off, so Low FPS Night may darken the bake.
     pub(crate) fn upload(
         &self,
         world: &crate::world_materials::Runtime,
         queue: &crate::frame_queue::FrameQueue,
         lights: &mut super::PointLightList,
+        baked: bool,
     ) {
         self.apply(lights);
         world.update_day_clock(queue, self.3.values(), self.3.sky_values());
@@ -116,19 +124,41 @@ impl Settings {
         world.set_gap_close(self.3.gap_close());
         world.set_ambient_fill(self.3.ambient_fill());
         world.set_indirect_readability(self.3.indirect_readability());
+        world.set_fog_night(queue, self.night(baked).map(|[level, _]| level));
         world.update_scene_lighting_mode(
             queue,
             lights,
-            self.1.bits() | crate::flat_world::bits(),
+            self.1.bits() | crate::flat_world::bits() | night_bits(self.night(baked)),
             self.2.bits(),
             self.shadows(),
         );
     }
 }
 
+/// Low FPS Night in the model word (`point_lights.metadata.y`, read by `night_on`,
+/// `night_level` and `night_factor` in `world_lighting_mode.wgsl`): bit 5 on (bit 4 is
+/// `r_flatWorld`), bits 8..15 the level as seen and 16..23 the lamps, in 255ths.
+fn night_bits(night: Option<[f32; 2]>) -> u32 {
+    night.map_or(0, |[level, lamps]| {
+        let byte = |v: f32| (v.clamp(0., 1.) * 255.).round() as u32;
+        1 << 5 | byte(level) << 8 | byte(lamps) << 16
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn low_fps_night_takes_its_own_bits_of_the_model_word() {
+        assert_eq!(night_bits(None), 0);
+        assert_eq!(night_bits(Some([0.2, 0.1])), 32 | 51 << 8 | 26 << 16);
+        assert_eq!(
+            night_bits(Some([1., 1.])) & (0x1f | crate::flat_world::BIT),
+            0,
+            "pixel light, toon and flat world bits untouched"
+        );
+    }
 
     #[test]
     fn walls_stop_dynamic_lights_by_default_and_the_cvar_turns_it_off_live() {

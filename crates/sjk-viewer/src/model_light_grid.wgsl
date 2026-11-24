@@ -13,6 +13,16 @@ fn model_light_without_baked_direction(position: vec3<f32>) -> EntityLight {
 fn finish_model_light(position: vec3<f32>, source: EntityLight) -> EntityLight {
     var light = source;
     light.ambient = light.ambient * 0.6 + vec3(32.0);
+    // Low FPS Night: the grid's light darkened before the dynamic lights join it at full
+    // strength (`entity_lighting::finish`).
+    if night_on() {
+        let peak = pow(min(max(max(light.ambient.r + light.directed.r,
+            light.ambient.g + light.directed.g), light.ambient.b + light.directed.b) / 255.0,
+            1.0), 2.2);
+        let factor = night_factor(peak);
+        light.ambient *= factor;
+        light.directed *= factor;
+    }
     var direction = light.direction * length(light.directed);
     for (var index = 0u; index < min(point_lights.metadata.x, 32u); index += 1u) {
         let source = point_lights.lights[index];

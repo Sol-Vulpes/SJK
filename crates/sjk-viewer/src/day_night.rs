@@ -18,6 +18,8 @@ pub(crate) struct Settings {
     pub(crate) pc_clock: bool,
     /// `r_daySky`: without the live sun the sky alone shows the hour ([`Self::sky`]).
     pub(crate) sky: bool,
+    /// `r_lowFpsNight` at installation: the sky's tint is built for its fixed night too.
+    pub(crate) low_fps_night: bool,
 }
 
 /// Frame-local sunlight and ambient fill, evaluated without allocation.
@@ -66,6 +68,9 @@ impl Settings {
             sky: console
                 .and_then(|c| c.integer_cvar(live::SKY_CVAR))
                 .is_some_and(|on| on != 0),
+            low_fps_night: console
+                .and_then(|c| c.integer_cvar(live::LOW_FPS_NIGHT_CVAR))
+                .is_some_and(|on| on != 0),
         }
     }
 
@@ -76,7 +81,7 @@ impl Settings {
     /// shadows.
     pub(crate) fn sky(self) -> Self {
         Self {
-            enabled: self.enabled || self.pc_clock || self.sky,
+            enabled: self.enabled || self.pc_clock || self.sky || self.low_fps_night,
             ..self
         }
     }
@@ -213,6 +218,14 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         "1 sets the hour of the sun from this PC's clock (local time), over r_dayHour and \
         r_dayMinutes; live",
     ))?;
+    cvars.register(CvarDefinition::new(
+        live::LOW_FPS_NIGHT_CVAR,
+        0_i64,
+        CvarFlags::ARCHIVE,
+        "Low FPS Night: a fixed night (22:00) on baked lighting at no cost; the map's light \
+        darkened, lamps, sabers and shots keep theirs; never turns real-time lighting on, \
+        does nothing under it; live, its night sky from the next map or vid_restart",
+    ))?;
     for (name, value, help) in [
         (
             "r_dayHour",
@@ -223,6 +236,16 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             "r_dayMinutes",
             0.,
             "Minutes per day, 0 holds hour, 1..1440 cycles; live",
+        ),
+        (
+            "r_lowFpsNightLevel",
+            f64::from(live::LOW_FPS_NIGHT_LEVEL),
+            "Low FPS Night: how bright the map's baked light stays, as seen, 0.05..1; live",
+        ),
+        (
+            "r_lowFpsNightLamps",
+            f64::from(live::LOW_FPS_NIGHT_LAMPS),
+            "Low FPS Night: how much light the brightest baked spots (lamps) keep, 0..1; live",
         ),
         (
             "r_volumetricClarity",

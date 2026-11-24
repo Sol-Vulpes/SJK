@@ -52,15 +52,15 @@ pub(crate) const VERIFIED_ICON: u32 = CROSSHAIR_ICON_FIRST + CROSSHAIR_ICON_CELL
 /// First of the quick wheels' icon cells (`quick_wheel::ICONS`), after the verified
 /// badge's.
 pub(crate) const WHEEL_ICON_FIRST: u32 = VERIFIED_ICON + 1;
-/// Quick wheel cells: four rows less the eight the settings icons took (21/11/2026: the
-/// atlas may grow no taller), for the 44 icons of two boards and the toys', with room
-/// for three more.
-pub(crate) const WHEEL_ICON_CELLS: u32 = 4 * COLUMNS - 8;
+/// Quick wheel cells: four rows less the nine the settings icons took (eight on
+/// 21/11/2026, the atlas may grow no taller; one for Low FPS Night's moon), for the 44
+/// icons of two boards and the toys', with room for two more.
+pub(crate) const WHEEL_ICON_CELLS: u32 = 4 * COLUMNS - 9;
 /// First of the settings menu's icon cells (`settings_icons::ICONS`), after the
 /// quick wheels'.
 pub(crate) const SETTINGS_ICON_FIRST: u32 = WHEEL_ICON_FIRST + WHEEL_ICON_CELLS;
-/// Settings icon cells: two rows.
-pub(crate) const SETTINGS_ICON_CELLS: u32 = 2 * COLUMNS + 8;
+/// Settings icon cells: two rows and nine (33 whole icons and the small ones' eight).
+pub(crate) const SETTINGS_ICON_CELLS: u32 = 2 * COLUMNS + 9;
 /// First of the medals' small medallion cells (`medals::Medal::icon`), after the
 /// settings menu's.
 pub(crate) const MEDAL_ICON_FIRST: u32 = SETTINGS_ICON_FIRST + SETTINGS_ICON_CELLS;

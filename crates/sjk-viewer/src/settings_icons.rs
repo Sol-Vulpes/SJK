@@ -28,7 +28,7 @@ macro_rules! small {
 
 /// Every whole-cell icon, in the script's order: the categories', the key bindings'
 /// groups' and the ones other screens draw large.
-pub(crate) const ICONS: [(&str, &[u8]); 32] = [
+pub(crate) const ICONS: [(&str, &[u8]); 33] = [
     icon!("settings"),
     icon!("first_setup"),
     icon!("video"),
@@ -52,6 +52,7 @@ pub(crate) const ICONS: [(&str, &[u8]); 32] = [
     icon!("lighting"),
     icon!("shadows"),
     icon!("weather"),
+    icon!("low_fps_night"),
     icon!("scoreboard"),
     icon!("camera"),
     icon!("crosshair"),

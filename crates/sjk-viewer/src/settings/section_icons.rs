@@ -26,6 +26,7 @@ const ICONS: &[(&str, &str)] = &[
     ("Shadows", "shadows"),
     ("Weather", "weather"),
     ("Rain looks", "weather"),
+    ("Low FPS Night", "low_fps_night"),
     // Sound.
     ("Volume", "sound"),
     ("Game sounds", "game_sounds"),
@@ -105,6 +106,7 @@ const ICONS: &[(&str, &str)] = &[
     ("Graphics: lighting", "lighting"),
     ("Graphics: shadows", "shadows"),
     ("Graphics: weather", "weather"),
+    ("Graphics: low FPS night", "low_fps_night"),
 ];
 
 /// The icon of the sub-heading `heading` (any case).

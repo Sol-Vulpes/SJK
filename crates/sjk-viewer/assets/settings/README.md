@@ -17,12 +17,14 @@ one look and a new icon is one line in the script:
   ([Phosphor-LICENSE.txt](Phosphor-LICENSE.txt)), laid on the disc as a raised white
   plate with a soft shadow; the crossed lightsabers are drawn by the script itself.
 
-There are two sizes. The 32 in this folder are 128x128, the UI atlas cell: the
+There are two sizes. The 33 in this folder are 128x128, the UI atlas cell: the
 categories', the key bindings' groups' and the ones other screens draw large. The 32
 in [small/](small) are 64x64: the pictures only Settings' sub-headings wear, drawn
 small there. The client packs those four to an atlas cell at start
 (`settings_icons::small_cells`) and draws each from its quarter, because the atlas is
 full: it is as tall as a device is asked to allow, so 32 more whole cells do not fit.
+`low_fps_night` (a moon, Low FPS Night's tab and heading) is the 33rd whole icon; its
+cell came from the quick wheel's spare ones too.
 All are on transparency with an anti-aliased round edge. The font is not in the
 repository: only the pictures drawn from it are.
 
@@ -46,7 +48,7 @@ python scripts/settings_icons_draw.py package crates/sjk-viewer/assets/settings
 
 To add one: a line in the script's `ICONS` or `SMALL` (its file name and a Phosphor
 glyph's name, as on phosphoricons.com), the same name in `settings_icons.rs`'s `ICONS`
-or `SMALL`, and run the script. The atlas keeps 40 cells for them (`ui_renderer::icons`,
-`SETTINGS_ICON_CELLS`, eight of them taken from the quick wheel's spare ones): 32 whole
+or `SMALL`, and run the script. The atlas keeps 41 cells for them (`ui_renderer::icons`,
+`SETTINGS_ICON_CELLS`, nine of them taken from the quick wheel's spare ones): 33 whole
 icons and room for 32 small ones, all in use. A further icon needs a cell found
 elsewhere in the atlas; a test checks the count and the sizes.

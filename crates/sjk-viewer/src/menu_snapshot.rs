@@ -780,7 +780,7 @@ fn menu_snapshot() {
     // A changed setting shows its mark and its default.
     console.set_cvar("r_hdrExposure", "1.5");
     // The classic option panels, focused on a row with something to say.
-    let panels: [(&str, Page, Entry, Frame, &str); 9] = [
+    let panels: [(&str, Page, Entry, Frame, &str); 10] = [
         (
             "setup-video-ingame",
             Page::Setup,
@@ -843,6 +843,13 @@ fn menu_snapshot() {
             Entry::RenderShadows,
             Frame::Main,
             "r_sunShadowTaps",
+        ),
+        (
+            "renderer-low-fps-night",
+            Page::Graphics,
+            Entry::LowFpsNight,
+            Frame::Main,
+            "r_lowFpsNight",
         ),
     ];
     for (name, page, entry, frame, cvar) in panels {
@@ -2263,6 +2270,8 @@ fn sjk_settings_snapshot() {
     let mut console =
         crate::console::ViewerConsole::new(directory.path().join("config.cfg")).unwrap();
     console.set_cvar("con_scale", "1.3");
+    // Low FPS Night's tab shows it switched on.
+    console.set_cvar("r_lowFpsNight", "1");
     // Name, window, category, focused setting, its list open, a search.
     type Case<'a> = (
         &'a str,
@@ -2272,7 +2281,7 @@ fn sjk_settings_snapshot() {
         bool,
         Option<&'a str>,
     );
-    let cases: [Case; 14] = [
+    let cases: [Case; 15] = [
         (
             "sjk-settings",
             VIEWPORT_WIDE,
@@ -2330,6 +2339,15 @@ fn sjk_settings_snapshot() {
             2,
             Some("r_sunShadowTaps"),
             true,
+            None,
+        ),
+        // Low FPS Night's own tab.
+        (
+            "sjk-settings-graphics-low-fps-night",
+            VIEWPORT_WIDE,
+            2,
+            Some("r_lowFpsNight"),
+            false,
             None,
         ),
         (

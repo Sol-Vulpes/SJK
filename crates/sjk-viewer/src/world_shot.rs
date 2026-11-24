@@ -468,6 +468,9 @@ mod ejk_look_shots;
 #[path = "world_shot_footprints.rs"]
 mod footprints_shots;
 #[cfg(test)]
+#[path = "world_shot_low_fps_night.rs"]
+mod low_fps_night_shots;
+#[cfg(test)]
 #[path = "world_shot_mover_models.rs"]
 mod mover_models_shots;
 #[path = "world_shot_pc_clock.rs"]

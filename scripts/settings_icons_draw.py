@@ -80,6 +80,7 @@ ICONS = {
     "lighting": "lightbulb",
     "shadows": "circle-half",
     "weather": "cloud-rain",
+    "low_fps_night": "moon",
     # The HUD's parts and the other screens.
     "scoreboard": "ranking",
     "camera": "video-camera",

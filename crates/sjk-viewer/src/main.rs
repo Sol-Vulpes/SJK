@@ -3284,11 +3284,14 @@ impl GpuState {
             &mut particle_groups[1],
         );
         map_edits::lights::append(&self.map_edits, view_position, &mut self.dynamic_lights);
+        let baked = !self.context.sun_shadows.day.enabled;
         self.context.dynamic_light_settings.upload(
             &self.world_materials,
             &self.queue,
             &mut self.dynamic_lights,
+            baked,
         );
+        self.entity_lighting.night = self.context.dynamic_light_settings.night(baked);
         if let Some(vfs) = self.vfs.as_deref() {
             self.world_materials
                 .update_videos(&self.queue, vfs, visual_now);
@@ -3322,8 +3325,11 @@ impl GpuState {
             self.world_materials.fogs(),
         );
         // Saber shaders taking the colour of the light where they are read the grid too.
+        // Blades keep the day's light: Low FPS Night darkens the world, not the sabers.
+        let mut blade_lighting = self.entity_lighting;
+        blade_lighting.night = None;
         saber_persona::light_instances(saber_instances, &self.blade_skins, |at| {
-            let light = self.entity_lighting.sample(&self.bsp, at, &[]);
+            let light = blade_lighting.sample(&self.bsp, at, &[]);
             std::array::from_fn(|i| light.ambient[i] + 0.5 * light.directed[i])
         });
         let global_particle_seconds = presentation_time as f32 * 0.001;

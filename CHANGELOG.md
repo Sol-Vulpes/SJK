@@ -31,10 +31,14 @@ introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
+
+= r_lowFpsNight: Low FPS Night: a fixed night at no FPS cost without real-time lighting; the map goes dark while lamps and sabers keep their light.
+
 - Collection > Achievements: a category's count no longer runs into its name, and a medallion's name no longer runs into the next one's with a larger menu text size or letter spacing; a name too wide for its cell breaks into two lines. A category with every achievement held says "Completed" in gold instead of "5 of 5" _(Kushina, PR #448)_
 - Collection > Tags: the line under Break down and Craft no longer says "Made: your GIF tag. It is yours for good." on every tag after a GIF tag is made; the hub's answer shows only on the card of the tag and finish it was for, and the others say again why Craft waits _(Kushina, PR #449)_
 - Ground HUD (`cg_groundHud`): with a saber, the classic HUD no longer also writes "Lightsaber" and the style at the bottom of the screen; the stance dot at the feet already shows the style. Weapons keep their ammunition panel _(Kushina, PR #450)_
 - Scoreboard: the spectators' names no longer run past the board's edge. They break into more lines under "Watching", the rows make room when many watch, and long names are shortened with ".." only when they still would not fit _(Kushina, PR #452)_
+- Settings > Graphics has a Low FPS Night tab (`r_lowFpsNight`): a fixed 22:00 night on the map's own baked lighting, for slower PCs, at no FPS cost. The map's light goes dark (Night brightness, `r_lowFpsNightLevel`), the brightest lamp spots keep some (Lamp light kept, `r_lowFpsNightLamps`), and sabers, shots and explosions light the dark as brightly as by day. The dark leans a cool moonlit blue while lamp pools stay warm, and map fog darkens with the night instead of glowing; it never turns real-time lighting on _(Kushina, PR #444)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 
