@@ -3228,6 +3228,18 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 # ---- Menus & settings ----
 
+[creator-hoth-gear]
+area: Menus & settings
+title: Character creation: whole part pictures and the Hoth gear (Kushina, PR #451)
+change: Part pictures of custom species are drawn whole, not only their tinted bits.
+change: The SJK creator lists parts without an icon after the others: the Hoth gear (g1, e1).
+change: The classic menu keeps retail's lists (pictured parts only).
+test: SJK creator, jedi_zf: Torso and Legs show whole outfits; a Hoth tile at the end.
+test: Pick Hoth torso and legs, Apply: the Hoth gear is worn in game.
+test: ui_menuStyle classic, same species: no Hoth or a2/b2 tiles; pictures whole.
+test: The species grid: every species still has its picture.
+note: With JoF EJK's japro-assets.pk3 in EternalJK, the Hoth tiles show jaPRO's pictures.
+
 [achievement-wall-words]
 area: Menus & settings
 title: Achievement wall: names and counts kept apart, Completed (Kushina, PR #448)

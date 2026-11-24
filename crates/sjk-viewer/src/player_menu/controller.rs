@@ -346,10 +346,9 @@ impl PlayerMenu {
         else {
             return;
         };
+        // Only the classic menu steps parts, through retail's list: the pictured ones.
         let length = match axis {
-            0 => species.heads.len(),
-            1 => species.torsos.len(),
-            2 => species.legs.len(),
+            0..=2 => species.pictured_parts(axis).len(),
             3 => species.colors.len(),
             _ => 0,
         };

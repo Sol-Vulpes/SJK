@@ -10,7 +10,7 @@
 
 = Sol
 + 24/11/2026 | - | Low FPS Night: rustfmt the entity light grid loop
-- d93a5cb |  | Low FPS Night: rustfmt the entity light grid loop
+- ddd78ad |  | Low FPS Night: rustfmt the entity light grid loop
 + 24/11/2026 | - | Credits, debug panel and history for the PR batch of 24/11 (Kushina #438 #440 #441 #443 #444 #448 #449 #450 #452)
 - 6cba458 |  | Credits, debug panel and history for the PR batch of 24/11 (Kushina #438 #440 #441 #443 #444 #448 #449 #450 #452)
 + 24/11/2026 | - | Model sync shares a model whole: voice, animation sounds, shaders from any file, outside textures; easier to use
@@ -3545,6 +3545,9 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 24/11/2026 | SJK #451 | Show whole part pictures and list the Hoth gear in character creation
+- 894120c |  | Show whole part pictures and list the Hoth gear in character creation
+- c8bd28f |  | Give the species test folders their model
 + 24/11/2026 | SJK #443 | Let rig chains that ask keep their modelled curve as they hang
 - f80273f |  | Let rig chains that ask keep their modelled curve as they hang
 + 24/11/2026 | SJK #441 | Rig models: eye joints follow the look target

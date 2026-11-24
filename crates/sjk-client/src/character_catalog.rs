@@ -47,17 +47,36 @@ pub struct LegacySpeciesColor {
 pub struct LegacySpecies {
     /// Directory component below `models/players`.
     pub model: String,
-    /// Icon-backed head skin names, including their `head_` prefix.
+    /// Head skin names, including their `head_` prefix: those with an icon
+    /// first, then those without.
     pub heads: Vec<String>,
-    /// Icon-backed torso skin names, including their `torso_` prefix.
+    /// Torso skin names, including their `torso_` prefix, ordered as `heads`.
     pub torsos: Vec<String>,
-    /// Icon-backed lower-body skin names, including their `lower_` prefix.
+    /// Lower-body skin names, including their `lower_` prefix, ordered as `heads`.
     pub legs: Vec<String>,
+    /// How many of the heads, torsos and legs have an icon: the leading entries
+    /// of each list, all that retail's menu (and SJK's classic one) offers.
+    pub pictured: [usize; 3],
     /// Colour actions offered by `playerchoice.txt`.
     pub colors: Vec<LegacySpeciesColor>,
 }
 
 impl LegacySpecies {
+    /// The parts of axis 0 (heads), 1 (torsos) or 2 (legs).
+    pub fn parts(&self, axis: usize) -> &[String] {
+        match axis {
+            0 => &self.heads,
+            1 => &self.torsos,
+            _ => &self.legs,
+        }
+    }
+
+    /// The parts of `axis` that have an icon, as retail lists them.
+    pub fn pictured_parts(&self, axis: usize) -> &[String] {
+        let parts = self.parts(axis);
+        &parts[..self.pictured[axis.min(2)].min(parts.len())]
+    }
+
     /// Builds the byte-exact multipart `model` cvar value used by OpenJK UI.
     pub fn cvar_value(&self, head: &str, torso: &str, legs: &str) -> String {
         format!("{}/{head}|{torso}|{legs}", self.model)
@@ -230,9 +249,9 @@ fn parse_species(
     paths: &[sjk_vfs::VirtualPath],
 ) -> Result<Option<LegacySpecies>, Box<dyn Error + Send + Sync>> {
     let prefix = format!("models/players/{model}/");
-    let mut heads = Vec::new();
-    let mut torsos = Vec::new();
-    let mut legs = Vec::new();
+    // Each list's parts with whether they have an icon: the pictured ones make
+    // the folder a species as in retail, and are listed first.
+    let mut lists: [Vec<(bool, String)>; 3] = Default::default();
     for path in paths {
         let Some(stem) = path
             .as_str()
@@ -241,25 +260,37 @@ fn parse_species(
         else {
             continue;
         };
-        if icon_path(vfs, model, stem)?.is_none() {
-            continue;
-        }
-        if stem.starts_with("head_") {
-            heads.push(stem.to_owned());
+        let kind = if stem.starts_with("head_") {
+            0
         } else if stem.starts_with("torso_") {
-            torsos.push(stem.to_owned());
+            1
         } else if stem.starts_with("lower_") {
-            legs.push(stem.to_owned());
-        }
+            2
+        } else {
+            continue;
+        };
+        // A part without an icon is listed too (retail left it out), after the
+        // pictured ones: the Hoth gear, `torso_g1` and `lower_e1` of every stock
+        // species, has none (24/11/2026). SJK's creator offers it; the classic
+        // menu keeps retail's list (`pictured`).
+        let icon = icon_path(vfs, model, stem)?.is_some();
+        lists[kind].push((icon, stem.to_owned()));
     }
-    if heads.is_empty() || torsos.is_empty() || legs.is_empty() {
+    let mut pictured = [0; 3];
+    for (count, list) in pictured.iter_mut().zip(&mut lists) {
+        list.sort_by_key(|(icon, _)| !*icon);
+        *count = list.iter().filter(|(icon, _)| *icon).count();
+    }
+    if pictured.contains(&0) {
         return Ok(None);
     }
+    let [heads, torsos, legs] = lists.map(|list| list.into_iter().map(|(_, stem)| stem).collect());
     Ok(Some(LegacySpecies {
         model: model.to_owned(),
         heads,
         torsos,
         legs,
+        pictured,
         colors: parse_colors(&String::from_utf8_lossy(bytes)),
     }))
 }
@@ -314,6 +345,43 @@ fn icon_path(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_species_lists_its_parts_without_an_icon_too() {
+        let mut vfs = VirtualFileSystem::new();
+        vfs.mount_memory(
+            "pack",
+            [
+                ("models/players/jedi_zf/model.glm", Vec::new()),
+                ("models/players/jedi_zf/playerchoice.txt", Vec::new()),
+                ("models/players/jedi_zf/head_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_head_a1.jpg", Vec::new()),
+                ("models/players/jedi_zf/torso_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_torso_a1.png", Vec::new()),
+                ("models/players/jedi_zf/torso_g1.skin", Vec::new()),
+                ("models/players/jedi_zf/lower_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_lower_a1.png", Vec::new()),
+                ("models/players/jedi_zf/lower_e1.skin", Vec::new()),
+                ("models/players/jedi_zf/model_default.skin", Vec::new()),
+                // Skins with no icon at all make no species.
+                ("models/players/bare/model.glm", Vec::new()),
+                ("models/players/bare/playerchoice.txt", Vec::new()),
+                ("models/players/bare/head_a1.skin", Vec::new()),
+                ("models/players/bare/torso_a1.skin", Vec::new()),
+                ("models/players/bare/lower_a1.skin", Vec::new()),
+            ],
+        )
+        .expect("mounts");
+        let catalog = legacy_character_catalog(&vfs).expect("the catalogue");
+        assert_eq!(catalog.species.len(), 1);
+        let species = &catalog.species[0];
+        assert_eq!(species.model, "jedi_zf");
+        assert_eq!(species.heads, ["head_a1"]);
+        assert_eq!(species.torsos, ["torso_a1", "torso_g1"]);
+        assert_eq!(species.legs, ["lower_a1", "lower_e1"]);
+        assert_eq!(species.pictured, [1, 1, 1]);
+        assert_eq!(species.pictured_parts(1), ["torso_a1"]);
+    }
 
     #[test]
     fn rig_models_with_an_icon_are_listed_as_their_default_skin() {

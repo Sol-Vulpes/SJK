@@ -37,7 +37,7 @@ pub(super) struct PartIcons {
 impl PartIcons {
     pub(super) fn new() -> Self {
         Self {
-            loader: IconLoader::new(),
+            loader: IconLoader::opaque(),
             species: None,
             counts: [0; 3],
         }
@@ -59,7 +59,7 @@ impl PartIcons {
             species.torsos.len(),
             species.legs.len(),
         ];
-        self.loader = IconLoader::new();
+        self.loader = IconLoader::opaque();
         self.loader
             .request_paths(Arc::clone(vfs), requests(vfs, species));
     }
@@ -72,7 +72,7 @@ impl PartIcons {
     /// next [`Self::show`] loads them again.
     pub(super) fn forget_uploads(&mut self) {
         self.species = None;
-        self.loader = IconLoader::new();
+        self.loader = IconLoader::opaque();
     }
 
     pub(super) fn upload(
@@ -106,6 +106,17 @@ impl PartIcons {
     fn ready(&self, species: usize, texture: TextureId) -> bool {
         self.species == Some(species) && self.loader.is_texture_ready(texture)
     }
+}
+
+/// What a part without a picture is called on its tile: "Hoth" for the stock
+/// species' Hoth gear (the parts of [`HOTH_GEAR_ICONS`], which have no icon in
+/// retail), else its name after the part's prefix (`torso_h2` is "h2").
+pub(super) fn part_label<'a>(model: &str, name: &'a str) -> &'a str {
+    let icon = format!("models/players/{model}/icon_{name}");
+    if crate::assets::search_paths::HOTH_GEAR_ICONS.contains(&icon.as_str()) {
+        return "Hoth";
+    }
+    name.split_once('_').map_or(name, |(_, rest)| rest)
 }
 
 /// Atlas cell `slot` of the range.
@@ -161,6 +172,7 @@ mod tests {
             heads: vec!["head_a1".to_owned(), "head_b1".to_owned()],
             torsos: vec!["torso_a1".to_owned()],
             legs: vec!["lower_a1".to_owned(), "lower_b1".to_owned()],
+            pictured: [2, 1, 2],
             colors: Vec::new(),
         }
     }
@@ -185,6 +197,16 @@ mod tests {
         );
         assert_eq!(requests[5].1, ["gfx/menus/players/jedi_hm/hmtintbase.jpg"]);
         assert!(PART_ICON_FIRST + PART_ICON_CELLS <= crate::ui_renderer::ATLAS_CELLS);
+    }
+
+    #[test]
+    fn the_hoth_gear_is_named_and_other_parts_by_their_variant() {
+        assert_eq!(part_label("jedi_zf", "torso_g1"), "Hoth");
+        assert_eq!(part_label("jedi_hm", "lower_e1"), "Hoth");
+        // A community species' g1 is its own, not Hoth gear.
+        assert_eq!(part_label("my_species", "torso_g1"), "g1");
+        assert_eq!(part_label("jedi_zf", "torso_h2"), "h2");
+        assert_eq!(part_label("jedi_zf", "plain"), "plain");
     }
 
     #[test]

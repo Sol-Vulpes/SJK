@@ -403,7 +403,17 @@ Settings and SJK in place of retail's Controls and Setup:
   the first; a drawn hilt and blade stand in until the first frame. See
   [model preview](rendering.md#classic-model-preview). The part
   lists show each variant's icon (`models/players/<species>/icon_<part>`,
-  `.jpg`, `.png` or `.tga`) as retail did, its name when there is none, and
+  `.jpg`, `.png` or `.tga`) as retail did, drawn whole: the icons' alpha is
+  the mask the colour swatches tint, not a cut-out, and drawn with it only the
+  tinted bits of each outfit showed (24/11/2026). In SJK's creator a variant without an
+  icon is listed too, after the pictured ones, with its name ("Hoth" for the
+  stock species' Hoth gear,
+  `torso_g1` and `lower_e1`, which retail left out); the classic menu lists
+  the pictured ones only, as retail did (`LegacySpecies::pictured`); a folder needs an icon
+  for each list to be a species, as in retail. The Hoth gear's pictures come
+  from jaPRO's `japro-assets.pk3` in the `EternalJK` folder where it is
+  installed (JoF EJK shows them), those twelve pictures alone
+  (`HOTH_GEAR_ICONS`, `asset_search_paths.rs`). And
   the swatches are the species' tint base (`gfx/menus/players/<species>/`
   `*tintbase`) multiplied by each `playerchoice.txt` colour, as the swatch
   shaders draw them (a flat colour without the image). The species being

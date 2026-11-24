@@ -1303,11 +1303,9 @@ impl PlayerMenu {
         self.border(place, canvas, if active { FOCUS } else { LIST_BORDER }, 1.0);
         self.canvas.scroll_region(PARTS_SCROLL, place.rect(canvas));
         let axis = self.classic.part_axis;
-        let Some(parts) = self.species_field(|species| match axis {
-            0 => species.heads.clone(),
-            1 => species.torsos.clone(),
-            _ => species.legs.clone(),
-        }) else {
+        // Retail's list: the parts with an icon only (SJK's creator adds the rest).
+        let Some(parts) = self.species_field(|species| species.pictured_parts(axis).to_vec())
+        else {
             return;
         };
         let [x, y, w, h] = canvas;

@@ -72,6 +72,21 @@ static COSMETICS_LOGGED: AtomicBool = AtomicBool::new(false);
 /// The folder JoF EJK and EternalJK keep their own content in, where JoF's
 /// launcher installs hat and cape packs.
 const COSMETICS_GAME: &str = "EternalJK";
+/// The stock species' Hoth gear pictures jaPRO adds (paths without extension).
+pub(crate) const HOTH_GEAR_ICONS: [&str; 12] = [
+    "models/players/jedi_hf/icon_torso_g1",
+    "models/players/jedi_hf/icon_lower_e1",
+    "models/players/jedi_hm/icon_torso_g1",
+    "models/players/jedi_hm/icon_lower_e1",
+    "models/players/jedi_kdm/icon_torso_g1",
+    "models/players/jedi_kdm/icon_lower_e1",
+    "models/players/jedi_rm/icon_torso_g1",
+    "models/players/jedi_rm/icon_lower_e1",
+    "models/players/jedi_tf/icon_torso_g1",
+    "models/players/jedi_tf/icon_lower_e1",
+    "models/players/jedi_zf/icon_torso_g1",
+    "models/players/jedi_zf/icon_lower_e1",
+];
 /// Where a pack's hats and capes are; a PK3 with models there is a
 /// cosmetics pack.
 const COSMETIC_FOLDERS: [&str; 2] = ["models/cosmetics/hats", "models/cosmetics/capes"];
@@ -386,6 +401,30 @@ impl Options {
         &self,
         install: &Path,
     ) -> Vec<(PathBuf, String, Vec<u8>)> {
+        self.eternaljk_pictures(install, &crate::hud::movement_keys::PICTURES)
+    }
+
+    /// jaPRO's pictures of the stock species' Hoth gear, `icon_torso_g1` and
+    /// `icon_lower_e1` ([`HOTH_GEAR_ICONS`]), from the highest-priority PK3 in
+    /// `install/EternalJK` that has each (jaPRO's `japro-assets.pk3`), as
+    /// `(archive, path, image bytes)`: retail has none, and JoF EJK's character
+    /// creation shows these (24/11/2026). Only these pictures, nothing else from the
+    /// pack. Empty when the folder is a game directory.
+    pub(crate) fn eternaljk_hoth_gear_icons(
+        &self,
+        install: &Path,
+    ) -> Vec<(PathBuf, String, Vec<u8>)> {
+        self.eternaljk_pictures(install, &HOTH_GEAR_ICONS)
+    }
+
+    /// Each of `names` (a path without its extension) as a `.tga`, `.png` or `.jpg`
+    /// from the highest-priority PK3 in `install/EternalJK` that has it, as
+    /// `(archive, path, image bytes)`. Empty when the folder is a game directory.
+    fn eternaljk_pictures(
+        &self,
+        install: &Path,
+        names: &[&str],
+    ) -> Vec<(PathBuf, String, Vec<u8>)> {
         let Some(directory) = self.eternaljk_directory(install) else {
             return Vec::new();
         };
@@ -400,7 +439,7 @@ impl Options {
                 Some((archive, probe))
             })
             .collect();
-        crate::hud::movement_keys::PICTURES
+        names
             .iter()
             .filter_map(|name| {
                 archives.iter().find_map(|(archive, probe)| {
@@ -650,6 +689,21 @@ impl Options {
             vfs.mount_memory(
                 "EternalJK movement keys",
                 keys.into_iter().map(|(_, path, bytes)| (path, bytes)),
+            )?;
+        }
+        // jaPRO's pictures of the stock species' Hoth gear, likewise only those.
+        let hoth = self.eternaljk_hoth_gear_icons(install);
+        if !hoth.is_empty() {
+            if log {
+                crate::log::progress(format_args!(
+                    "{} Hoth gear pictures from {}",
+                    hoth.len(),
+                    install.join(COSMETICS_GAME).display(),
+                ));
+            }
+            vfs.mount_memory(
+                "EternalJK Hoth gear pictures",
+                hoth.into_iter().map(|(_, path, bytes)| (path, bytes)),
             )?;
         }
         // The hats and capes whose models name the folders JoF's pieces used before
@@ -1013,6 +1067,37 @@ mod tests {
         assert!(vfs.contains("gfx/hud/keys/jump_on.tga").unwrap());
         assert!(vfs.contains("gfx/hud/keys/right_off.tga").unwrap());
         assert!(!vfs.contains("gfx/hud/speedometer.tga").unwrap());
+    }
+
+    #[test]
+    fn eternaljk_hoth_gear_pictures_are_mounted_alone() {
+        let install = tempfile::tempdir().unwrap();
+        let folder = install.path().join("EternalJK");
+        std::fs::create_dir_all(&folder).unwrap();
+        pk3(
+            &folder.join("japro-assets.pk3"),
+            &[
+                "models/players/jedi_zf/icon_torso_g1.png",
+                "models/players/jedi_zf/icon_lower_e1.png",
+                "models/players/jedi_hm/icon_torso_g1.png",
+                "models/players/jedi_zf/icon_torso_a1.png",
+            ],
+        );
+        let options = Options::default();
+        assert_eq!(options.eternaljk_hoth_gear_icons(install.path()).len(), 3);
+        let vfs = options.mount(install.path()).unwrap();
+        assert!(
+            vfs.contains("models/players/jedi_zf/icon_torso_g1.png")
+                .unwrap()
+        );
+        assert!(
+            vfs.contains("models/players/jedi_zf/icon_lower_e1.png")
+                .unwrap()
+        );
+        assert!(
+            !vfs.contains("models/players/jedi_zf/icon_torso_a1.png")
+                .unwrap()
+        );
     }
 
     #[test]

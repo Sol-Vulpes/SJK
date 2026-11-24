@@ -864,14 +864,15 @@ impl PlayerMenu {
                         let name = catalog_of(&self.loader)
                             .zip(species)
                             .and_then(|(catalog, index)| catalog.species.get(index))
-                            .and_then(|species| match part {
-                                Part::Head => species.heads.get(item),
-                                Part::Torso => species.torsos.get(item),
-                                Part::Legs => species.legs.get(item),
+                            .and_then(|species| {
+                                let name = match part {
+                                    Part::Head => species.heads.get(item),
+                                    Part::Torso => species.torsos.get(item),
+                                    Part::Legs => species.legs.get(item),
+                                }?;
+                                Some(super::part_icons::part_label(&species.model, name))
                             })
-                            .map_or("", |name| {
-                                name.split_once('_').map_or(name.as_str(), |(_, rest)| rest)
-                            });
+                            .unwrap_or("");
                         self.canvas.text_aligned(
                             name,
                             rect,

@@ -1254,7 +1254,7 @@ Blackwolf's VisionJK rebuild of the JA+ 2.4 B7 server module from its Linux bina
 `g_mod japlus`): JA+'s settings and their defaults and the `jp_cinfo` bits come from it,
 and its behaviour is ported into SJK's own code, not its source.
 
-Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 17 pull
+Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 18 pull
 requests merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK)); her
 ideas are under [Ideas](#ideas):
@@ -1298,6 +1298,10 @@ ideas are under [Ideas](#ideas):
 - #450 the ground HUD stands in for the classic HUD's saber name and style line.
 - #452 the SJK scoreboard's spectator names break into lines inside the board, and the rows
   make room when many watch.
+- #451 character creation draws the species' part pictures whole (their alpha is the
+  tint mask, not a cut-out), and the SJK creator offers the stock species' Hoth gear,
+  which has no icon, with jaPRO's pictures where installed; the classic menu keeps
+  retail's lists.
 
 Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):
