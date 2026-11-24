@@ -202,6 +202,9 @@ struct Shared {
     frame: u64,
     /// The menu clock the swatches play their loops by (seconds).
     seconds: f32,
+    /// While kybers are being baked: how many loaded ones are on disk, of how many
+    /// ([`progress`]).
+    progress: Option<(usize, usize)>,
 }
 
 static SHARED: Mutex<Shared> = Mutex::new(Shared {
@@ -213,7 +216,30 @@ static SHARED: Mutex<Shared> = Mutex::new(Shared {
     },
     frame: 0,
     seconds: 0.0,
+    progress: None,
 });
+
+/// How far the first baking of the kybers' loops has come, while it runs: the loaded kybers
+/// kept on disk and how many there are. The Collection says so (Sol, 23/11/2026, after
+/// players' reports of single-digit FPS in it on 2026.1123.1, the first release with the
+/// loops: every kyber is baked once, then read from disk). None once none is baking.
+pub(crate) fn progress() -> Option<(usize, usize)> {
+    #[cfg(test)]
+    if let Some(pretend) = *PRETEND_PROGRESS.lock().unwrap_or_else(|e| e.into_inner()) {
+        return Some(pretend);
+    }
+    lock().progress
+}
+
+/// A progress the world shots show whatever the baking does.
+#[cfg(test)]
+pub(crate) static PRETEND_PROGRESS: Mutex<Option<(usize, usize)>> = Mutex::new(None);
+
+/// How long after its last bake the baking still counts as running ([`progress`]), so the
+/// notice does not blink between two loops.
+const BAKING_SHOWS: Duration = Duration::from_millis(1500);
+/// Frames between two counts of the loops on disk ([`progress`]).
+const PROGRESS_EVERY: u64 = 30;
 
 fn lock() -> std::sync::MutexGuard<'static, Shared> {
     SHARED
@@ -808,6 +834,8 @@ pub(crate) struct Stills {
     /// waiting for its pipelines.
     cursor: usize,
     skipped: bool,
+    /// The last count of the loaded kybers kept on disk, and how many there are.
+    kept: (usize, usize),
     /// Stills baked so far (the world shots time them).
     #[cfg(test)]
     pub(crate) baked: u64,
@@ -846,6 +874,7 @@ impl crate::GpuState {
         };
         let mut bakes: Bakes = [None; PICTURES_A_FRAME];
         if self.blade_stills.wanted.is_empty() {
+            lock().progress = None;
             self.release_idle_stills(now);
             return bakes;
         }
@@ -949,7 +978,36 @@ impl crate::GpuState {
         if bakes.iter().any(Option::is_some) {
             self.blade_stills.last_bake = Some(now);
         }
+        self.note_progress(frame, now);
         bakes
+    }
+
+    /// Count the loaded kybers kept on disk now and then, for [`progress`], while baking.
+    fn note_progress(&mut self, frame: u64, now: Instant) {
+        let baking = self
+            .blade_stills
+            .last_bake
+            .is_some_and(|at| now - at < BAKING_SHOWS);
+        if !baking {
+            lock().progress = None;
+            return;
+        }
+        if frame % PROGRESS_EVERY == 0 || self.blade_stills.kept.1 == 0 {
+            let disk = self.blade_stills.disk.as_ref();
+            let keys = &self.blade_stills.keys;
+            let mut kept = 0;
+            let mut total = 0;
+            for (_, skin) in self.blade_skins.iter() {
+                total += 1;
+                let on_disk = keys
+                    .get(skin.id)
+                    .is_some_and(|&(_, key)| disk.is_some_and(|disk| disk.has(skin.id, key)));
+                kept += usize::from(on_disk);
+            }
+            self.blade_stills.kept = (kept, total);
+        }
+        let (kept, total) = self.blade_stills.kept;
+        lock().progress = (total > 0 && kept < total).then_some((kept, total));
     }
 
     /// Skin `id`'s loop key, worked out once per loaded generation, `budget` a frame; none

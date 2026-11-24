@@ -36,27 +36,22 @@ pub(crate) enum Screen {
 }
 
 impl Screen {
-    /// The screen's tabs, in the row's order: the Collection's end with the Log book's
-    /// for a player whose logs hold a catch ([`crate::catch_book::shown`]), then the
-    /// Saber Lab's while the lab is on ([`crate::saber_lab`]).
+    /// The screen's tabs, in the row's order: the Collection's end with the Saber Lab's
+    /// while the lab is on ([`crate::saber_lab`]).
     pub(crate) fn tabs(self) -> &'static [Tab] {
-        match (self, crate::catch_book::shown(), crate::saber_lab::active()) {
-            (Self::Profile, ..) => &PROFILE_TABS,
-            (Self::Collection, true, true) => &COLLECTION_TABS_BOOK_LAB,
-            (Self::Collection, true, false) => &COLLECTION_TABS_BOOK,
-            (Self::Collection, false, true) => &COLLECTION_TABS_LAB,
-            (Self::Collection, false, false) => &COLLECTION_TABS,
+        match (self, crate::saber_lab::active()) {
+            (Self::Profile, _) => &PROFILE_TABS,
+            (Self::Collection, true) => &COLLECTION_TABS_LAB,
+            (Self::Collection, false) => &COLLECTION_TABS,
         }
     }
 
     /// The tabs' names, in the row's order.
     pub(crate) fn labels(self) -> &'static [&'static str] {
-        match (self, crate::catch_book::shown(), crate::saber_lab::active()) {
-            (Self::Profile, ..) => &PROFILE_LABELS,
-            (Self::Collection, true, true) => &COLLECTION_LABELS_BOOK_LAB,
-            (Self::Collection, true, false) => &COLLECTION_LABELS_BOOK,
-            (Self::Collection, false, true) => &COLLECTION_LABELS_LAB,
-            (Self::Collection, false, false) => &COLLECTION_LABELS,
+        match (self, crate::saber_lab::active()) {
+            (Self::Profile, _) => &PROFILE_LABELS,
+            (Self::Collection, true) => &COLLECTION_LABELS_LAB,
+            (Self::Collection, false) => &COLLECTION_LABELS,
         }
     }
 }
@@ -87,16 +82,10 @@ pub(crate) enum Tab {
     Forge,
     /// The cards opening holocrons brought, and the credits.
     Cards,
-    /// Collectible profile covers from Echo openings: off the row while banners are
-    /// out of the game (Sol, 08/11/2026: unfinished), its page kept for fixtures.
-    Banners,
     /// What came, was opened, spent and traded, newest first (31/10/2026).
     History,
     /// One list of everything the player owns, with counts (15/11/2026).
     Inventory,
-    /// The Fishing and Mining logs, read only, for a player who caught something
-    /// ([`crate::catch_book`]; the toys were removed on 20/11/2026).
-    LogBook,
     /// The Saber Lab's blade held, swung and floating, while the lab is on
     /// ([`crate::saber_lab`]).
     SaberLab,
@@ -133,34 +122,6 @@ const COLLECTION_TABS_LAB: [Tab; 11] = [
     Tab::Inventory,
     Tab::SaberLab,
 ];
-/// The Collection's tabs with the Log book, then the lab's.
-const COLLECTION_TABS_BOOK: [Tab; 11] = [
-    Tab::Medals,
-    Tab::Achievements,
-    Tab::Shaders,
-    Tab::Toys,
-    Tab::Tags,
-    Tab::Holocrons,
-    Tab::Forge,
-    Tab::Cards,
-    Tab::History,
-    Tab::Inventory,
-    Tab::LogBook,
-];
-const COLLECTION_TABS_BOOK_LAB: [Tab; 12] = [
-    Tab::Medals,
-    Tab::Achievements,
-    Tab::Shaders,
-    Tab::Toys,
-    Tab::Tags,
-    Tab::Holocrons,
-    Tab::Forge,
-    Tab::Cards,
-    Tab::History,
-    Tab::Inventory,
-    Tab::LogBook,
-    Tab::SaberLab,
-];
 const PROFILE_LABELS: [&str; 4] = ["Character", "Saber", "Force", "SJK Profile"];
 const COLLECTION_LABELS: [&str; 10] = [
     "Medals",
@@ -188,37 +149,6 @@ const COLLECTION_LABELS_LAB: [&str; 11] = [
     SABER_LAB,
 ];
 
-const COLLECTION_LABELS_BOOK: [&str; 11] = [
-    "Medals",
-    "Achievements",
-    "Kybers",
-    "Toys",
-    "Tags",
-    HOLOCRONS,
-    FORGE,
-    "Cards",
-    "History",
-    "Inventory",
-    LOG_BOOK,
-];
-const COLLECTION_LABELS_BOOK_LAB: [&str; 12] = [
-    "Medals",
-    "Achievements",
-    "Kybers",
-    "Toys",
-    "Tags",
-    HOLOCRONS,
-    FORGE,
-    "Cards",
-    "History",
-    "Inventory",
-    LOG_BOOK,
-    SABER_LAB,
-];
-
-/// The name of the Log book's tab.
-pub(crate) const LOG_BOOK: &str = "Log book";
-
 /// The name of the Saber Lab's tab.
 pub(crate) const SABER_LAB: &str = "Saber Lab";
 
@@ -233,7 +163,7 @@ pub(crate) const FORGE: &str = "Forge";
 
 impl Tab {
     #[cfg(test)]
-    pub(crate) const ALL: [Self; 18] = [
+    pub(crate) const ALL: [Self; 16] = [
         Self::Character,
         Self::Saber,
         Self::Force,
@@ -246,10 +176,8 @@ impl Tab {
         Self::Holocrons,
         Self::Forge,
         Self::Cards,
-        Self::Banners,
         Self::History,
         Self::Inventory,
-        Self::LogBook,
         Self::SaberLab,
         Self::Hall,
     ];
@@ -262,8 +190,7 @@ impl Tab {
         }
     }
 
-    /// Its place on its screen's row: the Log book's and the Saber Lab's after the rest,
-    /// the lab's past the book while the book shows.
+    /// Its place on its screen's row: the Saber Lab's after the rest.
     pub(crate) fn index(self) -> usize {
         match self {
             Self::Character | Self::Medals => 0,
@@ -276,12 +203,9 @@ impl Tab {
             Self::Cards => 7,
             Self::History => 8,
             Self::Inventory => 9,
-            Self::LogBook => 10,
-            Self::SaberLab if crate::catch_book::shown() => 11,
             Self::SaberLab => 10,
             // Off the row: after its end.
-            Self::Banners => 12,
-            Self::Hall => 13,
+            Self::Hall => 11,
         }
     }
 
@@ -290,8 +214,6 @@ impl Tab {
         match self {
             // Named whether the lab is on or not: a page may still show it as it stops.
             Self::SaberLab => SABER_LAB,
-            Self::LogBook => LOG_BOOK,
-            Self::Banners => "Banners",
             Self::Hall => COLLECTION,
             _ => self.screen().labels()[self.index()],
         }

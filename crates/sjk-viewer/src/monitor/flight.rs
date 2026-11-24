@@ -16,7 +16,7 @@ use glam::{Mat3, Quat, Vec3};
 pub(crate) const CORNERS: usize = 8;
 /// The corners in the monitor's own frame (its screen facing +X, its left +Y, up +Z),
 /// their centre at the origin: the screen's face, then the tube's back, smaller and
-/// standing on the same bottom. `scripts/monitor_assets.py` builds the model on them.
+/// standing on the same bottom (the monitor's model was built on them).
 const SHAPE: [[f32; 3]; CORNERS] = [
     [9.0, 10.0, 10.25],
     [9.0, -10.0, 10.25],

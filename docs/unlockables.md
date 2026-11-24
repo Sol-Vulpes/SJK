@@ -73,7 +73,7 @@ Display up to Uncommon), and after his adjustments of 21/10/2026, which moved 38
 108 133 136 to Common; 11 mythicals left, 12 with the Varykino Blossom of 21/10/2026). The rounds' notes below keep the tiers the blades
 came in.
 
-Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), do not drop yet ("Coming to holocrons soon.", `COMING_TO_HOLOCRONS`): Sol tests them first, given by hand, then turns `droppable` on in the hub's catalogue and the client's together.
+Blades 170 to 299, Creyon's Star Wars round (PR #370, merged 06/11/2026), are the Beta edition: kept out of drops until Sol's tests were done, they drop from Beta holocrons since the Beta season opened on 23/11/2026 (`droppable` on in the hub's catalogue and the client's).
 
 | No. | Id | Name | Tier | Smith | Drops |
 | --- | --- | --- | --- | --- | --- |
@@ -2070,7 +2070,14 @@ tier's colour and the kyber worn glows gold from its foot
   in the live pictures' pass, a signature waiting for its own pipelines (asked for at
   once, so no loop keeps the shared look a build stands in with); with nothing on screen
   waiting, the other loaded kybers are baked one loop at a time while the Collection is
-  open, so a scroll finds them on disk. With the menu pictures on (a card short of video
+  open, so a scroll finds them on disk. While that first baking runs (a bake in the last
+  1.5 s, a loaded kyber not on disk), the hall and every page show a slim glass line at
+  the bottom left, "Preparing kyber pictures · N / M" (the loaded kybers kept on disk, of
+  how many), with "Once only: the Collection may be slow until they are done"
+  (`blade_stills::progress`, `Panel::bake_notice`; 23/11/2026, after players' reports of
+  single-digit FPS in the Collection on 2026.1123.1, the first release with the loops,
+  gone after a restart once the loops were kept). Checked by the world shot
+  `duel6_collection_bake_notice` at 1080p and 4K, a progress pretended. With the menu pictures on (a card short of video
   memory) a kyber shows its first picture only, still, from an atlas of 48 of them
   (3072 x 576, 6.75 MiB), one baked a frame and not kept, and nothing is live. The chosen
   swatch shows its loop until its live picture is drawn with its own pipelines; the live
@@ -2298,6 +2305,11 @@ catalogue is `crate::finishers` (`finishers.rs`), the hub's the unlocks of kind 
   only while the own profile lists it. Collection > Kybers has a Finishers pill beside
   Saber (and Body, to come): its page lists each finisher as a card, Equip or Unequip
   while held, how to get it otherwise.
+- **Seeing them:** `cg_finishers` (archived, on by default; Settings > Gameplay >
+  Finishers, 22/11/2026) plays finishers on this PC, the player's own and others'. Off,
+  `observe_saber_kills` counts the kills as seen and starts none, so a saber kill leaves the
+  body as the game does; what the player wears still goes to the hub. EJK mode turns it off
+  ([client.md](client.md#ejk-mode)).
 - **The look:** the finisher goes to the hub as the look's `finisher` (hub PROTOCOL.md,
   Looks) and comes back to other players in presence and look events. A hub before
   04/11/2026 refuses the field (`bad_body`): the look goes again without it. A finisher the
@@ -2490,7 +2502,7 @@ holds the table (`id`, full name, short tag); a new edition is one line there.
 one is the Beta collection"). The editions are the Collection's collections:
 
 - **Alpha Edition**: every blade before Creyon's round (blades 1 to 169), and every
-  medal, achievement, banner, tag, finisher and toy so far.
+  medal, achievement, tag, finisher and toy so far.
 - **Beta Edition**: Creyon's round, PR #370, blades 170 to 299 (`edition:
   crate::editions::BETA` on each; `unlockables.rs` tests that exactly those 130 are
   Beta), and what comes after it.
@@ -2502,7 +2514,7 @@ one is the Beta collection"). The editions are the Collection's collections:
 given (a play drop, a staff or operator gift, a purchase, a mystery box, a toy, an
 achievement's dormant kyber) and kept for good, through trades too. Opening (or attuning) one brings only
 things of its edition or an older one: an Alpha holocron or dormant kyber only Alpha things, a
-Beta one Beta or Alpha: the hub picks its kybers, tags, banners and a dormant kyber's kyber
+Beta one Beta or Alpha: the hub picks its kybers, tags and a dormant kyber's kyber
 among those `editions::within(item, holocron)` allows. Cards are not gated yet: every
 card face is the SJK Alpha set. The Holocrons tab says each one's: the recent list puts it
 before the date
@@ -2517,14 +2529,12 @@ newest client meets that release (SJK development builds pass, as for the other
 minimum-client switches): an older client keeps getting Alpha ones, so nobody gets a blade their game
 cannot show. Until it is set, every holocron and dormant kyber is Alpha.
 
-**Opening Beta** (when Sol's tests are done):
-
-1. `droppable: true` on the 130 blades in the hub's catalogue and the client's
-   `unlockables.rs` together, and both `COMING_TO_HOLOCRONS` constants go (they make
-   "Coming to holocrons soon." and keep the blades out of drops, crafting, the shop and
-   trades).
-2. A client release with it.
-3. The hub deployed with it, `SJK_HUB_BETA_MIN_CLIENT` set to that release.
+**Beta opened** on 23/11/2026 (Sol's call): the hub's switch names 2026.1123.1, the
+first beta, and the 130 blades are droppable on both sides. A 2026.1123.1 client still
+calls them "Coming to holocrons soon." and keeps them out of its own crafting, shop and
+trade views until the release after it; the hub gives them all the same. Every
+holocron and dormant kyber given before the switch stays Alpha and opens by the Alpha
+tables.
 
 ## Saber smiths
 
@@ -2551,17 +2561,17 @@ holocron's colour, with its blade if the hub's pack brought one, the crate spin 
 "?" tile; it reads "update SJK to see it in your Collection". The Collection lists it once
 the client knows it. Since 03/11/2026 any prize the client does not know is shown the same
 way, by its kind (Kushina, 30/10/2026: such a kyber came out as a dark, empty blade card):
-the kind is read from the hub's id (`saber_`, `tag_`, `banner_`, `toy_`; "prize" for
+the kind is read from the hub's id (`saber_`, `tag_`, `toy_`; "prize" for
 anything else, `opening::unknown_kind`), the strip's tile says "New tag", "New kyber"...,
 and without a blade from the pack the card shows a "?" in a ring and "Update SJK to see
 it" instead of an empty swatch. A card of a rarity or finish the client does not know is
 no longer left out: it shows as "A new card".
 
-## Profile covers
+## Profile covers (removed)
 
-[Profile banners](profile-banners.md) share the hub's counted unlock inventory but
-have their own catalogue and Collection tab. They are identity equipment, not saber
-skins or game-server looks; blade-only trade, craft and shatter actions exclude them.
+Profile banners, collectible covers kept in the hub's counted unlock inventory, were
+removed from the client on 23/11/2026
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)).
 
 - **Round 18 and 19** (4/11/2026): a new blade's effects in the air (`@raycache fast`; the blades already in the client draw as before) are drawn into a half-size layer in a view (`saber_volume.rs`, `SIG_SPLIT`, `fragment_volume`), scaled up with a Catmull-Rom filter; a body picture can be sampled with `skinBody`. A generated extra for every blade and generated "great moments" were tried and taken out again (Creyon: they made the blades alike): extras are to be made by hand for each blade (`gx*` in `lab.glsl` holds pieces for that). God Ki's Scythe form is gone. Hard distance switches in the fast rays and early cuts of effects that still shone are gone.
 - **Round 20** (5/11/2026): the round lights and orbiting arcs that stood on most new blades are gone; `gxKin` in `lab.glsl` throws off what a blade's world would (grains, flecks, drops, threads, flashing leaf, smoke, bristles, panes, streaks), chosen per blade, with crystals kept for blades of crystal. Anything measured along a curve is continuous now (`bW`), because the nearest piece alone jumped where a curve folds in the view and drew a hard line in the air; mist marches only inside its own height; the effect layer fades by the ray's distance to the blade.

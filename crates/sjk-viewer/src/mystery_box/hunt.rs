@@ -35,6 +35,11 @@ pub(super) const MARK_SIGHT: f32 = 20.0;
 const SLOTS: u16 = 32;
 /// How long the mark may type in the chat before blowing up, and when they are warned
 /// (the hub hands an away mark on after a minute; this comes first).
+/// How long without a key or the mouse makes the player away for the hunt (Sol,
+/// 23/11/2026: "avoid ever getting someone afk or typing getting tagged"; two minutes
+/// before, what holocrons call idle). Short on purpose: the hub picks nobody away, so a
+/// player who stepped away from the keyboard is passed over within seconds.
+const IDLE: Duration = Duration::from_secs(15);
 const CHAT_LIMIT: Duration = Duration::from_secs(30);
 const CHAT_WARN: Duration = Duration::from_secs(20);
 /// The sound source of a mark's explosion, past the alarm's.
@@ -268,13 +273,19 @@ fn mark_ends(mark: &wire::HuntMark, now: Instant, unix: i64) -> Instant {
         .max(now)
 }
 
+/// Whether a player whose last key or mouse input was `since` ago (never, for `None`)
+/// is away for the hunt.
+fn idle(since: Option<Duration>) -> bool {
+    since.is_none_or(|since| since >= IDLE)
+}
+
 /// What the player is told when slot `slot` (named `name`) becomes the mark; `own` is
-/// the player's slot.
+/// the player's slot. The tomb marks them, since the box is a Sith tomb (23/11/2026).
 fn mark_words(slot: u8, own: u8, name: &str) -> (bool, String) {
     if slot == own {
         (
             true,
-            "You are the mark!\nOutlast every hunter for 100 credits each\n\
+            "The tomb has marked you!\nOutlast every hunter for 100 credits each\n\
              Teleport or sit in the chat and you blow up"
                 .to_owned(),
         )
@@ -282,8 +293,8 @@ fn mark_words(slot: u8, own: u8, name: &str) -> (bool, String) {
         (
             false,
             format!(
-                "Box hunt: {name}^7 is the mark. Kill them for a free mystery box roll; \
-                 you have one life"
+                "Box hunt: the tomb has marked {name}^7. Kill them for a free mystery box \
+                 roll; you have one life"
             ),
         )
     }
@@ -441,8 +452,11 @@ impl GpuState {
         now: Instant,
     ) {
         let on = self.box_hunt.on();
-        // Away: not playing (a menu, the console, spectating, idle) or typing in the chat.
-        let away = !self.actively_playing(now) || self.chat.is_typing();
+        // Away: not playing (a menu, the console, spectating), typing in the chat, or
+        // hands off the keys and the mouse for [`IDLE`].
+        let away = !self.actively_playing(now)
+            || self.chat.is_typing()
+            || idle(crate::holocrons::activity::since_input(now));
         let hunt = &mut self.mystery_boxes.hunt;
         if on && hunt.away != Some(away) {
             hunt.away = Some(away);
@@ -843,7 +857,7 @@ impl GpuState {
             origin + Vec3::Z * MARK_RISE,
             origin + Vec3::Z * MARK_SIGHT,
             Label {
-                headline: "MARK".to_owned(),
+                headline: "MARKED".to_owned(),
                 line: "Kill for a free box roll".to_owned(),
                 tone: Tone::Mark,
             },
@@ -859,10 +873,13 @@ mod tests {
     fn the_mark_is_told_to_themselves_and_to_hunters() {
         let (centre, words) = mark_words(3, 3, "Kyle");
         assert!(centre);
-        assert!(words.starts_with("You are the mark!"));
+        assert!(words.starts_with("The tomb has marked you!"));
         let (centre, words) = mark_words(3, 5, "Kyle");
         assert!(!centre);
-        assert!(words.contains("Kyle^7 is the mark"));
+        assert!(words.contains("the tomb has marked Kyle^7"));
+        // Hands off the keys for a quarter of a minute, or never on them: away.
+        assert!(idle(None) && idle(Some(IDLE)));
+        assert!(!idle(Some(IDLE - Duration::from_millis(1))));
     }
 
     #[test]

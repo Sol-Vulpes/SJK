@@ -177,6 +177,7 @@ impl Effects {
     }
 
     /// Whether anything runs or waits.
+    #[cfg(test)]
     pub(crate) fn any(&self) -> bool {
         self.active.is_some() || self.curse.is_some()
     }

@@ -94,6 +94,7 @@ const CHAT_ROWS: &[&str] = &[
     crate::duel_lines::WIN_CVAR,
     crate::duel_lines::LOSE_CVAR,
     crate::duel_lines::TO_ALL_CVAR,
+    crate::chat::style::CVAR,
     "cg_chatBoxFontSize",
     crate::text::system_font::CHAT_CVAR,
     crate::chat::emoji::CVAR,
@@ -393,6 +394,27 @@ impl Group {
         }
     }
 
+    /// The cvars of the group's rows as shown: [`Self::cvar_list`], and for one of
+    /// Advanced's categories cut into sections ([`super::sections`]) the sections'
+    /// settings in their order, then what the category holds that no section of any
+    /// category names.
+    fn arranged(self) -> Vec<&'static str> {
+        let list = self.cvar_list();
+        let Self::Advanced(advanced) = self else {
+            return list;
+        };
+        let sections = super::sections::of(advanced);
+        let mut cvars: Vec<&'static str> = sections
+            .iter()
+            .flat_map(|section| section.rows.iter().copied())
+            .collect();
+        cvars.extend(
+            list.into_iter()
+                .filter(|cvar| !super::sections::names(cvar)),
+        );
+        cvars
+    }
+
     /// The tab list of a screen showing the group: its name alone.
     pub(super) fn tabs(self) -> &'static [&'static str] {
         std::slice::from_ref(&Self::CAPTIONS[self.index()])
@@ -424,6 +446,7 @@ impl Group {
                 crate::blade_lab_designs::CVAR,
                 crate::duel_blades::CVAR,
                 crate::stock_blades::CVAR,
+                crate::finishers::SHOW_CVAR,
                 crate::effect_aux::saber_rain_steam::CVAR,
                 "cg_speedTrail",
                 crate::actor_world_submission::force_powers::victim::CVAR,
@@ -528,6 +551,7 @@ impl Group {
                 crate::ghost_replay::SHOWCASE_CVAR,
             ],
             Self::Interface => &[
+                crate::ejk_mode::CVAR,
                 crate::menu::style::CVAR,
                 crate::launcher_notice::CVAR,
                 crate::menu_pictures::CVAR,
@@ -663,6 +687,7 @@ impl Group {
                 crate::duel_lines::WIN_CVAR,
                 crate::duel_lines::LOSE_CVAR,
                 crate::duel_lines::TO_ALL_CVAR,
+                crate::chat::style::CVAR,
                 "cg_chatBoxFontSize",
                 crate::text::system_font::CHAT_CVAR,
                 crate::chat::emoji::CVAR,
@@ -745,12 +770,19 @@ impl Group {
                 "s_volume",
                 "s_musicVolume",
                 crate::audio::VOICE_VOLUME_CVAR,
+                // The fourth most changed sound setting, a fifth of the time from a
+                // search (the hub's settings usage, 21/11/2026).
+                crate::emotes::VOLUME_CVAR,
                 "snd_mute_losefocus",
             ],
             Self::Simple(Simple::Controls) => &["sensitivity", "m_invert", "cl_run"],
             Self::Simple(Simple::Gameplay) => &[
                 crate::camera::STYLE_CVAR,
                 crate::gameplay_fps::CVAR,
+                // The two things players search Settings for most ("pred", "remap":
+                // the hub's settings usage, 21/11/2026).
+                "cg_predictLegacy",
+                crate::remap_blocked_maps::SERVER_CVAR,
                 "cg_drawGun",
                 "cg_saberTrail",
                 crate::effect_flash::REDUCE_CVAR,
@@ -777,6 +809,7 @@ impl Group {
                 "cg_chatBoxFontSize",
             ],
             Self::Simple(Simple::General) => &[
+                crate::ejk_mode::CVAR,
                 crate::menu::style::CVAR,
                 crate::text::style::SCALE_CVAR,
                 crate::player_trades::SIZE_CVAR,
@@ -815,7 +848,7 @@ impl Group {
                 (crate::brush_view::CVAR, "Map tools"),
             ],
             Self::Interface => &[
-                (crate::menu::style::CVAR, "Menus"),
+                (crate::ejk_mode::CVAR, "Menus"),
                 (crate::menu::sjk::theme::CVAR, "Theme"),
                 (crate::console::console_options::STYLE_CVAR, "Console"),
                 (crate::quick_wheel::pages::FILE, "Quick wheel"),
@@ -836,37 +869,14 @@ impl Group {
                 ("cg_fov", "View"),
             ],
             Self::Network => &[("cl_autoUpdate", "SJK online"), ("rate", "Connection")],
-            Self::Advanced(Advanced::Sound) => &[
-                ("s_volume", "Game"),
-                (crate::emotes::VOLUME_CVAR, "Emotes"),
-                (crate::toy_sounds::VOLUME_CVAR, "Toys"),
-                (crate::unlock_toast::SOUND_CVAR, "Notifications"),
-                (crate::chat_sounds::MASTER_CVAR, "Chat sounds"),
-            ],
-            Self::Advanced(Advanced::Gameplay) => &[
-                ("cg_simpleItems", "Items and models"),
-                ("cg_saberTrail", "Effects"),
-                (crate::monitor::SHOW_CVAR, "Toys"),
-                (crate::camera::STYLE_CVAR, "Camera and prediction"),
-            ],
-            Self::Advanced(Advanced::Interface) => &[
-                (crate::menu::style::CVAR, "Menus"),
-                (crate::menu::sjk::theme::CVAR, "Theme"),
-                (crate::console::console_options::STYLE_CVAR, "Console"),
-            ],
-            Self::Advanced(Advanced::Hud) => &[
-                ("cg_drawHud", "Layout"),
-                ("cg_crosshair", "Crosshair"),
-                ("cg_drawCrosshairNames", "Names and cards"),
-                ("cg_nameplate", "Nameplates"),
-                (crate::world_ping::SHOW_CVAR, "World pings"),
-                ("cg_drawFps", "Readouts"),
-                (crate::status_bar::CVAR, "Status bar"),
-                (crate::scoreboard::style::CVAR, "Scoreboard"),
-            ],
-            Self::Advanced(Advanced::Chat) => {
-                &[("cg_drawChat", "Chat box"), ("cl_sjkChat", "SJK chat")]
-            }
+            // Cut into sections ([`super::sections`]).
+            Self::Advanced(
+                Advanced::Sound
+                | Advanced::Gameplay
+                | Advanced::Interface
+                | Advanced::Hud
+                | Advanced::Chat,
+            ) => &[],
             Self::Advanced(Advanced::Mods) => &[
                 ("assetbrowser", "Packs"),
                 ("mod_japlus", "Server mods"),
@@ -887,7 +897,7 @@ impl Group {
                 ("cg_nameplate", "Over the game"),
             ],
             Self::Simple(Simple::General) => &[
-                (crate::menu::style::CVAR, "Menus"),
+                (crate::ejk_mode::CVAR, "Menus"),
                 (super::catalog::IMPORT_ROW, "From another client"),
                 ("jof.downloads", "JoF content"),
                 ("sith.downloads", "Sith cloud"),
@@ -896,11 +906,11 @@ impl Group {
             // Its headings are its tabs' names ([`graphics_tabs`]).
             Self::Scoreboard | Self::Graphics | Self::Simple(_) => &[],
             Self::Quick => &[
+                (crate::menu::sjk::theme::CVAR, "Look"),
                 (super::catalog::IMPORT_ROW, "From another client"),
                 (crate::graphics_quality::ROW_NAME, "Graphics"),
-                (crate::menu::style::CVAR, "Styles"),
                 ("r_resolution", "Display"),
-                ("sensitivity", "Aim"),
+                (crate::camera::STYLE_CVAR, "Camera and aim"),
                 ("s_volume", "Sound"),
                 (crate::menu_hud::STYLE_CVAR, "HUD"),
                 ("cg_nameplate", "Nameplates"),
@@ -934,6 +944,24 @@ impl Group {
             return lines;
         }
         let rows = self.rows();
+        // One of Advanced's categories cut into sections: each section's heading over
+        // its first row, and the rows no section names under "More".
+        if let Self::Advanced(advanced) = self
+            && !super::sections::of(advanced).is_empty()
+        {
+            let mut lines = Vec::with_capacity(rows.len() + 12);
+            let mut last = None;
+            for (row, setting) in rows.iter().enumerate() {
+                let heading = super::sections::holding(advanced, setting.cvar)
+                    .map_or(super::sections::MORE, |section| section.heading);
+                if last != Some(heading) {
+                    lines.push(super::Line::Heading(heading));
+                    last = Some(heading);
+                }
+                lines.push(super::Line::Row(row));
+            }
+            return lines;
+        }
         let mut lines = Vec::with_capacity(rows.len() + self.headings().len());
         for (row, setting) in rows.iter().enumerate() {
             if let Some((_, heading)) = self
@@ -967,7 +995,7 @@ impl Group {
                     )
                     .collect();
             }
-            self.cvar_list()
+            self.arranged()
                 .iter()
                 .filter_map(|cvar| find(cvar))
                 .collect()
@@ -1012,7 +1040,7 @@ mod tests {
             .chain(Group::sjk_only())
             .filter(|group| *group != Group::Graphics)
         {
-            assert_eq!(group.rows().len(), group.cvar_list().len(), "{group:?}");
+            assert_eq!(group.rows().len(), group.arranged().len(), "{group:?}");
         }
     }
 
@@ -1096,9 +1124,11 @@ mod tests {
     fn simple_mode_keeps_its_categories_short() {
         for simple in Simple::ALL {
             let rows = Group::Simple(simple).rows();
-            // General holds the two content collections' automatic updates too.
+            // General holds the two content collections' automatic updates too, and
+            // EJK mode, which a player coming from JoF EJK looks for first.
+            let most = if simple == Simple::General { 16 } else { 15 };
             assert!(
-                (3..=15).contains(&rows.len()),
+                (3..=most).contains(&rows.len()),
                 "{simple:?}: {} rows",
                 rows.len()
             );
@@ -1214,12 +1244,19 @@ mod tests {
                 );
             }
             let lines = group.lines();
-            assert_eq!(
-                lines.len(),
-                rows.len() + group.headings().len(),
-                "{group:?}"
+            // A category cut into sections has their headings, not these.
+            let sectioned = matches!(
+                group,
+                Group::Advanced(advanced) if !super::super::sections::of(advanced).is_empty()
             );
-            if !group.headings().is_empty() {
+            if !sectioned {
+                assert_eq!(
+                    lines.len(),
+                    rows.len() + group.headings().len(),
+                    "{group:?}"
+                );
+            }
+            if sectioned || !group.headings().is_empty() {
                 assert!(
                     matches!(lines[0], super::super::Line::Heading(_)),
                     "{group:?}"
@@ -1249,7 +1286,7 @@ mod tests {
             .iter()
             .filter_map(|line| match line {
                 super::super::Line::Heading(heading) => Some(*heading),
-                super::super::Line::Row(_) => None,
+                super::super::Line::Row(_) | super::super::Line::Note(_) => None,
             })
             .collect();
         assert_eq!(
@@ -1274,7 +1311,7 @@ mod tests {
             .iter()
             .filter_map(|line| match line {
                 super::super::Line::Row(row) => Some(*row),
-                super::super::Line::Heading(_) => None,
+                super::super::Line::Heading(_) | super::super::Line::Note(_) => None,
             })
             .collect();
         assert_eq!(shown, (0..rows.len()).collect::<Vec<_>>());

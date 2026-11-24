@@ -24,6 +24,208 @@
 
 # ---- Console & chat ----
 
+[v1-leftovers]
+area: Menus & settings
+title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved
+change: No toy_wheelofdoom (toy, key, quick wheel, status bar piece) and no wheelofdoom_remove.
+change: No Fishing/Mining Log book (tile, tab, Share) or junk selling; retired achievements stay.
+change: No Support SJK line; Settings > Interface has no Classic menus' look row.
+test: Collection > Toys: 7 toys, no WHEEL OF DOOM row; Earn and win holds Box hunt, Quests.
+test: Quick wheel catalogue (Add a choice, Toys) and Key bindings: no WHEEL OF DOOM entry.
+test: A Force box: Hold Use with a coin rolls; the status bar and Inventory show your coins.
+test: Collection hall: no Log book tile, even with fishing_log.txt holding a catch.
+test: Achievements > Hobbies (a holder of a fishing one): retired, No longer obtainable.
+test: SJK UI main page: no Support SJK line; the launcher notice still shows without it.
+test: ui_menuStyle classic, ui_classicLook sjk: the classic menus stay in the retail look.
+test: toy_wheelofdoom or wheelofdoom_remove in the console: unknown command.
+
+[wheel-of-doom-removed]
+area: Gameplay
+title: WHEEL OF DOOM: the placed wheels' code and assets removed (v1 clean-up)
+change: No wheel model, spin, music, ticks or words in the client; the outcomes stay for the box.
+change: wheelofdoom_place and wheelofdoom_list are gone (toy and remove: see v1-leftovers).
+test: Hold Use at a Force box with a coin: the DOOM coin roll starts as before.
+test: A DOOM coin roll at a Force box (local hub, branch force-box): an effect strikes, HUD line.
+test: Quack effect: every swing quacks; WHEEL OF DOOM sounds off in Settings silences it.
+test: A map where a wheel stood: nothing stands there; no error in the console at map load.
+
+[banners-removed]
+area: Menus & settings
+title: Profile banners removed from the client (v1 clean-up)
+change: No Banners page, covers, bonus reveal, banner odds or break down left in the client.
+change: A hub that still sends banner fields or a banner bonus is read without them.
+test: Collection: no Banners tile or tab; Profile page and player card show no cover.
+test: Chat: rest on a name: the sender card's head is the same dark blue as before.
+test: Open holocrons (one, then a batch): prizes, then Done; no "Bonus banners" step.
+test: Holocrons > loot odds: six notes, none about banners; History shows no error.
+
+[classic-chat]
+area: Console & chat
+title: Classic chat style: JoF EJK's field and chat box (cg_chatStyle classic)
+change: Settings > Chat > Chat style: sjk (the default, as before) or classic. EJK mode sets it.
+change: Classic: the field at the top left (All Team SJK:), plain names, no pointer.
+test: cg_chatStyle classic. Y: "All Team SJK:" at the top left, All lit; the mouse still looks.
+test: Tab: Team lit in cyan, then SJK in yellow, then All; what you typed stays. Enter sends.
+test: T opens it on Team, I on SJK, U on a player: "Whisper to <name>:" with the text under it.
+test: Ctrl+A then a letter replaces the text; Ctrl+V pastes; hold Backspace: it keeps deleting.
+test: Chat lines: name as the server sends it, no emblem, tick, label or card; gone after 10 s.
+test: An SJK chat line: icon, name, SJK in gold, text in gold. A long one wraps under the icon.
+test: Beside JoF EJK at the same resolution: box position, text size and row spacing match.
+test: Console lines at the top left push the field down, as in JoF EJK.
+test: cg_chatStyle sjk: SJK's chat exactly as before. EJK mode off gives your style back.
+note: The field's letters are narrower than JoF EJK's big characters (no bitmap fonts).
+
+[first-setup-steps]
+area: Menus & settings
+title: First setup in steps with pictures (the pop-up, in every menu style)
+change: Six steps: Look, Colours, Player (your name), Graphics, Play, Online. Picture buttons.
+change: Done on the last step finishes it: it no longer opens at start. firstsetup reopens it.
+change: It opens with the classic menus too (at start and by firstsetup), not the old list.
+test: New profile (or firstsetup): step 1 shows SJK and EJK with pictures, SJK in use.
+test: Both pictures are the same match view: SJK has the status bar and timer, EJK the retail HUD.
+test: Click EJK: In use moves, the pop-up stays, Menu style and HUD rows follow in a moment.
+test: Click SJK again: your settings come back. Enter on the one in use goes to step 2.
+test: Step 2: click each theme, the whole card changes colour. With EJK on, a gold note shows.
+test: Step 3 opens in the Name field: type, the name changes at once (check the main page after).
+test: Step 3: ^ and a digit show in the field as typed; In game shows the colours. Click a chip.
+test: Step 3: Ctrl+A then type replaces; Ctrl+C / Ctrl+V; hold Backspace; double click selects all.
+test: Step 3: empty the field and leave it: the name you had is back, not an empty one.
+test: Step 3: Enter in the field goes to step 4. Down reaches the buttons, Up the field again.
+test: Step 3: Import my setup opens the Import page; an imported name shows in the field.
+test: Step 3: Choose a character opens the Character page; Esc there returns to step 3.
+test: Step 4: three pictures of the same spot; ratings and Recommended fit your card.
+test: Step 4: Low/Medium/High/Ultra chips under Solar Renderer set that level and its picture.
+test: Step 5: Gameplay FPS is the first row; all ten rows and the help fit, nothing scrolls.
+test: Step 6: Your setup shows Look, Colours, Player, Graphics; a click on a tile opens its step.
+test: Left/Right/Tab move over buttons and chips, Down reaches the rows, then the tick.
+test: PgUp/PgDn, Back/Next and a click on a step's name change step.
+test: Done on step 6 (or PgDn there), restart: First setup does not open. firstsetup: it does.
+test: Esc on any step, restart: it opens again. Tick Don't show at start, restart: it does not.
+test: F2 or All settings opens Settings > First setup with the whole list. Esc closes.
+test: ui_menuStyle classic and ui_hideFirstSetup 0, restart: the pop-up opens over the classic menu.
+test: Classic menus, firstsetup: the pop-up. Its All settings: the classic list panel.
+test: Classic menus > Setup > First setup: still the classic list.
+test: In a game, firstsetup: still the list panel over the game.
+test: At 4:3, ultrawide and 4K nothing is cut, overlaps or leaves the card.
+note: Not in the steps any more: nameplate range/bars/icons/duel, Force shells, duel ghost.
+
+[modes-any-order]
+area: Menus & settings
+title: EJK mode, Tactical and renderer vanilla on together, off in any order
+change: Each keeps your own values, never another mode's; off hands a setting to the mode still on.
+test: Note your graphics preset and a few custom values (shadows, stock blades, fog).
+test: ejkmode on, tactical medium, ejkmode off: graphics stay Vanilla (Tactical holds them).
+test: tactical off: your own preset and values are back, not Vanilla.
+test: tactical max, ejkmode on, tactical off, ejkmode off: your own values again.
+test: renderer vanilla, ejkmode on, renderer sjk: it says EJK mode still holds the graphics.
+test: ejkmode off after that: your own graphics are back.
+test: EJK mode on, change the HUD look by hand, EJK mode off: the HUD you picked stays.
+test: Update with EJK mode or Tactical already on from the release before: off gives your own back.
+note: A profile where the old build already handed back Vanilla wrongly stays as that build left it.
+
+[import-brightness]
+area: Menus & settings
+title: Config import copies Brightness (r_gamma)
+change: First setup Import / firstsetup import: new row Brightness, from the cfg's r_gamma.
+change: EJK's washed-out look is its gamma (yours 1.31); EJK mode still leaves gamma alone.
+test: firstsetup import on EternalJK/eternaljk.cfg: Brightness row reads 1.31.
+test: Import it: r_gamma is 1.311622, the picture lighter as in EJK.
+test: A cfg without r_gamma shows no Brightness row.
+
+[ejk-mode]
+area: Menus & settings
+title: EJK mode: one switch for JoF EJK's look (ui_ejkMode)
+change: Settings > Interface > EJK mode (also First setup > Look, Simple > General).
+change: On sets JoF EJK's look from one table and keeps your settings; off gives them back.
+change: New row Gameplay > Finishers (cg_finishers): off, saber kills play no finisher.
+test: Note your menu style, HUD, scoreboard, graphics preset. Turn EJK mode on.
+test: Menus go classic in the retail look; accept the graphics reload card.
+test: In a match: JoF EJK HUD (or retail), no status bar, kill feed, version line, timer.
+test: Console is the classic one; kills and joins print at the top left.
+test: Scoreboard is the retail one, no IDs, no head icons.
+test: Chat is in the game's font at JoF EJK's size; no nameplates, kybers, toys, tags.
+test: Graphics preset reads Vanilla; compare the picture with JoF EJK side by side.
+test: Change one setting by hand (HUD look): it stays, also after a restart.
+test: Turn EJK mode off: everything you noted is back, but the one you changed by hand.
+test: Search Settings for ejk, eternal, jof, openjk, classic, retail: the row is found.
+test: Console: ejkmode, ejkmode on, ejkmode off, ejkmode list (each setting and why).
+test: What's new card: EJK mode shows with its switch.
+note: The chat composer, chat place and emotes are not covered; see docs/status.md.
+
+[classic-own-look]
+area: Menus & settings
+title: Classic menus' own look: no retail art, the theme's colours (ui_classicLook sjk)
+change: Settings > Interface > Classic menus' look: Retail (default) or SJK.
+change: SJK draws every classic page without the game's pictures, in the theme's colours.
+test: ui_menuStyle classic, then ui_classicLook sjk: the main page has no Star Wars art.
+test: Text, rules and boxes are sharp at your resolution; nothing is a stretched picture.
+test: Change Theme to Sith, Jedi, Custom: the classic pages follow at once.
+test: Walk Play, Profile (character, saber, Force, cosmetics), Settings, SJK, in-game menu.
+test: Force page: light and dark sides keep their own blue and red; saber swatches too.
+test: Look for a leftover retail blue anywhere and note where (it is one table entry).
+test: ui_classicLook retail: the retail pictures and colours are back, unchanged.
+test: With ui_menuStyle sjk the row is dimmed and says it needs Menu style on Classic.
+test: Main page: frame lines from the corners, a window each side of the ring, the ring.
+test: The windows and ring keep the original menu's proportions, centred, on 16:9 too.
+test: On 16:9: a plate with studs and a conduit each side; nothing is a stretched picture.
+test: Title: the game's Star Wars / Jedi Academy logo, letters only, no blue box behind.
+test: Sides: columns of Aurebesh letters, climbing slowly; four of them on 16:9.
+test: Other pages: the page bar is a band from edge to edge between two rules.
+note: Entries and panels are still placed on the 4:3 canvas; moving them out is next.
+note: Shelved for v1 on 23/11/2026 (v1-leftovers): no Settings row, retail whatever the cvar.
+note: To look at it: SJK_CLASSIC_LOOK=sjk on menu_snapshot.
+
+[first-setup-themes]
+area: Menus & settings
+title: First setup opens on the look: Solar, Sith, Jedi and Custom theme tiles
+change: Themes are named Solar (warm), Sith (new, red), Jedi (cold) and Custom.
+change: First setup shows them as four tiles; its first rows are theme, hue, saturation, menus.
+test: Console: firstsetup. Four tiles under the title, each in its own colours.
+test: Click Sith: the whole pop-up turns red at once; the tile gets the gold edge, In use.
+test: Click Jedi, then Solar: each applies at once; Done keeps the last one.
+test: Move Theme hue: the theme becomes Custom and the Custom tile shows that colour.
+test: With Sith worn: main menu, Settings, the status bar and nameplates are red too.
+test: Sith: text and lines stay readable over a bright map (snow, sky) behind glass.
+test: Settings > Interface > Theme: a list of Solar, Sith, Jedi, Custom; same result.
+test: Console: ui_theme jedi and ui_theme solar are understood; ui_theme sith is saved.
+note: A saved ui_theme cold shows as Jedi; nothing is migrated.
+
+[settings-pictures]
+area: Menus & settings
+title: Settings: new icons drawn by one script, long categories cut into pictured sections
+change: All 64 settings icons are drawn by scripts/settings_icons_draw.py: one look.
+change: HUD, Gameplay, Sound, Chat, Interface: short sections by subject, a picture each.
+change: Away settings moved from Sound to Gameplay; Page Up/Down jump a section.
+test: Settings (Advanced): each category on the rail has its new icon; Gameplay: sabers.
+test: HUD: sections Layout, Crosshair, Names and cards, Nameplates, Playstyle, Readouts...
+test: Gameplay: Players and models, Sabers, Force, Duels, Maps and remaps, Toys, Camera...
+test: Sound: Volume, Game sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds.
+test: Chat: Chat box, Chat look, Chat tabs, Do not disturb, Duel lines, SJK chat...
+test: Each heading shows a small icon before its name, sharp, no edge of a neighbour.
+test: Page Down goes to the next section's first row, Page Up to the one before.
+test: Search away: the away rows are found under Gameplay. Nothing is under "More".
+test: Classic menus, in-game menu, key bindings, news: their icons are the new set too.
+note: The quick wheel's own icons are still the old boards' (a slightly different hand).
+
+[smart-settings]
+area: Menus & settings
+title: Settings: named stops, units, loudness volumes, dependent rows, smarter search
+change: FPS caps, Away after, error smoothing, Rate, Snapshots: lists of stops plus Custom.
+change: Sliders show units and a default mark; volumes read as loudness (22% = old 0.05).
+change: Rows that do nothing while a parent is off are dimmed; search forgives typos.
+test: Display > FPS cap: open the list, pick 144 FPS; Left/Right step; type 275, Enter.
+test: FPS cap > Custom...: the entry opens on the value; Esc keeps it, Enter sets it.
+test: Sound: drag Effects volume low: whole percents; Left/Right move 5%; 0 reads Off.
+test: Any slider: a tick marks the default; drag near it and the knob catches it.
+test: Controls: sensitivity drags in 0.1 steps, 5 near the middle; type 2.35 works.
+test: HUD: nameplates off dims their rows; the detail says what they need; on undims.
+test: Display: Detect refresh rate is dimmed unless FPS cap is on Auto.
+test: Search crosshar, caht, afk, pov, msaa: each finds its setting; hud leads with best.
+test: Search bind: the empty result points to Key bindings.
+test: Graphics > Time of day reads 19:30 style; HUD scale reads in percent.
+test: Classic menus (ui_menuStyle classic): the same rows work, lists and typed values too.
+note: Saved values are untouched: s_volume 0.05 still is 0.05, it only reads 22%.
+
 [bar-ping]
 area: HUD
 title: Top bar ping matches the scoreboard; the lagometer graphs stock's snapshot ping
@@ -225,7 +427,7 @@ change: tags and cards, each with its tier in colour and how many, under a headi
 test: collection, Ctrl+Tab to Inventory: credits and shards match the Forge; holocrons the tab's.
 test: S cycles Tier / Name / Quantity; the sort segments click too; Up/Down skip the headings.
 test: / opens the search: type, held Backspace, Ctrl+A/C/V work; Esc clears; wheel scrolls.
-note: DOOM coins show only once the hub said them (toy_wheelofdoom asks).
+note: DOOM coins show only once the hub said them (read with the Force boxes).
 
 [tier-frame]
 area: Menus & settings
@@ -558,32 +760,9 @@ note: Needs the hub's box-rework branch deployed.
 
 [drop-odds]
 area: Gameplay
-title: Possible drops panel at boxes and wheels; louder WHEEL OF DOOM music
-change: Facing a box or wheel, a panel under the Use prompt lists drops with their %.
-change: WHEEL OF DOOM music at twice the gain, heard to 1400 units.
+title: Possible drops panel at boxes
+change: Facing a box, a panel under the Use prompt lists drops with their %.
 test: Face a mystery box: after a moment the panel fades in, holocron 45.5 % first.
-test: Face a wheel: holocron tiers in colour, "A bad effect (12 kinds)" in red.
-test: A spin: the music is clearly louder, still heard across the room.
-
-[wheel-placed]
-area: Gameplay
-title: WHEEL OF DOOM placed on maps, spun for a DOOM coin
-change: wheelofdoom_place/remove/list (creator); Use at a wheel spins it for a coin.
-change: 20 segments with a holocron of every tier and the coin back; 34 s spin to music.
-test: wheelofdoom_place on a server: the wheel stands, words over it, Use prompt.
-test: Without a coin: "No DOOM coin". With one: it spins to the music, lands at its end.
-test: A friend at the same wheel during a spin: "Someone is spinning it".
-note: Music from zz_sjk_wheel_of_doom_sounds_local.pk3; hub box-rework branch needed.
-
-[banners-off]
-area: Menus & settings
-title: Profile banners out of the game for now (unfinished)
-change: Collection has no Banners tab; holocron odds no longer mention bonus banners.
-change: The hub drops none, shows no worn or held banner and refuses equipping one.
-test: Collection row: Cards then History, no Banners; Tab cycles past it.
-test: Profile header, player card and chat sender cards: no cover, even one worn before.
-test: Holocrons > loot odds: no "Bonus banner" note.
-note: Needs the hub's banners-off change deployed and SJK_HUB_BANNER_MIN_CLIENT off.
 
 [spawn-panel]
 area: Console & chat
@@ -827,7 +1006,7 @@ note: Hub branch box-hunt-1103 must be deployed for the 09:00 day and the gift c
 [unknown-prize-card]
 area: Menus & settings
 title: Holocrons: loot this build does not know shows a "?" card, not a dark empty one
-change: An unknown shader, tag, toy, banner or card shows "?" in a ring and "Update SJK to see it".
+change: An unknown shader, tag, toy or card shows "?" in a ring and "Update SJK to see it".
 change: The strip tile says New tag / New shader / New card; batch finds say the kind too.
 test: Open holocrons with an older build while the hub drops a newer shader: "?" card, its name.
 test: A known shader still shows its blade swatch; a known tag its picture.
@@ -944,27 +1123,6 @@ test: Left/Right filter: Credits keeps buys, boxes and openings that paid credit
 test: Scroll to the end with more than 100 lines: Load older adds older lines once.
 test: On a hub without the endpoint: "History unavailable", "keeps no history yet".
 note: Needs the hub's history branch deployed.
-
-[banners]
-area: Menus & settings
-title: Profile banners (#319, Lumaya): covers on Profile and cards, Collection > Banners
-change: Collection > Banners previews six covers (one free), wears one through the hub.
-change: Holocron openings may add a banner on top of the prize, once the hub enables them.
-test: Collection > Banners: the free cover wears; held covers show copies; Profile header.
-test: Player card and SJK chat sender cards show the worn cover; unknown ids fall back.
-test: Holocron odds: Banner bonus row only on a hub with banners on, 0 otherwise.
-note: Hub banner drops stay off until SJK_HUB_BANNER_MIN_CLIENT is set (hub shared #6).
-
-[banner-breakdown]
-area: Menus & settings
-title: Banner break down (Slash, after headshotsmcgee117's idea): banners into kyber shards
-change: Collection > Banners: Break down a copy (press twice) turns a held banner into shards.
-change: Last copy too on a shatter_last hub, with a warning; it comes off the profile if worn.
-test: Hub with --banner-shatter staff and you staff: hold 2+ Jedi Archives, Break down a copy.
-test: First press arms (Confirm...), second within 5 s sends; "+5 kyber shards" line, count -1.
-test: Last copy: warning line, then it leaves Collection and the profile; History "Shattered".
-test: Switch off (or not staff): no Break down button; the Forge shows no banner answer.
-note: Needs hub shared #18 deployed first; --banner-shatter is off by default (client #369).
 
 [creyon-new-blades-370]
 area: Rendering & effects
@@ -3325,27 +3483,6 @@ test: Esc menu: the Credits icon is a grey disc with a silver laurel.
 test: Settings rail: every category icon is grey; Chat, Mods and Quick wheel have one too.
 test: What's new card: the headings' icons are grey discs.
 
-[shelve-support-links]
-area: Menus & settings
-title: Support SJK shelved: no donation links on the main page
-change: The GitHub Sponsors and Ko-fi line at the top left of the SJK UI main page is hidden.
-change: Settings > Interface no longer has a Support SJK row.
-test: SJK UI main page: no Support SJK line top left, at 1080p and 4K (150 %).
-test: Settings > Interface: no Support SJK row.
-test: ui_supportLinks 1 in the console: the line still stays hidden.
-
-[support-links]
-area: Menus & settings
-title: Support SJK on the main page: GitHub Sponsors and Ko-fi, x hides it for good
-change: SJK UI main page, top left: "Support SJK", GitHub Sponsors and Ko-fi pills, and x.
-change: x sets ui_supportLinks 0; Settings > Interface > Support SJK shows it again.
-change: The old donation goal card and its hub request are gone; Supporter still holders only.
-test: Main page: the line sits top left, clear of the ring, at 1080p and 4K (150 %).
-test: GitHub Sponsors opens github.com/sponsors/Sol-Vulpes; Ko-fi opens ko-fi.com/soljk.
-test: Hover x: a quiet line says where to bring it back. Click x: the line goes at once.
-test: Restart: still hidden. Settings > Interface > Support SJK on: it comes back.
-test: Classic+ menus: no Support SJK line.
-
 [staff-tools-2]
 area: Menus & settings
 title: Staff page: kyber crystal gifts, second presses, and key ids never shown in game
@@ -5410,19 +5547,48 @@ test: s_language english, snd_restart: they are English again.
 
 # ---- Gameplay ----
 
+[sith-hunt]
+area: Gameplay
+title: Box hunt: Sith card and alert; nobody away or typing is ever tagged
+change: The mark's card is a pointed basalt plate edged in red: THE TOMB'S MARK over the name.
+change: It arrives as an alert (big, lower, 2.6 s) then settles; the alarm is Force rage's roar.
+change: Away for the hunt after 15 s off the keys and mouse; a mark found away is handed on.
+test: 3+ hunters, toy_boxhunt on: a mark is picked; the big plate shows, then shrinks to the top.
+test: As the mark: THE TOMB HAS CHOSEN / YOU ARE THE MARK, blood red, screen edges flush red.
+test: Over the mark: MARKED in red, a barbed blade for an arrow; out of view it rides the ring.
+test: Stand still 15 s hands off, or sit in the chat or a menu, at pick time: never the mark.
+test: Open the chat just as you are picked: within seconds another hunter is the mark instead.
+test: With 3 hunters and the picked one away: no mark at all, the hunt tries again a minute on.
+note: The hand-on at the pick needs hub branch hunt-in-play (dfe36aa); merged local, not deployed.
+
+[sith-tomb]
+area: Gameplay
+title: Force box: an ancient Sith tomb, red glyphs, a lid that grinds apart
+change: The box is a black basalt sarcophagus on two steps, a horn at each corner, red glyphs.
+change: Its lid is two slabs: they lift, slide apart and tip; red fire rises while it is open.
+change: JA's stone door sounds: seal, grind (2.4 s), a thud as the slabs rest; again to shut.
+test: A box on a map: dark stone, a red sigil each side, glyphs, slits down the horns, a halo.
+test: From afar the halo is a soft red light, never a flat red pane or a hard edge.
+test: Tap Use: the slabs grind apart over 2.3 s, a thud, embers and red fire inside.
+test: The roll waits inside ~1 s then rises above the horns; the words stand clear over it.
+test: Take it (or wait 10 s): the slabs grind shut, a thud, the fire sinks back.
+test: Walk round it: no texture stretched or mirrored badly, the lid meets the rim when shut.
+test: mapedit web editor: the box shows with both lid slabs shut.
+note: Bigger than the chest (80 x 41 on the floor, 47 tall): check each placed box still fits.
+
 [force-box]
 area: Gameplay
 title: Force box: stone, gold, blue runes, JA sounds; hold Use to roll a DOOM coin
 change: The mystery box looks like an ancient Jedi box (placeholder) and plays JA Force sounds.
 change: Tap Use: the credits roll. Hold Use 1 s with a DOOM coin: the WHEEL's outcomes instead.
-change: No WHEEL OF DOOM stands on a map; wheelofdoom_place refuses.
+change: No WHEEL OF DOOM stands on a map; the wheel's model, spin and sounds are removed.
 test: A box on duel6: stone chest, gold bands, two glowing blue runes a side, a blue halo.
 test: Tap Use: Force pull opens it, a hum through the roll, a push as the lid shuts.
 test: With a coin: prompt says Tap: 100 credits and Hold Use: DOOM coin roll (N coins).
 test: Hold Use 1 s: Keep holding, then the box rolls; a holocron, coins, bolts or the teddy bear.
 test: A punishment (mirror, drunk...) strikes you; the teddy bear blows you up; 15 s to roll again.
 test: A 2nd SJK player sees the roll; their prompt says Someone rolls a DOOM coin.
-test: toy_wheelofdoom: your coins and Hold Use at a Force box; no wheel stands on its old map.
+test: Status bar: your DOOM coins; no wheel stands on its old map.
 note: The coin roll needs hub branch force-box (1b9fd35) on a local hub; not deployed.
 
 [force-throw]
@@ -5593,6 +5759,12 @@ test: Try mimic <name> 0, then mimic <name> 2 copy: no delay, then sides kept af
 test: Press any key: it stops. mimic off also stops it.
 test: mimic <name> 0.3 walk, both walking the choreography: you walk the whole time.
 test: Without walk, while they walk slowly: you walk too, not run (no catch-up run).
+change: 22/11: view turns like a mouse (held views are safe); staff and duals keep their stance.
+test: mimic <name> 3 copy through lunges, katas, back attacks: no look at the ground.
+test: Same run: you walk the way they did, also right after a special move.
+note: If the view still goes off, the client log has lines starting mimic: view held.
+test: 22/11: they turn, then strafe left: you turn the same and strafe (not walk forward).
+test: With a staff, then duals, mimic a single-saber player's swings: your blades stay.
 note: A 0.2-0.3 s delay or more keeps it tight; with 0 it reacts after your pings.
 
 [ghost-replay]
@@ -10054,20 +10226,6 @@ test: /engage_FullForceDuel on a second client, accept: push and lightning work 
 test: Win: centre print with health and armour; console line for everyone.
 note: Not run with a client yet. No 3 s pass-through after a duel (no JA+ client predicts it).
 
-[wheel-of-doom]
-area: Gameplay
-title: WHEEL OF DOOM toy: spin for credits, a Mythical holocron or doom (needs hub wheel-of-doom)
-change: toy_wheelofdoom (Collection > Toys, a bind, quick wheel): first press shows the price.
-change: A second within 5 s spins a wheel before you; others see it; 16 outcomes, 5 min cooldown.
-change: Effects on your own keys, mouse, view for 15-30 s; HUD line; end on new map or death.
-test: Join a server, toy_wheelofdoom: price card by the crosshair; again: wheel spins, ticks, stops.
-test: Wait out an effect: HUD line counts down, the effect ends; die or change map: it ends.
-test: Press again at once: "Your next spin in N s"; in a duel: refused in the centre.
-test: Second SJK client nearby: sees the wheel spin and stop on the same segment.
-test: Over several spins: mirror, blind, upside down, no saber, quack look and feel right.
-test: Settings > Sound > Toys, WHEEL OF DOOM sounds off: the wheel spins silently.
-note: Placeholder model (Sol's to come). Mirror flips the whole picture, HUD included.
-
 [status-balloons]
 area: Rendering & effects
 title: Status bubbles: the chat bubble shows typing, a menu/console or away (cg_statusBalloons)
@@ -10540,13 +10698,3 @@ change: The hub's odds change ships with the release (hub branch no-raygun).
 test: Open boxes: no Ray Gun rolls by; the drops panel lists no Ray Gun once the hub is updated.
 test: Monitor: a hit player still falls as a ragdoll and gets up as before.
 test: First person: your weapon and saber show as before (no prop gun in the hand).
-
-[fishing-mining-removed]
-area: Menus & settings
-title: Fishing and Mining removed; their logs stay in the Collection's Log book
-change: No toy_fishing or toy_mining, no selling, glints, daily goals or rare catch banners.
-change: Collection: a Log book tile after History and a tab, only with a catch in the logs.
-change: Both books read only: ??? for none caught, count and first day, rare ones in gold.
-test: With a fishing_log.txt holding a catch: the Log book tile and tab show, both books fit.
-test: Share under a book with a catch: one line in SJK chat; again at once: a moment ago.
-test: A profile with no logs: no Log book tile, no tab; Toys shows 8 rows, all fit.

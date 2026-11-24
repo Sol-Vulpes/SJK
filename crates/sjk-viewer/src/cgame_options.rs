@@ -350,6 +350,11 @@ impl crate::GpuState {
         self.chat
             .set_scoreboard_layout(crate::scoreboard::behavior::chat_layout(self, scoreboard));
         self.chat.set_edges(self.status_bar.reserved());
+        self.chat.set_notify_bottom(
+            self.console
+                .as_ref()
+                .map_or(0.0, crate::console::ViewerConsole::notify_bottom),
+        );
         let visible = self
             .console
             .as_ref()

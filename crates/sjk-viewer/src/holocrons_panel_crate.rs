@@ -73,8 +73,6 @@ pub(crate) enum Item {
     /// A tag (`tags.rs`, 27/10/2026; only ever the prize: the strip's neighbours are cards,
     /// shaders and shards).
     Tag(&'static crate::tags::Tag),
-    /// A profile cover, shown as the selected prize.
-    Banner(&'static crate::profile_card::banner::Banner),
     /// A pile of kyber shards (17/10/2026): `shards` of them for the prize, 0 for a
     /// neighbour (its tier's range is shown instead).
     Shards { tier: usize, shards: u64 },
@@ -88,7 +86,6 @@ impl Item {
             Self::Card { rarity, .. } => RARITIES[rarity].colour,
             Self::Shader(skin) => skin.tier.colour(),
             Self::Tag(tag) => tag.tier.colour(),
-            Self::Banner(banner) => banner.tier.colour(),
             Self::New(_) => crate::menu::sjk::color::gold(),
             Self::Shards { .. } => crate::cards::shard::KYBER,
         }
@@ -102,7 +99,6 @@ impl Item {
             Self::Shader(skin) => skin.tier as u32 * 10 + 1,
             // A tag stands just under a shader of its tier.
             Self::Tag(tag) => tag.tier as u32 * 10,
-            Self::Banner(banner) => banner.tier as u32 * 10,
             Self::New(_) => 21,
             // A consolation: above a plain Common card, below everything rarer.
             Self::Shards { .. } => 2,
@@ -116,7 +112,6 @@ impl Item {
             Self::Card { rarity, finish, .. } => rarity >= 3 || finish == 2,
             Self::Shader(skin) => skin.tier >= Rarity::Legendary,
             Self::Tag(tag) => tag.tier >= Rarity::Legendary,
-            Self::Banner(banner) => banner.tier >= Rarity::Legendary,
             Self::New(_) | Self::Shards { .. } => false,
         }
     }
@@ -354,7 +349,7 @@ mod tests {
                         assert!(cards::ODDS[tier].finish[*finish] > 0);
                     }
                     Item::Shader(skin) => assert!(skin.droppable, "{}", skin.id),
-                    Item::New(_) | Item::Tag(_) | Item::Banner(_) => {
+                    Item::New(_) | Item::Tag(_) => {
                         panic!("only a prize is new or a tag")
                     }
                     Item::Shards { tier: of, shards } => {

@@ -1109,15 +1109,15 @@ and in the hub (same ids):
 | Long Distance Call (retired 20/11/2026) | `monitor_far` | a player struck with a monitor 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
 | Bounty Hunter, Big Game Hunter | `box_hunt_mark`, `box_hunt_marks_10` | 1, 10 box hunt marks killed (a free roll won or not) | hub |
 | Still Standing, Most Wanted | `box_hunt_survive`, `box_hunt_survive_5` | 1, 5 marks stayed to the end without a hunter's kill, still in the hunt | hub |
-| First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
-| Every Fish in the Pond (retired 20/11/2026) | `fish_kinds` | every kind of fish landed (12, `fishing::FISH_KINDS`) | client |
+| First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing-and-mining-removed)) | client |
+| Every Fish in the Pond (retired 20/11/2026) | `fish_kinds` | every kind of fish landed (12, `achievements::FISH_KINDS`) | client |
 | Echo Angler (retired 20/11/2026) | `echo_angler` | 5 Echoes landed on the line (10 until 04/11/2026) | client |
 | Old Whiskers (hidden) (retired 20/11/2026) | `old_whiskers` | Old Whiskers, the great catfish, landed | client |
-| Beachcomber (retired 20/11/2026) | `junk_kinds` | every kind of junk fished up (6, `fishing::JUNK_KINDS`) | client |
+| Beachcomber (retired 20/11/2026) | `junk_kinds` | every kind of junk fished up (6, `achievements::JUNK_KINDS`) | client |
 | Steady Hand (retired 20/11/2026) | `fish_steady` | 10 fish bites hooked in a row, none let go between | client |
-| First Strike, Stonebreaker (retired 20/11/2026) | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#fishing-and-mining-removed-and-the-log-book)) | client |
+| First Strike, Stonebreaker (retired 20/11/2026) | `mine_first`, `mine_500` | 1, 500 boulders broken with the Mining toy ([client.md](client.md#fishing-and-mining-removed)) | client |
 | Sharp Eye (retired 20/11/2026) | `mine_clean_250` | 250 clean strikes (a blow as the boulder glints) | client |
-| Prospector (retired 20/11/2026) | `mine_kinds` | every kind of ore dug (9, `mining::ORE_KINDS`, the Heart among them) | client |
+| Prospector (retired 20/11/2026) | `mine_kinds` | every kind of ore dug (9, `achievements::ORE_KINDS`, the Heart among them) | client |
 | Heart of the Mountain (hidden) (retired 20/11/2026) | `heart_of_the_mountain` | the Heart of the Mountain dug | client |
 
 
@@ -1682,8 +1682,8 @@ page (its arc holds five entries), the in-game SJK menu and the `identity` comma
 Achievements a dedicated server would vouch for, and pictures for the achievements,
 are not made yet.
 
-## Profile banners
+## Profile banners (removed)
 
-A profile may equip an owned static cover, shared by its profile header and player
-cards. Choose it in Collection > Banners; the hub validates and saves equipment.
-Old or unknown covers use the neutral fallback. See [profile banners](profile-banners.md).
+Profile banners were removed from the client on 23/11/2026
+([holocrons.md](holocrons.md#profile-banner-prizes-removed)). A profile's `banner` field
+is no longer read, and `PUT /v1/profile/banner` is no longer sent.

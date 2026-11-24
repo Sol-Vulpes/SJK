@@ -32,6 +32,7 @@ impl GpuState {
         self.update_sjk_chat();
         self.update_chat_translations();
         self.update_tactical();
+        self.update_ejk_mode();
         self.update_emotes();
         self.update_away_emote();
         self.update_world_pings();
@@ -98,7 +99,7 @@ impl GpuState {
         self.update_drone(&relay_events);
         self.update_boombox(&relay_events);
         self.update_mystery_boxes(&toy_events, &relay_events);
-        self.update_wheel_of_doom(&toy_events);
+        self.update_wheel_of_doom();
         self.update_quests(&toy_events);
         self.update_toy_master(&toy_events);
         self.update_e2e_whispers();

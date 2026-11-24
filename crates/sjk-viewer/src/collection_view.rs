@@ -158,8 +158,6 @@ pub(crate) fn row_labels(
         monitor: false,
         box_hunt: false,
         quests: false,
-        wheel_of_doom: false,
-        log_books: None,
         stock: color::holo(),
         grid: false,
         options: "",
@@ -679,11 +677,9 @@ impl Panel {
             Tab::Shaders => self.shaders(&frame, inputs, seconds),
             Tab::Toys => self.toys(&frame, inputs),
             Tab::Tags => self.tags(&frame, inputs),
-            Tab::Banners => self.banners(&frame, inputs),
             Tab::Cards => self.cards(&frame, inputs, seconds),
             Tab::History => self.history_tab(&frame, inputs),
             Tab::Inventory => self.inventory_tab(&frame, inputs, seconds),
-            Tab::LogBook => self.log_book_tab(&frame, inputs),
             Tab::Forge => {
                 self.grid = inputs.grid;
                 self.forge(&frame, inputs, seconds, viewport);
@@ -710,6 +706,7 @@ impl Panel {
             );
         }
         self.keys(&frame, inputs);
+        self.bake_notice(&frame);
         self.lab_build_overlay(&frame);
         self.hover_card(&frame, inputs);
         self.arrived_page(&frame, arriving);
@@ -872,6 +869,39 @@ impl Panel {
     }
 
     /// The keys of the tab on show, right-aligned at the bottom.
+    /// While the kybers' loops are baked for the first time (`blade_stills::progress`), a
+    /// slim glass line at the bottom left, beside the keys, says so and how far it has come,
+    /// since the Collection can run slowly meanwhile on a modest graphics card (Sol,
+    /// 23/11/2026). Every page and the hall show it.
+    pub(super) fn bake_notice(&mut self, frame: &Frame) {
+        let Some((kept, total)) = crate::blade_stills::progress() else {
+            return;
+        };
+        let s = frame.s;
+        let [x, y, width, height] = [LEFT_X, KEYS_Y - 13.0, 720.0, 46.0];
+        crate::menu::sjk::kit::card(&mut self.ui, frame, [x, y, width, height]);
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("Preparing kyber pictures · {kept} / {total}"),
+            frame.rect(x + 20.0, y + 10.0, 240.0, 26.0),
+            17.0 * s,
+            color::gold_bright(),
+            FontWeight::Semibold,
+            TextAlign::Start,
+        );
+        text(
+            &mut self.ui,
+            TextFamily::Display,
+            format_args!("Once only: the Collection may be slow until they are done"),
+            frame.rect(x + 256.0, y + 11.0, width - 276.0, 24.0),
+            15.0 * s,
+            color::muted(),
+            FontWeight::Regular,
+            TextAlign::Start,
+        );
+    }
+
     fn keys(&mut self, frame: &Frame, inputs: &Inputs<'_>) {
         let s = frame.s;
         let next_tab = crate::terms::say(self.tab.next(true).label());
@@ -1019,10 +1049,6 @@ impl Panel {
                     Some(_) => keys.push((&["Enter"], "equip")),
                     None => {}
                 }
-            }
-            Tab::Banners => {
-                keys.push((&["Arrows"], "choose"));
-                keys.push((&["Enter"], "equip / unequip"));
             }
             Tab::Tags => {
                 keys.push((&["Arrows"], "choose"));

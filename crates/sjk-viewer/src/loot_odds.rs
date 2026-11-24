@@ -21,8 +21,6 @@ pub(crate) const SHADER_TIERS: usize = 5;
 /// Every odds table, one entry per holocron tier in [`TIERS`] order; shares per mille.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Table {
-    /// Independent banner bonus odds (zero until a supporting hub supplies it).
-    pub(crate) banner: [u32; COUNT],
     /// How often a drop is each tier.
     pub(crate) drop: [u16; COUNT],
     /// The card's rarity and finish inside each tier.
@@ -51,7 +49,6 @@ pub(crate) struct Table {
 /// This client's copy of the hub's tables (`src/holocrons.rs`, `src/cards.rs` and
 /// `src/loot.rs` there), shown until the hub sends its own.
 pub(crate) const BUILT_IN: Table = Table {
-    banner: [0; COUNT],
     drop: [
         TIERS[0].per_mille,
         TIERS[1].per_mille,
@@ -123,7 +120,6 @@ fn of_hub(tiers: &[sjk_identity::LootTier]) -> Option<Table> {
             && whole(&tier.finish)
             && whole(&tier.shader_tier)
             && u64::from(tier.shader) + u64::from(tier.tag) + u64::from(tier.shard_pile) <= 1_000
-            && tier.banner <= 1_000
             && tier.credits[0] <= tier.credits[1]
             && tier.shards[0] <= tier.shards[1]
             && tier.card_shards[0] <= tier.card_shards[1]
@@ -146,7 +142,6 @@ fn of_hub(tiers: &[sjk_identity::LootTier]) -> Option<Table> {
         table.shader_tier[index].copy_from_slice(&tier.shader_tier);
         table.shard_pile[index] = tier.shard_pile;
         table.tag[index] = tier.tag;
-        table.banner[index] = tier.banner;
         table.tag_finish[index] = tier.tag_finish;
         table.shards[index] = (
             u32::try_from(tier.shards[0]).ok()?,
@@ -169,7 +164,6 @@ mod tests {
         (0..COUNT)
             .map(|index| sjk_identity::LootTier {
                 tier: TIERS[index].id.to_owned(),
-                banner: table.banner[index],
                 drop: u32::from(table.drop[index]),
                 rarity: table.card[index]
                     .rarity
@@ -202,19 +196,28 @@ mod tests {
             .collect()
     }
 
+    /// Profile banners were removed on 23/11/2026; a hub still sends each tier's
+    /// `banner` odds (zero, or its bonus chance when set to roll them). The table reads
+    /// the same with or without them.
     #[test]
-    fn bonus_banner_odds_are_independent_of_the_ordinary_prize_shares() {
-        let mut tiers = wire(&BUILT_IN);
-        for tier in &mut tiers {
-            tier.banner = 1_000;
+    fn a_hubs_banner_odds_are_ignored() {
+        let tiers = wire(&BUILT_IN);
+        let mut json = serde_json::json!({
+            "tier": tiers[0].tier, "drop": tiers[0].drop, "rarity": tiers[0].rarity,
+            "finish": tiers[0].finish, "credits": tiers[0].credits,
+            "shader": tiers[0].shader, "shader_tier": tiers[0].shader_tier,
+            "tag": tiers[0].tag, "shard_pile": tiers[0].shard_pile,
+            "shards": tiers[0].shards, "card_shards": tiers[0].card_shards,
+            "tag_finish": tiers[0].tag_finish,
+        });
+        let plain: sjk_identity::LootTier = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!(plain, tiers[0]);
+        for odds in [0, 100, 5_000] {
+            json["banner"] = serde_json::json!(odds);
+            let sent: sjk_identity::LootTier = serde_json::from_value(json.clone()).unwrap();
+            assert_eq!(sent, tiers[0], "banner odds {odds}");
         }
-        let table = of_hub(&tiers).expect("a guaranteed bonus is still compatible");
-        assert_eq!(table.shader, BUILT_IN.shader);
-        assert_eq!(table.tag, BUILT_IN.tag);
-        assert_eq!(table.shard_pile, BUILT_IN.shard_pile);
-        assert_eq!(table.card, BUILT_IN.card);
-        tiers[0].banner = 1_001;
-        assert_eq!(of_hub(&tiers), None);
+        assert_eq!(of_hub(&tiers), Some(BUILT_IN));
     }
 
     #[test]

@@ -34,8 +34,6 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 
 #[path = "collection_achievements.rs"]
 mod achievements;
-#[path = "collection_banners.rs"]
-mod banners;
 #[path = "collection_cards.rs"]
 mod cards;
 #[path = "collection_finishers.rs"]
@@ -58,8 +56,6 @@ pub(crate) mod inventory;
 mod inventory_view;
 #[path = "collection_loadouts.rs"]
 pub(crate) mod loadouts;
-#[path = "collection_log_book.rs"]
-mod log_book;
 #[path = "collection_marks_view.rs"]
 mod marks_view;
 #[path = "collection_medals.rs"]
@@ -139,8 +135,6 @@ const MONITOR_TOKEN: u16 = 1_303;
 const BOX_HUNT_TOKEN: u16 = 1_304;
 /// Quests' niche on Toys.
 const QUESTS_TOKEN: u16 = 1_397;
-/// The WHEEL OF DOOM's niche on Toys.
-const WHEEL_OF_DOOM_TOKEN: u16 = 1_396;
 /// Each toy's place among the toys (`collection_toys::TOYS`, [`TOY_TOKENS`],
 /// [`Panel::toy`]): named, so a toy removed (the Banana peel, 20/11/2026) moves only
 /// these.
@@ -150,8 +144,7 @@ const DRONE_TOY: usize = 2;
 const BOOMBOX_TOY: usize = 3;
 const MONITOR_TOY: usize = 4;
 const BOX_HUNT_TOY: usize = 5;
-const WHEEL_OF_DOOM_TOY: usize = 6;
-const QUESTS_TOY: usize = 7;
+const QUESTS_TOY: usize = 6;
 /// The Toys tab's "?", the Toy Master's (`collection_toys::Panel::toy_master_badge`): its
 /// hover card tells of the toys hidden on maps and names those the player found.
 const TOY_MASTER_TOKEN: u16 = 1_376;
@@ -169,8 +162,8 @@ const BOTH_TOKEN: u16 = 1_306;
 /// How far (frame pixels) a press on the lone saber may move and still be a click.
 const CLICK_SLOP: f32 = 6.0;
 /// The toys the Toys tab shows: Illuminate, the Ragdoll, the Drone,
-/// the Boombox, the Monitor, Box hunt, then the WHEEL OF DOOM and Quests.
-const TOY_COUNT: usize = 8;
+/// the Boombox, the Monitor, Box hunt, then Quests.
+const TOY_COUNT: usize = 7;
 /// Each toy's row, in the order of [`Panel::toy`].
 const TOY_TOKENS: [u16; TOY_COUNT] = [
     TOY_TOKEN,
@@ -179,18 +172,13 @@ const TOY_TOKENS: [u16; TOY_COUNT] = [
     BOOMBOX_TOKEN,
     MONITOR_TOKEN,
     BOX_HUNT_TOKEN,
-    WHEEL_OF_DOOM_TOKEN,
     QUESTS_TOKEN,
 ];
 /// Each toy row's own switch (25/10/2026): it turns that toy on or off in place, a token
 /// a toy from here on, below [`TOY_SWITCH_END`]. From 1_360 they ran into
 /// [`FAVOURITE_TOKEN`] at the thirteenth toy (08/11/2026); no other token of the panel lies
-/// between 1_400 and 3_000 but the Log book's Share buttons ([`BRAG_TOKEN`]).
+/// between 1_400 and 3_000.
 const TOY_SWITCH_BASE: u16 = 1_460;
-/// The Log book page's Share buttons ([`crate::catch_book`]): the fish book's, then the
-/// mining book's.
-const BRAG_TOKEN: u16 = 1_441;
-const BRAG_MINING_TOKEN: u16 = 1_442;
 const TOY_SWITCH_END: u16 = 1_500;
 const _: () = assert!(TOY_SWITCH_BASE + TOY_COUNT as u16 <= TOY_SWITCH_END);
 /// The chosen toy's key, which a click or K waits for a key to bind, and its second (the
@@ -242,10 +230,6 @@ const CARD_LOOK_BASE: u16 = 8_010;
 const _: () = assert!(CARD_BASE as usize + CARD_TILES_MAX <= CARD_SHOW_BASE as usize);
 /// The Tags tab's tiles, one to each tag of `tags::CATALOGUE` (27/10/2026), and its card's
 /// Choose button.
-const BANNER_BASE: u16 = 8_200;
-const BANNER_WEAR: u16 = 8_299;
-/// The Banners tab's Break down button (05/11/2026).
-const BANNER_BREAK: u16 = 8_298;
 const TAG_BASE: u16 = 8_100;
 const TAG_CHOOSE_TOKEN: u16 = 8_099;
 /// The Tags tab's finish chips, Normal, Holo and Solar (31/10/2026).
@@ -456,14 +440,6 @@ pub(crate) enum PanelAction {
     BoxHunt(bool),
     /// Turn Quests on (`true`) or off: the same as `toy_quests`, set rather than toggled.
     Quests(bool),
-    /// Press the WHEEL OF DOOM's switch: the same as `toy_wheelofdoom` (the first shows
-    /// the price, a second spins).
-    WheelOfDoom,
-    /// Share a log book's rarest catch in the SJK chat (the Log book page's Share): the
-    /// fish book's, or the mining book's (`mining`).
-    Brag {
-        mining: bool,
-    },
     /// Set `cg_tag` to this tag's id: the one `toy_tag` sticks.
     /// Pick a tag (or a card) for `toy_tag`, in a finish (`cg_tag`, `cg_tagFinish`).
     ChooseTag(String, &'static str),
@@ -475,8 +451,6 @@ pub(crate) enum PanelAction {
     GifTags(bool),
     /// Spend a blank tag on this GIPHY GIF (its id) for a GIF tag.
     MakeGifTag(String),
-    /// Ask the hub to equip an owned banner, empty to unequip.
-    Banner(&'static str),
     /// Show a tab another page draws: the Holocrons page.
     Hub(Tab),
     /// Show the Holocrons page on the tier at this slot ([`crate::holocrons::slot`]) and
@@ -660,11 +634,6 @@ pub(crate) struct Inputs<'a> {
     pub(crate) box_hunt: bool,
     /// Quests are on now (kept as [`Self::illuminate`] is).
     pub(crate) quests: bool,
-    /// A WHEEL OF DOOM of the player's spins, or one of its effects runs.
-    pub(crate) wheel_of_doom: bool,
-    /// The Fishing and Mining log books, as read when the Collection opened
-    /// ([`crate::catch_book::load`]); none shows nothing.
-    pub(crate) log_books: Option<&'a crate::catch_book::Books>,
     /// The stock blade's colour (`color1`), for its swatch.
     pub(crate) stock: sjk_ui::Color,
     /// [`SHADER_VIEW_CVAR`]: the Shaders tab shows the grid of cards.
@@ -741,14 +710,6 @@ pub(crate) struct Panel {
     shader: usize,
     /// The toy chosen on Toys, by its place ([`ILLUMINATE_TOY`] to [`QUESTS_TOY`]).
     toy: usize,
-    /// The banner chosen on Banners, which banners the profile holds and the one worn.
-    banner: usize,
-    banner_owned: [bool; crate::profile_card::banner::ALL.len()],
-    banner_current: &'static str,
-    /// The copies of each banner the profile holds (the neutral cover none), online.
-    banner_counts: [u32; crate::profile_card::banner::ALL.len()],
-    /// Breaking the chosen banner down (05/11/2026): what the hub takes and the press.
-    banner_break: banners::Break,
     /// The tag chosen on Tags, in the wall's order (the catalogue's tags, then the
     /// cards), the things the last frame listed and what the player held of each (Enter
     /// picks only one held).
@@ -1017,11 +978,6 @@ impl Panel {
             achievement_pages: crate::achievements::Page::ALL.to_vec(),
             shader: 0,
             toy: 0,
-            banner: 0,
-            banner_owned: [false; crate::profile_card::banner::ALL.len()],
-            banner_current: "",
-            banner_counts: [0; crate::profile_card::banner::ALL.len()],
-            banner_break: banners::Break::default(),
             tag: 0,
             tag_entries: Vec::new(),
             tag_held: Vec::new(),
@@ -1390,11 +1346,9 @@ impl Panel {
             Tab::Toys if self.toy == BOOMBOX_TOY => PanelAction::Boombox(!self.boombox_on),
             Tab::Toys if self.toy == MONITOR_TOY => PanelAction::Monitor(!self.monitor_on),
             Tab::Toys if self.toy == BOX_HUNT_TOY => PanelAction::BoxHunt(!self.box_hunt_on),
-            Tab::Toys if self.toy == WHEEL_OF_DOOM_TOY => PanelAction::WheelOfDoom,
             Tab::Toys if self.toy == QUESTS_TOY => PanelAction::Quests(!self.quests_on),
             Tab::Toys => PanelAction::Illuminate(!illuminate),
             Tab::Tags => self.choose_tag(),
-            Tab::Banners => self.wear_banner(),
             Tab::Cards => {
                 self.card_inspect = self.cards_shown > 0;
                 PanelAction::None
@@ -1459,7 +1413,6 @@ impl Panel {
             Tab::Cards => self.cards_shown,
             Tab::Toys => TOY_COUNT,
             Tab::Tags => self.tag_entries.len().max(1),
-            Tab::Banners => crate::profile_card::banner::ALL.len(),
             _ => 0,
         }
     }
@@ -1473,7 +1426,6 @@ impl Panel {
             Tab::Cards => Some(&mut self.card),
             Tab::Toys => Some(&mut self.toy),
             Tab::Tags => Some(&mut self.tag),
-            Tab::Banners => Some(&mut self.banner),
             _ => None,
         }
     }
@@ -2583,22 +2535,6 @@ impl Panel {
                 self.tag = tag;
                 return PanelAction::None;
             }
-            if self.tab == Tab::Banners {
-                if token == BANNER_WEAR {
-                    return self.wear_banner();
-                }
-                if token == BANNER_BREAK {
-                    return self.break_banner(now);
-                }
-                if let Some(index) = token
-                    .checked_sub(BANNER_BASE)
-                    .map(usize::from)
-                    .filter(|index| *index < crate::profile_card::banner::ALL.len())
-                {
-                    self.banner = index;
-                    return PanelAction::None;
-                }
-            }
             if let Some(finish) = token
                 .checked_sub(TAG_FINISH_BASE)
                 .map(usize::from)
@@ -2731,8 +2667,6 @@ impl Panel {
             GRID_VIEW_TOKEN => self.set_grid(true),
             WEAR_TOKEN | TOY_SWITCH_TOKEN => self.activate(illuminate),
             TOY_SIGHT_TOKEN => self.toy_sight(),
-            BRAG_TOKEN => PanelAction::Brag { mining: false },
-            BRAG_MINING_TOKEN => PanelAction::Brag { mining: true },
             loadouts::OPEN_TOKEN => {
                 self.loadouts.open();
                 PanelAction::None
@@ -2764,7 +2698,7 @@ impl Panel {
             EXTRAS_BODY_TOKEN => PanelAction::None,
             // A toy's row chooses it; its own switch runs it.
             TOY_TOKEN | RAGDOLL_TOKEN | DRONE_TOKEN | BOOMBOX_TOKEN | MONITOR_TOKEN
-            | BOX_HUNT_TOKEN | WHEEL_OF_DOOM_TOKEN | QUESTS_TOKEN => {
+            | BOX_HUNT_TOKEN | QUESTS_TOKEN => {
                 self.toy = TOY_TOKENS.iter().position(|&row| row == token).unwrap_or(0);
                 PanelAction::None
             }
@@ -2922,12 +2856,6 @@ impl Panel {
     }
 
     /// Choose shader row `row` (0 the stock blade), for a world shot.
-    /// Select a banner in an offline UI fixture.
-    #[cfg(test)]
-    pub(crate) fn choose_banner_for_shot(&mut self, index: usize) {
-        self.banner = index.min(crate::profile_card::banner::ALL.len() - 1);
-    }
-
     #[cfg(test)]
     pub(crate) fn choose_shader_for_shot(&mut self, row: usize) {
         self.shader = row.min(SHADER_ROWS - 1);
@@ -2947,7 +2875,6 @@ impl Panel {
             Tab::Shaders => SHADER_BASE + self.shader as u16,
             Tab::Toys => TOY_TOKENS[self.toy.min(TOY_COUNT - 1)],
             Tab::Tags => TAG_BASE + self.tag.min(self.tag_entries.len().saturating_sub(1)) as u16,
-            Tab::Banners => BANNER_BASE + self.banner as u16,
             Tab::Cards if self.cards_shown > 0 => CARD_BASE + self.card as u16,
             Tab::History => self.history_focus(),
             Tab::Inventory => self.inventory.focus(),
@@ -3002,8 +2929,6 @@ mod tests {
             monitor: false,
             box_hunt: false,
             quests: false,
-            wheel_of_doom: false,
-            log_books: None,
             stock: sjk_ui::Color::new(0.16, 0.48, 1.0, 1.0),
             grid: false,
             options: "",

@@ -28,11 +28,10 @@ and changed together. Begin with the status page, then the architecture.
 | [Model sync](model-sync.md) | JoF- and Sith-verified players share their models through the Sith cloud, everyone downloads them; the Model sync page (`modelsync`), checks in `sjk-model-sync` |
 | [Rig models](rig-models.md) | glTF player models with their own skeleton, driven by the game's animations: manifest, bone maps, limits |
 | [Mystery boxes](mystery-boxes.md) | Boxes SJK's creator places on maps, opened by players for credits: the hub's roll, the reach, the creator's commands |
-| [WHEEL OF DOOM](wheel-of-doom.md) | The toy players spin for credits: the hub's spin, the sixteen outcomes and their effects on the spinner, the sounds, the model contract for Sol's wheel |
+| [WHEEL OF DOOM](wheel-of-doom.md) | The twenty outcomes a DOOM coin rolls at a Force box and their effects on the roller; how the wheel became part of the box |
 | [Quests](quests.md) | The Quests toy: the hub gives players taking part a quest (hug or kiss two others in a minute) for credits; how a target's client proves it |
 | [The Toy Master](toy-master.md) | Secret toys SJK's creator hides on maps: what the hub sends, presses and shows, the "?" and the hidden achievements, the creator's commands |
 | [Map edits](map-edits.md) | SJK's own map fixes drawn by SJK clients: hidden props and surfaces, placed models, remaps, per server; the staff editor, the browser editor and the hub copies |
-| [Profile banners](profile-banners.md) | Collectible profile covers, Echo rewards, equip/unequip and compatibility |
 | [Unlockables and looks](unlockables.md) | Blade skins and other unlockables, and looks every SJK player sees through the hub |
 | [Saber Lab handover](saber-lab-handover.md) | The Saber Lab's state for Sol to finish (03/11/2026): built, planned, owed before merge, Milamber's blade |
 

@@ -297,6 +297,7 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
         crate::graphics_quality::HELP,
     ),
     (crate::tactical::COMMAND, crate::tactical::HELP),
+    (crate::ejk_mode::COMMAND, crate::ejk_mode::HELP),
     (
         crate::graphics_quality::RENDERER_COMMAND,
         crate::graphics_quality::RENDERER_HELP,
@@ -428,7 +429,6 @@ fn all_commands() -> impl Iterator<Item = &'static (&'static str, &'static str)>
         .chain(crate::saber_hilt_command::COMMANDS)
         .chain(crate::map_edits::editor::COMMANDS)
         .chain(crate::mystery_box::COMMANDS)
-        .chain(crate::wheel_of_doom::COMMANDS)
         .chain(crate::toy_master::COMMANDS)
         .chain(jof_commands())
 }
@@ -1116,9 +1116,6 @@ impl crate::GpuState {
             name if crate::mystery_box::is_command(name) => {
                 return self.mystery_box_command(name, args);
             }
-            name if crate::wheel_of_doom::is_command(name) => {
-                return self.wheel_of_doom_creator_command(name, args);
-            }
             name if crate::toy_master::is_command(name) => {
                 return self.toy_master_command(name, args);
             }
@@ -1412,6 +1409,10 @@ impl crate::GpuState {
             crate::tactical::COMMAND => {
                 let console = self.console.as_mut().ok_or("Console unavailable")?;
                 return crate::tactical::command(console, args);
+            }
+            crate::ejk_mode::COMMAND => {
+                let console = self.console.as_mut().ok_or("Console unavailable")?;
+                return crate::ejk_mode::command(console, args);
             }
             crate::graphics_quality::RENDERER_COMMAND => {
                 let console = self.console.as_mut().ok_or("Console unavailable")?;

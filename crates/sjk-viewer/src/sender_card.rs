@@ -17,7 +17,7 @@
 
 use crate::menu::sjk::color;
 use crate::menu_widgets::MenuCanvas;
-use sjk_ui::{Color, DrawCommand, FontWeight, Rect, TextAlign};
+use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Gradient, Rect, TextAlign};
 
 /// Where a player is on the server the player is on.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -58,8 +58,6 @@ pub(crate) struct Person {
     /// Their picture's version, empty for none; `None` while not known (the place that
     /// shows the card asks, outside any lock: `player_identity::avatar_version`).
     pub(crate) avatar: Option<String>,
-    /// Validated banner id from the same profile lookup as the avatar.
-    pub(crate) banner: &'static str,
     /// A line on when they were about, from the place that shows the card ("Online
     /// now, in a match", "Seen 3 minutes ago"), or none.
     pub(crate) note: Option<String>,
@@ -239,17 +237,15 @@ pub(crate) fn draw(
         rect: card,
         radius: 9.0 * u,
     });
-    crate::profile_card::banner::draw(
-        canvas,
+    head_backdrop(
+        list,
         Rect::new(
             card.x + 1.0 * u,
             card.y + 1.0 * u,
             width - 2.0 * u,
             (HEAD + 2.0 * PAD) * u,
         ),
-        person.banner,
     );
-    let list = canvas.draw_list_mut();
     let _ = list.push(DrawCommand::PopClip);
     let _ = list.push(DrawCommand::Border {
         rect: card,
@@ -600,6 +596,53 @@ pub(crate) fn draw(
     card
 }
 
+/// The card's head: a dark blue wash with two faint rules under a veil that keeps the
+/// name readable, cut to `target` (the card's top, inside its rounded clip).
+fn head_backdrop(list: &mut DrawList, target: Rect) {
+    let scale = (target.width / 720.0).max(target.height / 200.0);
+    let x = target.x + (target.width - 720.0 * scale) * 0.5;
+    let y = target.y + (target.height - 200.0 * scale) * 0.5;
+    let rgb = crate::holocrons::rgb;
+    let _ = list.push(DrawCommand::PushRoundedClip {
+        rect: target,
+        radius: 8.0 * scale,
+    });
+    let _ = list.push(DrawCommand::GradientRect {
+        rect: target,
+        radius: 0.0,
+        gradient: Gradient {
+            start: rgb(0x152237),
+            end: rgb(0x080D16),
+            vertical: true,
+        },
+    });
+    for (rule, colour) in [
+        ([0.0, 146.0, 720.0, 1.0], Color::new(0.55, 0.67, 0.8, 0.2)),
+        ([490.0, 38.0, 100.0, 2.0], Color::new(0.65, 0.75, 0.9, 0.15)),
+    ] {
+        let _ = list.push(DrawCommand::RoundedRect {
+            rect: Rect::new(
+                x + rule[0] * scale,
+                y + rule[1] * scale,
+                rule[2] * scale,
+                rule[3] * scale,
+            ),
+            radius: 0.0,
+            color: colour,
+        });
+    }
+    let _ = list.push(DrawCommand::GradientRect {
+        rect: target,
+        radius: 0.0,
+        gradient: Gradient {
+            start: Color::new(0.0, 0.0, 0.0, 0.1),
+            end: Color::new(0.0, 0.0, 0.0, 0.72),
+            vertical: true,
+        },
+    });
+    let _ = list.push(DrawCommand::PopClip);
+}
+
 /// The key Ban 24 h is offered on, when it is ([`crate::chat_ban::offered`]).
 fn ban_offered(person: &Person) -> Option<&str> {
     person.key_id.as_deref().filter(|key| {
@@ -767,7 +810,6 @@ mod tests {
             emoji: String::new(),
             medals: crate::medals::Medals::default(),
             place: Place::SlotByName(5),
-            banner: "",
             avatar: Some(String::new()),
             note: None,
             safety: false,

@@ -95,8 +95,6 @@ pub(crate) enum InputAction {
     /// `toy_illuminate` (or its old name `force_illuminate`): turn Illuminate's holocron
     /// on or off ([`crate::illuminate`]).
     Illuminate,
-    /// `toy_wheelofdoom`: show the WHEEL OF DOOM's price, or spin it ([`crate::wheel_of_doom`]).
-    WheelOfDoom,
     /// `toy_ragdoll`: go limp, or get up ([`crate::ragdoll`]).
     Ragdoll,
     /// `toy_drone`: let drones follow the player, or not ([`crate::drone`]).
@@ -348,7 +346,6 @@ impl GameplayInput {
                     | crate::world_ping::COMMAND
                     | "toy_illuminate"
                     | "force_illuminate"
-                    | crate::wheel_of_doom::COMMAND
                     | crate::ragdoll::COMMAND
                     | crate::drone::COMMAND
                     | crate::boombox::COMMAND
@@ -525,7 +522,6 @@ impl GameplayInput {
             }
             // The old name still runs the toy, but is not listed (`selection_commands`).
             "toy_illuminate" | "force_illuminate" => Some(InputAction::Illuminate),
-            crate::wheel_of_doom::COMMAND => Some(InputAction::WheelOfDoom),
             crate::ragdoll::COMMAND => Some(InputAction::Ragdoll),
             crate::drone::COMMAND => Some(InputAction::Drone),
             crate::boombox::COMMAND => Some(InputAction::Boombox),
@@ -718,7 +714,6 @@ impl super::GpuState {
             Some(InputAction::WorldNote) => self.world_note_press(),
             Some(InputAction::WorldPing) => self.world_ping_press(),
             Some(InputAction::Illuminate) => self.toggle_illuminate(),
-            Some(InputAction::WheelOfDoom) => self.wheel_of_doom_command(),
             Some(InputAction::Ragdoll) => self.toggle_ragdoll(),
             Some(InputAction::Drone) => self.toggle_drone(),
             Some(InputAction::Boombox) => self.toggle_boombox(),

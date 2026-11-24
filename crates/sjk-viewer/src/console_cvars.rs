@@ -293,10 +293,28 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Synchronize presentation (0/1)",
         ),
         CvarDefinition::new(
+            crate::ejk_mode::CVAR,
+            false,
+            archive,
+            "EJK mode: SJK looks and feels like JoF EJK (classic menus, the game's fonts, EternalJK's console, HUD and scoreboard, Vanilla graphics, none of SJK's extras over a match); your own settings come back when it is turned off",
+        ),
+        CvarDefinition::new(
+            crate::ejk_mode::RESTORE_CVAR,
+            "",
+            archive,
+            "What EJK mode put aside, given back when it is turned off (written by EJK mode)",
+        ),
+        CvarDefinition::new(
             crate::menu::style::CVAR,
             crate::menu::style::MenuStyle::DEFAULT_NAME,
             archive,
             "Menu layout: sjk (the SJK UI) or classic (after the original Jedi Academy menus)",
+        ),
+        CvarDefinition::new(
+            crate::menu::classic::own_look::CVAR,
+            crate::menu::classic::own_look::NAMES[0],
+            archive,
+            "The classic menus' look: retail (the game's own artwork and colours); sjk, the own look, is shelved for now and draws retail's too",
         ),
         CvarDefinition::new(
             crate::menu::sjk::theme::CVAR,
@@ -724,7 +742,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::toy_sounds::Toy::WheelOfDoom.cvar(),
             true,
             archive,
-            "Play the WHEEL OF DOOM's sounds: its ticks, stop, laugh, fanfare and quacks (SJK)",
+            "Play the WHEEL OF DOOM's sounds: the Quack effect's quacks (SJK)",
         ),
         CvarDefinition::new(
             crate::toy_sounds::Toy::Quests.cvar(),
@@ -1271,6 +1289,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "The finisher your saber kills play, by unlock id (finisher_disintegrate), worn once your SJK profile holds it; empty for none",
         ),
         CvarDefinition::new(
+            crate::finishers::SHOW_CVAR,
+            true,
+            archive,
+            "Finishers play on saber kills, yours and other players' (0: the body is left as the game leaves it, on this PC; others still see the one you wear)",
+        ),
+        CvarDefinition::new(
             crate::saber_sound_choice::CVAR,
             "",
             archive,
@@ -1353,12 +1377,6 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Show the SJK Launcher notice at the top left of the SJK UI's main page when this computer has no SJK Launcher: a link to its release page (0 hides it, as its x does)",
-        ),
-        CvarDefinition::new(
-            crate::support_links::CVAR,
-            true,
-            archive,
-            "Show Support SJK at the top left of the SJK UI's main page: links to SJK's GitHub Sponsors and Ko-fi pages (0 hides it, as its x does)",
         ),
         CvarDefinition::new(
             crate::playstyle_card::CVAR,
@@ -1729,6 +1747,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             true,
             archive,
             "Display the bound scoreboard",
+        ),
+        CvarDefinition::new(
+            crate::chat::style::CVAR,
+            crate::chat::style::Style::DEFAULT_NAME,
+            archive,
+            "Chat style: sjk (SJK's chat field with its channel buttons, sender cards and marks), or classic (JoF EJK's: the message field at the top left, the chat box as EternalJK draws it)",
         ),
         CvarDefinition::new(
             crate::scoreboard::style::CVAR,

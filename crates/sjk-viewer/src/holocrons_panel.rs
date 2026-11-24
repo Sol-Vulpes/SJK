@@ -447,8 +447,6 @@ pub(crate) struct Panel {
     refreshed: Option<Instant>,
     /// The opening's ceremony, or the wait for the hub, while it shows.
     ceremony: Option<opening::Ceremony>,
-    /// Bonus covers reveal after the ordinary prizes, within the same opening.
-    bonus_prizes: Vec<opening::Prize>,
     /// The loot table shows over the page.
     loot: bool,
     /// Whether the loot table shows the Beta season's page ([`crate::seasons`]).
@@ -504,7 +502,6 @@ impl Panel {
             data: Data::nothing(State::Waiting),
             refreshed: None,
             ceremony: None,
-            bonus_prizes: Vec::new(),
             loot: false,
             loot_beta: false,
             ask_all: None,
@@ -1078,13 +1075,7 @@ mod tests {
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,
-            junk: None,
-            junk_sale: None,
-            kyber_find: None,
-            catch_quests: None,
             wheel_of_doom: None,
-            wheel_of_doom_revision: 0,
-            wheel_of_doom_spin: None,
             mystery_box_doom: None,
             box_hunt: None,
             quests: None,
@@ -1133,7 +1124,6 @@ mod tests {
             key_id: "0123456789abcdef".into(),
             key: String::new(),
             name: "Sol".into(),
-            banner: "".into(),
             bio: String::new(),
             verified: false,
             tick: sjk_identity::Tick::None,
@@ -1320,7 +1310,6 @@ mod tests {
 
     fn opened(tier: &str, finish: &str) -> sjk_identity::Opened {
         sjk_identity::Opened {
-            banner: None,
             holocron: 3,
             tier: tier.to_owned(),
             card: Some(sjk_identity::OpenedCard {
@@ -1401,7 +1390,7 @@ mod tests {
     }
 
     /// Any prize newer than this client shows as a fallback of its kind (Kushina,
-    /// 30/10/2026: "again new shader bug"): a tag, toy or banner it does not know says
+    /// 30/10/2026: "again new shader bug"): a tag or toy it does not know says
     /// what it is, and a card of a rarity it does not know still shows, not dropped.
     #[test]
     fn any_prize_this_client_does_not_know_shows_by_its_kind() {
@@ -1419,7 +1408,6 @@ mod tests {
         for (id, kind) in [
             ("tag_from_the_future", "tag"),
             ("toy_from_the_future", "toy"),
-            ("banner_from_the_future", "profile banner"),
             ("saber_from_the_future", "kyber"),
             ("something_else", "prize"),
         ] {

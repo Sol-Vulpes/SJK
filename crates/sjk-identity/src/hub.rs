@@ -500,12 +500,6 @@ pub trait Hub: Send {
             "this hub client does not send pictures".to_owned(),
         ))
     }
-    /// Equip a profile banner, or empty to unequip; the hub validates ownership.
-    fn set_banner(&mut self, _identity: &Identity, _id: &str) -> Result<Profile, HubError> {
-        Err(HubError::Protocol(
-            "profile banners need an updated hub".to_owned(),
-        ))
-    }
     /// Set the identity's name emoji (`crate::name_emoji`, checked; empty takes it
     /// away), leaving its bio and name as they are; the hub answers with the key's
     /// profile.
@@ -555,9 +549,7 @@ pub trait Hub: Send {
     ) -> Result<(), HubError>;
     /// [`Hub::claim`] with what the player did since the last accepted claim (`play`,
     /// 03/11/2026: the hub counts the time by real play), sent only with `active`. A hub
-    /// client that does not send signals claims without them. Answers what the claim's
-    /// answer brought beside its `ttl` (since 15/11/2026: a kyber find, the day's catch
-    /// quests; [`crate::catch`]).
+    /// client that does not send signals claims without them.
     fn claim_with(
         &mut self,
         identity: &Identity,
@@ -566,9 +558,8 @@ pub trait Hub: Send {
         name: &str,
         active: bool,
         _play: Option<&crate::wire::PlaySignals>,
-    ) -> Result<crate::catch::ClaimExtras, HubError> {
+    ) -> Result<(), HubError> {
         self.claim(identity, server, slot, name, active)
-            .map(|()| crate::catch::ClaimExtras::default())
     }
     /// How far the identity's key is from its next holocron (`GET /v1/holocrons`).
     fn holocrons(&mut self, _identity: &Identity) -> Result<HolocronState, HubError> {
@@ -745,26 +736,6 @@ pub trait Hub: Send {
         ))
     }
 
-    /// Whether this key may sell fished junk, the prices and what is still payable
-    /// today (`GET /v1/fishing/junk`, 03/11/2026).
-    fn junk_status(&mut self, _identity: &Identity) -> Result<crate::junk::JunkStatus, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not read junk selling".to_owned(),
-        ))
-    }
-
-    /// Sell `held`, pieces of fished junk by id (`POST /v1/fishing/junk/sell`,
-    /// 03/11/2026): the hub answers what it took.
-    fn sell_junk(
-        &mut self,
-        _identity: &Identity,
-        _held: &std::collections::BTreeMap<String, u32>,
-    ) -> Result<crate::junk::JunkSold, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not sell junk".to_owned(),
-        ))
-    }
-
     /// Every placed mystery box, the price and the odds (`GET /v1/mystery-boxes`,
     /// 27/10/2026).
     fn mystery_boxes(
@@ -876,38 +847,6 @@ pub trait Hub: Send {
     ) -> Result<crate::wheel_of_doom::Wheel, HubError> {
         Err(HubError::Protocol(
             "this hub client does not read the wheel of doom".to_owned(),
-        ))
-    }
-
-    /// Spin placed WHEEL OF DOOM `wheel`, the player on `server`
-    /// (`POST /v1/wheel-of-doom/spin`; a DOOM coin since 11/11/2026).
-    fn spin_wheel_of_doom(
-        &mut self,
-        _identity: &Identity,
-        _wheel: i64,
-        _server: &str,
-    ) -> Result<crate::wheel_of_doom::SpinAnswer, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not spin the wheel of doom".to_owned(),
-        ))
-    }
-
-    /// SJK's creator: place a WHEEL OF DOOM (`POST /v1/creator/wheel-of-doom`, a box's
-    /// body); answers its id.
-    fn place_wheel_of_doom(
-        &mut self,
-        _identity: &Identity,
-        _placed: &crate::mystery_box::MysteryBox,
-    ) -> Result<i64, HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not place wheels of doom".to_owned(),
-        ))
-    }
-
-    /// SJK's creator: remove WHEEL OF DOOM `id` (`POST /v1/creator/wheel-of-doom/remove`).
-    fn remove_wheel_of_doom(&mut self, _identity: &Identity, _id: i64) -> Result<(), HubError> {
-        Err(HubError::Protocol(
-            "this hub client does not remove wheels of doom".to_owned(),
         ))
     }
 
@@ -1923,15 +1862,6 @@ impl Hub for HttpHub {
         parse(self.send(Some(identity), "PUT", "/v1/profile", Some(body))?)
     }
 
-    fn set_banner(&mut self, identity: &Identity, id: &str) -> Result<Profile, HubError> {
-        parse(self.send(
-            Some(identity),
-            "PUT",
-            "/v1/profile/banner",
-            Some(json!({"id": id})),
-        )?)
-    }
-
     fn set_emoji(&mut self, identity: &Identity, emoji: &str) -> Result<Profile, HubError> {
         let body = json!({ "emoji": emoji });
         parse(self.send(Some(identity), "PUT", "/v1/profile", Some(body))?)
@@ -2121,7 +2051,6 @@ impl Hub for HttpHub {
         active: bool,
     ) -> Result<(), HubError> {
         self.claim_with(identity, server, slot, name, active, None)
-            .map(|_| ())
     }
 
     fn claim_with(
@@ -2132,10 +2061,10 @@ impl Hub for HttpHub {
         name: &str,
         active: bool,
         play: Option<&crate::wire::PlaySignals>,
-    ) -> Result<crate::catch::ClaimExtras, HubError> {
+    ) -> Result<(), HubError> {
         let body = claim_body_with(server, slot, name, active, play);
         self.send(Some(identity), "POST", "/v1/claim", Some(body))
-            .map(|answer| crate::catch::ClaimExtras::of(&answer))
+            .map(|_| ())
     }
 
     fn holocrons(&mut self, identity: &Identity) -> Result<HolocronState, HubError> {
@@ -2414,52 +2343,6 @@ impl Hub for HttpHub {
         parse(self.send(Some(identity), "GET", "/v1/wheel-of-doom", None)?)
     }
 
-    fn spin_wheel_of_doom(
-        &mut self,
-        identity: &Identity,
-        wheel: i64,
-        server: &str,
-    ) -> Result<crate::wheel_of_doom::SpinAnswer, HubError> {
-        parse(self.send(
-            Some(identity),
-            "POST",
-            "/v1/wheel-of-doom/spin",
-            Some(json!({ "wheel": wheel, "server": server })),
-        )?)
-    }
-
-    fn place_wheel_of_doom(
-        &mut self,
-        identity: &Identity,
-        placed: &crate::mystery_box::MysteryBox,
-    ) -> Result<i64, HubError> {
-        let answer = self.send(
-            Some(identity),
-            "POST",
-            "/v1/creator/wheel-of-doom",
-            Some(json!({
-                "map": placed.map,
-                "checksum": placed.checksum,
-                "server": placed.server,
-                "origin": placed.origin,
-                "yaw": placed.yaw,
-            })),
-        )?;
-        answer["id"]
-            .as_i64()
-            .ok_or_else(|| HubError::Protocol("a placed wheel without its id".to_owned()))
-    }
-
-    fn remove_wheel_of_doom(&mut self, identity: &Identity, id: i64) -> Result<(), HubError> {
-        self.send(
-            Some(identity),
-            "POST",
-            "/v1/creator/wheel-of-doom/remove",
-            Some(json!({ "id": id })),
-        )
-        .map(|_| ())
-    }
-
     fn raygun_hit(&mut self, identity: &Identity, server: &str, by: u8) -> Result<u64, HubError> {
         let answer = self.send(
             Some(identity),
@@ -2468,20 +2351,6 @@ impl Hub for HttpHub {
             Some(json!({ "server": server, "by": by })),
         )?;
         Ok(answer["hit"]["credits"].as_u64().unwrap_or(0))
-    }
-
-    fn junk_status(&mut self, identity: &Identity) -> Result<crate::junk::JunkStatus, HubError> {
-        parse(self.send(Some(identity), "GET", "/v1/fishing/junk", None)?)
-    }
-
-    fn sell_junk(
-        &mut self,
-        identity: &Identity,
-        held: &std::collections::BTreeMap<String, u32>,
-    ) -> Result<crate::junk::JunkSold, HubError> {
-        let body = crate::junk::sale_body(held)
-            .ok_or_else(|| HubError::Protocol("no junk to sell".to_owned()))?;
-        parse(self.send(Some(identity), "POST", "/v1/fishing/junk/sell", Some(body))?)
     }
 
     fn open_mystery_box(
@@ -3731,7 +3600,7 @@ mod tests {
             claim_body_with("1.2.3.4:29070", 3, "Sol", true, Some(&play)),
             json!({"server": "1.2.3.4:29070", "slot": 3, "name": "Sol", "active": true,
                 "play": {"moved": 900, "attacks": 3, "hits": 2, "hurt": 0, "kills": 0,
-                    "deaths": 0, "bites": 0, "rocks": 0}})
+                    "deaths": 0}})
         );
         assert_eq!(
             claim_body_with("1.2.3.4:29070", 3, "Sol", false, Some(&play)),

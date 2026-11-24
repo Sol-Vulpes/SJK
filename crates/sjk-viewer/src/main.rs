@@ -35,7 +35,6 @@ mod capture;
 mod card_outline;
 mod card_scenes;
 mod cards;
-mod catch_book;
 mod cgame_options;
 mod chat;
 mod chat_ban;
@@ -55,7 +54,6 @@ mod duel_visibility;
 mod economy;
 mod editions;
 mod entity_view;
-mod fishing;
 mod forge_alert;
 mod forge_fuse;
 mod kyber;
@@ -87,6 +85,7 @@ mod cosmetics;
 mod crash_report;
 mod crosshair_scan;
 mod cut_trace;
+mod cvar_restore;
 mod damage_feedback;
 mod day_sky_guard;
 mod decal_marks;
@@ -144,6 +143,7 @@ mod charge_flash;
 mod devmap_bar;
 mod e2e_whisper_card;
 mod e2e_whispers;
+mod ejk_mode;
 mod emote_end_debug;
 mod emote_filters;
 mod emote_help;
@@ -208,7 +208,6 @@ mod menu_stage;
 mod menu_widgets;
 mod menu_world;
 mod mimic;
-mod mining;
 mod missile_trails;
 mod mod_notice_card;
 mod model_materials;
@@ -370,6 +369,7 @@ mod session_transition;
 mod settings;
 mod settings_icons;
 mod settings_usage;
+mod setup_pictures;
 mod shared_geometry;
 mod sjk_chat_field;
 mod sjk_chat_frame;
@@ -387,7 +387,6 @@ mod status_balloons;
 mod status_balloons_frame;
 mod status_bar;
 mod stock_blades;
-mod support_links;
 mod symbols;
 mod tactical;
 mod terms;
@@ -751,8 +750,7 @@ struct GpuState {
     map_edits: map_edits::State,
     /// The mystery boxes standing on the loaded map (`mystery_box`).
     mystery_boxes: mystery_box::MysteryBoxes,
-    /// The WHEEL OF DOOM toy (`toy_wheelofdoom`): the wheels spinning and the spinner's
-    /// effects.
+    /// The WHEEL OF DOOM's effects on the player who rolled a DOOM coin (`wheel_of_doom`).
     wheel_of_doom: wheel_of_doom::WheelOfDoom,
     /// What the player's Use key does at what they face, by the crosshair (`use_prompt`).
     use_prompt: use_prompt::UsePrompt,
@@ -3170,7 +3168,6 @@ impl GpuState {
         self.static_models.append_instances(&mut self.object_groups);
         self.append_map_edit_instances();
         self.append_mystery_box_instances();
-        self.append_wheel_of_doom_instances();
         self.append_toy_master_instances();
         pickups::simple::append_frame(self, visual_now);
         // The charge glow on the view gun's muzzle (`cg_weapons.c` charge bits), after

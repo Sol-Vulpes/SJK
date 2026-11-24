@@ -99,10 +99,6 @@ impl Tick {
 /// A player's public profile as the hub serves it.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Profile {
-    /// Equipped cover id, shared across UI snapshots instead of allocating on clone.
-    /// Empty on older hubs or when unequipped; JSON remains an ordinary string.
-    #[serde(default, deserialize_with = "shared_banner")]
-    pub banner: std::sync::Arc<str>,
     /// First 16 hex digits of the SHA-256 of the public key.
     pub key_id: String,
     /// The public key, unpadded base64url.
@@ -233,13 +229,6 @@ pub struct GifTagMade {
     /// When it was made, in Unix seconds.
     #[serde(default)]
     pub made: u64,
-}
-
-/// Decode once on the worker; cloning profiles shares immutable banner storage.
-fn shared_banner<'de, D: serde::Deserializer<'de>>(
-    input: D,
-) -> Result<std::sync::Arc<str>, D::Error> {
-    String::deserialize(input).map(std::sync::Arc::from)
 }
 
 impl Profile {
@@ -409,9 +398,6 @@ pub struct OpenedCard {
 /// What opening one holocron brought.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Opened {
-    /// Independent profile-banner bonus, beside the ordinary prize; absent on old hubs.
-    #[serde(default)]
-    pub banner: Option<OpenedUnlock>,
     /// The holocron opened.
     pub holocron: u64,
     /// Its tier's wire id.
@@ -445,9 +431,10 @@ pub struct Opened {
 /// One more prize of a Beta holocron ([`Opened::extra`]).
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct OpenedExtra {
-    /// `shader`, `tag`, `shards`, `banner` or `card`.
+    /// `shader`, `tag`, `shards` or `card`; a hub may still say `banner` (profile
+    /// banners, removed from the client on 23/11/2026), which the client leaves out.
     pub kind: String,
-    /// The shader, tag or banner.
+    /// The shader or tag.
     #[serde(default)]
     pub unlock: Option<OpenedUnlock>,
     /// A bonus card (without credits).
@@ -625,16 +612,6 @@ pub struct ActivityState {
     /// The distance a claim's moves must add up to, in game units, to count as moving.
     #[serde(default)]
     pub move_min: u64,
-    /// When the key last hooked a fishing bite, unix seconds; 0 never (04/11/2026).
-    #[serde(default)]
-    pub last_bite: i64,
-    /// How long a hooked bite keeps a player standing at the water earning, in seconds;
-    /// 0 from hubs that do not count fishing.
-    #[serde(default)]
-    pub fishing_window: i64,
-    /// The percent a claim earns while fishing.
-    #[serde(default)]
-    pub fishing: u32,
 }
 
 /// What the player did since the last accepted claim, sent with an active claim
@@ -654,14 +631,6 @@ pub struct PlaySignals {
     pub kills: u64,
     /// Deaths at another player's hand.
     pub deaths: u64,
-    /// Bites of the fishing toy hooked in time (04/11/2026): standing at the water earns
-    /// while they come.
-    #[serde(default)]
-    pub bites: u64,
-    /// Boulders of the mining toy broken (15/11/2026): the hub counts them for kyber
-    /// finds and the daily catch quests; they set no pace.
-    #[serde(default)]
-    pub rocks: u64,
 }
 
 impl PlaySignals {
@@ -673,8 +642,6 @@ impl PlaySignals {
         self.hurt = self.hurt.saturating_add(other.hurt);
         self.kills = self.kills.saturating_add(other.kills);
         self.deaths = self.deaths.saturating_add(other.deaths);
-        self.bites = self.bites.saturating_add(other.bites);
-        self.rocks = self.rocks.saturating_add(other.rocks);
     }
 
     /// Whether any fight shows: a hit, a hurt, a kill or a death.
@@ -686,20 +653,6 @@ impl PlaySignals {
 /// The economy's ability that says the hub breaks down, crafts and trades tag copies
 /// (03/11/2026, Blep's idea).
 pub const TAG_COPIES_ABILITY: &str = "tag_copies";
-
-/// The economy's ability that says the hub breaks profile banners down through
-/// `POST /v1/unlocks/shatter` (05/11/2026, headshotsmcgee117's idea), for
-/// [`EconomyTables::banners`].
-pub const BANNER_SHATTER_ABILITY: &str = "banner_shatter";
-
-/// What breaking a profile banner's copy gives (`economy.banners`): `shatter` by the
-/// banner's tier, common to mythical.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
-pub struct BannerTables {
-    /// Shards by tier.
-    #[serde(default)]
-    pub shatter: Vec<u64>,
-}
 
 /// One copy of a tag in a finish (`normal`, `holo`, `solar`), as the tag requests name it.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, serde::Serialize)]
@@ -931,13 +884,10 @@ pub struct SeasonBonus {
     /// A pile of kyber shards.
     #[serde(default)]
     pub shards: u32,
-    /// A profile banner.
-    #[serde(default)]
-    pub banner: u32,
     /// A second card.
     #[serde(default)]
     pub card: u32,
-    /// The whole the shares are out of (less than 1000 while banners do not drop).
+    /// The whole the shares are out of.
     #[serde(default = "thousand")]
     pub scale: u32,
 }
@@ -1044,10 +994,6 @@ pub struct EconomyTables {
     /// from hubs before.
     #[serde(default)]
     pub tags: Option<TagTables>,
-    /// What breaking a banner's copy gives (05/11/2026, with [`BANNER_SHATTER_ABILITY`]);
-    /// `None` from hubs before.
-    #[serde(default)]
-    pub banners: Option<BannerTables>,
     /// The duplicates one fusion takes, by the input shaders' tier, common to mythical, 0
     /// for a tier that cannot fuse (10/11/2026, with [`FUSE_ABILITY`]): that many
     /// duplicates of one tier make one shader of the next the person lacks. Empty from
@@ -1061,15 +1007,6 @@ pub struct EconomyTables {
 }
 
 impl EconomyTables {
-    /// The shards a copy of a banner of tier index `tier` breaks into, when the hub breaks
-    /// banners down (`None` from a hub that does not).
-    pub fn banner_yield(&self, tier: usize) -> Option<u64> {
-        if !self.can(BANNER_SHATTER_ABILITY) {
-            return None;
-        }
-        self.banners.as_ref()?.shatter.get(tier).copied()
-    }
-
     /// Whether the hub's trade can do `ability` (`shatter_last`, `shatter_duplicates`).
     pub fn can(&self, ability: &str) -> bool {
         self.abilities.iter().any(|known| known == ability)
@@ -1328,9 +1265,6 @@ pub struct HolocronBuyAnswer {
 /// share per mille.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct LootTier {
-    /// Independent banner bonus chance per mille, absent on older hubs.
-    #[serde(default)]
-    pub banner: u32,
     /// The tier's wire id.
     pub tier: String,
     /// How often a drop is this tier.
@@ -2630,18 +2564,34 @@ mod tests {
         assert_eq!(caught.activity.unwrap().pace, Some(50));
         let economy = caught.economy.unwrap();
         assert!(economy.can(TAG_COPIES_ABILITY));
-        // A hub before banner break down (05/11/2026) gives none, a later one its table.
-        assert_eq!(economy.banner_yield(1), None);
         assert_eq!(economy.tags.unwrap().yield_of(1, "holo"), Some(25));
+        // Profile banners were removed on 23/11/2026: a hub that still sends their
+        // break-down ability and table, a worn banner, a held one or a bonus roll's
+        // banner share is read as if it had not.
         let banners: EconomyTables = serde_json::from_str(
-            r#"{"abilities":["banner_shatter"],"banners":{"shatter":[2,5,12,30,75]}}"#,
+            r#"{"abilities":["banner_shatter","tag_copies"],"banners":{"shatter":[2,5,12,30,75]}}"#,
         )
         .unwrap();
-        assert_eq!(banners.banner_yield(1), Some(5));
-        assert_eq!(banners.banner_yield(9), None);
-        let unsaid: EconomyTables =
-            serde_json::from_str(r#"{"banners":{"shatter":[2,5,12,30,75]}}"#).unwrap();
-        assert_eq!(unsaid.banner_yield(1), None, "only with the ability");
+        assert!(banners.can(TAG_COPIES_ABILITY));
+        let worn: Profile = serde_json::from_str(
+            r#"{"key_id":"0123456789abcdef","key":"","name":"Player","bio":"","verified":false,
+                "created":1,"banner":"banner_jedi_archives",
+                "unlocks":[{"id":"banner_jedi_archives","granted":1,"count":2}]}"#,
+        )
+        .unwrap();
+        let bare: Profile = serde_json::from_str(
+            r#"{"key_id":"0123456789abcdef","key":"","name":"Player","bio":"","verified":false,
+                "created":1,"unlocks":[{"id":"banner_jedi_archives","granted":1,"count":2}]}"#,
+        )
+        .unwrap();
+        assert_eq!(worn, bare);
+        let roll: SeasonBonus =
+            serde_json::from_str(r#"{"shader":0,"tag":250,"shards":250,"banner":250,"card":250}"#)
+                .unwrap();
+        assert_eq!(
+            (roll.tag, roll.shards, roll.card, roll.scale),
+            (250, 250, 250, 1000)
+        );
         let spent: HolocronState = serde_json::from_str(
             r#"{"progress_secs":0,"every_secs":1800,"catchup":{"pool":4,"left":0,"every_secs":900},
                 "activity":{"pace":null}}"#,
@@ -2770,7 +2720,7 @@ mod tests {
             r#"{"progress_secs":0,"every_secs":1800,"seasons":{"beta":[{"tier":"mythical",
             "rarity":[0,0,500,380,120],"finish":[0,850,150],"credits":[250,350],
             "shader_floor":"legendary","shader_tier":[50,150,350,330,120],
-            "bonus":[{"shader":0,"tag":250,"shards":250,"banner":0,"card":250,"scale":750}],
+            "bonus":[{"shader":0,"tag":250,"shards":250,"card":250,"scale":750}],
             "fresh_faces":true}],"pity":{"grand":{"every":15,"since":3},
             "mythical":{"every":80,"since":40}}}}"#,
         )

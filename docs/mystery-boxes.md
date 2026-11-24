@@ -1,14 +1,43 @@
 # Mystery boxes
 
-**Since 20/11/2026 the Force box** (Sol: "Star Wars themed, not a wooden box, more like an
+**Since 23/11/2026 the box is an ancient Sith tomb** (Sol: "more of an ancient sith tomb
+thing, dark, and with red effects, stone door sound when it opens"; it keeps the name Force
+box in game, and mystery box in the code, commands and hub). SJK's own, made by
+[mystery_box_model.py](../scripts/mystery_box_model.py) from noise and shapes, nothing
+taken from a game or a film (its glyphs are random strokes of no alphabet):
+
+- a sarcophagus of black basalt, 54 x 28 at its foot on two steps (80 x 41 on the floor),
+  its walls leaning in to a rim 27 units up, a horn of stone leaning in over each corner
+  to 47 units, a pilaster a quarter in from each end of the long sides;
+- cut into it and glowing red, pulsing slowly (and in the dynamic glow): a sigil in a
+  sunk disc on each side and end, glyphs either side of it and on the lid, lines of
+  light, a notched slit down each horn and pilaster, a few hot cracks; the stone takes
+  the world's light through a normal map of its joints and cuts;
+- a ridged lid in two slabs that meet along the ridge, a thin line of light on the seam.
+  Opening, the slabs lift 2.5 units off the rim, slide 10 apart and tip 5 degrees
+  outwards over 2.3 seconds, and shut the same way (`lid_slabs`; one model,
+  `mystery_box_lid.md3`, drawn twice, the second turned half round);
+- inside, stone lit from below, and while the lid is parted a sheet of embers and two
+  sleeves of red fire that rise with the slabs (`mystery_box_fire.md3`, stretched up by
+  how far the lid has parted); what the roll shows waits 0.9 s inside for the lid, then
+  rises to 58 units; the words stand 84 up;
+- a faint red halo rising 64 units over it, as before, so a box is found from afar.
+
+Its sounds are still Jedi Academy's own, by path: `movers/doors/door_stone_start` as the
+seal breaks, `door_stone_move` (2.4 s of stone grinding) while the slabs part and again
+while they shut, `door_stone_stop` as they come to rest either way; Force speed's hum
+still runs through the roll, and the take, win, jackpot and empty sounds are those of
+20/11/2026. Force pull and push no longer play.
+
+**From 20/11/2026 to 23/11/2026 the Force box** (Sol: "Star Wars themed, not a wooden box, more like an
 ancient Jedi Force box, with its own sounds from Star Wars"; the code, commands and hub keep
-the name mystery box). Its look is a placeholder until Sol's own model: the same chest,
+the name mystery box). Its look was a placeholder: the same chest,
 repainted in temple stone and old gold, a glowing blue rune of SJK's own on each half of its
-long sides, grooves of blue light along them and a blue halo. Sol's model only has to keep
+long sides, grooves of blue light along them and a blue halo. A model had only to keep
 the files' contract ([the assets' README](../crates/sjk-viewer/assets/mystery_box/README.md):
 the chest 60 x 26 x 24 at its bottom's middle, front +X, the halo a second surface; the lid
-on its hinge reaching +X; shaders `models/sjk/mystery_box` and `_halo`). Its sounds are Jedi
-Academy's own, by path: Force pull opens it, Force speed's hum runs through the roll (5.14 s,
+on its hinge reaching +X; shaders `models/sjk/mystery_box` and `_halo`). Its sounds were Jedi
+Academy's own, by path: Force pull opened it, Force speed's hum runs through the roll (5.14 s,
 the roll 5.2), a Force push shuts it, `protecthit` takes the prize, `interface/secret_area`
 greets the jackpot and `noforce` nothing; the bundled music box tune and the extras pack's
 opening, roll and closing are no longer played (the extras laugh is). It also takes the
@@ -24,7 +53,7 @@ around. Code: [mystery_box.rs](../crates/sjk-viewer/src/mystery_box.rs), the hub
 No game server knows of a box. It is drawn by SJK clients only, has no collision (players
 walk through it), and players on other clients see someone pressing Use at nothing.
 
-The box is SJK's own (bundled, `assets/mystery_box`, made by
+The first box was SJK's own too (bundled, `assets/mystery_box`, made by
 [mystery_box_model.py](../scripts/mystery_box_model.py)): a long wooden chest bound in
 iron, 60 x 26 x 24 units, a pale question mark glowing (pulsing) on each half of its two
 long sides, and a lid hinged at the back that swings open while it rolls and closes once
@@ -174,7 +203,7 @@ hunters in the chat once the roll stops on the bear (the hub's box hunt event
 `laugh_<opener>_<to>_<credits>`, which arrives at the opening, held for the roll).
 
 **The teddy bear brings a DOOM coin** (Sol, 11/11/2026): the opener of a box that blows up
-gets a DOOM coin besides, the only way to spin a [WHEEL OF DOOM](wheel-of-doom.md); the
+gets a DOOM coin besides, to roll at a box for the [WHEEL OF DOOM](wheel-of-doom.md)'s outcomes; the
 centre says "+1 DOOM coin".
 
 **A holocron** (`holocron`, 28/10/2026): the roll stops on the tier's holocron, and the hub
@@ -255,6 +284,22 @@ hunt. Among the players of a server with it on and in play (at least 3), the hub
 mark at random for 3 minutes, one mark at most every 10 minutes (Sol, 29/10/2026: from
 one pick to the next; the hunt rests in between, also when the mark is killed or leaves).
 
+**Nobody away is tagged** (Sol, 23/11/2026: "avoid ever getting someone afk or typing
+getting tagged for the hunt"). Three holes let it happen, and each is closed:
+
+- idle meant two minutes without input, so a player who had walked off a minute ago was
+  picked. For the hunt a player is away after 15 seconds without a key or the mouse
+  (`hunt::IDLE`; holocrons keep their two minutes);
+- a player who opened the chat as the hub made its pick was picked on a read a moment
+  old. The mark's client reads the hunt at once on being told and says it is away; the
+  hub (branch `hunt-in-play`) hands a mark found away within 20 seconds of the pick on
+  at once to another hunter in play, for a whole 3 minutes, or calls the mark off when
+  fewer than 3 others are in play and tries again a minute later;
+- a client that had stopped answering was picked on what it said up to a minute before.
+  The hub's pick now wants a read 30 seconds old at most (reads come every 20).
+
+The second and third need the hub's `hunt-in-play`; without it the first alone applies.
+
 **In play** (Sol, 31/10/2026; before, 2 players with the toy on, away or not): every read
 of the hunt says whether the player is away: typing in the chat, in a menu, the console
 or a dialog, spectating or following someone, at the intermission, or idle two minutes
@@ -264,6 +309,20 @@ hunters in play; a hunter whose reads stopped for a minute counts as away. A mar
 a minute since being picked hands it on: another hunter in play becomes the mark at once,
 for a whole 3 minutes, told as any new mark is, when 3 others are in play; else they stay
 the mark.
+
+**The Sith look** (Sol, 23/11/2026: "give a new look to the hunt, the alert ... sith
+themed", the box being a Sith tomb): the tomb marks a player. The card at the top centre
+is a plate of black basalt pointed at both ends, edged in glowing red, a line of light
+along its top and bottom and the tomb's split diamond at each end; it says "THE TOMB'S
+MARK" (with the hunters left) over the name, or, blood red, "THE TOMB HAS CHOSEN" over
+"YOU ARE THE MARK". It arrives as an alert: 1.9 times its size and 120 pixels lower for
+2.6 seconds, then it shrinks up into its place in half a second, its edge flashing for
+the first 2; on the mark's own screen the four edges flush red meanwhile. The alarm is
+Force rage's roar (`sound/weapons/force/rage.mp3`, retail; `mpalarm` before). Over the
+mark's head the word is "MARKED", and the arrow to them is a barbed blade. The centre
+print reads "The tomb has marked you!", the hunters' chat line "the tomb has marked
+<name>". The toy keeps its name, Box hunt. What follows describes the hunt as it was
+first drawn; the rules are unchanged.
 
 The mark is told in the centre of the screen ("You are the mark!"),
 the other hunters by a chat line, and they see "MARK" in red over the mark's head

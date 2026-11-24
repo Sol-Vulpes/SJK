@@ -224,7 +224,8 @@ includes:
   map's MD3 models as a note's subject;
 - donations (13/10/2026): the Supporter medal, given on its own for more than 1 euro on
   Ko-fi; since 26/10/2026, Support SJK at the top left of the main page, with links to
-  SJK's GitHub Sponsors and Ko-fi pages and a cross that hides it for good;
+  SJK's GitHub Sponsors and Ko-fi pages and a cross that hides it for good (shelved
+  07/11/2026, removed 23/11/2026);
 - footprints and dust on sand, snow and mud, steps on jumps and landings, and props a
   map hangs on movers drawn, such as t2_rancor's bar tables (13/10/2026);
 - material maps generation 7 (13/10/2026): the generator finds its overrides again and
@@ -528,6 +529,38 @@ includes:
 - door and lift shadows on lamp light within a budget (09/11/2026, Sol's request): the
   lamp cache is baked again 16 chunks of 64×64 texels a frame at most, only where a
   mover's shadow changed, so `T2_Rancor` no longer spends 14 ms a frame on it;
+- the classic menus' own look (21/11/2026): `ui_classicLook sjk` draws the classic pages
+  without retail artwork and in the theme's colours, by one colour table and a pass over
+  each finished page (shelved for v1 on 23/11/2026);
+- EJK mode (22/11/2026): `ui_ejkMode`, one switch that sets JoF EJK's look from one
+  table of settings and gives the player's own back, and `cg_finishers`;
+- the classic chat style (23/11/2026): `cg_chatStyle classic`, JoF EJK's message field and
+  chat box drawn from its source (`cl_console.cpp`, `cg_draw.c`, its `beta`'s SJK chat
+  lines), set by EJK mode; SJK's own chat stays the default;
+- First setup in steps with pictures (23/11/2026): the pop-up asks one thing at a time
+  from a table of steps, with picture buttons for the two looks (the same moment of a
+  match as SJK and as EJK mode draw it), the themes and the graphics presets (the
+  client's own renders of one spot under each), the player's name typed in it with its
+  colours, a recap before Done, which finishes it; it opens in every menu style and
+  keeps open when a look changes the style under it;
+- the modes that hold settings told of one another (23/11/2026): EJK mode, Tactical and
+  `renderer vanilla` come on and go off in any order and the player's own settings come
+  back (`cvar_restore.rs`);
+- the named themes and First setup's look (21/11/2026): Solar, Sith (a new red palette),
+  Jedi and Custom, shown as four tiles in their own colours at the top of First setup,
+  which opens on the look (theme, hue, saturation, menu style);
+- the Settings pictures and sections (21/11/2026): every settings icon drawn by one script
+  (`scripts/settings_icons_draw.py`: a computed metal disc and a Phosphor Icons symbol),
+  64 of them, for the categories and their sub-headings; HUD, Gameplay, Sound, Chat and
+  Interface cut into short sections by subject (`settings/sections.rs`), each heading
+  wearing its picture; Page Up and Page Down move a section at a time;
+- the smarter Settings controls (21/11/2026), shaped by the hub's anonymous settings
+  usage: named stops with Custom for the FPS caps, Away after, the prediction smoothing,
+  Rate and Snapshots; named choices for the crosshair, overhead names, nameplate bars
+  and Empower glow; units, a default mark and loudness volumes on the sliders; rows that
+  do nothing while another setting is off dimmed and saying what they need; a search
+  that forgives typos, knows other words and a Russian keyboard layout, and leads with
+  its best matches;
 - the status bar (15/11/2026, docked to both edges and on by default 16/11/2026, one bar
   at the bottom holding both since 21/11/2026): a thin bar along the bottom with the player's credits, kyber shards, dormant kybers and
   DOOM coins by their icons, kyber, effects, weapons, toys, the time and the date, and
@@ -817,7 +850,9 @@ merged into SJK
 - #274 each predicted rider and vehicle leaves out its own pilot or chassis, as in OpenJK.
 - #316 SJK chat: six shared emoji reactions on public messages.
 - #319 profile banners: collectible covers on the Profile and player card, Collection >
-  Banners, a bonus roll on holocron openings once the hub turns them on.
+  Banners, a bonus roll on holocron openings once the hub turns them on. Taken out of
+  the game on 08/11/2026 as unfinished and removed from the client on 23/11/2026, ahead
+  of v1; the work is credited as it was done.
 - #287 Lugormod v3 servers: own movement predicted as the server moves the player (scale,
   stand-up clearance, FFA admin jetpack, baton rolls).
 
@@ -1056,7 +1091,8 @@ into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author
 - #355 Loadouts on the Shaders tab opens its card again (hub report #245).
 - #357 sharpening (`r_sharpen`, RCAS), after Lex's idea.
 - #358 console aliases (`alias`, `unalias`, `aliases.cfg`), after Lex's idea.
-- #359 profile card and page: no cover for the neutral banner, round corners for a worn one.
+- #359 profile card and page: no cover for the neutral banner, round corners for a worn one
+  (banners removed 23/11/2026; the card without a cover stays).
 - #360 the whisper recipient on its own line, stepping and picking between whisperers, after
   Creo's idea.
 - #382 the Toys page's heading counted from the toys, so a new one cannot leave it behind
@@ -1089,7 +1125,8 @@ into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author
 - #365 the Quests toy: social quests among players who opt in, won as an Echo within the
   day's caps, after wonner67's idea.
 - #376 chroma shader blades take a white, grey or pale custom colour, after Dante's idea.
-- #369 banners break down for kyber shards, after headshotsmcgee117's idea.
+- #369 banners break down for kyber shards, after headshotsmcgee117's idea (banners
+  removed 23/11/2026).
 
 His Peek work in #199 (closed 24/10/2026, not merged) shaped the Drone toy: a player is
 asked before being peeked, told who watches, and can end it. His #206 (closed 25/10/2026,
@@ -1401,7 +1438,11 @@ OpenJK (`codemp`), EternalJK, JoF EJK and TaystJK/jaPRO are compatibility
 references for Jedi Academy behaviour; SJK reimplements that behaviour and does
 not include their code. The Jedi Knight II HUD's pictures
 (`crates/sjk-viewer/assets/hud/jk2`) are EternalJK's `hudfiles 2` graphics, by Bucky,
-used with Sol's approval. The bundled Inter fonts keep their
+used with Sol's approval. The settings icons' symbols
+(`crates/sjk-viewer/assets/settings`) are glyphs of Phosphor Icons, by the Phosphor Icons
+authors, under the [MIT License](crates/sjk-viewer/assets/settings/Phosphor-LICENSE.txt),
+drawn on SJK's own discs by `scripts/settings_icons_draw.py`. The classic menus' own look writes its side columns in Aurebesh AF, by AurekFonts,
+[public domain (CC0)](crates/sjk-viewer/assets/fonts/AurebeshAF-LICENSE.txt). The bundled Inter fonts keep their
 [license](crates/sjk-viewer/assets/fonts/LICENSE.txt), the console font, JetBrains
 Mono by The JetBrains Mono Project Authors, keeps its
 [SIL Open Font License](crates/sjk-viewer/assets/fonts/JetBrainsMono-OFL.txt), the SJK UI's

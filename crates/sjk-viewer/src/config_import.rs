@@ -1,8 +1,9 @@
 //! Importing a player's setup from another client: a `.cfg` file (Jedi Academy's
 //! `jampconfig.cfg`, EternalJK's or JA+'s) dropped on the window, named to
 //! `firstsetup import`, or one of the configs [`detect`] finds from the clients
-//! installed beside SJK, gives the player's name, model, field of view, FPS cap
-//! and key bindings, and what the frame rate meant for their movement
+//! installed beside SJK, gives the player's name, model, field of view, brightness
+//! (`r_gamma`, the washed-out look many EternalJK players keep), FPS cap and key
+//! bindings, and what the frame rate meant for their movement
 //! (`gameplay_fps.rs`). The Import page (`config_import_panel.rs`) lists what was
 //! found and copies the ticked parts; nothing else in the file is read or run.
 
@@ -18,6 +19,8 @@ pub(crate) enum Item {
     /// `model`, with the `char_color_*` tint when the file sets it.
     Model,
     Fov,
+    /// `r_gamma`: the game's brightness, the same curve in SJK (`post_color.rs`).
+    Brightness,
     /// `com_maxfps`: the frames drawn. The movement it gave is asked after
     /// (`gameplay_fps.rs`).
     FpsCap,
@@ -25,10 +28,11 @@ pub(crate) enum Item {
 }
 
 impl Item {
-    pub(crate) const ALL: [Self; 5] = [
+    pub(crate) const ALL: [Self; 6] = [
         Self::Name,
         Self::Model,
         Self::Fov,
+        Self::Brightness,
         Self::FpsCap,
         Self::Binds,
     ];
@@ -38,6 +42,7 @@ impl Item {
             Self::Name => "Name",
             Self::Model => "Model",
             Self::Fov => "Field of view",
+            Self::Brightness => "Brightness",
             Self::FpsCap => "FPS cap",
             Self::Binds => "Key bindings",
         }
@@ -52,6 +57,8 @@ pub(crate) struct Found {
     /// `char_color_red`, `_green` and `_blue`, copied with the model.
     pub(crate) colors: [Option<String>; 3],
     pub(crate) fov: Option<String>,
+    /// `r_gamma`, a finite number above 0 as written.
+    pub(crate) gamma: Option<String>,
     /// `com_maxfps`, 0 (uncapped) included.
     pub(crate) max_fps: Option<i64>,
     /// `cl_cmdratecap` (JoF EJK): on, its movement ran at 125 whatever its FPS.
@@ -74,6 +81,7 @@ impl Found {
             Item::Name => self.name.is_some(),
             Item::Model => self.model.is_some(),
             Item::Fov => self.fov.is_some(),
+            Item::Brightness => self.gamma.is_some(),
             Item::FpsCap => self.max_fps.is_some(),
             Item::Binds => !self.binds.is_empty(),
         }
@@ -90,6 +98,14 @@ impl Found {
             "model" if !value.trim().is_empty() => self.model = Some(value),
             "cg_fov" if value.trim().parse::<f64>().is_ok_and(|fov| fov > 0.0) => {
                 self.fov = Some(value.trim().to_owned());
+            }
+            "r_gamma"
+                if value
+                    .trim()
+                    .parse::<f64>()
+                    .is_ok_and(|gamma| gamma.is_finite() && gamma > 0.0) =>
+            {
+                self.gamma = Some(value.trim().to_owned());
             }
             "com_maxfps" => {
                 if let Ok(fps) = value.trim().parse::<i64>()
@@ -392,8 +408,10 @@ mod tests {
              seta model \"kyle/default\"\n\
              seta char_color_red \"200\"\n\
              seta cg_fov \"100\"\n\
+             seta r_gamma \"1.311622\"\n\
              seta sensitivity \"3\"\n",
         );
+        assert_eq!(found.gamma.as_deref(), Some("1.311622"));
         assert_eq!(found.name.as_deref(), Some("^1Sol^7Fox"));
         assert_eq!(found.model.as_deref(), Some("kyle/default"));
         assert_eq!(found.colors[0].as_deref(), Some("200"));

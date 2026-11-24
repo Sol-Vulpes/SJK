@@ -17,6 +17,9 @@
 pub(crate) mod browser;
 pub(crate) mod layout;
 pub(crate) mod loading;
+pub(crate) mod own_art;
+pub(crate) mod own_look;
+pub(crate) mod own_writing;
 mod pages;
 pub(crate) mod panel;
 pub(crate) mod view;

@@ -20,8 +20,8 @@ Each is 128x128, the UI atlas cell, on transparency with an anti-aliased round e
 Every action has its icon. `illuminate` (the Toys page's choice) is not cut from a
 board: it is the holocron picture the client bundles
 ([holocron](../holocron/README.md), `toy_illuminate.png`, 128x128 as these are).
-The atlas gives the wheel three rows of cells (`ui_renderer::WHEEL_ICON_CELLS`, 48),
-so three more icons fit before it needs another row.
+The atlas gives the wheel 56 cells (`ui_renderer::WHEEL_ICON_CELLS`; eight of its
+spare ones went to the settings icons on 21/11/2026), so three more icons fit.
 
 ## Regenerating
 

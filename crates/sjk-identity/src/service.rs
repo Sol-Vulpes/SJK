@@ -149,10 +149,6 @@ pub enum BoxDone {
     Placed(i64),
     /// SJK's creator removed box `id`.
     Removed(i64),
-    /// SJK's creator placed a WHEEL OF DOOM: its id.
-    WheelPlaced(i64),
-    /// SJK's creator removed WHEEL OF DOOM `id`.
-    WheelRemoved(i64),
 }
 /// How often the hub's list of asset packs is read while registered.
 const ASSETS_EVERY: Duration = Duration::from_secs(6 * 3_600);
@@ -312,29 +308,9 @@ pub struct Snapshot {
     /// The answer to the last mystery box request, by serial, or why it was refused
     /// (in the player's words).
     pub mystery_box: Option<(u64, Result<BoxDone, String>)>,
-    /// Fished junk selling as the hub last said ([`Service::read_junk`]): `None` until
-    /// read, and when the hub has none or could not be asked (no Sell button then).
-    pub junk: Option<crate::junk::JunkStatus>,
-    /// The answer to the last junk sale ([`Service::sell_junk`]), by serial, or why it
-    /// was refused (in the player's words).
-    pub junk_sale: Option<(u64, Result<crate::junk::JunkSold, String>)>,
-    /// The last kyber find a claim's answer brought (`crate::catch`, since 15/11/2026),
-    /// by a count that rises with each: the toys show it once.
-    pub kyber_find: Option<(u64, crate::catch::KyberFind)>,
-    /// The day's catch quests as the last claim's answer said them (`None` from a hub
-    /// without them, or before the player fished or mined that day).
-    pub catch_quests: Option<crate::catch::CatchQuests>,
-    /// The WHEEL OF DOOM's price, cooldown and segments as the hub last said
-    /// ([`Service::read_wheel_of_doom`]): `None` until read, or with a hub that has none.
+    /// The player's DOOM coins as the hub last said (read with the mystery boxes, and
+    /// after a box or a coin roll): `None` until read, or with a hub that has none.
     pub wheel_of_doom: Option<crate::wheel_of_doom::Wheel>,
-    /// Counts the times [`Snapshot::wheel_of_doom`] changed (its wheels, the coins).
-    pub wheel_of_doom_revision: u64,
-    /// The answer to the last [`Service::spin_wheel_of_doom`], by serial, or why it was
-    /// refused (in the player's words, with the cooldown's seconds left).
-    pub wheel_of_doom_spin: Option<(
-        u64,
-        Result<crate::wheel_of_doom::Spin, crate::wheel_of_doom::Refused>,
-    )>,
     /// The answer to the last [`Service::doom_mystery_box`], by serial, or why it was
     /// refused (in the player's words, with the seconds left to wait).
     pub mystery_box_doom: Option<(
@@ -801,13 +777,7 @@ impl Snapshot {
             mystery_boxes: None,
             mystery_boxes_revision: 0,
             mystery_box: None,
-            junk: None,
-            junk_sale: None,
-            kyber_find: None,
-            catch_quests: None,
             wheel_of_doom: None,
-            wheel_of_doom_revision: 0,
-            wheel_of_doom_spin: None,
             mystery_box_doom: None,
             box_hunt: None,
             quests: None,
@@ -898,7 +868,6 @@ enum Command {
     /// The in-game name the player now wears.
     Name(String),
     SetBio(String),
-    SetBanner(String),
     /// The name emoji to show at the right of the player's name, empty for none.
     SetEmoji(String),
     /// The custom SJK name, shown instead of the name worn in game.
@@ -981,26 +950,11 @@ enum Command {
     PlaceMysteryBox(crate::mystery_box::MysteryBox),
     /// SJK's creator: remove mystery box `id`.
     RemoveMysteryBox(i64),
-    /// Ask the hub about junk selling.
-    ReadJunk,
-    /// Read the WHEEL OF DOOM's price, cooldown and segments.
-    ReadWheelOfDoom,
-    /// Spin placed WHEEL OF DOOM `wheel` on `server`.
-    SpinWheelOfDoom {
-        wheel: i64,
-        server: String,
-    },
-    /// SJK's creator: place a WHEEL OF DOOM (its id is ignored).
-    PlaceWheelOfDoom(crate::mystery_box::MysteryBox),
-    /// SJK's creator: remove WHEEL OF DOOM `id`.
-    RemoveWheelOfDoom(i64),
     /// The player on `server` was struck by the Ray Gun of the player on slot `by`.
     RaygunHit {
         server: String,
         by: u8,
     },
-    /// Sell these pieces of fished junk, by id.
-    SellJunk(std::collections::BTreeMap<String, u32>),
     /// Read the box hunt on `server`, the player away or not.
     BoxHunt {
         server: String,
@@ -1246,8 +1200,6 @@ struct Worker {
     /// When the hub's mystery boxes are next read, and the last request's serial.
     due_mystery_boxes: Instant,
     mystery_box_serial: u64,
-    /// The last junk sale's serial.
-    junk_serial: u64,
     wheel_serial: u64,
     box_hunt_serial: u64,
     quests_serial: u64,
@@ -1546,23 +1498,6 @@ fn outcome_of(serial: u64, outcome: Result<String, HubError>) -> ReportOutcome {
     }
 }
 
-/// Keep what a claim's answer brought beside its `ttl` (`crate::catch`): a kyber find
-/// for the toys to show once, with the shards it left; the day's catch quests.
-fn note_claim_extras(snapshot: &Mutex<Snapshot>, extras: crate::catch::ClaimExtras) {
-    let mut snapshot = lock(snapshot);
-    if let Some(find) = extras.kyber_find {
-        if let Some(me) = snapshot.me.as_mut() {
-            me.shards = u64::try_from(find.balance).unwrap_or(me.shards);
-            snapshot.me_revision += 1;
-        }
-        let count = snapshot.kyber_find.as_ref().map_or(0, |(count, _)| *count) + 1;
-        snapshot.kyber_find = Some((count, find));
-    }
-    if extras.catch_quests.is_some() {
-        snapshot.catch_quests = extras.catch_quests;
-    }
-}
-
 fn lock(snapshot: &Mutex<Snapshot>) -> MutexGuard<'_, Snapshot> {
     snapshot
         .lock()
@@ -1640,7 +1575,6 @@ impl Worker {
             map_edits_serial: 0,
             due_mystery_boxes: now,
             mystery_box_serial: 0,
-            junk_serial: 0,
             wheel_serial: 0,
             box_hunt_serial: 0,
             quests_serial: 0,
@@ -2059,7 +1993,6 @@ impl Worker {
                 }
             }
             Command::SetBio(bio) => self.set_bio(&bio),
-            Command::SetBanner(id) => self.set_banner(&id),
             Command::SetEmoji(emoji) => self.set_emoji(&emoji),
             Command::SetName(name) => self.set_custom_name(&name),
             Command::Achievements(counts) => self.counts = counts,
@@ -2165,21 +2098,7 @@ impl Worker {
                 hub.remove_mystery_box(identity, id)
                     .map(|_| (BoxDone::Removed(id), None))
             }),
-            Command::ReadJunk => self.read_junk(),
-            Command::ReadWheelOfDoom => self.read_wheel_of_doom(),
-            Command::SpinWheelOfDoom { wheel, server } => {
-                self.spin_wheel_of_doom(wheel, &server, now);
-            }
-            Command::PlaceWheelOfDoom(placed) => self.mystery_box(now, |hub, identity| {
-                hub.place_wheel_of_doom(identity, &placed)
-                    .map(|id| (BoxDone::WheelPlaced(id), None))
-            }),
-            Command::RemoveWheelOfDoom(id) => self.mystery_box(now, |hub, identity| {
-                hub.remove_wheel_of_doom(identity, id)
-                    .map(|_| (BoxDone::WheelRemoved(id), None))
-            }),
             Command::RaygunHit { server, by } => self.raygun_hit(&server, by),
-            Command::SellJunk(held) => self.sell_junk(&held),
             Command::UseSecret {
                 id,
                 server,
@@ -2860,25 +2779,6 @@ impl Worker {
             Ok(profile) => {
                 snapshot.set_me(profile);
                 snapshot.notice = Some("saved".to_owned());
-            }
-            Err(error) => snapshot.notice = Some(error.to_string()),
-        });
-    }
-
-    fn set_banner(&mut self, id: &str) {
-        let outcome = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.set_banner(&self.identity, id),
-            _ => {
-                self.update(|snapshot| {
-                    snapshot.notice = Some("not connected to the hub".to_owned())
-                });
-                return;
-            }
-        };
-        self.update(|snapshot| match outcome {
-            Ok(profile) => {
-                snapshot.set_me(profile);
-                snapshot.notice = Some("banner saved".to_owned());
             }
             Err(error) => snapshot.notice = Some(error.to_string()),
         });
@@ -3709,13 +3609,7 @@ impl Worker {
             _ => Err(self.not_connected()),
         };
         let reread = match &outcome {
-            Ok((
-                BoxDone::Placed(_)
-                | BoxDone::Removed(_)
-                | BoxDone::WheelPlaced(_)
-                | BoxDone::WheelRemoved(_),
-                _,
-            )) => true,
+            Ok((BoxDone::Placed(_) | BoxDone::Removed(_), _)) => true,
             Err(HubError::Rejected { code, .. }) => code == "no_such_box",
             _ => false,
         };
@@ -3738,7 +3632,6 @@ impl Worker {
                         && wheel.coins != coins
                     {
                         wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
                     }
                     if let Some(profile) = profile {
                         if let Some(shop) = snapshot.shop.as_mut() {
@@ -3754,8 +3647,6 @@ impl Worker {
         });
     }
 
-    /// Ask the hub about junk selling: [`Snapshot::junk`] is what it said, `None` when it
-    /// could not be asked or has none (an older hub).
     /// Ask the hub for the WHEEL OF DOOM: [`Snapshot::wheel_of_doom`] is what it said,
     /// kept as it was when it could not be asked.
     fn read_wheel_of_doom(&mut self) {
@@ -3767,7 +3658,6 @@ impl Worker {
             self.update(|snapshot| {
                 if snapshot.wheel_of_doom.as_ref() != Some(&wheel) {
                     snapshot.wheel_of_doom = Some(wheel);
-                    snapshot.wheel_of_doom_revision += 1;
                 }
             });
         }
@@ -3781,41 +3671,6 @@ impl Worker {
             return;
         };
         let _ = hub.raygun_hit(&self.identity, server, by);
-    }
-
-    /// Spin placed wheel `wheel` on `server`: the answer goes in
-    /// [`Snapshot::wheel_of_doom_spin`], the profile after it (a holocron) in
-    /// [`Snapshot::me`] and the DOOM coins left in [`Snapshot::wheel_of_doom`]; a holocron
-    /// won is read at once for the Collection.
-    fn spin_wheel_of_doom(&mut self, wheel: i64, server: &str, now: Instant) {
-        self.wheel_serial += 1;
-        let serial = self.wheel_serial;
-        let outcome = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.spin_wheel_of_doom(&self.identity, wheel, server),
-            _ => Err(self.not_connected()),
-        };
-        if matches!(&outcome, Ok(answer) if answer.spin.holocron.is_some()) {
-            self.due_holocrons = self.due_holocrons.min(now);
-        }
-        self.update(|snapshot| {
-            let outcome = match outcome {
-                Ok(answer) => {
-                    if let Some(shop) = snapshot.shop.as_mut() {
-                        shop.day.credits = answer.profile.credits;
-                    }
-                    if let (Some(coins), Some(wheel)) =
-                        (answer.spin.coins, snapshot.wheel_of_doom.as_mut())
-                    {
-                        wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
-                    }
-                    snapshot.set_me(answer.profile);
-                    Ok(answer.spin)
-                }
-                Err(error) => Err(crate::wheel_of_doom::refusal(&error)),
-            };
-            snapshot.wheel_of_doom_spin = Some((serial, outcome));
-        });
     }
 
     /// Roll a DOOM coin at box `id` on `server`, as a wheel's spin: the answer goes in
@@ -3838,7 +3693,6 @@ impl Worker {
                         (answer.doom.coins, snapshot.wheel_of_doom.as_mut())
                     {
                         wheel.coins = coins;
-                        snapshot.wheel_of_doom_revision += 1;
                     }
                     snapshot.set_me(answer.profile);
                     Ok(answer.doom)
@@ -3846,59 +3700,6 @@ impl Worker {
                 Err(error) => Err(crate::wheel_of_doom::box_refusal(&error)),
             };
             snapshot.mystery_box_doom = Some((serial, outcome));
-        });
-    }
-
-    fn read_junk(&mut self) {
-        let status = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.junk_status(&self.identity).ok(),
-            _ => None,
-        };
-        self.update(|snapshot| snapshot.junk = status);
-    }
-
-    /// Sell `held` (pieces of junk by id): the answer goes in [`Snapshot::junk_sale`],
-    /// what is still payable in [`Snapshot::junk`] and the credits in the profile.
-    fn sell_junk(&mut self, held: &std::collections::BTreeMap<String, u32>) {
-        self.junk_serial += 1;
-        let serial = self.junk_serial;
-        let outcome = match (self.hub.as_mut(), self.registered) {
-            (Some(hub), true) => hub.sell_junk(&self.identity, held),
-            _ => Err(self.not_connected()),
-        };
-        self.update(|snapshot| {
-            let outcome = match outcome {
-                Ok(sold) => {
-                    if let Some(status) = snapshot.junk.as_mut() {
-                        status.left = sold.left;
-                        status.balance = sold.balance;
-                    }
-                    let credits = u64::try_from(sold.balance).unwrap_or(0);
-                    if let Some(shop) = snapshot.shop.as_mut() {
-                        shop.day.credits = credits;
-                    }
-                    if let Some(me) = snapshot.me.as_mut() {
-                        me.credits = credits;
-                        snapshot.me_revision += 1;
-                    }
-                    Ok(sold)
-                }
-                Err(error) => {
-                    if crate::junk::unsupported(&error) {
-                        snapshot.junk = None;
-                    } else if let HubError::Rejected { code, .. } = &error
-                        && let Some(status) = snapshot.junk.as_mut()
-                    {
-                        match code.as_str() {
-                            "junk_cap" => status.left = 0,
-                            "junk_selling_off" => status.open = false,
-                            _ => {}
-                        }
-                    }
-                    Err(crate::junk::refusal(&error))
-                }
-            };
-            snapshot.junk_sale = Some((serial, outcome));
         });
     }
 
@@ -4480,8 +4281,7 @@ impl Worker {
                     self.active,
                     Some(&self.play),
                 ) {
-                    Ok(extras) => {
-                        note_claim_extras(&self.snapshot, extras);
+                    Ok(()) => {
                         // What was sent is counted: the next claim starts afresh. An
                         // inactive claim sent nothing, so what it held waits.
                         if self.active {
@@ -4978,46 +4778,9 @@ impl Service {
         let _ = self.commands.send(Command::RemoveMysteryBox(id));
     }
 
-    /// Ask the hub whether the player may sell fished junk, at what prices and how much
-    /// it still pays today: the answer arrives in [`Snapshot::junk`].
-    pub fn read_junk(&self) {
-        let _ = self.commands.send(Command::ReadJunk);
-    }
-
-    /// Ask the hub for the WHEEL OF DOOM's price, cooldown and segments: the answer
-    /// arrives in [`Snapshot::wheel_of_doom`].
-    pub fn read_wheel_of_doom(&self) {
-        let _ = self.commands.send(Command::ReadWheelOfDoom);
-    }
-
-    /// Spin placed WHEEL OF DOOM `wheel`, the player on `server`, for a DOOM coin: what it
-    /// landed on arrives in [`Snapshot::wheel_of_doom_spin`].
-    pub fn spin_wheel_of_doom(&self, wheel: i64, server: String) {
-        let _ = self
-            .commands
-            .send(Command::SpinWheelOfDoom { wheel, server });
-    }
-
-    /// SJK's creator: place a WHEEL OF DOOM at `placed` (its id is ignored); the answer
-    /// arrives in [`Snapshot::mystery_box`] and the wheels are read again.
-    pub fn place_wheel_of_doom(&self, placed: crate::mystery_box::MysteryBox) {
-        let _ = self.commands.send(Command::PlaceWheelOfDoom(placed));
-    }
-
-    /// SJK's creator: remove WHEEL OF DOOM `id`.
-    pub fn remove_wheel_of_doom(&self, id: i64) {
-        let _ = self.commands.send(Command::RemoveWheelOfDoom(id));
-    }
-
     /// The player on `server` was struck by the Ray Gun of the player on slot `by`.
     pub fn raygun_hit(&self, server: String, by: u8) {
         let _ = self.commands.send(Command::RaygunHit { server, by });
-    }
-
-    /// Sell `held`, pieces of fished junk by id: what the hub took arrives in
-    /// [`Snapshot::junk_sale`], the credits after in the profile.
-    pub fn sell_junk(&self, held: std::collections::BTreeMap<String, u32>) {
-        let _ = self.commands.send(Command::SellJunk(held));
     }
 
     /// The player pressed Use `presses` times on the Toy Master's toy `id` on `server` in
@@ -5355,11 +5118,6 @@ impl Service {
     /// whenever it changes, for the key's name history at the hub.
     pub fn set_name(&self, name: String) {
         let _ = self.commands.send(Command::Name(name));
-    }
-
-    /// Equip a profile banner. The hub validates supported ids and current ownership.
-    pub fn set_banner(&self, id: String) {
-        let _ = self.commands.send(Command::SetBanner(id));
     }
 
     /// Change the player's bio at the hub.
@@ -5866,7 +5624,6 @@ mod tests {
             key_id: "0123456789abcdef".to_owned(),
             key: String::new(),
             name: name.to_owned(),
-            banner: "".into(),
             bio: String::new(),
             verified: false,
             tick: crate::Tick::None,
@@ -5907,12 +5664,6 @@ mod tests {
         }
         fn set_bio(&mut self, _: &Identity, bio: &str) -> Result<Profile, HubError> {
             self.record(format!("bio {bio}")).map(|()| profile(""))
-        }
-        fn set_banner(&mut self, _: &Identity, id: &str) -> Result<Profile, HubError> {
-            self.record(format!("banner {id}"))?;
-            let mut profile = profile("");
-            profile.banner = id.into();
-            Ok(profile)
         }
         fn set_emoji(&mut self, _: &Identity, emoji: &str) -> Result<Profile, HubError> {
             self.record(format!("emoji {emoji}")).map(|()| Profile {
@@ -5960,7 +5711,6 @@ mod tests {
             let opened: Vec<crate::wire::Opened> = ids
                 .iter()
                 .map(|&id| crate::wire::Opened {
-                    banner: None,
                     holocron: id,
                     // 77 is a kyber crystal.
                     tier: if id == 77 { "kyber_rare" } else { "rare" }.to_owned(),
@@ -9280,25 +9030,6 @@ mod tests {
         );
         worker.handle(Command::SetBio("  hello   there ".to_owned()), t0);
         assert_eq!(fake.log().last().unwrap(), "bio hello there");
-    }
-
-    #[test]
-    fn profile_banner_equipment_uses_the_worker_and_authoritative_profile() {
-        let fake = Fake::default();
-        let t0 = Instant::now();
-        let (mut worker, snapshot) = worker(&fake, t0);
-        worker.handle(Command::SetBanner("banner_jedi_archives".into()), t0);
-        assert!(!fake.log().iter().any(|line| line.starts_with("banner")));
-        worker.handle(Command::Configure(on("https://hub")), t0);
-        worker.tick(t0);
-        worker.handle(Command::SetBanner("banner_jedi_archives".into()), t0);
-        assert_eq!(fake.log().last().unwrap(), "banner banner_jedi_archives");
-        assert_eq!(
-            lock(&snapshot).me.as_ref().unwrap().banner.as_ref(),
-            "banner_jedi_archives"
-        );
-        worker.handle(Command::SetBanner(String::new()), t0);
-        assert_eq!(lock(&snapshot).me.as_ref().unwrap().banner.as_ref(), "");
     }
 
     #[test]

@@ -95,9 +95,6 @@ pub(crate) enum Tile {
     Forge,
     Inventory,
     History,
-    /// The Fishing and Mining logs, for a player who caught something
-    /// ([`crate::catch_book::shown`]).
-    LogBook,
     SaberLab,
 }
 
@@ -115,38 +112,6 @@ const TILES: [Tile; 11] = [
     Tile::Inventory,
     Tile::History,
 ];
-/// The same with the Log book after History.
-const TILES_BOOK: [Tile; 12] = [
-    Tile::Shaders,
-    Tile::Finishers,
-    Tile::Tags,
-    Tile::Toys,
-    Tile::Medals,
-    Tile::Achievements,
-    Tile::Cards,
-    Tile::Holocrons,
-    Tile::Forge,
-    Tile::Inventory,
-    Tile::History,
-    Tile::LogBook,
-];
-/// Both, then the lab's last.
-const TILES_BOOK_LAB: [Tile; 13] = [
-    Tile::Shaders,
-    Tile::Finishers,
-    Tile::Tags,
-    Tile::Toys,
-    Tile::Medals,
-    Tile::Achievements,
-    Tile::Cards,
-    Tile::Holocrons,
-    Tile::Forge,
-    Tile::Inventory,
-    Tile::History,
-    Tile::LogBook,
-    Tile::SaberLab,
-];
-const _: () = assert!(TILES_BOOK_LAB.len() <= TILES_MAX);
 /// The same while the Saber Lab is on: its tile last.
 const TILES_LAB: [Tile; 12] = [
     Tile::Shaders,
@@ -164,19 +129,12 @@ const TILES_LAB: [Tile; 12] = [
 ];
 const _: () = assert!(TILES_LAB.len() <= TILES_MAX);
 
-/// The tiles the hall shows now: the Log book's for a player whose logs hold a catch,
-/// the Saber Lab's while the lab is on.
+/// The tiles the hall shows now: the Saber Lab's while the lab is on.
 pub(crate) fn tiles() -> &'static [Tile] {
-    tiles_for(crate::catch_book::shown(), crate::saber_lab::active())
-}
-
-/// The tiles with the Log book's (`book`) and the lab's (`lab`), or without.
-fn tiles_for(book: bool, lab: bool) -> &'static [Tile] {
-    match (book, lab) {
-        (true, true) => &TILES_BOOK_LAB,
-        (true, false) => &TILES_BOOK,
-        (false, true) => &TILES_LAB,
-        (false, false) => &TILES,
+    if crate::saber_lab::active() {
+        &TILES_LAB
+    } else {
+        &TILES
     }
 }
 
@@ -194,7 +152,6 @@ impl Tile {
             Self::Forge => Tab::Forge,
             Self::Inventory => Tab::Inventory,
             Self::History => Tab::History,
-            Self::LogBook => Tab::LogBook,
             Self::SaberLab => Tab::SaberLab,
         }
     }
@@ -896,24 +853,6 @@ impl Panel {
                             .unwrap_or_default();
                         summary.art = Art::History { rows };
                     }
-                    Tile::LogBook => {
-                        if let Some(books) = inputs.log_books {
-                            let found = |book: &crate::catch_book::Book| {
-                                book.book.iter().filter(|entry| entry.count > 0).count()
-                            };
-                            let all = books.fishing.book.len() + books.mining.book.len();
-                            summary.lines.push((
-                                format!(
-                                    "{} of {all} kinds found",
-                                    found(&books.fishing) + found(&books.mining)
-                                ),
-                                color::text(),
-                            ));
-                            summary
-                                .lines
-                                .push(("Your Fishing and Mining logs".to_owned(), color::muted()));
-                        }
-                    }
                     Tile::SaberLab => summary.lines.push((
                         "On while the lab runs: hold, swing and build a blade".to_owned(),
                         color::muted(),
@@ -1348,6 +1287,7 @@ impl Panel {
         for (caps, action) in keys {
             x = key_hint(&mut self.ui, caps, action, x, y, s) + gap;
         }
+        self.bake_notice(frame);
     }
 
     /// Choose `tile` on the hall (the Holocrons page's way back comes to its tile).
@@ -1458,26 +1398,6 @@ mod tests {
 
     /// Left and Right walk the reading order, stopping at the ends; Up and Down go to the
     /// tile nearest straight above or below.
-    /// The Log book's tile shows only with a catch in the logs, after History and before
-    /// the lab's, and opens the Log book; the lists stand in the row's order.
-    #[test]
-    fn the_log_book_tile_shows_only_with_a_catch() {
-        assert!(!tiles_for(false, false).contains(&Tile::LogBook));
-        assert!(!tiles_for(false, true).contains(&Tile::LogBook));
-        for lab in [false, true] {
-            let tiles = tiles_for(true, lab);
-            let at = tiles
-                .iter()
-                .position(|tile| *tile == Tile::LogBook)
-                .unwrap();
-            assert_eq!(tiles[at - 1], Tile::History);
-            assert_eq!(tiles.last() == Some(&Tile::SaberLab), lab);
-            assert_eq!(tiles.len(), tiles_for(false, lab).len() + 1);
-        }
-        assert_eq!(Tile::LogBook.tab(), Tab::LogBook);
-        assert_eq!(Tile::LogBook.label(), "Log book");
-    }
-
     #[test]
     fn the_arrows_move_across_the_tiles() {
         let grid = layout(1_920.0, &spans(), 1.0);

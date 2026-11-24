@@ -12,7 +12,6 @@ pub mod assets;
 pub mod avatar;
 pub mod ban;
 pub mod bio;
-pub mod catch;
 pub mod channels;
 pub mod chat;
 pub mod crash;
@@ -20,7 +19,6 @@ pub mod emoji;
 pub mod feed;
 pub mod history;
 pub mod hub;
-pub mod junk;
 pub mod key_login;
 mod keys;
 pub mod logs;
@@ -80,17 +78,16 @@ pub use trades::{
 pub use translate::{TranslateError, TranslateOutcome, Translation};
 pub use vitals::{Sharing, VitalsTable};
 pub use wire::{
-    Achievement, ActivityState, BANNER_SHATTER_ABILITY, BannerTables, Bought, BuyAnswer,
-    CUSTOM_NAME_MAX, CardStack, Catchup, ChatMessage, CraftAnswer, Crafted, DropEvent, DropMark,
-    EconomyTables, Emote, FUSE_ABILITY, Feed, FindEvent, FindMark, FuseAnswer, FuseUsed, GifTag,
-    GifTagAnswer, GifTagMade, HOLOCRONS_LISTED, Holocron, HolocronBought, HolocronBuyAnswer,
-    HolocronCounts, HolocronState, KyberPity, KyberTables, KyberTier, Look, LookEvent, LootTier,
-    MARKS_ABILITY, MEDAL_RANK_MAX, MEDAL_RANK_MIN, MapBlock, Mark, MarksAnswer, Medal, OPEN_MAX,
-    Offer, OpenAnswer, Opened, OpenedCard, OpenedExtra, OpenedUnlock, People, Person, Ping,
-    PityCount, PlacedTag, PlaySignals, Presence, Profile, RelayBatch, RevealAnswer, Revealed,
-    SealedWhisper, SeasonBonus, SeasonPity, SeasonTables, SeasonTier, SharedVitals,
-    ShatterAllAnswer, ShatterAnswer, Shattered, ShatteredCopies, ShopDay, TAG_COPIES_ABILITY,
-    TagCopy, TagCraftAnswer, TagCrafted, TagShatterAnswer, TagShattered, TagTables, Tick, ToyEvent,
-    Trust, Unlock, UnlockMarks, Vitals, WISHLIST_MAX, WishlistAnswer, WornName, custom_name,
-    names_match, normal_form,
+    Achievement, ActivityState, Bought, BuyAnswer, CUSTOM_NAME_MAX, CardStack, Catchup,
+    ChatMessage, CraftAnswer, Crafted, DropEvent, DropMark, EconomyTables, Emote, FUSE_ABILITY,
+    Feed, FindEvent, FindMark, FuseAnswer, FuseUsed, GifTag, GifTagAnswer, GifTagMade,
+    HOLOCRONS_LISTED, Holocron, HolocronBought, HolocronBuyAnswer, HolocronCounts, HolocronState,
+    KyberPity, KyberTables, KyberTier, Look, LookEvent, LootTier, MARKS_ABILITY, MEDAL_RANK_MAX,
+    MEDAL_RANK_MIN, MapBlock, Mark, MarksAnswer, Medal, OPEN_MAX, Offer, OpenAnswer, Opened,
+    OpenedCard, OpenedExtra, OpenedUnlock, People, Person, Ping, PityCount, PlacedTag, PlaySignals,
+    Presence, Profile, RelayBatch, RevealAnswer, Revealed, SealedWhisper, SeasonBonus, SeasonPity,
+    SeasonTables, SeasonTier, SharedVitals, ShatterAllAnswer, ShatterAnswer, Shattered,
+    ShatteredCopies, ShopDay, TAG_COPIES_ABILITY, TagCopy, TagCraftAnswer, TagCrafted,
+    TagShatterAnswer, TagShattered, TagTables, Tick, ToyEvent, Trust, Unlock, UnlockMarks, Vitals,
+    WISHLIST_MAX, WishlistAnswer, WornName, custom_name, names_match, normal_form,
 };

@@ -7,20 +7,22 @@ impl SettingsMenu {
         let Some(setting) = self.rows().get(row) else {
             return false;
         };
-        let (min, max, integer) = match setting.kind() {
-            ValueKind::Integer { min, max, .. } => (min as f64, max as f64, true),
-            ValueKind::Float { min, max, .. } => (min, max, false),
-            _ => return false,
+        let Some((min, max, integer)) = typed_range(setting) else {
+            return false;
+        };
+        // The draft opens on the number the row shows, without its unit.
+        let unit = present::unit(setting.cvar);
+        let draft = match console.cvar(setting.cvar).map(CvarValue::as_text) {
+            Some(text) if !unit.typed_as_stored() => text
+                .trim()
+                .parse::<f64>()
+                .map_or(text, |value| draft_text(unit.display(value))),
+            Some(text) => text,
+            None => "?".to_owned(),
         };
         self.editing = None;
         self.selected = row;
-        self.numeric = Some(NumericEdit::new(
-            row,
-            value_text(console, setting.cvar),
-            min,
-            max,
-            integer,
-        ));
+        self.numeric = Some(NumericEdit::new(row, draft, min, max, integer));
         true
     }
 
@@ -30,10 +32,8 @@ impl SettingsMenu {
         let Some(setting) = self.rows().get(row) else {
             return false;
         };
-        let (min, max, integer) = match setting.kind() {
-            ValueKind::Integer { min, max, .. } => (min as f64, max as f64, true),
-            ValueKind::Float { min, max, .. } => (min, max, false),
-            _ => return false,
+        let Some((min, max, integer)) = typed_range(setting) else {
+            return false;
         };
         let Some(edit) = NumericEdit::typed(row, typed, min, max, integer) else {
             return false;
@@ -81,14 +81,38 @@ impl SettingsMenu {
         let Some(setting) = self.rows().get(row) else {
             return;
         };
-        let value = if matches!(setting.kind(), ValueKind::Integer { .. }) {
-            (value as i64).to_string()
-        } else {
-            value.to_string()
+        // What was typed is the number the row shows: back to the cvar's.
+        let value = present::unit(setting.cvar).value(value);
+        let value = match setting.kind() {
+            ValueKind::Integer { .. } | ValueKind::Stops { integer: true, .. } => {
+                (value as i64).to_string()
+            }
+            _ => round_to(value, 6).to_string(),
         };
         console.set_cvar(setting.cvar, &value);
         self.refresh(console);
     }
+}
+
+/// The range a number typed on row `setting` must lie in, in the number the row
+/// shows ([`present::Unit`]), and whether it is whole; `None` for a row that takes
+/// no typed number.
+fn typed_range(setting: &Setting) -> Option<(f64, f64, bool)> {
+    let unit = present::unit(setting.cvar);
+    match setting.kind() {
+        ValueKind::Integer { min, max, .. } => Some((min as f64, max as f64, true)),
+        ValueKind::Stops {
+            min, max, integer, ..
+        } => Some((min, max, integer)),
+        ValueKind::Float { min, max, .. } => Some((unit.display(min), unit.display(max), false)),
+        _ => None,
+    }
+}
+
+/// A shown number as a draft: three decimals at most, the entry's own limit.
+fn draft_text(shown: f64) -> String {
+    let text = format!("{:.3}", round_to(shown, 3));
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 impl ValueKind {

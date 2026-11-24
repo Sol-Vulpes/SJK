@@ -25,7 +25,6 @@ pub(super) fn register(shell: &mut sjk_shell::Shell) -> Result<(), sjk_shell::Co
             "toy_illuminate",
             "Toy: turn the Illuminate holocron's light on or off",
         ),
-        (crate::wheel_of_doom::COMMAND, crate::wheel_of_doom::HELP),
         (
             crate::ragdoll::COMMAND,
             "Toy: go limp as a ragdoll, or get up (other SJK players see the same fall)",

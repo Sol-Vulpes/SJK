@@ -1049,8 +1049,9 @@ The settings a level changes are put aside first, as `cvar=value` pairs in
 `cg_tacticalRestore`, and given back when the level drops, as `renderer vanilla` does: off
 leaves the player's settings as they were, and a profile saved at a level comes back at it
 with the originals still put aside. A setting changed by hand while Tactical holds it goes
-back when Tactical lets go. Some graphics settings take a graphics reload (`vid_restart`),
-remaps the next map; the rest is live.
+back when Tactical lets go. EJK mode and `renderer vanilla` hold some of the same settings;
+[the three are told of one another](#modes-that-hold-settings). Some graphics settings
+take a graphics reload (`vid_restart`), remaps the next map; the rest is live.
 
 `r_flatWorld` ([flat_world.rs](../crates/sjk-viewer/src/flat_world.rs), also a switch of its
 own) draws each world surface in its texture's smallest mip, its average colour, under the
@@ -1059,6 +1060,102 @@ map's own light, and stops each shader at its first later stage that is no light
 foliage. Textures uploaded without mips (`nomipmaps` shaders, the sky) keep their image.
 Models, effects and the HUD are untouched. JA+ emotes are the server's animations and still
 show.
+
+## EJK mode
+
+`ui_ejkMode` (Sol, 22/11/2026; [ejk_mode.rs](../crates/sjk-viewer/src/ejk_mode.rs)) is one
+switch that makes SJK look and feel like JoF EJK (EternalJK, of OpenJK's lineage), as close
+as SJK's own settings get. It is archived and off by default; the EJK mode row leads
+Settings > Interface > Menus (SJK UI, Advanced and Simple's General, and the classic+
+Interface group), stands in First setup's Look after Menu style (in the SJK UI's First
+setup pop-up it is the first step's two picture buttons, SJK and EJK,
+[sjk-ui.md](sjk-ui.md#first-setup)), and the Settings search
+finds it by `ejk`, `eternal`, `jof`, `openjk`, `ojk`, `classic` and `retail`. The `ejkmode
+[on|off|list]` console command names or sets it, and `ejkmode list` prints every setting
+it sets with its value and the reason.
+
+It is a preset, not a mode the drawing code knows of. One table (`ejk_mode::TABLE`) names
+each setting and the value JoF EJK's look takes, with why; the renderer's settings are the
+[Vanilla graphics preset](rendering.md)'s (`graphics_quality.rs`), which the table does
+not repeat. Nothing else reads `ui_ejkMode`, so every change the switch makes shows on its
+own row in Settings and can be changed again there.
+
+| Subject | Settings set |
+| --- | --- |
+| Menus and type | `ui_menuStyle classic` (the loading screen and the in-game menu follow it), `ui_gameFont 1`, `cg_chatFont` and `con_font` empty (no system font over the game's) |
+| Console | `con_style classic` (EternalJK's), `con_drawNotify 1` (console lines at the top left while playing, where JoF EJK shows kills and joins) |
+| HUD | `cg_hudStyle game` (`cg_hudFiles` and a HUD pack stay the player's, since 23/11/2026: JoF EJK's own HUD is `cg_hudFiles 3` where its files are installed), `cg_classicHudFont 1`, `cg_statusBar 0`, `cg_killfeed 0`, `cg_feats 0`, `cg_drawVersion 0`, `cg_drawTimer 0` and `cg_drawTimerUpperRight 1` (JoF EJK's defaults), `cg_teamScoresBoxes 0`, `cg_playerCard 0`, `cg_teamOutline 0`, `cg_groundHud 0` |
+| Scoreboard | `cg_scoreboardStyle classic`, `cg_showClientIDs 0` and `cg_drawScoreboardIcons 0` (JoF EJK's defaults), `cg_scoreboardAfk 0` |
+| Chat | `cg_chatStyle classic` (JoF EJK's message field and chat box, [Chat style](#chat-style)), `cg_chatBoxFontSize 1` (JoF EJK's default and size), `cg_chatBoxEmojis 0`, `cg_chatBoxBackdrop 0`, `cg_chatBoxOutline 0`, `cg_statusBalloons 0` (the stock talk balloon) |
+| Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
+| Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
+| The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
+| Image and weather | The Vanilla preset, then `r_autoExposure 0` (eye adaptation brightens dark rooms even without HDR), `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
+
+Turning it on puts the player's value of each of those settings aside, as `cvar=value`
+pairs in `ui_ejkModeRestore` (the format `renderer vanilla` and Tactical use,
+[cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs)), and sets the table's. The
+switch writes only as it flips: it is followed each frame (`GpuState::update_ejk_mode`),
+which reads the switch and whether anything is put aside and does nothing when the two
+agree, so the console, the Settings row, the what's-new card and a config all switch it and
+a profile saved with the mode on comes back as it was left. A setting changed by hand while
+the mode is on therefore stays as the player set it. Turning the mode off gives back what
+was put aside, but for the settings changed by hand since (they no longer hold the mode's
+value): those are the player's later choice and stay. The graphics settings read only at
+the graphics' start wait for a reload, which the reload card offers; the menu style's map
+behind the main page changes at the next start, as with the Menu style row.
+
+What it leaves alone: the SJK hub's features (the SJK chat, which the classic chat still
+shows and types to; the identity,
+the Collection, trading, notifications), gameplay and the network, other players' emotes,
+the player's own numbers (field of view, sensitivity, HUD scale, brightness, text sizes
+other than the chat's) and whatever has no setting of its own.
+
+### Modes that hold settings
+
+EJK mode, [Tactical](#tactical-mode) and `renderer vanilla` each set a group of settings
+and put the player's own values aside in a record of their own (`ui_ejkModeRestore`,
+`cg_tacticalRestore`, `r_ultraLowRestore`), and all three set the Vanilla graphics. Until
+23/11/2026 each kept "what the setting held when I came on", so with EJK mode on and then
+Tactical, Tactical's record held EJK mode's values, and turning EJK mode off and then
+Tactical left the player on Vanilla. Since then the three are told of one another in one
+place, [cvar_restore.rs](../crates/sjk-viewer/src/cvar_restore.rs) (`MODES`, `put_aside`,
+`give_back`):
+
+- A record only ever holds the player's own value. A mode coming on over a setting another
+  applied mode already holds copies that mode's record of it.
+- A mode going off gives a setting to the mode that still holds it (that mode's value)
+  when one does, else back to the player. So the modes can come on and go off in any
+  order and the player ends on their own settings (a test runs every order of the three,
+  at each Tactical level).
+- Each keeps its own way of going off: EJK mode leaves alone a setting changed by hand
+  while it was on, Tactical gives everything back. A setting counts as changed by hand
+  when it holds the value of none of the modes holding it; EJK mode then lets go of it,
+  and Tactical, when it goes off, gives the player's own value back.
+- `renderer vanilla` asked for while EJK mode or Tactical already holds Vanilla is kept
+  too: Vanilla stays when that mode goes off, until `renderer sjk`. `renderer sjk` while
+  another mode holds Vanilla only lets go of its own claim, and says which mode still
+  holds the graphics (before, it set Vanilla Plus under the mode).
+
+The records keep the format every release wrote (`cvar=value` pairs joined by `;`), so a
+profile saved with a mode on reads as it is and nothing saved is lost, and an older build
+still reads what this one writes. A profile an older build saved with two modes on has
+the second's record crossed; both are read, and of two records of a setting that differ,
+the one that is no mode's value is taken as the player's (`cvar_restore::own`), which
+sets such a profile right whichever mode goes off first. What cannot be told is a profile
+where the older build already gave the wrong values back (one mode turned off in the
+crossed order before the update): its settings are what that build left.
+
+Finishers gained their viewer's switch with it: `cg_finishers` (archived, on by default;
+Settings > Gameplay > Finishers) plays them on this PC; off, a saber kill leaves the body
+as the game does, while the finisher the player wears still goes to the hub
+([unlockables.md](unlockables.md#finishers)).
+
+Unit tests (`ejk_mode.rs`): every setting the mode names is registered, has a Settings row
+that offers its value and is named once; on then off gives a profile's settings back
+exactly; a setting changed by hand while on is left alone, on and off; a restart with the
+mode on writes nothing; a setting an earlier table put aside is given back; the command
+names, sets and lists the mode.
 
 ## Hats and capes
 
@@ -1744,7 +1841,8 @@ Like `ghost`, it is experimental and off until Settings > Mods > "Experimental:
 showcase tools" turns it on ([Ghost replay](#ghost-replay)).
 
 The client never sees another player's keys, only what they lead to: each snapshot
-carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`),
+carries their origin and velocity (`trBase`, `trDelta`), view angles (`apos.trBase`;
+`entityState_t::angles` is a player's spawn or teleport facing, not their view),
 ground entity, linked box (`solid`'s top tells a crouch, 16, from standing, 40), saber
 move, stance (`fireflag`), holster and weapon. The mimic keeps these samples, plays them
 back on its own timeline after the delay (interpolated, extrapolated at most 100 ms past
@@ -1754,7 +1852,20 @@ the newest) and rebuilds commands:
   leader's motion since then, in their own frame, becomes the mimic's in its frame: the
   leader stepping toward the mimic makes the mimic step toward them. `mirror` swaps
   left and right, so a step to the leader's left is a step to the mimic's right and both
-  stay face to face; their yaw turns mirror too. Pitch is copied.
+  stay face to face; their yaw turns mirror too. Pitch is copied, within 85 degrees
+  (Pmove's own clamp, 87.9, rewrites `delta_angles` when reached).
+- **View.** Each command's angles are the last command's plus a turn toward the wanted
+  view from the one the player has, 6 degrees at most (750 a second), as a mouse adds to
+  `cl.viewangles`. They are not `wanted - delta_angles`: a move that holds the view (the
+  lunge, the DFA, the back attacks, a kata, a knockdown, a saber lock, a JA+ emote)
+  rewrites `delta_angles` every command to cancel the command's angles
+  (`PM_SetPMViewAngle`), so angles worked back from a `delta_angles` a command late or
+  mispredicted threw the view anywhere, the pitch into its clamp (looking straight down),
+  and the keys, read in the wanted view, walked the wrong way (seen in a game on
+  22/11/2026). Adding the turn needs no `delta_angles`: a held view stays and a released
+  one goes on from where it was. The movement keys are read in the view the command
+  gets, not the wanted one. A view held more than 2 degrees from the asked one is said
+  in the client log, once a second at most, with the saber moves (`mimic: view held`).
 - **Movement.** On the ground the keys aim for the leader's velocity, read 80 ms ahead
   where the delay leaves samples there (so a turn starts when theirs did, not an
   acceleration later), plus a return toward their mapped position at 4 units a second
@@ -1786,7 +1897,12 @@ the newest) and rebuilds commands:
   kicks (alternate attack and a direction), the katas (both buttons); the others hold
   attack. A bounce keeps the buttons; parries, knockaways and locks, the fight's and not
   inputs, let go. A different stance presses `saberAttackCycle` (every 400 ms, eight
-  tries for a stance this player lacks) and a different holster `sv_saberswitch`.
+  tries for a stance this player lacks), only between a single saber's stances (1 to
+  5): with a staff or two sabers the cycle puts a blade away instead, which in a game
+  on 22/11/2026 changed the stance at each swing. A different holster presses
+  `sv_saberswitch`, holstered meaning every blade off (`saberHolstered` 2; 1 is one
+  blade of a staff or one saber of two). Neither is pressed while the leader or the
+  player swings: the server keeps a press made in a swing for its end.
 
 With no delay the copy runs as soon as the leader is seen, which is after their ping,
 the snapshot interval and this client's ping, and nothing ahead is known. It stops on any
@@ -1806,7 +1922,13 @@ with none (a full-speed leader cannot be caught up). `copy` keeps the sides. Wit
 and a leader doing the same choreography at walking pace (keys of 46, walk held,
 attacks included) every command holds the walk with no key past 64, the attacks come
 mirrored 4-24 ms late, it crouches, tracks within 8 units with no delay and 5 with 0.3
-seconds, and ends within 2. Not yet tried in a game.
+seconds, and ends within 2. The view has its own tests against the server's side of it
+(`PM_UpdateViewAngles` and a held view): free, it reaches the wanted view exactly, 6
+degrees a command; held for a second with a `delta_angles` three commands old, it does
+not move, then goes on from where it was held; a leader looking straight down gives 85
+degrees. Tried in a game on 22/11/2026 (`mimic vin 3 copy`): the saber moves were
+copied, the walk went the wrong way and the view to the ground at times, which the
+view's turn above answers; that fix is not yet tried in a game.
 
 ## Sound memory
 
@@ -2820,28 +2942,40 @@ Force aura and the combined Protect+Absorb shell, and the update and identity
 opt-ins, then its own "Don't show at start" row (`ui_hideFirstSetup`), ending in a
 Key bindings row. Its other rows are the catalogue's own, looked up by cvar, so a
 change there is the same change the other tabs make; it is the last tab so the
-other tabs keep their numbers. The SJK UI pop-up's line under its title points at
-the first row.
+other tabs keep their numbers.
 
 With the classic menus the same rows are the first group of the
 Setup page, FIRST SETUP (`Group::Quick`, [groups.rs](../crates/sjk-viewer/src/settings/groups.rs)),
 drawn as a classic+ option panel like the others, with search, descriptions and
-defaults, and opens the FIRST SETUP tab only if that panel cannot open. The SJK UI shows
-them as a pop-up card over the map (since 08/10/2026,
+defaults, and opens the FIRST SETUP tab only if that panel cannot open. Over the main
+menu First setup is a pop-up card over the map (since 08/10/2026,
 [sjk_popup.rs](../crates/sjk-viewer/src/settings/sjk_popup.rs),
-[sjk-ui.md](sjk-ui.md#first-setup)): the rows scroll inside it, and "Don't show
-at start" is a tick box pinned at its foot, always in view, beside All settings
-(the Settings screen on its First setup category, which keeps the rows too) and
-Done. Picking another menu style on its Menu style row keeps First setup on show in
-the new style: the classic Setup page's FIRST SETUP group or the SJK UI's
-pop-up.
+[sjk-ui.md](sjk-ui.md#first-setup)), which since 23/11/2026 asks one thing at a time:
+six steps (the look, with a picture button each for SJK and for EJK mode, the same
+moment of a match drawn both ways; the colours; the player, with the name typed in a
+field, an import from another client and the Character page; the graphics preset, each
+one a picture of the same spot; how you play; online, closing on a recap), each with its
+picture buttons and the few rows that belong with them, none scrolling. The steps and
+what each shows are a table
+([setup_steps.rs](../crates/sjk-viewer/src/settings/setup_steps.rs)); seven rows of the
+list are left out of the steps on purpose and listed there. "Don't show at start" is a
+tick box pinned at its foot, always in view, beside All settings (the Settings screen on
+its First setup category, which keeps every row in one list; under the classic style
+the classic Setup page's FIRST SETUP group), Back and Next. The pop-up has the SJK UI's
+look whatever the menu style, and since 23/11/2026 it is what opens over the main menu
+in every style, at start and by the command: picking EJK (or Classic on its Menu style
+row) turns the classic menus on under it and it stays open on its step, and a player on
+the classic menus gets it too. The classic Setup page's First setup still opens the
+list, and picking the SJK UI there goes on as the pop-up.
 
 At every start, the first time the main menu is up and the menu style is known, it
-opens in the active style, until the player ticks "Don't show at start"
-(`ui_hideFirstSetup` 1, archived); Escape leaves it for that run. (Before
-07/10/2026 it opened once, on the first start, marked by `ui_quickSetup`, which is
-no longer read.) The `firstsetup` console command opens it too, over the main
-menu or from a running game, in the active style
+opens, until the player finishes it (Done on its last step) or ticks "Don't show at
+start": both set `ui_hideFirstSetup` 1 (archived), so the tick shows what will happen
+and can be taken off again; Escape leaves it for that run and it is offered at the next
+start. (Before 23/11/2026 only the tick stopped it, so it came back at every start for
+a player who never found the tick. Before 07/10/2026 it opened once, on the first
+start, marked by `ui_quickSetup`, which is no longer read.) The `firstsetup` console
+command always opens it: the pop-up over the main menu, the list from a running game
 ([first_setup.rs](../crates/sjk-viewer/src/menu/first_setup.rs)). Its old name
 `quicksetup` was removed on 08/10/2026, with no hidden alias, so `quit` is the only
 command a `q` completes to. Not yet run in a game window.
@@ -2849,7 +2983,8 @@ command a `q` completes to. Not yet run in a game window.
 ### Importing from another client
 
 First setup's first row, Import from a client (its `firstsetup import` row, in
-every menu style), opens the Import page on the configs the clients installed beside
+every menu style; the Import my setup button of the SJK UI pop-up's third step), opens
+the Import page on the configs the clients installed beside
 SJK wrote, newest first, at most four: retail Jedi Academy and JA+
 (`jampconfig.cfg`), OpenJK (`openjk.cfg`), EternalJK and JoF EJK (`eternaljk.cfg`)
 and TaystJK (`taystjk.cfg`), in any folder of GameData (portable installs) or of
@@ -2878,7 +3013,7 @@ Explorer's Copy as path gives them: the path is taken as typed, without the
 console's backslash escapes, and one pair of surrounding quotes is dropped), and
 `firstsetup import` alone opens the page without a file. The file is read, never run: only `seta`/`set`/`sets`/`setu`, a
 bare `name`, `model` or `cg_fov`, `bind`, `unbind` and `unbindall` count (of the
-cvars, `name`, `model`, the `char_color_*` tint, `cg_fov`, `com_maxfps` and JoF EJK's
+cvars, `name`, `model`, the `char_color_*` tint, `cg_fov`, `r_gamma`, `com_maxfps` and JoF EJK's
 `cl_cmdratecap`), `//`
 comments are skipped, and a file that is not UTF-8 is read as Latin-1, as the
 legacy game wrote names. Files over 1 MB, other extensions, and configs holding
@@ -2886,7 +3021,10 @@ none of the parts are refused with the reason.
 
 The page lists the parts found, each ticked at first: Name (`name`), Model
 (`model`, with `char_color_red`/`_green`/`_blue` when the file sets them), Field
-of view (`cg_fov`), FPS cap (`com_maxfps`, the frames drawn) and Key bindings.
+of view (`cg_fov`), Brightness (`r_gamma`, the same curve as EternalJK's, so an
+EternalJK player's raised gamma, its lighter, washed-out look, comes with them; EJK
+mode leaves brightness alone, as stock EJK runs at 1), FPS cap (`com_maxfps`, the
+frames drawn) and Key bindings.
 Space, Left/Right or a click ticks a row; Enter copies the ticked parts into the
 profile (also logged to the console), then asks for the gameplay FPS with what the
 file's frame rate meant for its movement picked ([Gameplay FPS](#gameplay-fps)):
@@ -3481,6 +3619,54 @@ before expiry. Players outside the
 received snapshot cannot be watched. Player input and server authority remain
 unchanged. The command is bindable under Settings > Key bindings > Other.
 
+### Chat style
+
+`cg_chatStyle` (Sol, 23/11/2026; archived, `sjk` by default; Settings > Chat > **Chat
+style**, HUD in the classic+ views; [chat/style.rs](../crates/sjk-viewer/src/chat/style.rs))
+picks how the chat box and the chat field are drawn and behave. `sjk` is SJK's chat as the
+sections below describe it. `classic` is JoF EJK's (EternalJK's), from its source, read at
+JediofFreedom/JoF_EJK `beta` 10b940314; [EJK mode](#ejk-mode) sets it. The chat code
+branches on the style and on nothing else, and the SJK style draws what it drew before.
+The Settings search finds the row by `classic`, `composer`, `messagemode` and `say`.
+
+Lengths below are the game's virtual 640x480 units. With `cl_ratioFix` (on by default)
+JoF EJK multiplies every horizontal one by `widthRatioCoef`, so a unit is a 480th of the
+frame's height both ways (2.25 px at 1080 lines); the classic style does the same
+(`chat::style::classic`, each number with its source line and a test).
+
+| | JoF EJK | Classic style |
+| --- | --- | --- |
+| The field's place | `Con_DrawNotify` (`client/cl_console.cpp:1096-1160`): at x 8, under the notify lines (`v`), one `BIGCHAR_HEIGHT` (16) line | The same: x 8, under the notify lines drawn this frame (`ViewerConsole::notify_bottom`; under the top status bar while it shows), a 16-unit line |
+| The field's prompt | `Con_ChatChannels` (`cl_console.cpp:985-992`): `All Team SJK:`, the channel in use white, cyan or yellow, the others grey; a whisper `Whisper to <name>:` on its own line, the text on the next at x 16 | The same words and colours, for the channels the row offers (`cg_chatTab*`; JoF, S and Admin after SJK where they exist, in SJK's colours for them); `Whisper to <name>:` above the text at x 16, with ` (encrypted)` when the whisper goes encrypted |
+| The field's letters | The console character set in 16x16 cells (`SCR_DrawStringExt2`), a black shadow 2 units right and down, cursor character 10 blinking 256 ms on and off (`cl_keys.cpp:565`) | The console's characters (JetBrains Mono with `ui_gameFont`, else Inter) 16 units tall, a black shadow 1 unit right and down (`text::Edge::RetailChars`: half of JoF EJK's, as the vector letters' strokes are half as thick as the bitmap's and 2 units read as doubled text), `_` blinking 256 ms on and off |
+| Tab, Enter, Escape | Tab: All, Team, SJK, All; a whisper back to All; the text kept (`Message_Key`, `cl_keys.cpp:1053-1065`). Enter sends, Escape drops | Tab walks SJK's cycle (All, Team, SJK, then the clan chats and Admin where offered, the last whisperer), the text kept; Enter sends where SJK's field sends (`say`, `say_team`, `tell <slot>`, `amsay`, the hub); Escape drops |
+| The pointer | `KEYCATCH_MESSAGE` catches keys only: the mouse still turns the view | The pointer stays captured (`ChatOverlay::takes_keys_only`, `sync_cursor_policy`); clicks, the wheel and the mouse's extra buttons do nothing while the field is open |
+| The box's place | `CG_ChatBox_DrawStrings` (`cgame/cg_draw.c:11116-11117`): x `cg_chatBoxX` 30 times `widthRatioCoef`, bottom `cg_chatBoxHeight` 350 | The same from the same cvars: 67.5 px and 787.5 px at 1920x1080 (SJK's style puts x at 30/640 of the width, 90 px) |
+| Text size | `ocr_a` at `0.65 * cg_chatBoxFontSize` (default 1): a 21-unit line box, the baseline 19 x 0.65 under the row's y (`rd-common/tr_font.cpp:1608`) | SJK Chat in the same box, its baseline put where retail's is (2 x 0.65 units lower than SJK's style draws it). `cg_chatBoxFontSize` keeps SJK's default 0.85 outside EJK mode, which sets 1 |
+| Rows | A message takes `CHATBOX_FONT_HEIGHT` 20 x 0.65 a row (`cg_draw.c:11167`, `11215`); its wrapped rows are a line feed apart, `ocr_a`'s point size 18 x 0.65 (`tr_font.cpp:1621`); nothing between messages | The same: 29.25 px a row and 26.3 px between a message's rows at 1080 lines. `cg_chatBoxLineSpacing` and `cg_chatBoxLetterSpacing`, which JoF EJK has not, are not read |
+| Wrapping | Letters are added at scale 0.65, whatever the size, until `cg_chatBoxCutOffLength` (350, in 640ths of the width) is reached, then the row breaks at the last space (`cg_draw.c:10507`) | The same width and measure (a row holds the same letters at every size); at most four rows, the last ending in `...` (JoF EJK draws every row) |
+| Time | A message shows until `cg_chatBox` (10000) ms passed (`cg_draw.c:10476`, `11140`); `cg_chatBoxLines` 5 messages; no fade, no slide; an open field changes nothing | The same. The field does not bring expired messages back, filter the box by channel or scroll it, as SJK's does |
+| Names | The line as the server wrote it, name first (`^7Fox^7: ^2hi`, `(Fox^7): ^5hi`, `[Fox^7]: ^6hi`), white under its codes | The same (`ChatLine::lead`): no emblem, tick, clan emblem, TEAM or WHISPER label, name emoji or sender card. An encrypted whisper reads as a tell, `[Fox]: ` in a tell's magenta (its own is `[To Fox]: `) |
+| Shadow | `ITEM_TEXTSTYLE_OUTLINED` is retail's drop shadow: the text in grey 0.15, `Round(18 * scale * 0.075)` units right and down (`tr_font.cpp:1560-1596`), 1 unit at size 1 | The same (`text::Edge::RetailFont`): 3 px right and 2.25 px down at 1920x1080. `cg_chatBoxOutline` and `cg_darkTextOutline` still replace it when on |
+| SJK chat | `CG_SJKChatBoxPaint` (`cg_draw.c:11008-11035`): the client's icon (17 x 0.65 units, the text 3 x 0.65 after it), the name in its colours with a green `+` for a verified sender, `SJK` or `ALL/SJK` in `#E8B84A`, `: `, the text in `#F5C756`, later rows lined up after the icon | The same; a clan chat's line wears its label and colour, a holocron drop its tier's colour, and neither it nor the SJK team's lines an icon. `cl_sjkChatClientIcons 0` gives every message SJK's emblem, as in SJK's style |
+| Emojis, GIFs | `cg_chatBoxEmojis`; `<GIF>` on `beta` | `cg_chatBoxEmojis` and `cl_sjkChatGifs` as in SJK's style (a GIF plays under its SJK line) |
+
+What the classic field keeps of SJK's: the draft's editing (Ctrl+A/C/X/V, Ctrl+Insert,
+Shift+Insert, word motions, a held Backspace, dead keys; the same `Editor`), a selection
+shown as a pale band, the draft of up to four messages (JoF EJK's field stops at 151
+characters), `/tr`, and the note why a message cannot go (in yellow under the field).
+Colour codes typed in the draft colour it and are not shown, as in SJK's field (JoF EJK
+shows them). It has no row of buttons, no placeholder, no red notes, no "Latest", no link
+copy and no translation on a click. The scoreboard's own chat places and `cg_chatBox 0`
+work as in SJK's style.
+
+Not the same as JoF EJK: its big characters fill square 16x16 cells, SJK's console font
+(SJK draws no bitmap fonts) keeps its own narrower advance, so the same line is about
+half as wide.
+
+Pictures: `world_shot_classic_chat.rs` renders both styles from one camera at 1080p and
+4K (`classic_chat_shots`).
+
 ### Chat logs
 
 **Save game chat logs** in Settings > Chat (Advanced SJK UI; classic menus: HUD)
@@ -3938,7 +4124,7 @@ The bottom bar carries what the player has and wears:
 | Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
 | Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
 | To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
-| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub's WHEEL OF DOOM answer has come (`toy_wheelofdoom`, a wheel on the map) |
+| DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub has said them (read with the Force boxes) |
 | New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
 | Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
 | Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
@@ -4524,11 +4710,10 @@ are its first user, in place of their centre prints.
 (`Prompt::drops`): once the prompt has stood 0.35 s, a dark panel edged in gold fades in
 under it (0.25 s), titled "Possible drops", one row a thing with its chance on the right
 ("45.5 %"), likeliest first, at most 12 rows, kept on the screen. It goes with the
-prompt. The chances are the hub's, read with the boxes and wheels, so they change when
+prompt. The chances are the hub's, read with the boxes, so they change when
 the hub's odds do. A [mystery box](mystery-boxes.md#opening-one) shows them while nobody
-opens it; a [WHEEL OF DOOM](wheel-of-doom.md#spinning-one) whenever its prompt shows,
-the holocrons in their tier's colour and its bad effects in one red row ("A bad effect
-(12 kinds)").
+opens it (the placed WHEEL OF DOOM, which showed them too, left the client on
+23/11/2026).
 
 ## Capture the flag HUD
 
@@ -5948,7 +6133,7 @@ The player's own toy still shows, and nothing changes for the toys' rules.
 | Ragdoll | See others fall limp | `cg_toyRagdollShow` | their falls: their bodies as the game shows them |
 | Drone | See others' drones | `cg_toyDroneShow` | their drones, names and sounds (who peeks at you is still told) |
 | Boombox | See and hear others' boomboxes | `cg_toyBoomboxShow` | their stereo (on the shoulder or the floor) and its music |
-| Monitor | See monitors | `cg_toyMonitorShow` | every monitor and its sounds, yours too ([Monitor](#monitor)) |
+| Force Throw | See thrown junk | `cg_toyMonitorShow` | every throw and its sounds, yours too ([Force Throw](#force-throw)) |
 
 Box hunt acts only on players who have it on, so it has none.
 The holocron, the box and the boombox are hidden as if those players had them off here
@@ -6317,165 +6502,154 @@ it. The stereo's model, picture, shader and icon are bundled, made by
 game), and mounted below all game data, so a PK3 with the same paths replaces them. See
 [boombox.rs](../crates/sjk-viewer/src/boombox.rs).
 
-## Monitor
+<a id="monitor"></a>
 
-**Since 21/11/2026 Force Throw** (Sol: the Monitor kept and given a Star Wars theme):
-the same throw, charge, flight, hits and immunity, its commands, cvars and look id kept
-(`toy_monitor`, `monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `toy_saved`), only
-what a player sees and hears is new. Each throw hurls one of Jedi Academy's own models by
-path, by its thrower and number so every client draws the same (`monitor::junk_of`): a
-banded crate (`models/map_objects/imperial/crate_banded.md3`), a wrecked R5 or a wrecked
-GONK droid (`r5destroyed`, `gonkdestroyed`), each drawn about 24 units across and centred on
-the flight's eight corners, so it flies and strikes as the monitor did. A crate bursts where
-it comes to rest into eight of JA's crate pieces (`models/chunks/crate/crate1_*.md3`), flung
-out and up, lying 2 seconds and fading (not at a hit: the throw flies on after one, for Two
-for One and Strike!). Its sounds are JA's: a Force push throws (a charged throw too), Force
-jump's build-up charges, `debris1` strikes a body, `smalldebris` knocks on the world,
-`cratebust1` bursts a crate, Force Absorb raises the Screen Saver, now named the **Force
-Barrier**, and `noforce` ends it; the thrower's hit tick and the icon (a banded crate pushed
-by blue rings of the Force) are SJK's, made by `scripts/force_throw_assets.py`. The
-monitor's model, picture, shader and synthesized sounds are gone. Its seven achievements are
-back, ids kept: Rebound (was Payback), Force Surge (Power Surge), Telekinetic (Tech
-Support), Reach of the Force (Long Distance Call), Two for One, Strike! and the Drone's
-Special Delivery. What follows is the Monitor as it was built; its mechanics still hold.
+## Force Throw
 
-The Monitor (Sol's idea, 26/10/2026, after the old sandbox-game joke of hurling a big CRT
-monitor at someone) is a toy for every SJK player: throw an old square monitor, and one
-that hits a player who has the toy on too knocks them down as a [ragdoll](#ragdoll) and
-sends them flying, the way the monitor struck them.
+Force Throw (Sol's toy; the Monitor from 26/10/2026, after the old sandbox-game joke of
+hurling a big CRT monitor at someone, given a Star Wars theme on 21/11/2026) is a toy for
+every SJK player: hurl junk with the Force, and what hits a player who has the toy on too
+knocks them down as a [ragdoll](#ragdoll) and sends them flying, the way it struck them.
+Its commands, cvars, look id and code keep the Monitor's name (`toy_monitor`,
+`monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `s_toyMonitorSound`, the look's
+`monitor`, [monitor.rs](../crates/sjk-viewer/src/monitor.rs)), so binds and saved settings
+carry over; Settings still calls its rows "Monitor sounds" and "Show monitors", and the
+quick wheel its entries "Monitor" and "Throw monitor".
 
 - **`toy_monitor`** (a bind, the quick wheel's Toys page, Collection > Toys, "Hit me")
   is the switch, both the right to throw and the consent to be hit (Sol's rule: always
   opt in). It stays as last switched, across maps, servers and restarts
-  (`cl_toyMonitor`, archived). A monitor passes through a player without it.
-- **`monitor_throw`** (the Toys page's Throw monitor, the console) throws one from the
+  (`cl_toyMonitor`, archived). Thrown junk passes through a player without it.
+- **What flies:** each throw hurls one of Jedi Academy's own models, read from the
+  player's game by path and never shipped, chosen by its thrower and number so every
+  client draws the same (`monitor::junk_of`): a banded crate
+  (`models/map_objects/imperial/crate_banded.md3`), a wrecked R5 or a wrecked GONK droid
+  (`r5destroyed`, `gonkdestroyed`), each scaled to the flight's body (about 22 units)
+  and centred on it. A crate bursts where it comes to rest into eight of JA's crate
+  pieces (`models/chunks/crate/crate1_*.md3`), flung out and up, lying 2 seconds and
+  fading over the last half second; it does not burst at a hit, as the throw flies on
+  after one (for Two for One and Strike!).
+- **`monitor_throw`** (the quick wheel's Throw monitor, the console) throws from the
   eyes, the way the player looks, at 1,100 units a second plus the player's own speed,
   tumbling end over end; one every 1.2 seconds at most, four of a player's out at once
-  (the oldest goes). Without the toy on it says "Turn the Monitor toy on to throw one";
+  (the oldest goes). Without the toy on it says "Turn the Force Throw toy on to throw";
   nobody throws while limp, dead, spectating, in a duel, with the flag, hacked, held by
-  the server or in a vehicle ("No monitor right now"), and nobody in a vehicle is
+  the server or in a vehicle ("No Force throw right now"), and nobody in a vehicle is
   knocked down.
-- **The charged throw** (Sol's ask, 26/10/2026): `+monitor_throw`, the held bind
-  (Settings > Key bindings > Interaction > Throw monitor, the Collection's Throw key),
-  charges while held and throws on the release, from 1,100 units a second for a tap to
-  2,600 once held a second. A ring round the crosshair fills clockwise from the top,
-  yellow turning orange, white when full, and the thrower hears a tube's hum rise to a
-  ready ping (`charge.wav`), stopped on the release. Pressed during the cooldown, it
-  begins charging once the cooldown ends; it is put down when the player may no longer
-  throw, or held 6 seconds (a release lost to the window). A throw leaving the hand
-  faster than 1,800 is heard by everyone as a charged one, a thump and a deep whoosh
-  (`throw_hard.wav`), from the speed its event carries: no new event, so the clients
-  before it see the same flight (they hear the plain whoosh). A key bound to the plain
-  `monitor_throw` alone before is bound to `+monitor_throw` when the profile loads; a
-  bind running it among other commands stays, throwing at once.
-- **The monitor** is a solid of eight corners held by sticks between every two
+- **The charged throw:** `+monitor_throw`, the held bind (Settings > Key bindings >
+  Interaction > Force throw, the Collection's Throw key), charges while held and throws
+  on the release, from 1,100 units a second for a tap to 2,600 once held a second. A
+  ring round the crosshair fills clockwise from the top, yellow turning orange, white
+  when full, and the thrower hears Force jump's build-up (`jumpbuild.mp3`), stopped on
+  the release. Pressed during the cooldown, it begins charging once the cooldown ends;
+  it is put down when the player may no longer throw, or held 6 seconds (a release lost
+  to the window). A key bound to the plain `monitor_throw` alone is bound to
+  `+monitor_throw` when the profile loads; a bind running it among other commands
+  stays, throwing at once.
+- **The flight** is a solid of eight corners held by sticks between every two
   ([flight.rs](../crates/sjk-viewer/src/monitor/flight.rs)), the same Verlet steps as the
-  Ragdoll's body: it bounces off the world (more than a body, plastic and glass), slides
-  with friction, topples over an edge and comes to rest on a face. It lies 10 seconds,
-  then shrinks away; one still flying after 20 seconds stops.
+  Ragdoll's body: it bounces off the world, slides with friction, topples over an edge
+  and comes to rest on a face. It lies 10 seconds, then fades; one still flying after 20
+  seconds stops.
 - **The hit** is decided by the struck player's client alone, against its own body: a
-  standing player's box (lower crouched), or a limp one's ragdoll points. The monitor
-  must come at them, faster than 250 units a second against their own speed. The body
-  falls limp (if standing) and takes a [blow](#ragdoll) at its point nearest the
-  monitor: the monitor's speed against the body's times 1.5, 260 upwards, 3,000 units a
-  second at most (the hardest blow a ragdoll takes, 2,600 before the charged throw). A
-  monitor thrown at someone standing still sends them off at about 1,650 units a second,
-  a fully charged one at 3,000. The monitor's way over each step is tried every 6 units,
-  so a fast one does not pass through a limb between two steps. A ragdoll can be struck again where it lies or flies (not for
-  0.2 seconds after a blow, nor by the same monitor for 0.6). The thrower's own monitor
-  can hit them once it is 0.4 seconds out of the hand. The monitor bounces back off the
-  body (half the body's push, back, and 150 up).
-- **Busy players are not hit** (Sol's ask, 26/10/2026): a player typing (a key catcher
-  open: the chat, the console or a menu, what sends the talk balloon's `BUTTON_TALK`,
+  standing player's box (lower crouched), or a limp one's ragdoll points. The junk must
+  come at them faster than 250 units a second against their own speed. The body falls
+  limp (if standing) and takes a [blow](#ragdoll) at its point nearest the junk: its
+  speed against the body's times 1.5, 260 upwards, 3,000 units a second at most (the
+  hardest blow a ragdoll takes). A throw at someone standing still sends them off at
+  about 1,650 units a second, a fully charged one at 3,000. Its way over each step is
+  tried every 6 units, so a fast throw does not pass through a limb between two steps. A
+  ragdoll can be struck again where it lies or flies (not for 0.2 seconds after a blow,
+  nor by the same throw for 0.6). The thrower's own throw can hit them once it is 0.4
+  seconds out of the hand. The junk bounces back off the body (half the body's push,
+  back, and 150 up).
+- **Busy players are not hit:** a player typing (a key catcher open: the chat, the
+  console or a menu, what sends the talk balloon's `BUTTON_TALK`,
   `GpuState::talk_button`) or away (alt-tabbed or idle as the away emote counts it, or an
-  away tag in their name: `GpuState::own_away`, `toy_rules.rs`) is not struck; the monitor passes
-  through. Other clients foresee no hit on a player showing the talk balloon
+  away tag in their name: `GpuState::own_away`, `toy_rules.rs`) is not struck; the junk
+  passes through. Other clients foresee no hit on a player showing the talk balloon
   (`EF_TALK`) or whom their scoreboard counts away (`seen_away`).
-- **Foreseen hits** (Sol's ask, 26/10/2026, after hits showed a ping or more late):
-  the struck player's client alone decides a hit, and its word reaches the others a
-  ping or more later (and after its turn in the relay's 35 ms queue). So every SJK
-  client also tries each monitor against the other players who have the toy on (their
-  look lists `monitor` since then), as it shows them (the presented body's box, or
-  their ragdoll), with the same rules (a step no older than 0.3 seconds, the same
+- **Foreseen hits:** the struck player's client alone decides a hit, and its word
+  reaches the others a ping or more later (and after its turn in the relay's 35 ms
+  queue). So every SJK client also tries each throw against the other players who have
+  the toy on (their look lists `monitor`), as it shows them (the presented body's box,
+  or their ragdoll), with the same rules (a step no older than 0.3 seconds, the same
   immunity, never the thrower themselves, nobody dead, in a duel or blocked). On a hit
   it knocks the body down there and then (a fall from where it shows them, with the
-  blow), bounces the monitor and plays the bonk. Their own word then takes its place:
-  their `fall_` replaces the foreseen fall, keeping the foreseen blow until their
-  `hit_` replaces it (`Body::without`), and the monitor's foreseen bounce gives way to
-  the real one (`Flight::without`). Without their word within 1.2 seconds
-  (`ragdoll::GUESS_WAIT`: they dodged on their screen, carry the flag, or stand where
-  the client did not show them), the blow is undone: a foreseen fall ends and they
-  stand again, a foreseen blow leaves a fall they were already in. One foreseen blow
-  waits at a time for a player.
+  blow), bounces the junk and plays the strike. Their own word then takes its place:
+  their `fall_` replaces the foreseen fall, keeping the foreseen blow until their `hit_`
+  replaces it (`Body::without`), and the foreseen bounce gives way to the real one
+  (`Flight::without`). Without their word within 1.2 seconds (`ragdoll::GUESS_WAIT`:
+  they dodged on their screen, carry the flag, or stand where the client did not show
+  them), the blow is undone: a foreseen fall ends and they stand again, a foreseen blow
+  leaves a fall they were already in. One foreseen blow waits at a time for a player.
 - **The hit marker:** when the struck player's blow reaches the thrower's client (the
   `hit_` event, so a ping or so after the hit), or at once when the thrower's client
-  foresees it, four short strokes stand out diagonally
-  from the crosshair and fade over 0.35 seconds, spreading a little, red for a blow of
-  2,400 or more (a charged throw), white otherwise, and the thrower hears a bright tick
-  (`hit.wav`). Not for a hit on themselves, nor one heard more than 1.5 seconds after it
-  happened. The marks go with the crosshair (`cg_drawCrosshair` 0 hides them)
+  foresees it, four short strokes stand out diagonally from the crosshair and fade over
+  0.35 seconds, spreading a little, red for a blow of 2,400 or more (a charged throw),
+  white otherwise, and the thrower hears a bright tick (`sound/sjk/monitor/hit.wav`).
+  Not for a hit on themselves, nor one heard more than 1.5 seconds after it happened.
+  The marks go with the crosshair (`cg_drawCrosshair` 0 hides them)
   ([monitor_marks.rs](../crates/sjk-viewer/src/hud/monitor_marks.rs)).
-- **Unseen in duels, or on request** (Sol's ask, 26/10/2026): while the player, or the
-  player they follow, is in a private duel, and on Duel and Power Duel servers, no monitor
-  is drawn or heard, and no charge ring or hit marker shows (nobody throws or is hit in a
-  duel anyway; this hides the monitors of the players around it). Settings > Game options >
-  Toys, "Show monitors", and the Monitor's card in the Collection's Toys tab, "See
-  monitors" (`cg_toyMonitorShow`, archived, default 1), at 0 hides every
-  monitor and its sounds in the world on this PC, the player's own too; their charge ring,
-  charge hum, hit marker and tick stay. Neither changes who may be hit: a player with the
-  toy on and monitors hidden can still be struck.
-- **The Screen Saver** (Sol's idea, 29/10/2026): a player struck by 5 monitors of other
-  players within 20 seconds is untouchable by monitors for 30 seconds, and may still
-  throw their own ([saver.rs](../crates/sjk-viewer/src/monitor/saver.rs)). A monitor counts
-  once however often it strikes (one juggling a body), the player's own never, and the
-  count starts afresh once it rises. The fifth hit still lands; from then every monitor
-  passes through the player, standing or limp, as through a player without the toy. The
-  centre of the screen says "SCREEN SAVER: monitors pass through you for 30 seconds".
-  A gold shell wraps the body: Force Absorb's (`gfx/misc/personalshield`) tinted gold,
-  as many passes as `cg_shieldBrightness`, fading in, pulsing gently, and flickering
-  over its last 3 seconds. A CRT's degauss is heard as it rises (`saver_on.wav`) and its
-  power-off as it ends (`saver_off.wav`), the player's own in both ears, another's where
-  they are. It ends at its time, or sooner with the player's death or a new map (the
-  game clock going back). Others learn of it through a feed
+- **Unseen in duels, or on request:** while the player, or the player they follow, is in
+  a private duel, and on Duel and Power Duel servers, no thrown junk is drawn or heard,
+  and no charge ring or hit marker shows (nobody throws or is hit in a duel anyway; this
+  hides the throws of the players around it). Settings > Game options > Toys, "Show
+  monitors", and Force Throw's card in the Collection's Toys tab, "See thrown junk"
+  (`cg_toyMonitorShow`, archived, default 1), at 0 hides every throw and its sounds in
+  the world on this PC, the player's own too; their charge ring, charge sound, hit marker
+  and tick stay. Neither changes who may be hit: a player with the toy on and throws
+  hidden can still be struck.
+- **The Force Barrier** ([saver.rs](../crates/sjk-viewer/src/monitor/saver.rs), the
+  Screen Saver in the code and its events): a player struck by 5 throws of other players
+  within 20 seconds is untouchable by thrown junk for 30 seconds, and may still throw
+  their own. A throw counts once however often it strikes (one juggling a body), the
+  player's own never, and the count starts afresh once it rises. The fifth hit still
+  lands; from then every throw passes through the player, standing or limp, as through
+  a player without the toy. The centre of the screen says "FORCE BARRIER: thrown junk
+  passes through you for 30 seconds". A gold shell wraps the body: Force Absorb's
+  (`gfx/misc/personalshield`) tinted gold, as many passes as `cg_shieldBrightness`,
+  fading in, pulsing gently, and flickering over its last 3 seconds. Force Absorb's sound
+  is heard as it rises (`absorb.mp3`) and `noforce.mp3` as it ends, the player's own in
+  both ears, another's where they are. It ends at its time, or sooner with the player's
+  death or a new map (the game clock going back). Others learn of it through a feed
   [toy event](hub-chat.md#toy-events) the player sends to the one who raised it
   (`monitor` `saver_<until>`, the game server time it ends; `saver_off` if the player
   dies first): their clients draw the shell and foresee no hit on the player meanwhile,
-  and drop it at its time or the player's death. Clients from before it see no shell
-  and may foresee a hit that the player's own client refuses, which they undo as any
-  hit whose word does not come. No shell shows in a duel or with `cg_toyMonitorShow` 0.
-  It brings two achievements ([identity.md](identity.md#achievements)): Payback and
-  the hidden Power Surge.
-- **Getting up:** a fall a monitor began ends by itself 2.5 seconds after the body came
-  to rest, once the real body has walked to it (or 6 seconds later whatever it did);
+  and drop it at its time or the player's death. No shell shows in a duel or with
+  `cg_toyMonitorShow` 0.
+- **Getting up:** a fall a throw began ends by itself 2.5 seconds after the body came to
+  rest, once the real body has walked to it (or 6 seconds later whatever it did);
   `toy_ragdoll` gets up at once, and being hurt does as for the Ragdoll.
-- **The sounds** are SJK's own, synthesized by
-  [monitor_assets.py](../scripts/monitor_assets.py): a whoosh as it leaves the hand
-  (`sound/sjk/monitor/throw.wav`), a hollow plastic thunk with the glass ringing when it
-  strikes a body (`bonk.wav`), a clunk and rattle when it knocks on the world harder than
-  160 units a second (`knock.wav`, at most every 120 ms a monitor, louder the harder:
-  from 0.55 to full at 600). A knock carries farther than the game's own sounds, at full
-  volume to 768 units and silent past about 2,000 (`KNOCK_REACH`): with the game's
-  falloff (silent past 1,500, half at 900) the knocks of a monitor landing far from
-  the listener went unheard (Sol, 28/10/2026). Tests throw a monitor at a floor and a
-  wall, in shapes and in a map's brushes, and count the knocks heard.
-  Settings > Sound > Toys, "Monitor sounds" (`s_toyMonitorSound`), silences them.
+- **The sounds** are Jedi Academy's own but for the hit tick: a Force push as the junk
+  leaves the hand (`sound/weapons/force/push.mp3`, a charged throw too), `debris1` when
+  it strikes a body, `smalldebris` when it knocks on the world harder than 160 units a
+  second (at most every 120 ms a throw, louder the harder: from 0.55 to full at 600) and
+  `cratebust1` when a crate bursts. A knock carries farther than the game's own sounds,
+  at full volume to 768 units and silent past about 2,000 (`KNOCK_REACH`), so a throw
+  landing far from the listener is still heard. Settings > Sound > Toys, "Monitor
+  sounds" (`s_toyMonitorSound`), silences them.
+- **Achievements** ([identity.md](identity.md#achievements)), the Monitor's ids kept:
+  Rebound (strike the player whose throw raised your Force Barrier, while it holds), the
+  hidden Force Surge (strike three different players while it holds), Telekinetic, Reach
+  of the Force, Two for One, Strike! and the Drone's Special Delivery.
 
 No game server knows of it: the struck player's real body stays where it was and walks
 to the ragdoll, as for the Ragdoll; players on stock clients see nothing. Every SJK client
 on the server sees the same throw: the thrower's client relays
-`throw_<number>_<moment>_<x>_<y>_<z>_<vx>_<vy>_<vz>` (the monitor's number among the
+`throw_<number>_<moment>_<x>_<y>_<z>_<vx>_<vy>_<vz>` (the throw's number among the
 thrower's, 0 to 99; the game server time; where it leaves the hand and how fast, whole
 units) through the [toy relay](hub-chat.md#toy-relay) to each SJK player in turn, the
 nearest first, one every 40 ms, and each runs the same flight from it in 16 ms steps of
 the game server's clock, fast-forwarding a throw heard late (up to 8 seconds). A hit
-travels as the Ragdoll's `hit_` event, which names the monitor, so every client bounces
-it off the body at the same step (a flight that already ran past it runs again from its
+travels as the Ragdoll's `hit_` event, which names the throw, so every client bounces it
+off the body at the same step (a flight that already ran past it runs again from its
 throw). A sender counts only when the game shows the name they claimed, and never one
-blocked here. The model (a beige CRT, 20 x 17 x 18 units), its picture, shader, icon and
-sounds are bundled, made by the script from shapes, noise and synthesized tones (nothing
-taken from another game), and mounted below all game data, so a PK3 with the same paths
-replaces them. World shots: `world_shot::monitor_shots::monitor_on_a_demo` (with
-`SJK_TEST_DEMO`). See [monitor.rs](../crates/sjk-viewer/src/monitor.rs).
+blocked here. Only the icon (a banded crate pushed by blue rings of the Force) and the
+hit tick are SJK's, bundled and made by `scripts/force_throw_assets.py` from shapes and
+synthesized sound ([assets/monitor](../crates/sjk-viewer/assets/monitor/README.md)), and
+mounted below all game data, so a PK3 with the same paths replaces them. World shots:
+`world_shot::monitor_shots::monitor_on_a_demo` (with `SJK_TEST_DEMO`).
 
 ## Banana peel (removed)
 
@@ -6619,7 +6793,7 @@ from the card faces' textures. See [tags.rs](../crates/sjk-viewer/src/tags.rs),
 [tags_frame.rs](../crates/sjk-viewer/src/tags_frame.rs) and
 [collection_tags.rs](../crates/sjk-viewer/src/collection_tags.rs).
 
-## Fishing and Mining (removed), and the Log book
+## Fishing and Mining (removed)
 
 Fishing (Sanji's idea, 29/10/2026, Slash's design: a rod, a bucket and a float, bites
 hooked with `+use`, Echo bites, junk and the catch market) and Mining (vinry's idea,
@@ -6628,18 +6802,16 @@ rubble) were removed on 20/11/2026 in Sol's cleanup before the release, with the
 kyber glints, daily catch goals, selling commands and rare catch banners. Their saved
 settings (`s_toyFishingSound`, `s_toyMiningSound`, `cg_fishingBiteCue`) are dropped
 from the profile at load; a bind on `toy_fishing`, `toy_mining` or their selling and
-log commands only says the command is unknown. Their achievements are retired
-([identity.md](identity.md)).
+log commands only says the command is unknown. Their achievements are retired, kept and
+shown to the players who hold them ([identity.md](identity.md)).
 
-Their logs (`fishing_log.txt`, `mining_log.txt` in the profile folder) stay the
-player's own record: the Collection's **Log book** (a tile in the hall after History,
-a tab on the row) shows both, read only, for a player whose logs hold a catch
-([catch_book.rs](../crates/sjk-viewer/src/catch_book.rs),
-[collection_log_book.rs](../crates/sjk-viewer/src/collection_log_book.rs)): every fish
-and junk, every ore and rubble, two to a row, the ones never caught as "???", the others
-with their count and first day, the rare ones in gold, and each book's Share button,
-which says its rarest catch in the SJK chat (once a minute). A player with no catch sees
-neither the tile nor the tab.
+Their last leftovers went on 23/11/2026, in the clean-up ahead of v1 (Sol's approval):
+the Collection's Log book, which showed the two logs read only with a Share button for
+the rarest catch; the catch tables and log reading behind it (`fishing.rs`, `mining.rs`,
+`catch_book.rs`); and the hub plumbing (junk selling, `GET /v1/fishing/junk` and `POST
+/v1/fishing/junk/sell`, a claim answer's kyber finds and catch quests, the claims'
+`bites` and `rocks` signals, and the "fight or fish" holocron pace line). The logs
+(`fishing_log.txt`, `mining_log.txt`) stay in the profile folder, unread.
 
 ## Toy sounds
 
@@ -7080,13 +7252,13 @@ per toy, so a toy deleted from the page is added again in Settings > Quick wheel
 is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
 Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
 state; no cvar holds it). Since 23/10/2026 the default page also has the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
-while the player is limp), and since 26/10/2026 the [Monitor](#monitor) (`toy_monitor`,
+while the player is limp), and since 26/10/2026 the Monitor, now [Force Throw](#force-throw) (`toy_monitor`,
 marked while it is on, then Throw monitor, `monitor_throw`); a wheel saved before keeps
 its Toys page as it was, and gains them from Add a choice, Toys. The page holds ten, so
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
-(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026), the Tag (`toy_tag`)
-and since 07/11/2026 the [WHEEL OF DOOM](wheel-of-doom.md) (`toy_wheelofdoom`, a press:
-the first shows the price, a second spins).
+(`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026) and the Tag
+(`toy_tag`). The WHEEL OF DOOM's entry (`toy_wheelofdoom`, 07/11/2026 to 23/11/2026, which
+told the player's DOOM coins) is gone; a wheel that saved it drops the unknown choice.
 
 ### GIF wheel
 

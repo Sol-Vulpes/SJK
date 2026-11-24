@@ -296,17 +296,8 @@ pub(crate) struct ViewerConsole {
     quests_on: bool,
     /// The Toys tab asked to turn Quests on (`true`) or off, not yet taken.
     pending_quests: Option<bool>,
-    /// A WHEEL OF DOOM of the player's runs, mirrored as [`Self::illuminate_lit`] is.
-    wheel_of_doom_on: bool,
-    /// The Toys tab pressed the WHEEL OF DOOM's switch, not yet taken.
-    pending_wheel_of_doom: bool,
-    /// The Fishing and Mining log books, read as the Collection opened
-    /// ([`crate::catch_book::load`]).
-    log_books: crate::catch_book::Books,
     /// An empty Collection page asked for the server list (15/11/2026).
     pending_servers: bool,
-    /// The Log book's Share button was pressed: Mining's (`true`) or Fishing's.
-    pending_brag: Option<bool>,
     /// The Monitor toy is on, mirrored as [`Self::illuminate_lit`] is.
     monitor_on: bool,
     /// The Toys tab asked to turn the Monitor on (`true`) or off, not yet taken.
@@ -904,7 +895,7 @@ impl ViewerConsole {
             }
             // The hue and the saturation are the custom theme's: moving one picks it.
             if crate::menu::sjk::theme::follows_custom(name) {
-                let custom = crate::menu::sjk::theme::Theme::NAMES[2];
+                let custom = crate::menu::sjk::theme::Theme::Custom.name();
                 let _ = self
                     .shell
                     .cvars
