@@ -1,3 +1,21 @@
+## help_prediction, and "the prediction feels different" in the betas (24/11/2026)
+
+Branch `personal/help-prediction`, based on `main` `3abe77908`. A player told Sol the
+prediction felt different in 2026.1123. Between `sjk-v2026.1117.1` and `sjk-v2026.1123.2`
+nothing in pmove, prediction, command timing, clocks, interpolation or smoothing changed
+(`sjk-game-jka`, `sjk-runtime`, `sjk-network` untouched; `local_prediction*`,
+`prediction_*`, `presentation_clock`, `command_rate`, `remote_motion` untouched). What did
+change is the ping shown: ef6c558a5 (17/11) made the lagometer plot stock's round trip
+(`snap.ping`) instead of `serverTime - commandTime`, and the status bar (on by default
+since efa26e410) shows the scoreboard's ping, so the numbers and the graph look different.
+Frame-time load from new features (acrylic blur, status bar) moves Auto gameplay FPS's
+commands too; not measured. On main since: #279 (preview raises no events) and #261
+(4-sample history for others), neither touching local prediction.
+
+`help_prediction` (`prediction_help.rs`) lists the related cvars with value, default and
+description from the registry, and the related commands. Verified: fmt, clippy, the
+viewer tests, the release startup stack check. Not run in game.
+
 ## Missing-saber probe: why a player's saber is not drawn (24/11/2026)
 
 Branch `personal/missing-saber-probe`, based on `main` `5aa0d0a4c`. Hub #248, and Sol saw it

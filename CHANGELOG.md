@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- `help_prediction` lists every setting about prediction, the smoothing of other players and how your commands reach the server, grouped, with the value you use (green when you changed it), its default and what it does, then the related commands (`help_gameplay_fps`, `help_tickrate`) _(Sol)_
 - A saber swing is no longer heard when none is made: with the medium style a chain of 3 swings could sound like 4, as the client played a swing it guessed between two commands that the server then did not make (hub #279) _(Sol)_
 - Map music plays in stereo again, as in stock Jedi Academy: tracks were mixed down to mono (hub #284) _(Sol)_
 - Dropped weapons lie on their side on the ground, as in stock, instead of standing on their stock with the barrel up (hub #295) _(Sol)_

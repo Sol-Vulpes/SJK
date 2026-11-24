@@ -807,6 +807,11 @@ impl ViewerConsole {
         self.shell.cvars.get(name).map(|cvar| &cvar.value)
     }
 
+    /// The whole registered cvar: value, default and description.
+    pub(crate) fn cvar_entry(&self, name: &str) -> Option<&sjk_shell::Cvar> {
+        self.shell.cvars.get(name)
+    }
+
     /// A stamp of the archived cvars' values ([`CvarRegistry::archive_revision`]): it
     /// changes whenever one of them does, so a reading of archived cvars can be kept
     /// until it changes.

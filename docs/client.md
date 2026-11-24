@@ -3125,6 +3125,12 @@ itself, once per server and value, with a line in orange saying the inputs are n
 going through at that rate and 125 picked.
 `help_gameplay_fps` prints the explanation and the value in use to the console and
 opens the card; `help_gameplay_fps <fps>` or `gameplay_fps <fps>` sets it (0 for Auto).
+`help_prediction` ([prediction_help.rs](../crates/sjk-viewer/src/prediction_help.rs), Sol,
+24/11/2026) prints the prediction, smoothing and command-timing cvars in four groups
+(your movement, commands and packets, other players and timing, the server's movement
+rules) with each one's value, default and registered description, a changed value in
+green, then `help_gameplay_fps`, `help_tickrate`, `fakenoclip` and `freecam`; a test
+checks every listed cvar is registered.
 `help_tickrate` ([tickrate_help.rs](../crates/sjk-viewer/src/tickrate_help.rs), Sol,
 08/11/2026) prints to the console what players call the tick rate, for staff to tell
 players to type: the frames drawn (`com_maxfps`), the commands sent (the gameplay FPS)
