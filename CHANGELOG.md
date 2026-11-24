@@ -30,7 +30,15 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1124.2 (Beta) | 24/11/2026
+
+Low FPS Night, whole models through model sync, the Varykino Blossom's extras and a round of fixes from Kushina.
+
+> Low FPS Night: A fixed night on the map's own lighting for slower PCs, at no FPS cost (Settings > Graphics).
+> Model sync: A shared model brings its voice, its animation sounds and its shaders, and says what went in.
+> Varykino Blossom: A finer Lavender mist, and five extras for holders of a Solar SJK Alpha 014.
+> Fixes: Spectators' names stay inside the scoreboard, achievement names no longer run together, and the ground HUD hides the saber's style line.
+> Character creation: Custom species show whole outfits, and the SJK creator offers the Hoth gear.
 
 = r_lowFpsNight: Low FPS Night: a fixed night at no FPS cost without real-time lighting; the map goes dark while lamps and sabers keep their light.
 
@@ -47,7 +55,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - A model whose voice table starts with a setting line (JoF's Mandalorians: `breathes "0"`) speaks with its own voice instead of the generic one: the voice folder is the first one-word line _(Sol)_
 - Model sync is easier: a share says what went in (files, size, sounds, what it took from elsewhere, what is missing on your PC) and how to fix a refused one; `modelsync check` says it without sending; `getmodel all` and the page's Get players' models fetch the shared models of everyone here you lack; `modelsync share`, `modelsync get <name>` work too; a downloaded model shows on the map at once, without waiting for the next map _(Sol)_
 - Character creation: the head, torso and legs pictures of the custom species show the whole outfit, not only its tinted bits, and in the SJK creator the Hoth gear (torso `torso_g1`, legs `lower_e1`) can be chosen in the Torso and Legs lists, with jaPRO's pictures of it where JoF EJK's `japro-assets.pk3` is installed in the EternalJK folder (named "Hoth" without them); the classic menu keeps retail's lists _(Kushina, PR #451, pictures after jaPRO)_
-- Varykino Blossom: the Lavender mist is narrower and covers less, so it no longer thickens the blade; with a Solar SJK Alpha 014 (Kushina), five extras under Extra features: Blossom mist (a faint lavender cloud drifting down with the blossoms, or alone with Falling blossoms off), Ink stroke (a lilac sumi-e brush stroke along the swing), Silk threads (silk bindings round the branch), Butterfly (a white butterfly with a lilac disc sitting on the tip in the droplet's place, fluttering up when the blade clashes) and Lilac light (every effect of the blade turned a soft lilac, its glow narrower, all but the blossoms its swing sheds); its own sounds are now a soft breeze (a quiet rise, a gentle breathing hum and soft gusts as it swings), heard in place of the stock saber sounds _(Kushina, PR #446)_
+- Varykino Blossom: the Lavender mist is narrower and covers less, so it no longer thickens the blade; with a Solar SJK Alpha 014 (Kushina), five extras under Extra features: Blossom mist (a faint lavender cloud drifting down with the blossoms, or alone with Falling blossoms off), Ink stroke (a lilac sumi-e brush stroke along the swing), Silk threads (silk bindings round the branch), Butterfly (a white butterfly with a lilac disc sitting on the tip in the droplet's place, fluttering up when the blade clashes) and Lilac light (every effect of the blade turned a soft lilac, its glow narrower, all but the blossoms its swing sheds) _(Kushina, PR #446)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 
