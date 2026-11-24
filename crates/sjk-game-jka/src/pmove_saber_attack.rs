@@ -260,7 +260,7 @@ fn stab_down(saber: &mut Lightsaber) -> u16 {
     {
         return LS_NONE;
     }
-    if saber.state.client_num < 32 {
+    if saber.state.client_num < crate::pmove::max_clients() {
         saber.state.velocity[2] = 0.0;
         saber.command.up_move = 0;
     }

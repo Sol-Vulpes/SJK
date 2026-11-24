@@ -83,8 +83,8 @@ mod respawn_tests {
 /// `PMF_RESPAWNED` (`codemp/game/bg_public.h`).
 const PMF_RESPAWNED: u16 = 512;
 use super::{
-    Bounds, GroundState, JUMP_VELOCITY, MAX_CLIENTS, MoveContext, MovementCollision, PMF_JUMP_HELD,
-    Predictor,
+    Bounds, GroundState, JUMP_VELOCITY, MoveContext, MovementCollision, PMF_JUMP_HELD, Predictor,
+    max_clients,
 };
 use sjk_protocol::{ENTITY_NUMBER_NONE, UserCommand};
 
@@ -126,7 +126,7 @@ impl Predictor {
         let state = &self.state;
         // A flying NPC (`FLY_NORMAL`) moves by `PM_FlyMove` and never reaches
         // `PM_CheckJump`; a vehicle does not jump either.
-        if state.client_num >= MAX_CLIENTS
+        if state.client_num >= max_clients()
             && self
                 .npc
                 .is_some_and(|npc| npc.class == CLASS_VEHICLE || npc.flags2 & EF2_FLYING != 0)
