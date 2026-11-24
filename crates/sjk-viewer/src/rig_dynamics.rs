@@ -9,7 +9,8 @@
 //! actor's ([`super::Scratch`]); it all happens in the model's space, so the chain
 //! answers the animation (steps, jumps, turns of the hips). A chain with a
 //! [`Settings::drag`] also feels the player's movement through the world, as air on
-//! it ([`Motion`]).
+//! it ([`Motion`]), and one with a [`Settings::breeze`] a gusting breeze, the same for
+//! every player ([`breeze`]).
 //!
 //! Each chain has its own [`Settings`] (a cape: no wag, stiffer), and its points are
 //! pushed out of the body's [`Capsule`]s (trunk and legs, measured once from the mesh;
@@ -59,6 +60,16 @@ const MAX_TURN: f32 = 12.0;
 const MOTION_RATE: f32 = 10.0;
 /// Movement faster than this, game units per second, is a teleport or a respawn.
 const TELEPORT_SPEED: f32 = 3000.0;
+/// The breeze's heading at the middle of its drift, degrees in the world (the game's yaw:
+/// +X at 0); it drifts [`BREEZE_DRIFT`] radians either side.
+const BREEZE_HEADING: f32 = 30.0;
+/// The most the breeze's heading drifts either side of [`BREEZE_HEADING`], radians.
+const BREEZE_DRIFT: f32 = 0.9;
+/// The breeze repeats after this many seconds of the game clock, which every frequency in
+/// [`breeze`] divides: the clock is taken modulo it, keeping `f32` precise, with no jump.
+const BREEZE_PERIOD_MS: i64 = 1_000_000;
+/// How far behind the anchor's the gusts reach a chain's tip, seconds: a gust runs down it.
+const BREEZE_TRAVEL: f32 = 0.5;
 /// How far above the ground a colliding chain's points stay at the least, game units, so
 /// a strand lying on the floor does not flicker through it.
 pub(super) const GROUND_GAP: f32 = 0.5;
@@ -94,6 +105,9 @@ pub(crate) struct Settings {
     /// Whether the head's capsule pushes the chain's points out too: hair kept from
     /// swinging through the face and the skull.
     pub(crate) head: bool,
+    /// How far the breeze moves the chain's tip at its strongest gust, game units (0, the
+    /// default: no breeze). It blows the same way for every player ([`breeze`]).
+    pub(crate) breeze: f32,
 }
 
 impl Default for Settings {
@@ -109,6 +123,7 @@ impl Default for Settings {
             drag: 0.0,
             arms: false,
             head: false,
+            breeze: 0.0,
         }
     }
 }
@@ -181,6 +196,35 @@ impl Motion {
         let turn = self.turn.clamp(-MAX_TURN, MAX_TURN);
         self.velocity.clamp_length_max(MAX_WIND) + Vec3A::new(-point.y, point.x, 0.0) * turn
     }
+
+    /// The breeze at a point `lag` seconds behind the anchor's gusts, in the model's space:
+    /// its direction scaled by its strength (0 to 1). It follows the game clock and the
+    /// facing [`Self::observe`] was last given, so it blows the same way through the world
+    /// for every player; an actor nobody tells of either takes `seconds` (its own clock)
+    /// and faces +X.
+    fn breeze(&self, seconds: f32, lag: f32) -> Vec3A {
+        let (time, yaw) = self.last.map_or((seconds, 0.0), |(_, yaw, time_ms, _)| {
+            ((time_ms.rem_euclid(BREEZE_PERIOD_MS)) as f32 / 1000.0, yaw)
+        });
+        let (heading, strength) = breeze(time - lag);
+        let world = Vec3A::new(heading.cos(), heading.sin(), 0.0) * strength;
+        // As in `observe`: the model's -Y is the entity's +X.
+        Mat3A::from_rotation_z(-(yaw + 90.0).to_radians()) * world
+    }
+}
+
+/// The breeze at `seconds` of the game clock: its heading in the world (radians, the game's
+/// yaw) and its strength, 0 to 1. Gusts of a few seconds over a slower swell, and a heading
+/// drifting over a minute or so; every frequency is a whole number of cycles in
+/// [`BREEZE_PERIOD_MS`], so the clock may wrap there.
+pub(super) fn breeze(seconds: f32) -> (f32, f32) {
+    let wave = |hertz: f32, phase: f32| (std::f32::consts::TAU * hertz * seconds + phase).sin();
+    let strength = 0.55 + 0.25 * wave(0.13, 0.0) + 0.15 * wave(0.31, 1.3) + 0.05 * wave(0.83, 0.4);
+    let drift = BREEZE_DRIFT * (0.65 * wave(0.021, 0.0) + 0.35 * wave(0.047, 2.0));
+    (
+        BREEZE_HEADING.to_radians() + drift,
+        strength.clamp(0.0, 1.0),
+    )
 }
 
 /// A part of the body dynamic chains are kept out of: the segment between two
@@ -348,8 +392,9 @@ pub(super) struct Chains {
     along: Vec<f32>,
     /// Its chain's settings.
     settings: Vec<Settings>,
-    /// Whether any chain has a [`Settings::drag`], read each frame for each actor.
-    drag: bool,
+    /// Whether any chain has a [`Settings::drag`] or a [`Settings::breeze`], read each frame
+    /// for each actor.
+    motion: bool,
     /// Its chain's anchor joint.
     anchor: Vec<usize>,
     /// The capsules each one ignores (a bit per capsule): its anchor's, and those it
@@ -417,7 +462,9 @@ impl Chains {
                 .map(|(_, depth, ..)| *depth as f32 / deepest)
                 .collect(),
             settings: found.iter().map(|(.., settings)| *settings).collect(),
-            drag: found.iter().any(|(.., settings)| settings.drag > 0.0),
+            motion: found
+                .iter()
+                .any(|(.., settings)| settings.drag > 0.0 || settings.breeze > 0.0),
             anchor: found.iter().map(|(_, _, anchor, _)| *anchor).collect(),
             ignored: vec![0; found.len()],
             ignored_middle: vec![0; found.len()],
@@ -576,9 +623,10 @@ impl Chains {
         self.settings.iter().any(|settings| settings.collide)
     }
 
-    /// Whether a chain feels the air, so the actor's movement needs following at all.
-    pub(super) fn wants_drag(&self) -> bool {
-        self.drag
+    /// Whether a chain feels the air or the breeze, so the actor's movement and facing
+    /// need following at all.
+    pub(super) fn wants_motion(&self) -> bool {
+        self.motion
     }
 
     /// Whether a chain is kept out of the arms, so they need capsules at all.
@@ -719,15 +767,25 @@ pub(super) fn simulate(
                 stiffness,
                 damping,
                 drag,
+                breeze,
                 ..
             } = chains.settings[slot];
+            let along = chains.along[slot];
             let air = if drag > 0.0 {
-                state.motion.wind(state.points[slot]) * -drag * chains.along[slot]
+                state.motion.wind(state.points[slot]) * -drag * along
+            } else {
+                Vec3A::ZERO
+            };
+            // The breeze holds the tip `breeze` units out at its strongest, as the spring
+            // balances it, less towards the anchor.
+            let blown = if breeze > 0.0 {
+                state.motion.breeze(state.time, along * BREEZE_TRAVEL) * breeze * stiffness * along
             } else {
                 Vec3A::ZERO
             };
             let velocity = &mut state.velocities[slot];
-            *velocity += (pull * stiffness - *velocity * damping + weight(slot) + air) * step;
+            *velocity +=
+                (pull * stiffness - *velocity * damping + weight(slot) + air + blown) * step;
             state.points[slot] += *velocity * step;
         }
     }
@@ -1528,6 +1586,57 @@ mod tests {
     }
 
     #[test]
+    fn the_breeze_gusts_and_drifts_within_its_ranges_and_repeats() {
+        let period = BREEZE_PERIOD_MS as f32 / 1000.0;
+        let (mut weakest, mut strongest) = (1.0f32, 0.0f32);
+        for tenth in 0..20_000 {
+            let seconds = tenth as f32 * 0.1;
+            let (heading, strength) = breeze(seconds);
+            weakest = weakest.min(strength);
+            strongest = strongest.max(strength);
+            let drift = (heading - BREEZE_HEADING.to_radians()).abs();
+            assert!(drift <= BREEZE_DRIFT + 1e-4, "{seconds}: {drift}");
+            if seconds < period {
+                let (later_heading, later) = breeze(seconds + period);
+                assert!((later - strength).abs() < 0.01, "{seconds}");
+                assert!((later_heading - heading).abs() < 0.01, "{seconds}");
+            }
+        }
+        // Gusts and lulls, never dead calm.
+        assert!(weakest > 0.05 && weakest < 0.3, "{weakest}");
+        assert!(strongest > 0.85, "{strongest}");
+    }
+
+    #[test]
+    fn a_chain_in_the_breeze_leans_the_same_way_through_the_world_whatever_the_facing() {
+        let settings = Settings {
+            breeze: 3.0,
+            ..in_air(0.0)
+        };
+        assert!(Chains::under(&leg_and_pendulum(), &[0, 1, 2, 3], &[(2, settings)]).wants_motion());
+        let mut directions = Vec::new();
+        for yaw in [0.0f32, 90.0, 200.0] {
+            // Standing still, facing `yaw`.
+            let tip = strand_tip_in(settings, running(0.0, yaw), 3);
+            let offset = tip - Vec3A::new(0.0, 0.0, 20.0);
+            // Back to the world (the inverse of `Motion::observe`'s turn).
+            let world = Mat3A::from_rotation_z((yaw + 90.0).to_radians()) * offset;
+            let sideways = world.truncate().length();
+            assert!(sideways > 0.5 && sideways < 3.5, "{yaw}: {world:?}");
+            directions.push(world.truncate() / sideways);
+        }
+        for direction in &directions[1..] {
+            assert!(direction.dot(directions[0]) > 0.999, "{directions:?}");
+        }
+        // Without it the strand hangs straight.
+        let still = strand_tip_in(in_air(0.0), running(0.0, 0.0), 3);
+        assert!(
+            (still - Vec3A::new(0.0, 0.0, 20.0)).length() < 1e-4,
+            "{still:?}"
+        );
+    }
+
+    #[test]
     fn a_teleport_a_paused_clock_or_a_long_gap_is_not_movement() {
         let mut motion = Motion::default();
         motion.observe([0.0; 3], 0.0, 0, BODY);
@@ -1572,12 +1681,12 @@ mod tests {
     fn only_chains_with_drag_ask_for_the_movement() {
         let joints = leg_and_pendulum();
         let order = [0, 1, 2, 3];
-        assert!(!Chains::under(&joints, &order, &[(2, Settings::default())]).wants_drag());
+        assert!(!Chains::under(&joints, &order, &[(2, Settings::default())]).wants_motion());
         let air = Settings {
             drag: 1.0,
             ..Settings::default()
         };
-        assert!(Chains::under(&joints, &order, &[(2, air)]).wants_drag());
+        assert!(Chains::under(&joints, &order, &[(2, air)]).wants_motion());
     }
 
     #[test]

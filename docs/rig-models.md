@@ -135,8 +135,21 @@ to 800 units per second and turns up to 12 radians per second. A jump of more th
 second is a teleport: it starts again at rest, whatever the yaw did, as do a gap of more than 0.1 s
 and a change of where the origin comes from (another body on a reused mesh, or the local player's
 prediction giving way to the interpolated origin in the free camera). An actor is only followed
-while a chain of its rig has a `drag`, and one whose origin is not read (no player pose, a cut-off
-limb) stops at once.
+while a chain of its rig has a `drag` or a `breeze`, and one whose origin is not read (no player
+pose, a cut-off limb) stops at once.
+
+`breeze <units>` (19/11/2026) blows a chain in a gusting breeze, so hair and cloth stay alive
+while the player stands, beyond the steady `wag` (0 by default, so nothing changes without it).
+The units are how far the tip is held out at the strongest gust, as the spring balances it,
+less towards the anchor: each point accelerates by `breeze * stiffness * strength` along the
+breeze. Its strength swells and gusts between about a tenth and full over a few seconds, and
+a gust reaches the tip half a second after the anchor (`BREEZE_TRAVEL`), so it runs down the
+chain; its heading drifts 0.9 radians either side of 30 degrees in the world over a minute or so
+(`breeze` in [rig_dynamics.rs](../crates/sjk-viewer/src/rig_dynamics.rs)). It follows the game
+clock and the actor's facing (followed as for `drag`), so it blows the same way through the world
+for every player, and a player turning sees their hair blow the other way; the pattern repeats
+every 1000 seconds, which keeps the clock precise. An actor whose movement is not followed takes
+its own clock and faces +X.
 
 A chain may fork, and joints may be stacked on one spot, as some rigs do. Each joint
 is placed from where its parent now stands. A parent is turned towards its first child
@@ -277,7 +290,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `scale <n>` or `scale auto` | game units per glTF metre | `auto` |
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
-| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head |
+| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0 |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
 | `map <joint> <bone> <joint end> <bone end>` | ... aimed along the bone | |
 | `map <joint> <bone> as <other joint>` | ... with another joint's alignment (finger chains) | |
@@ -285,7 +298,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`) does not load at all,
 rather than dropping that line.
 
 ### Variants

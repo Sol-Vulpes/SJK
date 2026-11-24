@@ -834,7 +834,7 @@ fn a_manifest_names_its_dynamic_joints() {
     let parsed = manifest(
         "dynamic tail_root\ndynamic hair 0\n\
          dynamic cape_l wag 0 stiffness 120 damping 9 nocollide\ndynamic cape_r 800 wag 0\n\
-         dynamic strand limit 4 clearance 1.5 drag 0.8 arms head\nlayer strand over cape_l",
+         dynamic strand limit 4 clearance 1.5 drag 0.8 arms head breeze 2.5\nlayer strand over cape_l",
     );
     assert_eq!(parsed.layers, [("strand".to_owned(), "cape_l".to_owned())]);
     let default = dynamics::Settings::default();
@@ -875,6 +875,7 @@ fn a_manifest_names_its_dynamic_joints() {
                     drag: 0.8,
                     arms: true,
                     head: true,
+                    breeze: 2.5,
                     ..default
                 }
             ),
@@ -887,6 +888,8 @@ fn a_manifest_names_its_dynamic_joints() {
         "dynamic tail wag",
         "dynamic tail stiffness 0",
         "dynamic tail damping -1",
+        "dynamic tail breeze -1",
+        "dynamic tail breeze",
         "dynamic tail 0 1",
     ] {
         assert!(Manifest::parse(bad).is_err(), "{bad}");
