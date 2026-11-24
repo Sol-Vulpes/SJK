@@ -51,6 +51,36 @@ pub fn reset_player_slots() {
     set_player_slots(CLASSIC_PLAYER_SLOTS);
 }
 
+/// The userinfo key by which a client tells a server, when it connects, that it can
+/// be shown more than 32 players.
+pub const EXTENDED_SLOTS_KEY: &str = "jof64";
+
+/// The slot count a server's serverinfo (configstring 0) announces: its
+/// `sv_maxclients`, held between 32 and [`PLAYER_CAPACITY`]. A stock server cannot
+/// have more than 32, so a larger number is a server with more player slots.
+pub fn server_info_slots(server_info: &[u8]) -> usize {
+    crate::info_value(server_info, b"sv_maxclients")
+        .and_then(|value| std::str::from_utf8(value).ok())
+        .and_then(|value| value.trim().parse::<usize>().ok())
+        .unwrap_or(CLASSIC_PLAYER_SLOTS)
+        .clamp(CLASSIC_PLAYER_SLOTS, PLAYER_CAPACITY)
+}
+
+/// Takes the slot count for a new gamestate, before anything reads its players.
+/// `extended` is whether this client told the server it can be shown more than 32
+/// players ([`EXTENDED_SLOTS_KEY`]): a client that did not is sent the classic 32,
+/// whatever the server holds.
+pub fn set_player_slots_for(game_state: &crate::GameState, extended: bool) {
+    let slots = if extended {
+        game_state
+            .config_string(0)
+            .map_or(CLASSIC_PLAYER_SLOTS, server_info_slots)
+    } else {
+        CLASSIC_PLAYER_SLOTS
+    };
+    set_player_slots(slots);
+}
+
 /// Whether `number` (a client number, which is also that player's entity number) names
 /// a player slot of the connected server.
 pub fn is_player_number(number: usize) -> bool {
@@ -105,6 +135,16 @@ impl Drop for PlayerSlotsForTest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_serverinfo_gives_the_slot_count() {
+        assert_eq!(server_info_slots(br"\sv_maxclients\64\mapname\mp/ffa3"), 64);
+        assert_eq!(server_info_slots(br"\sv_maxclients\48"), 48);
+        assert_eq!(server_info_slots(br"\sv_maxclients\24"), 32);
+        assert_eq!(server_info_slots(br"\sv_maxclients\200"), 64);
+        assert_eq!(server_info_slots(br"\mapname\mp/ffa3"), 32);
+        assert_eq!(server_info_slots(br"\sv_maxclients\many"), 32);
+    }
 
     #[test]
     fn both_ranges_map_each_way() {

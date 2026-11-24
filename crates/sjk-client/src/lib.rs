@@ -989,6 +989,10 @@ impl ClientSession {
                 {
                     self.demo_recorder.stop()?;
                     let initial = decode_initial_gamestate(&message.payload)?;
+                    sjk_protocol::set_player_slots_for(
+                        &initial.game_state,
+                        self.compat_profile.extended_slots(),
+                    );
                     if let Some(storage) = &self.download_storage
                         && !storage
                             .missing(&initial.game_state)
@@ -1186,6 +1190,7 @@ impl ClientSession {
     }
 
     pub fn disconnect(&mut self) -> Result<(), ClientError> {
+        sjk_protocol::reset_player_slots();
         if self.connection.is_none() {
             self.local = None;
             self.disconnected = true;
