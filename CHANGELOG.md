@@ -30,7 +30,16 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1124.1 (Beta) | 24/11/2026
+
+Fixes from your reports: smoother players, sounds back, the KR server and a lighter Collection.
+
+> Smoother players: Other players run and turn smoothly between snapshots, and no longer go flat in flips and dual-saber spins.
+> Sounds: Map music is in stereo again, the concussion rifle fires with sound, and no swing is heard that was never made.
+> KR server: Servers with unusual bytes in their name no longer leave you stuck on the loading screen.
+> Lighter Collection: The Collection says when it prepares kyber pictures, and goes light by itself on a weak PC.
+> EJK look: The Vanilla preset holds the exposure fixed and turns sharpening off, as EJK does.
+> Duels: Hats, capes, hilts, guns and jetpacks take a duellist's look.
 
 - `help_prediction` lists every setting about prediction, the smoothing of other players and how your commands reach the server, grouped, with the value you use (green when you changed it), its default and what it does, then the related commands (`help_gameplay_fps`, `help_tickrate`) _(Sol)_
 - A saber swing is no longer heard when none is made: with the medium style a chain of 3 swings could sound like 4, as the client played a swing it guessed between two commands that the server then did not make (hub #279) _(Sol)_
