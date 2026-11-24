@@ -36,8 +36,6 @@ pub struct LegacyThrownSaber<'a> {
 
 /// `MAX_GENTITIES`: an owner is any entity number, NPCs included.
 const MAX_GENTITIES: u32 = 1_024;
-/// `MAX_CLIENTS`: owners below it are players with clientinfo.
-const MAX_CLIENTS: u16 = 32;
 
 /// Owner entity number of an `ET_GENERAL`/`WP_SABER` entity.
 ///
@@ -80,10 +78,11 @@ impl<'a> LegacyThrownSabers<'a> {
     pub fn get(&self, number: u16) -> Option<LegacyThrownSaber<'a>> {
         let state = (*self.states.get(usize::from(number))?)?;
         let owner = legacy_thrown_saber_owner(state)?;
-        if owner >= MAX_CLIENTS {
+        // `MAX_CLIENTS`: owners below it are players with clientinfo.
+        if !sjk_protocol::is_player_number(usize::from(owner)) {
             return self.npc(state, owner);
         }
-        let config = self.game.config_string(1_131 + usize::from(owner))?;
+        let config = crate::player_identity::player_config(self.game, usize::from(owner))?;
         if config.is_empty() {
             return None;
         }

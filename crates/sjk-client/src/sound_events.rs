@@ -16,7 +16,9 @@ use crate::maintained_sounds::{
 };
 use crate::{AmbientSetKind, AmbientSets};
 use sjk_audio::{Attenuation, ChannelId, PlayRequest, SoundHandle, SourceId};
-use sjk_protocol::{EntityState, GameState, Snapshot};
+use sjk_protocol::{
+    EntityState, GameState, PLAYER_CAPACITY, Snapshot, is_player_number, player_slots,
+};
 use sjk_vfs::VirtualFileSystem;
 #[path = "sound_feedback.rs"]
 mod feedback;
@@ -37,7 +39,6 @@ pub use saber_switch::LegacySaberView;
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:132
 const MAX_SOUNDS: usize = 256;
 const MAX_ENTITIES: usize = 1_024;
-const MAX_CLIENTS: usize = 32;
 const ET_EVENTS: u8 = 18; // codemp/game/bg_public.h:1270
 const SOLID_BMODEL: u32 = 0x00ff_ffff; // codemp/qcommon/q_shared.h
 
@@ -604,7 +605,7 @@ fn event_cause(event: u16, entity: &EventSubject) -> Option<u16> {
         75 => entity.ground,
         _ => return None,
     };
-    (usize::from(client) < MAX_CLIENTS).then_some(client)
+    is_player_number(usize::from(client)).then_some(client)
 }
 
 /// Stateful codemp sound-event resolver and duplicate-event latch.
@@ -617,9 +618,9 @@ pub struct LegacySoundAdapter {
     weapons: [[Option<u16>; 2]; 19],
     footsteps: [[Option<u16>; 4]; 11],
     water_steps: [[Option<u16>; 4]; 3],
-    custom: [CustomSet; MAX_CLIENTS],
+    custom: [CustomSet; PLAYER_CAPACITY],
     npc: npc_sounds::NpcSounds,
-    client_teams: [u8; MAX_CLIENTS],
+    client_teams: [u8; PLAYER_CAPACITY],
     taunt_random: crate::animation_events::Random,
     /// Picks a swing's, hit's, block's or footstep's sample, as codemp's
     /// `Q_irand` does: a fixed pick per player gave them one swing sound only
@@ -672,7 +673,7 @@ pub struct LegacySoundAdapter {
     flesh_sparks: u8,
     /// The client the event being resolved names as its cause ([`event_cause`]).
     cause: Option<u16>,
-    client_config_hash: [u64; MAX_CLIENTS],
+    client_config_hash: [u64; PLAYER_CAPACITY],
     ledger: LegacySoundLedger,
     loops: LegacyLoopAdapter,
     maintained: MaintainedSounds,
@@ -863,8 +864,14 @@ impl LegacySoundAdapter {
             .contains("sound/interface/commlink_off.mp3")
             .unwrap_or(false)
             .then(|| intern("sound/interface/commlink_off.mp3"));
-        let custom =
-            std::array::from_fn(|client| custom_set(game_state, vfs, client as u16, &mut intern));
+        // Only the server's slots resolve a set: past them there is no player to voice.
+        let custom = std::array::from_fn(|client| {
+            if is_player_number(client) {
+                custom_set(game_state, vfs, client as u16, &mut intern)
+            } else {
+                CustomSet::default()
+            }
+        });
         let npc = npc_sounds::NpcSounds::new(game_state, vfs, &mut intern);
         let client_teams = std::array::from_fn(|client| client_team(game_state, client));
         let saber_definitions = crate::legacy_saber_definitions(vfs).unwrap_or_default();
@@ -991,7 +998,7 @@ impl LegacySoundAdapter {
     ) {
         let mut saber_definitions = None;
         let mut players_changed = false;
-        for client in 0..MAX_CLIENTS {
+        for client in 0..player_slots() {
             let hash = player_config_hash(game_state, client);
             if hash == self.client_config_hash[client] {
                 continue;
@@ -1492,7 +1499,7 @@ impl LegacySoundAdapter {
             )),
             // A client's blade skin or own hilts are voiced below; other entities
             // keep the stock hilt.
-            33 if usize::from(source) >= MAX_CLIENTS => Some((
+            33 if !is_player_number(usize::from(source)) => Some((
                 LegacySoundEvent::SaberUnholster,
                 self.saber_on,
                 source,
@@ -1761,7 +1768,7 @@ impl LegacySoundAdapter {
                 }
                 41 => {
                     let sound = self.team_power[usize::from(parameter != 1)];
-                    for target in 0..MAX_CLIENTS {
+                    for target in 0..player_slots() {
                         if client_bit(entity.client_bits, target) {
                             let target = target as u16;
                             self.emit(
@@ -1893,7 +1900,7 @@ impl LegacySoundAdapter {
 
     fn emit_voice_command(&mut self, parameter: u8, entity: EventSubject, snapshot: &Snapshot) {
         let client = usize::from(entity.ground);
-        if client >= MAX_CLIENTS {
+        if !is_player_number(client) {
             return;
         }
         let sound = self.configured_sound(parameter, npc_sounds::Voice::Player(client));
@@ -2095,9 +2102,8 @@ fn custom_set(
     // picks the generic voice, as EternalJK's `CG_LoadCISounds` does for a default
     // model. Without it a female player's stand-in spoke with the male voice (#312).
     let (directory, female) = configured.unwrap_or_else(|| {
-        let config = game_state
-            .config_string(crate::player_identity::CS_PLAYERS + usize::from(client))
-            .unwrap_or(&[]);
+        let config =
+            crate::player_identity::player_config(game_state, usize::from(client)).unwrap_or(&[]);
         let female = crate::LegacyClientInfo::new(config)
             .bytes("ds")
             .is_some_and(|ds| ds.first() == Some(&b'f'));
@@ -2138,7 +2144,7 @@ fn client_bit(bits: [u16; 4], client: usize) -> bool {
 
 fn client_team(game_state: &GameState, client: usize) -> u8 {
     config_info_value(
-        game_state.config_string(1_131 + client).unwrap_or_default(),
+        crate::player_identity::player_config(game_state, client).unwrap_or_default(),
         "t",
     )
     .and_then(|value| value.parse().ok())
@@ -2173,8 +2179,7 @@ fn sound_exists(vfs: &VirtualFileSystem, requested: &str) -> bool {
 }
 
 fn player_config_hash(game_state: &GameState, client: usize) -> u64 {
-    game_state
-        .config_string(1_131 + client)
+    crate::player_identity::player_config(game_state, client)
         .unwrap_or_default()
         .iter()
         .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {

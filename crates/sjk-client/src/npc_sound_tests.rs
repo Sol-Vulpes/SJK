@@ -1,5 +1,5 @@
 use super::*;
-use sjk_protocol::{LEGACY_ENTITY_FIELDS, PlayerState};
+use sjk_protocol::{CLASSIC_PLAYER_SLOTS as MAX_CLIENTS, LEGACY_ENTITY_FIELDS, PlayerState};
 
 fn fixture() -> (GameState, VirtualFileSystem, LegacySoundAdapter) {
     let mut game = GameState::empty_local(0);

@@ -12,7 +12,11 @@ use sjk_protocol::GameState;
 use sjk_runtime::{Appearance, EntityId};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub(crate) const CS_PLAYERS: usize = 1_131;
+/// Player `client`'s `CS_PLAYERS` configstring: `None` when the server has no such slot
+/// or has not sent it.
+pub(crate) fn player_config(game_state: &GameState, client: usize) -> Option<&[u8]> {
+    game_state.config_string(sjk_protocol::player_configstring(client)?)
+}
 
 /// Resolve the model and skin requested by one BaseJKA player configstring.
 ///
@@ -41,7 +45,7 @@ pub fn legacy_client_appearance_with_policy(
     forced: Option<&str>,
     policy: impl FnOnce(Appearance) -> Appearance,
 ) -> Option<Appearance> {
-    let config = game_state.config_string(CS_PLAYERS + usize::from(client_num))?;
+    let config = player_config(game_state, usize::from(client_num))?;
     let mut appearance = appearance_from_config(config)?;
     if let Some(model) = forced {
         let (name, skin) = model.split_once('/').unwrap_or((model, "default"));
@@ -105,7 +109,7 @@ pub fn legacy_client_saber_name(game_state: &GameState, client_num: u16) -> Opti
 /// (`bg_saberLoad.c:2219-2225`) removes that slot instead of loading it, so
 /// it resolves to `None` rather than to a hilt fallback.
 pub fn legacy_client_saber_names(game_state: &GameState, client_num: u16) -> [Option<String>; 2] {
-    let Some(config) = game_state.config_string(CS_PLAYERS + usize::from(client_num)) else {
+    let Some(config) = player_config(game_state, usize::from(client_num)) else {
         return [None, None];
     };
     let borrowed = saber_names_from_config(config);
@@ -263,7 +267,7 @@ mod model_policy_tests {
         game.replace_config_string(0, b"\\g_gametype\\6".to_vec())
             .unwrap();
         let info = b"\\model\\creature/custom\\t\\1".to_vec();
-        game.replace_config_string(CS_PLAYERS, info.clone())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS, info.clone())
             .unwrap();
         let fallback = Appearance {
             model: "models/players/kyle".into(),
@@ -275,10 +279,16 @@ mod model_policy_tests {
                     .unwrap();
             assert_eq!(appearance.model, fallback.model);
             assert_eq!(appearance.variant, "red");
-            assert_eq!(game.config_string(CS_PLAYERS), Some(info.as_slice()));
+            assert_eq!(
+                game.config_string(sjk_protocol::CS_PLAYERS),
+                Some(info.as_slice())
+            );
         }
-        game.replace_config_string(CS_PLAYERS, b"\\model\\creature/custom\\t\\2".to_vec())
-            .unwrap();
+        game.replace_config_string(
+            sjk_protocol::CS_PLAYERS,
+            b"\\model\\creature/custom\\t\\2".to_vec(),
+        )
+        .unwrap();
         assert_eq!(
             legacy_client_appearance_with_policy(&game, 0, None, |_| fallback)
                 .unwrap()
