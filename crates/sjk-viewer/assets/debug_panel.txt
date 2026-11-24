@@ -3227,6 +3227,30 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 
 # ---- Menus & settings ----
+
+[achievement-wall-words]
+area: Menus & settings
+title: Achievement wall: names and counts kept apart, Completed (Kushina, PR #448)
+change: Headings and medallion names are measured with ui_textScale and ui_letterSpacing.
+change: Names wrap into two lines in their cell; a full category says Completed in gold.
+test: ui_textScale 1.3, ui_letterSpacing 2: Collection > Achievements, all three pages.
+test: No heading runs into its count, no name into the next one's.
+test: A category with every achievement held says Completed instead of 5 of 5.
+
+[tag-answer-own-card]
+area: Menus & settings
+title: Tags: a tag copies answer only on its own card (Kushina, PR #449)
+change: The hub's Break down/Craft answer stays on the card of the tag and finish it was for.
+test: Make a GIF tag, then open Collection > Tags: no "Made: your GIF tag" on the tag cards.
+test: A grey Craft says why it waits; a Break down's answer shows on that copy's card only.
+
+[scoreboard-spectator-lines]
+area: Menus & settings
+title: Scoreboard: spectators' names break into lines (Kushina, PR #452)
+change: Names after Watching break between names inside the board; rows make room for more.
+change: Long names are cut with .. only when they still do not fit.
+test: An FFA server with several spectators (long names): hold TAB, full and compact board.
+test: The names stay inside the board; Watching stays alone on the left.
 [collection-no-nameplates]
 area: Menus & settings
 title: Collection: the Nameplates tab is gone
@@ -4183,6 +4207,13 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[ground-hud-saber-style]
+area: HUD
+title: Ground HUD stands in for the saber's style line (Kushina, PR #450)
+change: With cg_groundHud 1 and a saber, the classic HUD no longer writes Lightsaber and the style.
+test: cg_groundHud 1, saber out: no Lightsaber/Strong at the bottom; the dot at the feet shows it.
+test: Switch to a blaster: its ammunition panel still shows. cg_groundHud 0: all as before.
+
 [sun-jk]
 area: Menus & settings
 title: Sol JK is now Sun JK (visible text only)
@@ -4505,6 +4536,27 @@ test: Menu and Force icons look as before, edges not cut.
 
 
 # ---- Rendering & effects ----
+
+[low-fps-night]
+area: Rendering & effects
+title: Low FPS Night: a fixed night on baked lighting (Kushina, PR #444)
+change: r_lowFpsNight 1 (off by default) holds the sky at 22:00 and darkens the map's bake.
+change: r_lowFpsNightLevel sets the brightness, r_lowFpsNightLamps the lamp light kept.
+test: Settings > Graphics > LOW FPS NIGHT on (real-time lighting off): the map goes dark.
+test: The FPS stays as by day; lamps and sabers light the dark; fog darkens, no glow.
+test: Off: the map looks exactly as before. With r_dayNight 1 it does nothing.
+note: Saber light may look too strong at low levels (review point, follow-up for Kushina).
+
+[rig-head-breeze-eyes-shape]
+area: Rendering & effects
+title: Rig models: head, breeze, eyes and shape words (Kushina, PRs #438 #440 #441 #443)
+change: dynamic lines may say head, breeze <units>, shape; an eyes line names eye joints.
+change: All opt-in: a rig without the words moves exactly as before.
+test: A rig pack using head: hair no longer swings through the face as the head turns.
+test: breeze 1.5 on a hair chain: standing still, it sways in gusts; same way for everyone.
+test: An eyes line on a face rig: the eyes follow an NPC's look target, lids stay put.
+test: shape on a styled strand: it keeps its curve as it hangs instead of going flat.
+note: Older clients reject a manifest using these words; packs add them after a release.
 
 [duel-bolt-ons]
 area: Rendering & effects

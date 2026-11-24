@@ -1254,7 +1254,7 @@ Blackwolf's VisionJK rebuild of the JA+ 2.4 B7 server module from its Linux bina
 `g_mod japlus`): JA+'s settings and their defaults and the `jp_cinfo` bits come from it,
 and its behaviour is ported into SJK's own code, not its source.
 
-Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 8 pull
+Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 17 pull
 requests merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK)); her
 ideas are under [Ideas](#ideas):
@@ -1282,6 +1282,22 @@ ideas are under [Ideas](#ideas):
   faces the viewer, or its opposite for a rim light (stock parses them and draws nothing).
 - #442 a rig model's colliding chains (tails, capes, long hair) stay off the ground: a
   trace down finds the floor and a joint under it is laid on it.
+- #438 `head` on a rig chain's `dynamic` line keeps it out of a capsule measured round the
+  head joint's vertices, so hair no longer swings through the face.
+- #440 `breeze <units>` sways a rig chain in a gusting wind that blows the same way through
+  the world for every player.
+- #441 an `eyes` line names a rig model's eye joints, which turn towards the look target the
+  head already follows, at most 30 degrees past the head, eased.
+- #443 `shape` keeps a rig chain's modelled curve as it hangs: the spring holds each joint
+  under its parent, and gravity weighs most near the root.
+- #444 Low FPS Night (`r_lowFpsNight`, off by default): a fixed 22:00 night on the map's
+  baked lighting for slower PCs, with lamps and sabers keeping their light.
+- #448 Collection > Achievements: headings and medallion names measured with the text size
+  and letter spacing, names wrapped in their cell, and "Completed" for a full category.
+- #449 Collection > Tags: the hub's tag copies answer shows only on the card it was for.
+- #450 the ground HUD stands in for the classic HUD's saber name and style line.
+- #452 the SJK scoreboard's spectator names break into lines inside the board, and the rows
+  make room when many watch.
 
 Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):

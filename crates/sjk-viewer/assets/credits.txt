@@ -621,7 +621,7 @@ link: Blackwolf1337's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=
 
 [Kushina]
 github: kushinaSJK
-role: Contributor: 8 merged pull requests; ideas for SJK
+role: Contributor: 17 merged pull requests; ideas for SJK
 did: #373 Rig model hair and other forked chains no longer jump about
 did: #374 Rig chains: limit, clearance, layer lines and levers; a bone's middle collides
 did: #377 Rig hair and capes trail behind a running player and keep out of the arms
@@ -630,6 +630,15 @@ did: #388 A ribbon bar for every medal on the scoreboard
 did: #408 Collection text fits a larger text size and letter spacing
 did: #439 alphaGen dot and oneMinusDot draw facing and rim alpha
 did: #442 Rig model chains stay off the ground
+did: #438 Rig chains keep out of the head (head)
+did: #440 Rig chains sway in a gusting breeze (breeze)
+did: #441 Rig models' eyes follow the look target (eyes)
+did: #443 Rig chains keep their modelled curve as they hang (shape)
+did: #444 Low FPS Night: a fixed night on baked lighting, at no FPS cost
+did: #448 The achievement wall's words kept apart, and Completed
+did: #449 A tag copies answer shown only on the card it was for
+did: #450 The ground HUD stands in for the saber's style line
+did: #452 Scoreboard spectators' names break into lines inside the board
 did: The Varykino Blossom blade: a blossom-pink blade, lavender mist, a flowering branch and blossoms shed as it swings
 did: Favourite and locked saber shaders: stars listed first, locks kept from break down and trades
 did: Plugin options as Settings switches, in place of typing a cp_pluginDisable number

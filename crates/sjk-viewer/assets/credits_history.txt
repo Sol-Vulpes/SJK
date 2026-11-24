@@ -9,6 +9,14 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Model sync shares a model whole: voice, animation sounds, shaders from any file, outside textures; easier to use
+- db8585f |  | Model sync shares a model whole: voice, animation sounds, shaders from any file, outside textures; easier to use
++ 24/11/2026 | - | Model sync: real community models pack (803 of 830): MP3s after padding, voice tables with setting lines, leading-slash references, ratio 1000
+- fb53d45 |  | Model sync: real community models pack (803 of 830): MP3s after padding, voice tables with setting lines, leading-slash references, ratio 1000
++ 24/11/2026 | - | Low FPS Night: scale the entity light grid by axis with zip (clippy needless_range_loop)
+- dc3269d |  | Low FPS Night: scale the entity light grid by axis with zip (clippy needless_range_loop)
++ 24/11/2026 | - | Release 2026.1124.1 (Beta): smoother players, sounds back, the KR server, a lighter Collection
+- 35601d0 |  | Release 2026.1124.1 (Beta): smoother players, sounds back, the KR server, a lighter Collection
 + 24/11/2026 | - | help_prediction: the prediction, smoothing and command-timing settings with their values
 - 251b86f |  | help_prediction: the prediction, smoothing and command-timing settings with their values
 + 24/11/2026 | - | Vanilla preset turns sharpening off; the other presets leave it as the player set it (Creo)
@@ -3533,6 +3541,32 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 24/11/2026 | SJK #443 | Let rig chains that ask keep their modelled curve as they hang
+- f80273f |  | Let rig chains that ask keep their modelled curve as they hang
++ 24/11/2026 | SJK #441 | Rig models: eye joints follow the look target
+- 747774d |  | Rig models: eye joints follow the look target
++ 24/11/2026 | SJK #440 | Let rig chains that ask sway in a gusting breeze
+- fbcd7f1 |  | Let rig chains that ask sway in a gusting breeze
++ 24/11/2026 | SJK #438 | Keep rig chains that ask out of the head
+- 4d60fc2 |  | Keep rig chains that ask out of the head
++ 24/11/2026 | SJK #444 | Add Low FPS Night, a fixed night on baked lighting
+- f4647f5 |  | Add Low FPS Night, a fixed night on baked lighting
+- 3c2a88b |  | Changelog: name PR #444 in the Low FPS Night line
+- e7a871b |  | Low FPS Night: moonlit blue on the dark, fog darkened with the night
+- 2d1e4b7 |  | Format the Low FPS Night moonlight test as rustfmt does
+- 1baa8e9 |  | Low FPS Night: a stronger moonlit blue (NIGHT_MOON 0.7, 1, 1.8)
++ 24/11/2026 | SJK #452 | Scoreboard: spectators' names break into lines inside the board
+- ad3adce |  | Scoreboard: spectators' names break into lines inside the board
+- ec00226 |  | Scoreboard spectators: rustfmt
++ 24/11/2026 | SJK #450 | Let the ground HUD stand in for the saber's style line
+- bd1ee2a |  | Let the ground HUD stand in for the saber's style line
++ 24/11/2026 | SJK #448 | Keep the achievement wall's words apart and say Completed
+- 7d9f57e |  | Keep the achievement wall's words apart and say Completed
+- 51e791d |  | Measure the achievement names at Exo 2's real width
+- 3893e32 |  | Format the achievement wall's imports
+- a8f89d1 |  | Run the checks again: no macOS runner took the last run
++ 24/11/2026 | SJK #449 | Show a tag copies answer only on the card it was for
+- 6baa087 |  | Show a tag copies answer only on the card it was for
 + 20/11/2026 | SJK #442 | Rig models: dynamic chains stay off the ground
 - 7c0040f |  | Rig models: dynamic chains stay off the ground
 + 20/11/2026 | SJK #439 | Draw alphaGen dot and oneMinusDot as facing and rim alpha
