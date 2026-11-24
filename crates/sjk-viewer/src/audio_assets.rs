@@ -67,19 +67,38 @@ pub(super) fn resolve_sound(vfs: &VirtualFileSystem, path: &str) -> Option<(Stri
         .or_else(|| resolve_sound_file(vfs, path))
 }
 
-/// Look `path` up in the VFS, falling back between `.wav` and `.mp3`.
-fn resolve_sound_file(vfs: &VirtualFileSystem, path: &str) -> Option<(String, Asset)> {
-    if let Some(asset) = vfs.read(path).ok().flatten() {
-        return Some((path.to_owned(), asset));
-    }
-    let candidates = if let Some(base) = path.strip_suffix(".wav") {
+/// Whether [`resolve_sound`] would find `path`, without reading it: a music change asks
+/// before it reads the track, and reading a whole MP3 out of its pk3 only to throw it away
+/// doubled the render thread's stall (hub #318).
+pub(super) fn sound_exists(vfs: &VirtualFileSystem, path: &str) -> bool {
+    let found = |path: &str| {
+        let has = |candidate: &str| vfs.contains(candidate).unwrap_or(false);
+        has(path)
+            || sound_candidates(path)
+                .iter()
+                .any(|candidate| !candidate.is_empty() && has(candidate))
+    };
+    sjk_client::voice_language::foreign(path).is_some_and(|foreign| found(&foreign)) || found(path)
+}
+
+/// The names `path` is looked for under after itself: `.wav` and `.mp3` for each other,
+/// both for a name without either (empty for none).
+fn sound_candidates(path: &str) -> [String; 2] {
+    if let Some(base) = path.strip_suffix(".wav") {
         [format!("{base}.mp3"), String::new()]
     } else if let Some(base) = path.strip_suffix(".mp3") {
         [format!("{base}.wav"), String::new()]
     } else {
         [format!("{path}.wav"), format!("{path}.mp3")]
-    };
-    candidates
+    }
+}
+
+/// Look `path` up in the VFS, falling back between `.wav` and `.mp3`.
+fn resolve_sound_file(vfs: &VirtualFileSystem, path: &str) -> Option<(String, Asset)> {
+    if let Some(asset) = vfs.read(path).ok().flatten() {
+        return Some((path.to_owned(), asset));
+    }
+    sound_candidates(path)
         .into_iter()
         .filter(|candidate| !candidate.is_empty())
         .find_map(|candidate| {
@@ -262,7 +281,7 @@ impl GameAudio {
         self.map_music = None;
         self.dynamic = None;
         let path = default_music_extension(&music.intro);
-        if !path.contains('/') || resolve_sound(vfs, &path).is_none() {
+        if !path.contains('/') || !sound_exists(vfs, &path) {
             if let Ok(Some(asset)) = vfs.read("ext_data/dms.dat") {
                 let result = std::str::from_utf8(&asset.bytes)
                     .map_err(|e| e.to_string())
@@ -271,7 +290,7 @@ impl GameAudio {
                 match result {
                     Ok(level) => {
                         for track in level.tracks[..2].iter().flatten() {
-                            if resolve_sound(vfs, track).is_none() {
+                            if !sound_exists(vfs, track) {
                                 crate::log::progress(format_args!(
                                     "Missing dynamic track: {track}"
                                 ));
@@ -650,5 +669,39 @@ mod music_memory_tests {
         mix_until(&audio, &mut source, 176_400, 0);
         audio.start_music(&vfs, &spec("music/b.wav"));
         mix_until(&audio, &mut source, 88_200, 176_400);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_sound_is_found_without_reading_it_as_resolving_finds_it() {
+        let mut vfs = VirtualFileSystem::new();
+        vfs.mount_memory(
+            "test",
+            [
+                ("music/a.mp3", b"mp3".to_vec()),
+                ("music/b.wav", b"wav".to_vec()),
+            ],
+        )
+        .unwrap();
+        for path in [
+            "music/a.mp3",
+            "music/a.wav",
+            "music/a",
+            "music/b.mp3",
+            "music/b",
+            "music/c.mp3",
+            "music/c",
+        ] {
+            assert_eq!(
+                sound_exists(&vfs, path),
+                resolve_sound(&vfs, path).is_some(),
+                "{path}"
+            );
+        }
+        assert!(sound_exists(&vfs, "music/a.wav") && !sound_exists(&vfs, "music/c"));
     }
 }

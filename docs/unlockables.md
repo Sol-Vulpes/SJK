@@ -2079,7 +2079,23 @@ tier's colour and the kyber worn glows gold from its foot
   gone after a restart once the loops were kept). Checked by the world shot
   `duel6_collection_bake_notice` at 1080p and 4K, a progress pretended. With the menu pictures on (a card short of video
   memory) a kyber shows its first picture only, still, from an atlas of 48 of them
-  (3072 x 576, 6.75 MiB), one baked a frame and not kept, and nothing is live. The chosen
+  (3072 x 576, 6.75 MiB), one baked a frame and not kept, and nothing is live.
+  - **The menus' light path for weak PCs** (24/11/2026, hub #328 on 2026.1123.1: "collection
+    menu drops me into single digit fps and makes it almost unusable"):
+    `blade_pictures::light_menus` is the menu pictures on (`ui_menuPictures`, which
+    `video_memory.rs` sets at start on a card of 4 GB or less, integrated GPUs included) or
+    the Collection measured slow this session: under 20 FPS (`SLOW_FPS`) for 3 s in a row
+    (`SLOW_FOR`) while its kyber pictures show, with a frame cap of 40 or more or none (an
+    unfocused window's cap or a player's low one is no sign of a weak PC;
+    `blade_pictures::note_frame_rate`, called by `step_blade_stills`). On it the kybers
+    show their first picture, still, baked one a frame, only those on screen (no
+    background baking of the others, no loop written to disk), no blade is drawn live,
+    the "Preparing kyber pictures" count is not shown (nothing is kept to count), and the
+    menus' acrylic glass draws its plain tint (`sjk_ui::acrylic::fallback`; in the menus
+    only, the HUD's glass in a game is unchanged). The measured part changes no setting
+    and lasts until the client is closed: the client log says `menus: the Collection ran
+    under 20 FPS for 3 s` when it starts. A PC that keeps 20 FPS never takes it.
+  The chosen
   swatch shows its loop until its live picture is drawn with its own pipelines; the live
   pictures' target (832 x 1664, about 17 MB) is freed 5 s after the last one is asked
   for. A kyber not held shows its loop greyed and dimmed under a small padlock on the

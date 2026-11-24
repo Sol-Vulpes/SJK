@@ -232,7 +232,7 @@ impl GpuState {
     /// game state arrives; not the game menu over a game (the game runs on under it), a
     /// map loading for a server (its connection is serviced and the load's steps handed
     /// on once a frame) or a demo.
-    fn menus_only(&self) -> bool {
+    pub(crate) fn menus_only(&self) -> bool {
         self.live_session.is_none()
             && self.demo_session.is_none()
             && self.resident.session.is_none()

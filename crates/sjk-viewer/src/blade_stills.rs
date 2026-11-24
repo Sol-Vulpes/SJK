@@ -38,8 +38,9 @@
 //! Video memory, a fixed budget for 3 GB cards (15/11/2026): the atlas is 3072 x 2304
 //! RGBA8, 27 MiB ([`LOOPS`] loops of [`FRAMES`] pictures), only while the Collection or a
 //! strip shows; the baking target 768 x 768 (RGBA16F) with its depth, 6.75 MiB, only while
-//! baking. With the menu pictures on (a card short of memory) a kyber shows its first
-//! picture only, still: the atlas holds [`LOW_SLOTS`] of them in 3072 x 576, 6.75 MiB, and
+//! baking. With the menu pictures on (a card short of memory), or on the menus' light path
+//! once the Collection was measured slow ([`crate::blade_pictures::light_menus`]), a kyber
+//! shows its first picture only, still: the atlas holds [`LOW_SLOTS`] of them in 3072 x 576, 6.75 MiB, and
 //! no live blade is drawn; a picture baked then is not kept (a loop read from disk gives
 //! its first picture).
 
@@ -879,6 +880,16 @@ impl crate::GpuState {
             return bakes;
         }
         self.blade_stills.last_wanted = Some(now);
+        // A weak PC measured here takes the menus' light path from the next frame: first
+        // pictures only, baked one a frame (hub #328).
+        if crate::blade_pictures::note_frame_rate(self.frame_pacer.fps(), self.maximum_fps(), now) {
+            crate::log::progress(format_args!(
+                "menus: the Collection ran under {} FPS for {} s: its kybers show still \
+                 pictures and its glass a plain tint for this session",
+                crate::blade_pictures::SLOW_FPS,
+                crate::blade_pictures::SLOW_FOR.as_secs()
+            ));
+        }
         let generation = self.blade_skins.generation();
         if self.blade_stills.generation != Some(generation) {
             self.blade_stills.generation = Some(generation);
@@ -988,7 +999,8 @@ impl crate::GpuState {
             .blade_stills
             .last_bake
             .is_some_and(|at| now - at < BAKING_SHOWS);
-        if !baking {
+        // First pictures (the menus' light path) are not kept, so there is no count to give.
+        if !baking || !crate::blade_pictures::live() {
             lock().progress = None;
             return;
         }
