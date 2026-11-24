@@ -50,6 +50,11 @@ impl Task {
     }
 
     /// The mount, once the worker has it.
+    /// Whether a mount is in flight.
+    pub(crate) fn busy(&self) -> bool {
+        self.0.is_some()
+    }
+
     pub(crate) fn poll(&mut self) -> Option<Mounted> {
         let result = match self.0.as_ref()?.try_recv() {
             Ok(mounted) => mounted,

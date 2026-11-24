@@ -122,13 +122,41 @@ impl crate::GpuState {
             }
         };
         crate::rig_model::forget_sources();
+        // Models model sync downloaded: only those are loaded again, for the players
+        // whose clientinfo names them (they show a stand-in until now).
+        let downloaded = std::mem::take(&mut self.clientinfo_watch.downloaded);
         let worn: Vec<String> = self
             .actor_meshes
             .iter()
             .filter(|mesh| !mesh.corpse_pool)
             .map(|mesh| mesh.appearance.model.clone())
             .collect();
-        let folders = rig_folders(worn.iter().map(String::as_str), &vfs, self.vfs.as_deref());
+        let folders = if downloaded.is_empty() {
+            rig_folders(worn.iter().map(String::as_str), &vfs, self.vfs.as_deref())
+        } else {
+            downloaded
+                .iter()
+                .map(|name| format!("models/players/{name}"))
+                .collect()
+        };
+        let wearers: Vec<u16> = self
+            .live_session
+            .as_ref()
+            .map(sjk_client::ClientSession::game_state)
+            .map(|game| {
+                (0..32u16)
+                    .filter(|&client| {
+                        game.config_string(crate::player_identity::CS_PLAYERS + usize::from(client))
+                            .and_then(|info| {
+                                sjk_client::LegacyClientInfo::new(info)
+                                    .text("model")
+                                    .and_then(crate::installed_models::folder)
+                            })
+                            .is_some_and(|model| downloaded.contains(&model))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         // The forge keys textures by file name: a texture re-exported under the same
         // name must be uploaded again from the new pack.
         let packs = rig_packs(&folders, &vfs);
@@ -159,11 +187,12 @@ impl crate::GpuState {
         let mut players = 0;
         for client in 0..32u16 {
             let entity = sjk_runtime::EntityId::new(u64::from(client) + 1);
-            let wears = self.actor_meshes.iter().any(|mesh| {
-                !mesh.corpse_pool
-                    && mesh.entity_id == Some(entity)
-                    && folders.contains(&mesh.appearance.model)
-            });
+            let wears = wearers.contains(&client)
+                || self.actor_meshes.iter().any(|mesh| {
+                    !mesh.corpse_pool
+                        && mesh.entity_id == Some(entity)
+                        && folders.contains(&mesh.appearance.model)
+                });
             if !wears {
                 continue;
             }
@@ -184,6 +213,17 @@ impl crate::GpuState {
             folders.len(),
             names.join(", ")
         ));
+        if !downloaded.is_empty() {
+            if let Some(console) = &mut self.console {
+                let names: Vec<&str> = downloaded.iter().map(String::as_str).collect();
+                console.push_log(format!(
+                    "Model sync: {} shows now ({players} player{} here).",
+                    names.join(", "),
+                    if players == 1 { "" } else { "s" }
+                ));
+            }
+            return;
+        }
         if let Some(console) = &mut self.console {
             console.push_log(if folders.is_empty() {
                 "Rig models read again: nobody wears one.".to_owned()

@@ -31,17 +31,20 @@ const ROW_BUTTONS: usize = 2;
 const ROW_TOKEN: u16 = 100;
 const SEARCH_TOKEN: u16 = 500;
 const REFRESH_TOKEN: u16 = 501;
+const GET_ALL_TOKEN: u16 = 502;
 const WHEEL_TOKEN: u16 = 910;
 /// How often the rows are read again while nothing said they changed (a model
 /// installed meanwhile, the catalogue read late).
 const REREAD: Duration = Duration::from_secs(3);
 
-/// What has the keyboard: the search, a button of the chosen row, Refresh or Close.
+/// What has the keyboard: the search, a button of the chosen row, Refresh, Get all or
+/// Close.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Focus {
     Search,
     Row(usize),
     Refresh,
+    GetAll,
     Close,
 }
 
@@ -52,6 +55,8 @@ pub(crate) enum PageAction {
     Close,
     /// Read the Sith cloud's list again.
     Refresh,
+    /// `getmodel all`: the shared models of the players here this game lacks.
+    GetAll,
     /// Queue `<action's command> <model>`.
     Run(RowAction, String),
 }
@@ -304,7 +309,7 @@ impl Page {
 
     /// Up or Down: choose another row, the keyboard on its buttons when it has any.
     fn step_row(&mut self, by: isize) {
-        if let Focus::Search | Focus::Refresh | Focus::Close = self.focus {
+        if let Focus::Search | Focus::Refresh | Focus::GetAll | Focus::Close = self.focus {
             self.focus = Focus::Row(0);
         }
         self.step(by);
@@ -315,7 +320,7 @@ impl Page {
     fn stops(&self) -> Vec<Focus> {
         let mut stops = vec![Focus::Search];
         stops.extend((0..self.chosen_buttons()).map(Focus::Row));
-        stops.extend([Focus::Refresh, Focus::Close]);
+        stops.extend([Focus::Refresh, Focus::GetAll, Focus::Close]);
         stops
     }
 
@@ -373,6 +378,7 @@ impl Page {
                     Focus::Search => self.press_row(0),
                     Focus::Row(button) => self.press_row(button),
                     Focus::Refresh => PageAction::Refresh,
+                    Focus::GetAll => PageAction::GetAll,
                     Focus::Close => PageAction::Close,
                 };
             }
@@ -419,6 +425,10 @@ impl Page {
                 Some(REFRESH_TOKEN) => {
                     self.focus = Focus::Refresh;
                     PageAction::Refresh
+                }
+                Some(GET_ALL_TOKEN) => {
+                    self.focus = Focus::GetAll;
+                    PageAction::GetAll
                 }
                 Some(SEARCH_TOKEN) => {
                     self.focus = Focus::Search;
@@ -595,6 +605,8 @@ mod tests {
         let _ = press(&mut page, KeyCode::Tab, None);
         assert_eq!(press(&mut page, KeyCode::Enter, None), PageAction::Refresh);
         let _ = press(&mut page, KeyCode::ArrowRight, None);
+        assert_eq!(press(&mut page, KeyCode::Enter, None), PageAction::GetAll);
+        let _ = press(&mut page, KeyCode::ArrowRight, None);
         assert_eq!(press(&mut page, KeyCode::Enter, None), PageAction::Close);
         // Down to vinfox, which has one button: the focus goes to a button that exists.
         let _ = press(&mut page, KeyCode::ArrowDown, None);
@@ -652,7 +664,7 @@ mod tests {
             let window = sjk_ui::Rect::new(0.0, 0.0, viewport[0], viewport[1]);
             for token in (0..(ROWS * ROW_BUTTONS) as u16)
                 .chain(ROW_TOKEN..ROW_TOKEN + ROWS as u16)
-                .chain([SEARCH_TOKEN, REFRESH_TOKEN, BACK_TOKEN])
+                .chain([SEARCH_TOKEN, REFRESH_TOKEN, GET_ALL_TOKEN, BACK_TOKEN])
             {
                 let Some(rect) = page.ui.rect_for(token) else {
                     continue;

@@ -1,9 +1,12 @@
 //! Builds the PK3 a player uploads from the files of the model they wear, wherever
-//! those were installed: only `models/players/<name>/` and `shaders/<name>.shader`
-//! are kept, paths are lowercased, the shader file keeps only the model's own
+//! those were installed ([`crate::gather`] collects them): only
+//! `models/players/<name>/`, `shaders/<name>.shader` and `sound/chars/<name>/` are
+//! kept, paths are lowercased, the shader file keeps only the model's own
 //! shaders, and the result is checked before it is returned.
 
-use crate::{Checked, Limits, Rejection, check, model_folder, shader_file, valid_name};
+use crate::{
+    Checked, Limits, Rejection, check, model_folder, shader_file, sound_folder, valid_name,
+};
 use std::io::{Cursor, Write};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, ZipWriter};
@@ -21,10 +24,13 @@ pub fn pack(
     }
     let folder = model_folder(&name);
     let shader = shader_file(&name);
+    let sounds = sound_folder(&name);
     let mut kept: Vec<(String, Vec<u8>)> = files
         .into_iter()
         .map(|(path, bytes)| (path.replace('\\', "/").to_ascii_lowercase(), bytes))
-        .filter(|(path, _)| path.starts_with(&folder) || *path == shader)
+        .filter(|(path, _)| {
+            path.starts_with(&folder) || path.starts_with(&sounds) || *path == shader
+        })
         .filter_map(|(path, bytes)| {
             if path != shader {
                 return Some((path, bytes));
