@@ -834,7 +834,7 @@ fn a_manifest_names_its_dynamic_joints() {
     let parsed = manifest(
         "dynamic tail_root\ndynamic hair 0\n\
          dynamic cape_l wag 0 stiffness 120 damping 9 nocollide\ndynamic cape_r 800 wag 0\n\
-         dynamic strand limit 4 clearance 1.5 drag 0.8 arms\nlayer strand over cape_l",
+         dynamic strand limit 4 clearance 1.5 drag 0.8 arms head\nlayer strand over cape_l",
     );
     assert_eq!(parsed.layers, [("strand".to_owned(), "cape_l".to_owned())]);
     let default = dynamics::Settings::default();
@@ -874,6 +874,7 @@ fn a_manifest_names_its_dynamic_joints() {
                     clearance: 1.5,
                     drag: 0.8,
                     arms: true,
+                    head: true,
                     ..default
                 }
             ),
@@ -996,10 +997,18 @@ fn dynamic_chains_of_an_installed_rig() {
     for (label, manifest) in [("manifest", &manifest), ("no gravity", &weightless)] {
         let rig = RigModel::load(&vfs, &directory, manifest, &gla, &glm).unwrap();
         for capsule in &rig.chains.capsules {
-            println!(
-                "capsule {} to {}: radius {:.1}",
-                rig.joints[capsule.from].name, rig.joints[capsule.to].name, capsule.radius
-            );
+            match capsule.head {
+                Some([start, end]) => println!(
+                    "capsule head {}: radius {:.1}, length {:.1}",
+                    rig.joints[capsule.from].name,
+                    capsule.radius,
+                    start.distance(end)
+                ),
+                None => println!(
+                    "capsule {} to {}: radius {:.1}",
+                    rig.joints[capsule.from].name, rig.joints[capsule.to].name, capsule.radius
+                ),
+            }
         }
         let mut scratch = Scratch::default();
         rig.pose_after(&bones, None, &mut scratch, None);
@@ -1746,6 +1755,65 @@ fn the_pelvis_vertices_make_a_capsule_for_the_dynamic_chains() {
     )
     .unwrap();
     assert!(still.chains.capsules.is_empty());
+}
+
+#[test]
+fn the_head_vertices_make_a_capsule_for_a_chain_that_asks() {
+    let mut model = rig();
+    // A strand hanging from the head, moving on its own.
+    model.joints.push(GltfJoint {
+        name: "strand".into(),
+        parent: Some(1),
+        bind: translated(0.1, 1.7, 0.0),
+        inverse_bind: translated(-0.1, -1.7, 0.0),
+        rest: translated(0.1, 0.2, 0.0),
+    });
+    model.joints.push(GltfJoint {
+        name: "strand_tip".into(),
+        parent: Some(2),
+        bind: translated(0.1, 1.4, 0.0),
+        inverse_bind: translated(-0.1, -1.4, 0.0),
+        rest: translated(0.0, -0.3, 0.0),
+    });
+    // Rings 0.08 m round the head's axis from 1.45 to 1.75 m, on the head: taller
+    // than wide, so the capsule runs up the middle.
+    let primitive = &mut model.primitives[0];
+    // The fixture's own three vertices go on the middle ring, a third of a turn apart, so
+    // they move neither the middle nor the radius.
+    for (step, position) in primitive.positions.iter_mut().enumerate() {
+        let angle = step as f32 * std::f32::consts::TAU / 3.0;
+        *position = [0.08 * angle.cos(), 1.6, 0.08 * angle.sin()];
+    }
+    for level in 0..7 {
+        for step in 0..12 {
+            let angle = step as f32 * std::f32::consts::TAU / 12.0;
+            let height = 1.45 + 0.05 * level as f32;
+            primitive
+                .positions
+                .push([0.08 * angle.cos(), height, 0.08 * angle.sin()]);
+            primitive.normals.push([0.0, 0.0, 1.0]);
+            primitive.texture_coordinates.push([0.0; 2]);
+            primitive.joints.push([1, 0, 0, 0]);
+            primitive.weights.push([1.0, 0.0, 0.0, 0.0]);
+        }
+    }
+    let fit = |line: &str| {
+        let text = format!("scale 40\nmap pelvis pelvis head cranium\nmap head cranium\n{line}");
+        RigModel::fit(model.clone(), "", &manifest(&text), &driver()).unwrap()
+    };
+    assert!(fit("dynamic strand").chains.capsules.is_empty());
+    let rig = fit("dynamic strand head");
+    assert_eq!(rig.chains.capsules.len(), 1, "{:?}", rig.chains.capsules);
+    let capsule = rig.chains.capsules[0];
+    assert_eq!((capsule.from, capsule.to), (1, 1));
+    // 0.08 m at 40 units a metre.
+    assert!((capsule.radius - 3.2).abs() < 0.01, "{capsule:?}");
+    // Upright (the game's +Z), 0.3 m less a radius each end long.
+    let [start, end] = capsule.head.expect("the head's ends");
+    let bind = rig.joints[1].bind;
+    let along = bind.transform_point3a(end) - bind.transform_point3a(start);
+    assert!(along.x.abs() < 0.1 && along.y.abs() < 0.1, "{along:?}");
+    assert!((along.z.abs() - (12.0 - 6.4)).abs() < 0.1, "{along:?}");
 }
 
 /// A rig model beside a stock GLM model in the same `_humanoid` frames, as the game

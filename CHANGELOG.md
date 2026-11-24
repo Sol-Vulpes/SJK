@@ -39,6 +39,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Ground HUD (`cg_groundHud`): with a saber, the classic HUD no longer also writes "Lightsaber" and the style at the bottom of the screen; the stance dot at the feet already shows the style. Weapons keep their ammunition panel _(Kushina, PR #450)_
 - Scoreboard: the spectators' names no longer run past the board's edge. They break into more lines under "Watching", the rows make room when many watch, and long names are shortened with ".." only when they still would not fit _(Kushina, PR #452)_
 - Settings > Graphics has a Low FPS Night tab (`r_lowFpsNight`): a fixed 22:00 night on the map's own baked lighting, for slower PCs, at no FPS cost. The map's light goes dark (Night brightness, `r_lowFpsNightLevel`), the brightest lamp spots keep some (Lamp light kept, `r_lowFpsNightLamps`), and sabers, shots and explosions light the dark as brightly as by day. The dark leans a cool moonlit blue while lamp pools stay warm, and map fog darkens with the night instead of glowing; it never turns real-time lighting on _(Kushina, PR #444)_
+- Rig models' hair can be kept out of the head (`head`) _(Kushina, PR #438)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 
