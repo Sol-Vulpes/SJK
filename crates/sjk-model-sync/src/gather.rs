@@ -191,7 +191,7 @@ fn gather_shaders<S: Source>(
             named.extend(
                 glm.hierarchy
                     .iter()
-                    .map(|surface| surface.shader.trim().to_ascii_lowercase())
+                    .map(|surface| normal(&surface.shader.trim().to_ascii_lowercase()))
                     .filter(|shader| shader.contains('/')),
             );
         }
@@ -384,7 +384,8 @@ fn skin_references(text: &str) -> impl Iterator<Item = String> + '_ {
     text.lines().filter_map(|line| {
         let (_, reference) = line.split_once(',')?;
         let reference = reference.trim().trim_matches('"');
-        (reference.contains('/') && !reference.starts_with('*')).then(|| reference.to_owned())
+        let reference = normal(reference);
+        (reference.contains('/') && !reference.starts_with('*')).then_some(reference)
     })
 }
 
@@ -394,8 +395,9 @@ fn rewrite_skin(text: &str, swaps: &BTreeMap<String, String>) -> String {
     text.lines()
         .map(|line| {
             if let Some((surface, reference)) = line.split_once(',')
-                && let Some(moved) =
-                    swaps.get(strip_image_extension(reference.trim().trim_matches('"')))
+                && let Some(moved) = swaps.get(strip_image_extension(&normal(
+                    reference.trim().trim_matches('"'),
+                )))
             {
                 format!("{surface},{moved}")
             } else {
@@ -428,6 +430,12 @@ fn rewrite_words(text: &str, swaps: &BTreeMap<String, String>) -> String {
     }
     flush(&mut word, &mut out);
     out
+}
+
+/// A path as written in a skin or shader, as the game reads it: `/` separators, no
+/// leading one (`/models/players/x/legs` is `models/players/x/legs`).
+fn normal(path: &str) -> String {
+    path.replace('\\', "/").trim_start_matches('/').to_owned()
 }
 
 fn strip_image_extension(path: &str) -> &str {
@@ -494,7 +502,7 @@ mod tests {
             file("models/players/fox/model.glm", "glm"),
             file(
                 "models/players/fox/model_default.skin",
-                "torso,models/players/fox/torso\nhead,models/players/shared/Head.tga\nhips,models/players/kyle/hips\nhair,models/players/foxhair/hair",
+                "torso,/models/players/fox/torso\nhead,models/players/shared/Head.tga\nhips,models/players/kyle/hips\nhair,models/players/foxhair/hair",
             ),
             file("models/players/fox/torso.tga", "t"),
             file("models/players/fox/sounds.cfg", "FoxVoice\nf"),

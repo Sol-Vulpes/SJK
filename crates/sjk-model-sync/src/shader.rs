@@ -140,7 +140,12 @@ pub(crate) fn images(block: &str) -> Vec<String> {
         };
         for frame in frames {
             if frame.contains('/') && !frame.starts_with(['$', '*', '{', '}']) {
-                images.push(frame.to_ascii_lowercase());
+                images.push(
+                    frame
+                        .to_ascii_lowercase()
+                        .trim_start_matches('/')
+                        .to_owned(),
+                );
             } else {
                 break;
             }

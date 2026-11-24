@@ -99,11 +99,12 @@ viewers are protected even if the server is wrong. One rule fails the whole pack
   (`krovos.shader` holds `krovos2`'s): when packing, the client keeps only the model's
   own and leaves the rest out ([`pack`](../crates/sjk-model-sync/src/pack.rs)).
 - **Model tables:** `sounds.cfg`, `sounds_<skin>.cfg` and `animevents.cfg` in the
-  folder, plain text; a voice table's first line names its voice folder (`a-z 0-9 _ -
-  /`, no `..`).
+  folder, plain text; a voice table's first one-word line names its voice folder (`a-z
+  0-9 _ - /`, no `..`); lines with spaces or quotes before it, such as JoF's
+  Mandalorians' `breathes "0"`, are settings, passed over as the client passes them.
 - **Sounds, only under `sound/chars/<name>/`:** `.wav` (RIFF with a format the game
-  plays: PCM, ADPCM or MP3 in WAV, 1 or 2 channels, 4-48 kHz) and `.mp3` (a frame header,
-  after any ID3 tag). Sounds anywhere else are refused, so a pack can never change Kyle's
+  plays: PCM, ADPCM or MP3 in WAV, 1 or 2 channels, 4-48 kHz) and `.mp3` (a frame header
+  within 64 KB after any ID3 tag: many community MP3s start with zeros). Sounds anywhere else are refused, so a pack can never change Kyle's
   voice, a weapon or another model's voice for whoever loads it (since 24/11/2026).
 - **Nothing else:** no other `.cfg` (`animation.cfg`), `.menu`, `.qvm`, `.dll`, `.bsp`,
   `.sab`, emotes or other folders.
@@ -114,7 +115,7 @@ viewers are protected even if the server is wrong. One rule fails the whole pack
 | Limit | Value |
 |---|---|
 | PK3 size | 40 MB |
-| Unpacked size | 160 MB, and each entry at most 200 times its packed size |
+| Unpacked size | 160 MB, and each entry at most 1000 times its packed size (200 until 24/11/2026: silent WAVs and flat textures reach 350) |
 | Files | 512 |
 | Texture side | 4096 pixels |
 | All textures unpacked (RGBA) | 256 MB |

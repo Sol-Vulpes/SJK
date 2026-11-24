@@ -58,12 +58,18 @@ fn mp3(bytes: &[u8]) -> Result<(), &'static str> {
             .fold(0usize, |size, &b| (size << 7) | usize::from(b & 0x7f));
         at = 10 + size;
     }
-    let header = bytes.get(at..at + 4).ok_or("an MP3 without sound")?;
-    let sync = header[0] == 0xff && header[1] & 0xe0 == 0xe0;
-    let layer = (header[1] >> 1) & 0b11;
-    let bitrate = header[2] >> 4;
-    let rate = (header[2] >> 2) & 0b11;
-    if !sync || layer == 0 || bitrate == 0b1111 || rate == 0b11 {
+    // Decoders look for the first frame past any padding (community MP3s often start
+    // with kilobytes of zeros): one within the first 64 KB after the tag.
+    let end = bytes.len().min(at.saturating_add(64 * 1024));
+    let found = bytes.get(at..end).unwrap_or(&[]).windows(4).any(|header| {
+        let sync = header[0] == 0xff && header[1] & 0xe0 == 0xe0;
+        let version = (header[1] >> 3) & 0b11;
+        let layer = (header[1] >> 1) & 0b11;
+        let bitrate = header[2] >> 4;
+        let rate = (header[2] >> 2) & 0b11;
+        sync && version != 0b01 && layer != 0 && bitrate != 0 && bitrate != 0b1111 && rate != 0b11
+    });
+    if !found {
         return Err("not an MP3 file");
     }
     Ok(())
@@ -98,6 +104,10 @@ mod tests {
         let mut tagged = b"ID3\x04\0\0\0\0\0\x02xx".to_vec();
         tagged.extend([0xff, 0xfb, 0x90, 0x44]);
         assert_eq!(check("mp3", &tagged), Ok(()));
+        let mut padded = vec![0u8; 4000];
+        padded.extend([0xff, 0xfb, 0x90, 0x44]);
+        assert_eq!(check("mp3", &padded), Ok(()));
+        assert!(check("mp3", &[0u8; 4000]).is_err());
         assert!(check("mp3", b"<html>").is_err());
     }
 }

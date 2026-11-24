@@ -1095,6 +1095,51 @@ models/players/other/x { }"
         assert_eq!(notes(&gathered), ": 1 sounds (its voice).");
     }
 
+    /// Packs every non-retail model of the installed game, as a share would, and
+    /// prints what each takes or why it is refused (`SJK_GAME_DATA`, the GameData
+    /// folder).
+    #[test]
+    #[ignore = "reads the installed game"]
+    fn every_installed_model_gathers_and_packs() {
+        let Some(root) = std::env::var_os("SJK_GAME_DATA") else {
+            return;
+        };
+        let vfs = crate::assets::mount_game_data(Path::new(&root)).unwrap();
+        let retail = sjk_client::retail_view(&vfs).unwrap();
+        let retail_models: BTreeSet<String> = retail
+            .list_files("models/players", ".glm")
+            .into_iter()
+            .filter_map(|path| path.split_once('/').map(|(name, _)| name.to_owned()))
+            .collect();
+        let names: BTreeSet<String> = vfs
+            .list_files("models/players", ".glm")
+            .into_iter()
+            .filter_map(|path| path.split_once('/').map(|(name, _)| name.to_owned()))
+            .filter(|name| !retail_models.contains(name) && sjk_model_sync::valid_name(name))
+            .collect();
+        let (mut packed, mut voiced, mut pulled) = (0, 0, 0);
+        for name in &names {
+            let gathered = gather(&vfs, name);
+            let line = notes(&gathered);
+            let missing = gathered.missing.len();
+            let sounds = gathered.sounds;
+            let outside = gathered.pulled_in;
+            match sjk_model_sync::pack::pack(name, gathered.files, &Limits::DEFAULT) {
+                Ok((pk3, _)) => {
+                    packed += 1;
+                    voiced += usize::from(sounds > 0);
+                    pulled += usize::from(outside > 0);
+                    println!("OK {name} {} KB{line} missing {missing}", pk3.len() / 1024);
+                }
+                Err(why) => println!("NO {name}: {why}.{}", hint(&why)),
+            }
+        }
+        println!(
+            "{packed} of {} pack; {voiced} with a voice, {pulled} with outside files",
+            names.len()
+        );
+    }
+
     #[test]
     fn modelsync_words_name_the_commands() {
         let args = |words: &[&str]| {

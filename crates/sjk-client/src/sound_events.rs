@@ -2065,10 +2065,17 @@ fn custom_set(
     let configured = candidates.iter().find_map(|path| {
         let bytes = vfs.read(path).ok().flatten()?.bytes;
         let text = String::from_utf8_lossy(&bytes);
+        // The first one-word line: settings lines before it (JoF's Mandalorians start
+        // with `breathes "0"`) are not the voice folder.
         let directory = text
             .lines()
             .map(str::trim)
-            .find(|line| !line.is_empty() && !line.starts_with('/') && !line.starts_with('#'))?
+            .find(|line| {
+                !line.is_empty()
+                    && !line.starts_with('/')
+                    && !line.starts_with('#')
+                    && !line.contains(|c: char| c.is_whitespace() || c == '"')
+            })?
             .to_owned();
         let female = text
             .lines()

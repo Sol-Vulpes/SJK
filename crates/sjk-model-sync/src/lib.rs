@@ -55,8 +55,9 @@ impl Limits {
         pk3_bytes: 40 * 1024 * 1024,
         unpacked_bytes: 160 * 1024 * 1024,
         // Bombs are held by the sizes above; this only catches an entry that claims a
-        // little and unpacks to a lot (a mostly black JPEG reaches 60, 11/11/2026).
-        max_ratio: 200,
+        // little and unpacks to a lot (a mostly black JPEG reaches 60, 11/11/2026; a
+        // silent WAV or a flat TGA 350, 24/11/2026: 200 until then).
+        max_ratio: 1000,
         // The Sith cloud's packs: a model with its variants' skins and textures reaches
         // 300 files (`jedi_sithspanki`, 11/11/2026).
         files: 512,
@@ -190,11 +191,15 @@ fn is_model_table(file: &str) -> bool {
 }
 
 /// The voice folder a `sounds.cfg` names (`sound/chars/<it>/misc/`): its first line
-/// that is not blank or a comment, as the client reads it.
+/// that is one word, not a comment, as the client reads it. Settings lines before it
+/// (JoF's Mandalorians start with `breathes "0"`) are passed over.
 pub fn sound_dir(text: &str) -> Option<&str> {
-    text.lines()
-        .map(str::trim)
-        .find(|line| !line.is_empty() && !line.starts_with('/') && !line.starts_with('#'))
+    text.lines().map(str::trim).find(|line| {
+        !line.is_empty()
+            && !line.starts_with('/')
+            && !line.starts_with('#')
+            && !line.contains(|c: char| c.is_whitespace() || c == '"')
+    })
 }
 
 /// Whether `name` may be a synced model's name.

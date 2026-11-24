@@ -589,7 +589,7 @@ fn sounds_elsewhere_or_broken_are_refused() {
             ..
         })
     ));
-    for table in ["../kyle\nm", "\n\n", "Bad Dir\nm"] {
+    for table in ["../kyle\nm", "\n\n", "BadDir\nm"] {
         assert!(
             matches!(
                 check_list(with("models/players/solfox/sounds.cfg", table.as_bytes())),
@@ -647,5 +647,22 @@ fn a_gathered_model_packs_and_passes() {
             .files
             .iter()
             .any(|(path, _)| path == "sound/chars/solfox/misc/pain25.wav")
+    );
+}
+
+#[test]
+fn the_voice_folder_is_the_first_one_word_line() {
+    assert_eq!(
+        sound_dir("breathes \"0\"\r\nthemando\r\nm\r\n"),
+        Some("themando")
+    );
+    assert_eq!(sound_dir("// voice\nkyle\nm"), Some("kyle"));
+    assert_eq!(sound_dir("breathes \"0\"\n"), None);
+    assert!(
+        check_list(with(
+            "models/players/solfox/sounds.cfg",
+            b"breathes \"0\"\r\nthemando\r\nm"
+        ))
+        .is_ok()
     );
 }
