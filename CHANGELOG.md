@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Collection > Achievements: a category's count no longer runs into its name, and a medallion's name no longer runs into the next one's with a larger menu text size or letter spacing; a name too wide for its cell breaks into two lines. A category with every achievement held says "Completed" in gold instead of "5 of 5" _(Kushina)_
 - A saber swing is no longer heard when none is made: with the medium style a chain of 3 swings could sound like 4, as the client played a swing it guessed between two commands that the server then did not make (hub #279) _(Sol)_
 - Map music plays in stereo again, as in stock Jedi Academy: tracks were mixed down to mono (hub #284) _(Sol)_
 - Dropped weapons lie on their side on the ground, as in stock, instead of standing on their stock with the barrel up (hub #295) _(Sol)_
