@@ -123,7 +123,12 @@ const WEAPON_PATHS: [[Option<&str>; 2]; 19] = [
     [Some("sound/weapons/thermal/fire.wav"); 2],
     [Some("sound/weapons/laser_trap/fire.wav"); 2],
     [Some("sound/weapons/detpack/fire.wav"); 2],
-    [None, None],
+    // WP_CONCUSSION: "sound/weapons/concussion/fire" and "alt_fire"
+    // (cg_weaponinit.c:182,193); retail has them as MP3s (hub #299).
+    [
+        Some("sound/weapons/concussion/fire.mp3"),
+        Some("sound/weapons/concussion/alt_fire.mp3"),
+    ],
     [
         Some("sound/weapons/bryar/fire.wav"),
         Some("sound/weapons/bryar/alt_fire.wav"),
@@ -2293,6 +2298,19 @@ mod tests {
         let baton = Some("sound/weapons/baton/fire.mp3");
         assert_eq!(WEAPON_PATHS[WP_STUN_BATON], [baton, baton]);
         assert_eq!(WEAPON_PATHS[WP_MELEE], [None, None]);
+    }
+
+    const WP_CONCUSSION: usize = 15; // codemp/game/bg_weapons.h:47
+
+    #[test]
+    fn the_concussion_rifle_has_its_fire_and_alt_fire_sounds() {
+        assert_eq!(
+            WEAPON_PATHS[WP_CONCUSSION],
+            [
+                Some("sound/weapons/concussion/fire.mp3"),
+                Some("sound/weapons/concussion/alt_fire.mp3"),
+            ]
+        );
     }
 }
 

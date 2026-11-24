@@ -1,3 +1,23 @@
+## Stereo music, dropped weapons on their side, the concussion rifle's shots (24/11/2026)
+
+Branch `personal/weapon-sounds`, based on `main` `203a8185d`. Hub #284, #295, #299.
+
+- **#284, music mono:** every sound, music included, was decoded to a mono mixdown
+  (`sjk-audio` `decode_wav`/`decode_mp3`) and the background track put the same sample in
+  both ears (`render_background`); the retail `music/*.mp3` are stereo or joint stereo. A
+  music track now keeps its side channel ([client.md](client.md)); voices still play the mid.
+- **#295, dropped weapons:** Ghoul2 draws every `.glm` through a quarter turn about Z
+  (`tr_ghoul2.cpp` `identityMatrix`); the pickups drew their raw vertices, and the weapons'
+  `_w.glm` lie along -Y (retail bounds), so `LaunchItem`'s roll of -90 stood a dropped weapon
+  barrel up instead of laying it on its side ([rendering.md](rendering.md#pickups)).
+- **#299, concussion rifle silent:** `WEAPON_PATHS` (`sound_events.rs`) had no flash sounds for
+  `WP_CONCUSSION`; stock registers `sound/weapons/concussion/fire` and `alt_fire`
+  (`cg_weaponinit.c:182,193`, retail MP3s). Its alt charge was already there.
+
+Verified: fmt, build, workspace tests, clippy, the release startup stack check; unit tests
+for the stereo decode and mix, the pickups' turn and the concussion paths. Not heard or seen
+in game.
+
 ## Beta blades: where they come from, and the "flat" report (24/11/2026)
 
 Kushina's two reports on 2026.1123.2. Branch `personal/beta-blades-fix`, based on `main`
