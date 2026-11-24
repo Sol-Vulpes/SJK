@@ -1,30 +1,29 @@
 //! The Collection's Achievements tab: two pages, General and Fun (the toys, Sol,
 //! 30/10/2026), switched at the wall's top right or with F. Each is a wall of medallions
-//! in bands, each category's run under its name and count (short categories share a
-//! band), each medallion
+//! in bands, each category's run under its name and count ("Completed" once all are
+//! held; short categories share a band), each medallion
 //! ringed by the count in the category's colour, filled and gold once unlocked, the
 //! goal inside and the name under it; the one chosen is shown up close on the right with
 //! what to do and how far the player is, and under it the three nearest to unlocking.
 //! A hidden achievement not unlocked yet stands as a secret (`?`, no count); a retired
 //! one stands only once held, with "No longer obtainable".
 
-use super::view::{LEAD_Y, LEFT_X, SHOWCASE_WIDTH, SHOWCASE_X, centred_lines, glow};
+use super::view::{LEAD_Y, LEFT_X, SHOWCASE_WIDTH, SHOWCASE_X, centred_lines, glow, label_width};
 use super::*;
 use crate::achievements::medallion::{self, Medallion, tint};
 use crate::achievements::{Category, Page};
-use crate::menu::sjk::{Frame, color, kit, text, wrap};
+use crate::menu::sjk::{Frame, color, kit, text};
 use crate::menu_widgets::TextFamily;
 use sjk_ui::{DrawCommand, FontWeight, TextAlign};
 
 /// The wall: where its first band starts, the room a band takes, the medallions a band
-/// holds, a medallion's cell and its radius, and how many characters a line of a name
-/// under one holds.
+/// holds, a medallion's cell and its radius, and the size of the name under one.
 const WALL_TOP: f32 = 286.0;
 const BAND_STEP: f32 = 172.0;
 const COLUMNS: usize = 12;
 const CELL: f32 = 85.0;
 const RADIUS: f32 = 28.0;
-const NAME_CHARS: usize = 13;
+const NAME_SIZE: f32 = 14.0;
 /// The medallion up close.
 const BIG_RADIUS: f32 = 104.0;
 /// How many the Next up list shows.
@@ -48,6 +47,33 @@ pub(super) struct Slot {
     pub(super) index: usize,
     pub(super) band: usize,
     pub(super) column: usize,
+}
+
+/// The body family's (Exo 2) width against the display family's that
+/// [`label_width`] measures, or `widen` where Inter stands in for both. Each family
+/// is drawn to its own line height, and Exo 2's is the smaller, so its words come
+/// out 1.17 to 1.22 times as wide; at 1.15 "Block Party" was taken for one line and
+/// cut (24/11/2026).
+fn body_widen(widen: f32) -> f32 {
+    widen.max(1.22)
+}
+
+/// A medallion's name in at most two lines, each as many words as `fits`: what is
+/// left after the second goes on in it (the renderer cuts it), a word too wide alone
+/// stands alone.
+fn name_lines(name: &str, fits: impl Fn(&str) -> bool) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    for word in name.split_whitespace() {
+        let full = lines.len() == 2;
+        match lines.last_mut() {
+            Some(line) if full || fits(&format!("{line} {word}")) => {
+                line.push(' ');
+                line.push_str(word);
+            }
+            _ => lines.push(word.to_owned()),
+        }
+    }
+    lines
 }
 
 /// Whether `standing` is on `page` of the board.
@@ -305,24 +331,30 @@ impl Panel {
                     FontWeight::Semibold,
                     TextAlign::Start,
                 );
-                let name_width = crate::text::display_width(group.category.name(), 22.0);
+                // Measured as drawn: the player's text size and letter spacing, which
+                // a bare font measure left out, so counts ran into the names (24/11/2026).
+                let name_width = label_width(group.category.name(), 22.0, self.widen);
                 // The Toy Master's are listed only once found: their count is all held.
-                let count = if group.category == Category::ToyMaster {
-                    format!("{held} found")
+                // A category with every one held says so in gold.
+                let (count, shade) = if group.category == Category::ToyMaster {
+                    (format!("{held} found"), color::muted())
+                } else if held == members.len() {
+                    ("Completed".to_owned(), color::gold())
                 } else {
-                    format!("{held} of {}", members.len())
+                    (format!("{held} of {}", members.len()), color::muted())
                 };
+                let count_width = label_width(&count, 15.0, body_widen(self.widen));
                 text(
                     &mut self.ui,
                     TextFamily::Body,
                     format_args!("{count}"),
-                    frame.rect(left + name_width + 12.0, top + 2.0, 90.0, 24.0),
+                    frame.rect(left + name_width + 12.0, top + 2.0, count_width + 8.0, 24.0),
                     15.0 * s,
-                    color::muted(),
+                    shade,
                     FontWeight::Regular,
                     TextAlign::Start,
                 );
-                let rule_x = left + name_width + 24.0 + crate::text::display_width(&count, 15.0);
+                let rule_x = left + name_width + 24.0 + count_width;
                 if right - rule_x > 12.0 {
                     let _ = self.ui.draw_list_mut().push(DrawCommand::SolidRect {
                         rect: frame.rect(rule_x, top + 14.0, right - rule_x, 1.0),
@@ -403,13 +435,25 @@ impl Panel {
         } else {
             crate::terms::say(standing.kind.name)
         };
-        for part in wrap(&name, NAME_CHARS).take(2) {
+        // Lines measured as drawn and kept to the medallion's own cell: a one-line name
+        // wider than it ran into the next one's (24/11/2026). A word too wide alone
+        // is set smaller.
+        let widen = body_widen(self.widen);
+        let room = CELL - 4.0;
+        let fits = |words: &str| label_width(words, NAME_SIZE, widen) <= room;
+        for part in name_lines(&name, fits) {
+            let wide = label_width(&part, NAME_SIZE, widen);
+            let size = if wide > room {
+                (NAME_SIZE * room / wide).max(NAME_SIZE * 0.7)
+            } else {
+                NAME_SIZE
+            };
             text(
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("{part}"),
-                frame.rect(centre[0] - CELL * 0.5 - 6.0, y, CELL + 12.0, 20.0),
-                14.0 * s,
+                frame.rect(centre[0] - room * 0.5, y, room, 20.0),
+                size * s,
                 match (chosen, done) {
                     (true, _) => color::gold_bright(),
                     (false, true) => color::text(),
@@ -886,6 +930,21 @@ mod tests {
         // An index not on the wall (a retired one) goes to the first.
         assert_eq!(vertical(&slots, index_of("surveyor"), true), first);
         assert_eq!(sideways(&slots, index_of("surveyor"), 1, false), first);
+    }
+
+    /// A name takes as many words a line as fit, two lines at most, and a word too wide
+    /// alone stands alone.
+    #[test]
+    fn names_break_where_the_cell_ends() {
+        let fits = |words: &str| words.len() <= 8;
+        assert_eq!(name_lines("Puppet Master", fits), ["Puppet", "Master"]);
+        assert_eq!(name_lines("Leap of Faith", fits), ["Leap of", "Faith"]);
+        assert_eq!(name_lines("Alert!", fits), ["Alert!"]);
+        assert_eq!(name_lines("Telekinetic", fits), ["Telekinetic"]);
+        assert_eq!(
+            name_lines("Reach of the Force today", fits),
+            ["Reach of", "the Force today"]
+        );
     }
 
     /// A secret is never offered as the next to work towards, nor a retired one.

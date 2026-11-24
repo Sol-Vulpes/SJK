@@ -1305,8 +1305,11 @@ Community and Collection, and Fun, with a category for each toy (Cardboard box, 
 top right, or F, turns them; the board opens on General. Each page shows every
 achievement listed on it as a wall of medallions in four bands of up to twelve (since
 26/10/2026; each category's run under its name and count, short categories sharing a
-band, the categories in their own order, `collection_achievements.rs`): a medallion
-with the goal that fills with the count, gold once unlocked, and the name under it.
+band, the categories in their own order, `collection_achievements.rs`; a category
+with all held says "Completed" in gold instead of its count): a medallion with the
+goal that fills with the count, gold once unlocked, and the name under it in at most
+two lines kept to its cell. Headings, counts and names are measured as drawn, with the
+player's text size and letter spacing (24/11/2026).
 The arrows and Tab read the wall in its order; the one chosen shows up close on the
 right with what to do, a bar and the count or the date it was unlocked, and "Next up"
 the page's three nearest to unlocking. The total at the top counts both pages.
