@@ -314,6 +314,13 @@ pub(super) fn apply(
     } else {
         driver
     };
+    // The vertices are skinned with the renderer's unsquashed pose, so a bone lerped
+    // across a wide turn keeps its volume; bolts and traces keep the raw one.
+    let skinned: &[[[f32; 4]; 3]] = if ragdoll || emote {
+        matrices
+    } else {
+        mesh.animator.render_matrices()
+    };
     // A rig model is posed first, with the emote clip it plays: the bolts below
     // read its pose.
     if let Some(rig) = mesh.preview.rig.clone() {
@@ -335,7 +342,7 @@ pub(super) fn apply(
     if let Some(palette) = &mut mesh.gpu_palette {
         match &mesh.preview.rig {
             Some(_) => palette.stage(skinning, &mesh.preview.rig_pose.palette)?,
-            None => palette.stage(skinning, matrices)?,
+            None => palette.stage(skinning, skinned)?,
         }
         mesh.force_bones.update(&mesh.preview, matrices);
         mesh.force_bones.update_head(&mesh.preview, matrices);
@@ -356,7 +363,7 @@ pub(super) fn apply(
     let surfaces = mesh
         .preview
         .mesh
-        .skin_pose_matrices(&mesh.preview.skin, 0, matrices)?;
+        .skin_pose_matrices(&mesh.preview.skin, 0, skinned)?;
     mesh.retained_pose
         .update_trace_lod(&mesh.preview.mesh, driver)?;
     mesh.force_bones.update(&mesh.preview, matrices);
