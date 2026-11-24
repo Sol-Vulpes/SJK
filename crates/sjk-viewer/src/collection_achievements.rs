@@ -52,9 +52,12 @@ pub(super) struct Slot {
 }
 
 /// The body family's (Exo 2) width against the display family's that
-/// [`label_width`] measures, or `widen` where Inter stands in for both.
+/// [`label_width`] measures, or `widen` where Inter stands in for both. Each family
+/// is drawn to its own line height, and Exo 2's is the smaller, so its words come
+/// out 1.17 to 1.22 times as wide; at 1.15 "Block Party" was taken for one line and
+/// cut (24/11/2026).
 fn body_widen(widen: f32) -> f32 {
-    widen.max(1.15)
+    widen.max(1.22)
 }
 
 /// A medallion's name in at most two lines, each as many words as `fits`: what is
