@@ -401,7 +401,10 @@ fn spectator_lines(
                 if last.is_empty() {
                     break more;
                 }
-                let line = format!("{}{SPECTATOR_SEPARATOR}{more}", last.join(SPECTATOR_SEPARATOR));
+                let line = format!(
+                    "{}{SPECTATOR_SEPARATOR}{more}",
+                    last.join(SPECTATOR_SEPARATOR)
+                );
                 if width(&line) <= room {
                     break line;
                 }
@@ -1764,7 +1767,12 @@ impl Painter<'_> {
     /// Where the spectators' names start and how wide their lines may be: to
     /// the board's right end, a compact board's band included.
     fn spectator_room(&self, board: &Board) -> (f32, f32) {
-        let label = self.width(TextFamily::Display, SPECTATORS_LABEL, 20.0, FontWeight::Semibold);
+        let label = self.width(
+            TextFamily::Display,
+            SPECTATORS_LABEL,
+            20.0,
+            FontWeight::Semibold,
+        );
         let x = board.x + label + 18.0;
         let right = board.span.map_or(RIGHT, |[_, right]| right);
         (x, (right - x).max(0.0))
@@ -2823,9 +2831,13 @@ mod tests {
         let lines = spectator_lines(&names, 240.0, 2, &width);
         assert_eq!(lines, ["Alpha  ·  Bravo", "Charlie  ·  and 2 more"]);
         // Too many for the lines: the names are cut before any is left out.
-        let long: Vec<String> = ["Alpha Centauri Prime", "Bravo Company Leader", "Charlie Unit"]
-            .map(String::from)
-            .to_vec();
+        let long: Vec<String> = [
+            "Alpha Centauri Prime",
+            "Bravo Company Leader",
+            "Charlie Unit",
+        ]
+        .map(String::from)
+        .to_vec();
         let block = spectator_block(&long, 280.0, 2, &width);
         assert_eq!(block, ["Alpha Cen..  ·  Bravo Com..", "Charlie U.."]);
         assert_eq!(cut_name("JoF Slayer", 70.0, &width), "JoF S..");
