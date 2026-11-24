@@ -2695,6 +2695,9 @@ The ground HUD (health, shield and Force at the player's feet in third person)
 stands in for the status HUD; a zoom that shows the view in first person (the
 disruptor's scope, the binoculars) keeps the status hidden rather than bringing it
 back for the zoom (`Presentation::Covered` in `ground_hud/readout.rs`).
+With a saber the classic layout's centre weapon panel (the weapon's name and the
+style, "Lightsaber" and "Strong") gives way to it as well, since the ground HUD's
+stance dot shows the style; a weapon's ammunition panel stays (24/11/2026).
 Names rend2 or EternalJK use with another meaning are avoided.
 
 These rendering cvars have their own four groups. The SJK UI's Settings
