@@ -5561,6 +5561,16 @@ test: Open the chat just as you are picked: within seconds another hunter is the
 test: With 3 hunters and the picked one away: no mark at all, the hunt tries again a minute on.
 note: The hand-on at the pick needs hub branch hunt-in-play (dfe36aa); merged local, not deployed.
 
+[hunt-mark-idle]
+area: Gameplay
+title: Box hunt: the mark keeps the mark when standing still (hub report #334)
+change: 15 s off the keys still keeps a player from being picked; the mark has the 2 minutes.
+change: Before, a mark still for a moment as the alarm rang was handed on within seconds.
+test: 4+ hunters, toy_boxhunt on: as the mark, stand still 30 s: you stay the mark.
+test: Stand still 15 s before a pick: you are never the mark.
+test: Open the chat just as you are picked: another hunter is the mark instead.
+note: Kushina, T2_Dpred: "10 sec new target comes, ends in 3 sec".
+
 [sith-tomb]
 area: Gameplay
 title: Force box: an ancient Sith tomb, red glyphs, a lid that grinds apart
