@@ -50,6 +50,9 @@ pub(crate) struct GamestateProbe {
     /// (`sv_client.cpp:1436`), so a stamp that goes backwards is stranded
     /// until real time catches up — permanently, if the step back is large.
     highest_stamp: i32,
+    /// The last packet's stamp was behind [`Self::highest_stamp`]: a stranded run
+    /// is reported once, when it starts, not packet by packet.
+    stranded: bool,
 }
 
 impl GamestateProbe {
@@ -76,6 +79,7 @@ impl GamestateProbe {
         server_id: i32,
         sequence: i32,
         highest: i32,
+        outbox: crate::freeze_probe::Outbox,
     ) {
         self.freeze.snapshot(
             now,
@@ -88,6 +92,7 @@ impl GamestateProbe {
                 highest_server_command: highest,
                 command_stamp: 0,
             },
+            outbox,
         );
     }
     /// Report a gamestate and start sampling the move packets that follow.
@@ -107,9 +112,9 @@ impl GamestateProbe {
             .skip_while(|key| !key.eq_ignore_ascii_case("sv_serverid"))
             .nth(1)
             .unwrap_or("<absent>");
-        eprintln!(
+        crate::diagnostics::line(format_args!(
             "gamestate: serverId {previous_server_id} -> {server_id} (sv_serverid=\"{raw}\")"
-        );
+        ));
     }
 
     /// Log one move packet if it broke the stamp invariant, or if the window
@@ -124,15 +129,16 @@ impl GamestateProbe {
             head.snapshot_time < self.highest_stamp.saturating_sub(TIMELINE_RESTART_MILLIS);
         let backwards =
             head.command_stamp != 0 && !restarted && head.command_stamp < self.highest_stamp;
-        if backwards {
-            eprintln!(
+        if backwards && !self.stranded {
+            crate::diagnostics::line(format_args!(
                 "gamestate move: STAMP WENT BACKWARDS {} -> {} ({} ms), \
                  stranded until the server's clock passes the older one",
                 self.highest_stamp,
                 head.command_stamp,
                 self.highest_stamp - head.command_stamp,
-            );
+            ));
         }
+        self.stranded = backwards;
         if head.command_stamp != 0 {
             self.highest_stamp = if restarted {
                 head.command_stamp

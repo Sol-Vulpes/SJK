@@ -6,6 +6,21 @@ use std::time::{Duration, Instant};
 
 const STALLED_SNAPSHOTS: u32 = 40;
 
+/// The client's reliable commands at a snapshot: those sent and not yet acknowledged
+/// (every packet carries them all again, `CL_WritePacket`), their bytes, and those still
+/// waiting in the pacer. A backlog that grows while the freeze lasts means no packet
+/// gets as far as its commands at the server (lost, or dropped whole for its serverId,
+/// `SV_ExecuteClientMessage`); one that stays empty means the server reads them but
+/// skips every usercmd (`SV_UserMove`: none newer than the last it ran). The bytes
+/// matter because SJK never fragments a move packet as `Netchan_Transmit` does past
+/// 1300 bytes.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Outbox {
+    pub(crate) unacknowledged: usize,
+    pub(crate) bytes: usize,
+    pub(crate) waiting: usize,
+}
+
 #[derive(Debug)]
 /// Fixed-storage history of sent stamps and snapshot command-time progress.
 pub(crate) struct FreezeProbe {
@@ -70,16 +85,17 @@ impl FreezeProbe {
     }
 
     /// Report sustained command starvation at most once per second.
-    pub(super) fn snapshot(&mut self, now: Instant, head: MovePacketHead) {
+    pub(super) fn snapshot(&mut self, now: Instant, head: MovePacketHead, outbox: Outbox) {
         if !self.observe(now, head.snapshot_time, head.command_time) {
             return;
         }
         let sent = self.sent.unwrap_or(head);
-        eprintln!(
+        crate::diagnostics::line(format_args!(
             "clientthink freeze: snapshots={} snapTime={} cmdTime={} sentServerId={} \
              gamestateServerId={} currentServerId={} oldServerTime=unknown(server-only) \
              previousMapStamp={} stamp={} maxSentSinceGamestate={} msgAck={} \
-             sentRelAck={} relAck={}/{} lastServerCommand[{}]=\"{}{}\"",
+             sentRelAck={} relAck={}/{} outbox={} unacked ({} bytes) {} waiting \
+             lastServerCommand[{}]=\"{}{}\"",
             self.stalled,
             head.snapshot_time,
             head.command_time,
@@ -93,10 +109,13 @@ impl FreezeProbe {
             sent.server_command_sequence,
             head.server_command_sequence,
             head.highest_server_command,
+            outbox.unacknowledged,
+            outbox.bytes,
+            outbox.waiting,
             self.command_sequence,
             Escaped(&self.command_bytes[..self.command_len]),
             if self.truncated { "..." } else { "" },
-        );
+        ));
     }
 
     fn observe(&mut self, now: Instant, snapshot_time: i32, command_time: i32) -> bool {
