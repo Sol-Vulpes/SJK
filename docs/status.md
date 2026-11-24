@@ -1,17 +1,34 @@
-## Rig model chains keep off each other (23/11/2026)
+## Rig model chains keep off each other (23/11/2026, reworked 24/11/2026)
 
-23/11/2026, `feat/rig-chain-mutual-collision` based on `main` `1ae63030`. A `dynamic` line
-can give its chain a `thickness <units>`: chains that have one keep their bones the sum of
-the two thicknesses apart (each joint and the middle of its bone, no further than they lie
-at rest), so a ponytail swinging into the back hair or a ribbon into a lock no longer goes
-through it. A chain's own joints never push each other; a chain without the word is left as
-it was. Each joint keeps off the bones moved this frame where they stand and the rest
-where they were drawn last frame. The body capsules' push now goes through the same
-segment push. Older clients reject a manifest with the new word
-([rig-models.md](rig-models.md#dynamic-joints-tails-capes)). Tests: two strands brought to
-a unit apart stay the two thicknesses apart (and pass through without the word), nothing
-moves at rest, the pairs and their at-rest reach, the manifest word. Not run locally (left to
-CI), not tried in a game.
+`feat/rig-chain-mutual-collision`, rebased on `main` `34fd0ec9` (#438, #440, #441, #443
+in). A `dynamic` line can give its chain a `thickness <units>`: strands with one keep
+their bones the sum of the two thicknesses apart (each joint and the middle of its bone, no
+further than they lie at rest), so a ponytail swinging into the back hair or a ribbon into
+a lock no longer goes through it. After review (Sol, 24/11/2026), for its per-frame cost:
+
+- No table of joint-bone pairs any more (about 1 MB on a 30-lock rig). Each strand is cut
+  into pieces of four bones; each frame every piece gets a sphere round its bones, grown as
+  they move, and a joint passes every piece whose sphere is farther than the two
+  thicknesses. The bones of the others lie side by side with their middles and reaches,
+  so a far bone costs one squared distance, and a near one a division-free test on a bone
+  prepared once a frame; the at-rest distance is measured only for a bone it touches.
+  Tried and measured on the way: a sphere per whole strand (locks on one root all
+  overlap, so it passed little on a dense head) and a grid of bones by their middles
+  (with bones as long as a head is wide its cells held the whole head).
+- A strand is the joints under one joint right below the anchor, so the locks of one
+  `dynamic` line on a common hair root keep off each other (a fork's branches stay one).
+- The body capsules' push shares the segment push and uses the head capsule's ends
+  (`capsule.ends`, #438).
+
+Tests: strands brought together stay the thicknesses apart (and pass without the word),
+nothing moves at rest, the strands and their at-rest reach, locks on one root are strands
+of their own, and a hard-swung head of 12 locks ends exactly where trying every bone of
+every other strand in full puts it (the spheres and quick tests skip nothing that would
+push). The 72 rig tests pass locally in a release build. Timings there
+(`strand_cost`, `strand_cost_of_an_installed_rig`, ignored), one actor a frame: a made-up
+head of 30 locks of 10 joints on one root, swung hard, +260 us for the thickness (the
+first version +1280 us); the installed `kushina_sjk` (67 chain joints, 18 strands) with
+every chain thick +9 us (first version +53 us). Not tried in a game.
 
 ## help_prediction, and "the prediction feels different" in the betas (24/11/2026)
 

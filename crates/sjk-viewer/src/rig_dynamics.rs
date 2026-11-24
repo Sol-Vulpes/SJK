@@ -433,22 +433,112 @@ pub(super) struct Chains {
     levers: Vec<Option<Vec3A>>,
     /// The other chain's bone each joint stays on one side of (`layer` lines).
     layers: Vec<Option<Layer>>,
-    /// The bones of other chains each joint keeps off, both with a [`Settings::thickness`].
-    strands: Vec<Vec<Strand>>,
+    /// The strands with a [`Settings::thickness`], which keep off one another
+    /// ([`Chains::apart`]).
+    strands: Vec<Strand>,
+    /// The strand each joint belongs to, when its chain has a thickness.
+    strand_of: Vec<Option<usize>>,
     /// The slot of each joint's parent, when that is a chain joint too.
     parent_slot: Vec<Option<usize>>,
+    /// Each joint's bone at rest: its parent's bind position and its own.
+    rest_bone: Vec<(Vec3A, Vec3A)>,
+    /// The joints with a thickness, strand by strand ([`Strand::range`]).
+    thick: Vec<usize>,
+    /// Each joint's place in [`Self::thick`] (`usize::MAX`: none).
+    thick_at: Vec<usize>,
+    /// The strands cut into pieces of a few bones, each with a sphere round it
+    /// ([`StrandBones::bounds`]), and the piece of each place in [`Self::thick`].
+    pieces: Vec<Piece>,
+    piece_of: Vec<usize>,
+    /// Each joint's children with a thickness, whose bones start where it stands.
+    thick_children: Vec<Vec<usize>>,
+    /// Test only: every joint tries every bone of the other strands, with no sphere and
+    /// no quick test, to check that they skip nothing that would push.
+    #[cfg(test)]
+    pub(super) every_pair: bool,
 }
 
-/// A bone of another chain a joint keeps off ([`Chains::apart`]).
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// One strand of a chain with a thickness: the joints under one joint right below its
+/// anchor ([`Chains::apart`]). Strands keep off one another, a strand's own joints never.
+#[derive(Clone, Debug, PartialEq)]
 pub(super) struct Strand {
-    /// The other chain's joint, whose bone (from its parent to it) is kept off.
-    pub(super) other: usize,
-    /// How far the joint stays from that bone: the two chains' thicknesses, or as far as
-    /// it lies at rest if less (0: not at all, as it lies right on it).
-    pub(super) reach: f32,
-    /// The same for the middle of the joint's own bone.
-    pub(super) reach_middle: f32,
+    /// Its joints' slots, parents first.
+    pub(super) slots: Vec<usize>,
+    /// Its chain's thickness.
+    thickness: f32,
+}
+
+/// A few bones of one strand ([`PIECE_BONES`]), next to each other in [`Chains::thick`],
+/// with a sphere round them: a joint farther from it passes them all. A head's locks all
+/// start at one root, so a sphere round a whole lock would hold every other lock's root
+/// and pass little; round a piece, a lock's far end is passed by the joints at the root.
+#[derive(Clone, Debug, PartialEq)]
+struct Piece {
+    range: std::ops::Range<usize>,
+    strand: usize,
+    /// Its strand's thickness.
+    thickness: f32,
+}
+
+/// The bones of a [`Piece`].
+const PIECE_BONES: usize = 4;
+
+/// A sphere round a strand's bones ([`simulate`]): a joint farther from it than the two
+/// thicknesses keeps off none of them.
+#[derive(Clone, Copy, Debug, Default)]
+struct Bounds {
+    centre: Vec3A,
+    radius: f32,
+}
+
+impl Bounds {
+    /// The sphere round `points`: the middle of their box, out to the farthest.
+    fn around(points: impl Iterator<Item = Vec3A> + Clone) -> Self {
+        let (low, high) = points.clone().fold(
+            (Vec3A::splat(f32::MAX), Vec3A::splat(f32::MIN)),
+            |(low, high), point| (low.min(point), high.max(point)),
+        );
+        let centre = (low + high) * 0.5;
+        let radius = points
+            .map(|point| (point - centre).length_squared())
+            .fold(0.0, f32::max)
+            .sqrt();
+        Self { centre, radius }
+    }
+
+    /// Grown to hold `point` too: the smallest sphere holding both.
+    fn grow(&mut self, point: Vec3A) {
+        let distance = (point - self.centre).length();
+        if distance > self.radius {
+            let radius = (self.radius + distance) * 0.5;
+            self.centre += (point - self.centre) * ((radius - self.radius) / distance);
+            self.radius = radius;
+        }
+    }
+
+    /// Whether `point` lies nearer than `reach` outside the sphere.
+    fn near(&self, point: Vec3A, reach: f32) -> bool {
+        let within = self.radius + reach;
+        (point - self.centre).length_squared() < within * within
+    }
+}
+
+/// The strands' bones as they stand while the chains move, read for each joint that keeps
+/// off them ([`simulate`]); scratch, refilled each frame. Each bone's middle and how far
+/// it reaches (half its length and its strand's thickness) lie side by side in
+/// [`Chains::thick`]'s order, so a joint passes the far ones with one squared distance
+/// each, without the division and the square root of the full test.
+#[derive(Clone, Debug, Default)]
+struct StrandBones {
+    middles: Vec<Vec3A>,
+    reaches: Vec<f32>,
+    /// Each bone as its start, the way to its end and the inverse of its squared length
+    /// (0 for none), so the full test takes no division.
+    bones: Vec<(Vec3A, Vec3A, f32)>,
+    /// A sphere round each piece's bones ([`Chains::pieces`]).
+    bounds: Vec<Bounds>,
+    /// The ends of one piece's bones, to put a sphere round.
+    ends: Vec<Vec3A>,
 }
 
 /// Where a joint lies against a chain it is layered over: the plane through that chain's
@@ -522,15 +612,26 @@ impl Chains {
             reach_middle: Vec::new(),
             levers: vec![None; found.len()],
             layers: vec![None; found.len()],
-            strands: vec![Vec::new(); found.len()],
+            strands: Vec::new(),
+            strand_of: vec![None; found.len()],
             parent_slot: vec![None; found.len()],
+            rest_bone: Vec::new(),
+            thick: Vec::new(),
+            thick_at: vec![usize::MAX; found.len()],
+            pieces: Vec::new(),
+            piece_of: Vec::new(),
+            thick_children: vec![Vec::new(); found.len()],
+            #[cfg(test)]
+            every_pair: false,
         }
     }
 
-    /// Keep the bones of chains with a [`Settings::thickness`] off one another: each
-    /// joint, and the middle of its bone, stays the two chains' thicknesses away from
-    /// every bone of another such chain, or as far as it lies at rest if that is less, so
-    /// standing still moves nothing. Joints of one chain never push each other. Call
+    /// Keep the strands of chains with a [`Settings::thickness`] off one another: each
+    /// joint, and the middle of its bone, stays the two thicknesses away from every bone
+    /// of another strand, or as far as it lies at rest if that is less, so standing still
+    /// moves nothing. A strand is the joints under one joint right below an anchor, so
+    /// the locks of one `dynamic` line on a common hair root keep off each other too; a
+    /// strand's own joints (a fork's branches among them) never push each other. Call
     /// this after [`Self::layer`], which puts the joints in another order.
     pub(super) fn apart(&mut self, joints: &[Joint]) {
         let count = self.joints.len();
@@ -542,51 +643,86 @@ impl Chains {
                 self.joints.iter().position(|&other| other == parent)
             })
             .collect();
-        self.strands = (0..count)
-            .map(|slot| {
-                let thickness = self.settings[slot].thickness;
-                if thickness <= 0.0 {
-                    return Vec::new();
-                }
-                let joint = &joints[self.joints[slot]];
-                let point = joint.bind.translation;
-                let middle = joint.parent.map_or(point, |parent| {
-                    (joints[parent].bind.translation + point) / 2.0
-                });
-                (0..count)
-                    .filter(|&other| {
-                        self.anchor[other] != self.anchor[slot]
-                            && self.settings[other].thickness > 0.0
-                    })
-                    .filter_map(|other| {
-                        let to = joints[self.joints[other]].bind.translation;
-                        let from = joints[self.joints[other]]
-                            .parent
-                            .map_or(to, |parent| joints[parent].bind.translation);
-                        let wanted = thickness + self.settings[other].thickness;
-                        let held = |at: Vec3A| {
-                            let distance = (at - closest(from, to, at)).length();
-                            if distance < MIN_BONE {
-                                0.0
-                            } else {
-                                wanted.min(distance)
-                            }
-                        };
-                        let strand = Strand {
-                            other,
-                            reach: held(point),
-                            reach_middle: held(middle),
-                        };
-                        (strand.reach > 0.0 || strand.reach_middle > 0.0).then_some(strand)
-                    })
-                    .collect()
+        self.rest_bone = self
+            .joints
+            .iter()
+            .map(|&joint| {
+                let to = joints[joint].bind.translation;
+                let from = joints[joint]
+                    .parent
+                    .map_or(to, |parent| joints[parent].bind.translation);
+                (from, to)
             })
             .collect();
+        self.strands.clear();
+        self.strand_of = vec![None; count];
+        // Parents come first, so a strand's first joint is met before the rest of it.
+        for slot in 0..count {
+            if self.settings[slot].thickness <= 0.0 {
+                continue;
+            }
+            // A joint of its own chain under it: the same strand. (A chain hanging from
+            // another chain's joint starts a strand of its own.)
+            let above = self.parent_slot[slot]
+                .filter(|&parent| self.anchor[parent] == self.anchor[slot])
+                .and_then(|parent| self.strand_of[parent]);
+            let strand = above.unwrap_or_else(|| {
+                self.strands.push(Strand {
+                    slots: Vec::new(),
+                    thickness: self.settings[slot].thickness,
+                });
+                self.strands.len() - 1
+            });
+            self.strands[strand].slots.push(slot);
+            self.strand_of[slot] = Some(strand);
+        }
+        self.thick.clear();
+        self.thick_at = vec![usize::MAX; count];
+        self.pieces.clear();
+        self.piece_of.clear();
+        for (number, strand) in self.strands.iter().enumerate() {
+            for piece in strand.slots.chunks(PIECE_BONES) {
+                let start = self.thick.len();
+                for &slot in piece {
+                    self.thick_at[slot] = self.thick.len();
+                    self.thick.push(slot);
+                    self.piece_of.push(self.pieces.len());
+                }
+                self.pieces.push(Piece {
+                    range: start..self.thick.len(),
+                    strand: number,
+                    thickness: strand.thickness,
+                });
+            }
+        }
+        self.thick_children = vec![Vec::new(); count];
+        for &slot in &self.thick {
+            if let Some(parent) = self.parent_slot[slot] {
+                self.thick_children[parent].push(slot);
+            }
+        }
     }
 
-    /// The bones of other chains each joint keeps off.
+    /// How far joint `slot` and the middle of its bone keep off the bone of joint `other`
+    /// when `wanted` apart: `wanted`, or as far as each lies from it at rest if that is
+    /// less (0: not at all, as it lies right on it).
+    fn rest_reach(&self, slot: usize, other: usize, wanted: f32) -> (f32, f32) {
+        let (from, to) = self.rest_bone[other];
+        let (parent, point) = self.rest_bone[slot];
+        let held = |at: Vec3A| {
+            let distance = (at - closest(from, to, at)).length();
+            if distance < MIN_BONE {
+                0.0
+            } else {
+                wanted.min(distance)
+            }
+        };
+        (held(point), held((parent + point) * 0.5))
+    }
+
+    /// The strands with a thickness.
     #[cfg(test)]
-    pub(super) fn strands(&self) -> &[Vec<Strand>] {
+    pub(super) fn strands(&self) -> &[Strand] {
         &self.strands
     }
 
@@ -853,6 +989,8 @@ pub(crate) struct State {
     /// Where each chain joint was drawn last frame: the bones of chains not yet moved this
     /// frame, which others keep off ([`Chains::apart`]).
     drawn: Vec<Vec3A>,
+    /// The strands' bones as they stand this frame (scratch).
+    strand_bones: StrandBones,
     /// The animated pose before the chain moved it (scratch).
     animated: Vec<Affine3A>,
     aimed: Vec<bool>,
@@ -915,6 +1053,48 @@ pub(super) fn simulate(
     state.animated.extend_from_slice(pose);
     state.aimed.clear();
     state.aimed.resize(pose.len(), false);
+    // A strand joint's bone while the chains move, `moved` joints in: its ends already
+    // moved where they now stand, the rest where they were drawn last frame (on a restart,
+    // animated). A first bone starts at its anchor, which the chains do not move.
+    let bone = |moved: usize, at: usize, pose: &[Affine3A], drawn: &[Vec3A]| {
+        let stands = |at: usize| {
+            if restart || at < moved {
+                pose[chains.joints[at]].translation
+            } else {
+                drawn[at]
+            }
+        };
+        let to = stands(at);
+        let from = match chains.parent_slot[at] {
+            Some(parent) => stands(parent),
+            None => joints[chains.joints[at]]
+                .parent
+                .map_or(to, |parent| pose[parent].translation),
+        };
+        (from, to)
+    };
+    if !chains.thick.is_empty() {
+        let bones = &mut state.strand_bones;
+        bones.middles.clear();
+        bones.reaches.clear();
+        bones.bones.clear();
+        bones.bounds.clear();
+        for piece in &chains.pieces {
+            let thickness = piece.thickness;
+            bones.ends.clear();
+            for &at in &chains.thick[piece.range.clone()] {
+                let (from, to) = bone(0, at, pose, &state.drawn);
+                bones.middles.push((from + to) * 0.5);
+                bones.reaches.push((to - from).length() * 0.5 + thickness);
+                bones.bones.push(segment(from, to));
+                bones.ends.push(from);
+                bones.ends.push(to);
+            }
+            bones
+                .bounds
+                .push(Bounds::around(bones.ends.iter().copied()));
+        }
+    }
     // Parents first, so each joint's parent already stands where it will be drawn.
     for slot in 0..count {
         let index = chains.joints[slot];
@@ -992,35 +1172,54 @@ pub(super) fn simulate(
         {
             point = at_length(point);
         }
-        // Off the other chains' bones: those already moved this frame where they now
-        // stand, the rest where they were drawn last frame (on a restart, animated).
-        let mut moved = false;
-        for strand in &chains.strands[slot] {
-            let stands = |other: usize| {
-                if restart || other < slot {
-                    pose[chains.joints[other]].translation
-                } else {
-                    state.drawn[other]
+        // Off the other strands' bones. Both of this joint's points (it and the middle of
+        // its bone) lie a quarter of its bone from the middle between them, so a piece of a
+        // strand whose sphere is farther than that and the two thicknesses from there is
+        // passed whole, and a bone whose middle is farther than that, half its length and
+        // the thicknesses, with one squared distance.
+        if let Some(own) = chains.strand_of[slot] {
+            let thickness = chains.settings[slot].thickness;
+            #[cfg(test)]
+            let every = chains.every_pair;
+            #[cfg(not(test))]
+            let every = false;
+            let mut moved = false;
+            let mut between = (origin + point * 3.0) * 0.25;
+            let mut quarter = (point - origin).length() * 0.25;
+            for (number, piece) in chains.pieces.iter().enumerate() {
+                if piece.strand == own
+                    || !every
+                        && !state.strand_bones.bounds[number]
+                            .near(between, thickness + piece.thickness + quarter)
+                {
+                    continue;
                 }
-            };
-            let to = stands(strand.other);
-            let from = match chains.parent_slot[strand.other] {
-                Some(parent) => stands(parent),
-                None => joints[chains.joints[strand.other]]
-                    .parent
-                    .map_or(to, |parent| pose[parent].translation),
-            };
-            moved |= push_off_bone(
-                origin,
-                &mut point,
-                &mut state.velocities[slot],
-                (from, to),
-                strand.reach,
-                strand.reach_middle,
-            );
-        }
-        if moved {
-            point = at_length(point);
+                for at in piece.range.clone() {
+                    let reach = state.strand_bones.reaches[at] + thickness + quarter;
+                    if !every
+                        && (between - state.strand_bones.middles[at]).length_squared()
+                            >= reach * reach
+                    {
+                        continue;
+                    }
+                    if keep_off_bone(
+                        chains,
+                        (slot, chains.thick[at]),
+                        origin,
+                        &mut point,
+                        &mut state.velocities[slot],
+                        state.strand_bones.bones[at],
+                        thickness + piece.thickness,
+                    ) {
+                        moved = true;
+                        between = (origin + point * 3.0) * 0.25;
+                        quarter = (point - origin).length() * 0.25;
+                    }
+                }
+            }
+            if moved {
+                point = at_length(point);
+            }
         }
         if let Some(layer) = chains.layers[slot] {
             let outward = (pose[layer.from].matrix3 * layer.outward).normalize_or_zero();
@@ -1074,6 +1273,23 @@ pub(super) fn simulate(
             state.aimed[parent] = true;
         }
         pose[index] = pose[parent] * local;
+        // Its bone, and its children's, which start where it now stands, as they now
+        // stand, their pieces' spheres grown to hold them.
+        let own = chains.strand_of[slot].map(|_| slot);
+        for &at in own.iter().chain(&chains.thick_children[slot]) {
+            let (from, to) = bone(slot + 1, at, pose, &state.drawn);
+            let place = chains.thick_at[at];
+            let bones = &mut state.strand_bones;
+            bones.middles[place] = (from + to) * 0.5;
+            bones.bones[place] = segment(from, to);
+            if let Some(strand) = chains.strand_of[at] {
+                bones.reaches[place] =
+                    (to - from).length() * 0.5 + chains.strands[strand].thickness;
+                let piece = chains.piece_of[place];
+                bones.bounds[piece].grow(from);
+                bones.bounds[piece].grow(to);
+            }
+        }
         // A joint with no bone to aim swings itself about its pivot.
         if let Some(lever) = chains.levers[slot] {
             let now = pose[index].matrix3 * lever;
@@ -1248,6 +1464,56 @@ fn push_off_bone(
     let tip = push(1.0, 1.0, reach);
     let middle = push(0.5, 2.0, reach_middle);
     tip || middle
+}
+
+/// A bone from `from` to `to` as [`StrandBones::bones`] keeps it.
+fn segment(from: Vec3A, to: Vec3A) -> (Vec3A, Vec3A, f32) {
+    let along = to - from;
+    let squared = along.length_squared();
+    (
+        from,
+        along,
+        if squared <= f32::EPSILON {
+            0.0
+        } else {
+            squared.recip()
+        },
+    )
+}
+
+/// Keep joint `slot`'s `point`, and the middle of its bone from `origin`, `wanted` off
+/// the bone of joint `other` of another strand (a [`segment`]), or as far as each lies
+/// from it at rest if that is less ([`Chains::rest_reach`]), and stop its `velocity` going
+/// further in. The test takes two squared distances and no division or square root; the
+/// rest is measured only for a bone within reach. Whether it moved.
+fn keep_off_bone(
+    chains: &Chains,
+    (slot, other): (usize, usize),
+    origin: Vec3A,
+    point: &mut Vec3A,
+    velocity: &mut Vec3A,
+    (from, along, per_squared): (Vec3A, Vec3A, f32),
+    wanted: f32,
+) -> bool {
+    let near = |sample: Vec3A| {
+        let from_start = sample - from;
+        let offset = from_start - along * (from_start.dot(along) * per_squared).clamp(0.0, 1.0);
+        offset.length_squared() < wanted * wanted
+    };
+    let tip = near(*point);
+    let middle = near((origin + *point) * 0.5);
+    if !tip && !middle {
+        return false;
+    }
+    let (reach, reach_middle) = chains.rest_reach(slot, other, wanted);
+    push_off_bone(
+        origin,
+        point,
+        velocity,
+        (from, from + along),
+        if tip { reach } else { 0.0 },
+        if middle { reach_middle } else { 0.0 },
+    )
 }
 
 #[cfg(test)]
@@ -1671,20 +1937,175 @@ mod tests {
             &[(1, thick), (4, thick), (6, Settings::default())],
         );
         chains.apart(&joints);
-        let strands = chains.strands();
-        // The first chain's joints keep off the second's bone only: not each other,
-        // nor the chain without a thickness, which keeps off nothing.
+        // Two strands: the first chain's joints (which never push each other) and the
+        // second's; the chain without a thickness keeps off nothing.
         assert_eq!(chains.joints, [2, 3, 5, 7]);
-        assert!(strands[0].iter().all(|strand| strand.other == 2));
-        assert!(strands[1].iter().all(|strand| strand.other == 2));
-        assert!(strands[3].is_empty());
-        // Lying 1 unit off it at rest, it is held no further than that.
-        assert_eq!(strands[0].len(), 1);
-        assert!((strands[0][0].reach - 1.0).abs() < 1e-4, "{:?}", strands[0]);
+        let slots: Vec<&[usize]> = chains
+            .strands()
+            .iter()
+            .map(|strand| strand.slots.as_slice())
+            .collect();
+        assert_eq!(slots, [&[0, 1][..], &[2][..]]);
+        // Lying 1 unit off the second's bone at rest, the first joint and the middle of
+        // its bone are held no further than that.
+        let (reach, middle) = chains.rest_reach(0, 2, 4.0);
+        assert!((reach - 1.0).abs() < 1e-4 && (middle - 1.0).abs() < 1e-4);
         // The lower joint is 10 units below its end: the full four.
-        assert!((strands[1][0].reach - 4.0).abs() < 1e-4, "{:?}", strands[1]);
-        // And the second chain keeps off both of the first's bones.
-        assert_eq!(strands[2].len(), 2);
+        let (reach, _) = chains.rest_reach(1, 2, 4.0);
+        assert!((reach - 4.0).abs() < 1e-4, "{reach}");
+    }
+
+    /// One `dynamic` line over a hair root with two locks, one of them forked: two
+    /// strands, a lock's branches in one.
+    #[test]
+    fn the_locks_on_one_hair_root_are_strands_of_their_own() {
+        let root = Vec3A::new(0.0, 0.0, 40.0);
+        let joints = vec![
+            joint(None, Vec3A::ZERO, Vec3A::ZERO),
+            joint(Some(0), Vec3A::ZERO, root),
+            joint(Some(1), root, Vec3A::new(0.0, 0.0, 30.0)),
+            joint(
+                Some(2),
+                Vec3A::new(0.0, 0.0, 30.0),
+                Vec3A::new(0.0, 0.0, 20.0),
+            ),
+            joint(Some(1), root, Vec3A::new(5.0, 0.0, 30.0)),
+            joint(
+                Some(4),
+                Vec3A::new(5.0, 0.0, 30.0),
+                Vec3A::new(5.0, 0.0, 20.0),
+            ),
+            joint(
+                Some(4),
+                Vec3A::new(5.0, 0.0, 30.0),
+                Vec3A::new(8.0, 0.0, 20.0),
+            ),
+        ];
+        let thick = Settings {
+            thickness: 1.0,
+            ..Settings::default()
+        };
+        let mut chains = Chains::under(&joints, &[0, 1, 2, 3, 4, 5, 6], &[(1, thick)]);
+        chains.apart(&joints);
+        assert_eq!(chains.joints, [2, 3, 4, 5, 6]);
+        let slots: Vec<&[usize]> = chains
+            .strands()
+            .iter()
+            .map(|strand| strand.slots.as_slice())
+            .collect();
+        assert_eq!(slots, [&[0, 1][..], &[2, 3, 4][..]]);
+        // Both locks start at the root: the first's joint lies 4.5 off the second's first
+        // bone at rest and gets the full two, the middle of its bone, 2.2 off, no more.
+        let (reach, middle) = chains.rest_reach(0, 2, 2.0);
+        assert!((reach - 2.0).abs() < 1e-4, "{reach}");
+        assert!(middle <= 2.0 + 1e-4, "{middle}");
+    }
+
+    /// A head of hair: `locks` strands of `length` joints round a root 40 units up, about
+    /// `gap` apart at the top, all under one `dynamic` line of `thickness`.
+    fn head_of_hair(locks: usize, length: usize, gap: f32, thickness: f32) -> (Vec<Joint>, Chains) {
+        let root = Vec3A::new(0.0, 0.0, 40.0);
+        let mut joints = vec![
+            joint(None, Vec3A::ZERO, Vec3A::ZERO),
+            joint(Some(0), Vec3A::ZERO, root),
+        ];
+        let ring = gap * locks as f32 / std::f32::consts::TAU;
+        for lock in 0..locks {
+            let angle = std::f32::consts::TAU * lock as f32 / locks as f32;
+            let out = Vec3A::new(angle.cos(), angle.sin(), 0.0) * ring;
+            let mut above = (1, root);
+            for step in 0..length {
+                let at =
+                    root + out * (1.0 + step as f32 * 0.1) - Vec3A::Z * (3.0 * step as f32 + 2.0);
+                joints.push(joint(Some(above.0), above.1, at));
+                above = (joints.len() - 1, at);
+            }
+        }
+        let settings = Settings {
+            thickness,
+            collide: false,
+            ..Settings::default()
+        };
+        let order: Vec<usize> = (0..joints.len()).collect();
+        let mut chains = Chains::under(&joints, &order, &[(1, settings)]);
+        chains.apart(&joints);
+        (joints, chains)
+    }
+
+    /// The hair swung hard about its root and carried sideways for `frames` frames at 142
+    /// a second: where each joint ends up.
+    fn swung(joints: &[Joint], chains: &Chains, frames: usize) -> Vec<Vec3A> {
+        let rest: Vec<Affine3A> = joints.iter().map(|joint| joint.bind).collect();
+        let mut state = State::default();
+        let mut pose = rest.clone();
+        simulate(joints, chains, &mut pose, &mut state, None);
+        let step = 1.0 / 142.0;
+        for frame in 0..frames {
+            let time = frame as f32 * step;
+            let sway =
+                Affine3A::from_translation(glam::Vec3::new(30.0 * (time * 3.0).sin(), 0.0, 0.0))
+                    * Affine3A::from_rotation_y(1.2 * (time * 5.0).sin());
+            for (posed, rest) in pose.iter_mut().zip(&rest) {
+                *posed = sway * *rest;
+            }
+            simulate(joints, chains, &mut pose, &mut state, Some(step));
+        }
+        chains
+            .joints
+            .iter()
+            .map(|&joint| pose[joint].translation)
+            .collect()
+    }
+
+    /// The pieces' spheres and the quick test skip no bone that would push: swung hard,
+    /// the hair ends exactly where trying every bone of every other strand in full puts
+    /// it, and the thickness does keep the locks apart (the hair ends elsewhere without
+    /// it).
+    #[test]
+    fn strand_culling_skips_nothing_that_would_push() {
+        let (joints, mut chains) = head_of_hair(12, 6, 1.5, 1.0);
+        assert_eq!(chains.strands().len(), 12);
+        let fast = swung(&joints, &chains, 400);
+        chains.every_pair = true;
+        let every = swung(&joints, &chains, 400);
+        for (fast, every) in fast.iter().zip(&every) {
+            assert!((*fast - *every).length() < 1e-4, "{fast:?} {every:?}");
+        }
+        let (joints, chains) = head_of_hair(12, 6, 1.5, 0.0);
+        let loose = swung(&joints, &chains, 400);
+        let apart = fast
+            .iter()
+            .zip(&loose)
+            .map(|(a, b)| (*a - *b).length())
+            .fold(0.0, f32::max);
+        assert!(apart > 0.1, "{apart}");
+    }
+
+    /// The cost of the strands keeping off one another on a big head of hair (30 locks of
+    /// 10 joints): microseconds a frame with no thickness, with it, and trying
+    /// every pair. Run in release: `cargo test --release -p sjk-viewer strand_cost --
+    /// --ignored --nocapture`.
+    #[test]
+    #[ignore = "a timing, for a release build"]
+    fn strand_cost() {
+        let frames = 142 * 20;
+        let time = |thickness: f32, every: bool| {
+            let (joints, mut chains) = head_of_hair(30, 10, 1.0, thickness);
+            chains.every_pair = every;
+            swung(&joints, &chains, 142);
+            let start = std::time::Instant::now();
+            std::hint::black_box(swung(&joints, &chains, frames));
+            start.elapsed().as_secs_f64() * 1e6 / frames as f64
+        };
+        let none = time(0.0, false);
+        let culled = time(0.5, false);
+        let every = time(0.5, true);
+        println!(
+            "30 locks x 10 joints, a frame: no thickness {none:.1} us, thickness {culled:.1} us \
+             (+{:.1}), every pair {every:.1} us (+{:.1})",
+            culled - none,
+            every - none,
+        );
     }
 
     /// A strand stacked on its anchor with its vertices 10 units below, the anchor

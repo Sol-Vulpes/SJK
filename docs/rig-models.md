@@ -249,17 +249,32 @@ over itself, or lines that go round in a circle.
 
 Chains whose lines give a `thickness <units>` keep off one another, as strands of hair
 that do not pass through each other: a ponytail swinging into the back hair, a ribbon
-into a lock. Each joint of such a chain, and the middle of its bone, stays the two
-chains' thicknesses away from every bone of another chain with a thickness, or as far
-as it lies at rest if that is less, so standing still moves nothing and strands that
-start side by side are not shoved apart. Its speed towards the other bone stops, as at
-the body. The joints of one chain never push each other, and a chain without the word
-neither pushes nor is pushed. Both chains move: each joint keeps off the bones already
-moved this frame where they now stand, and the others where they were drawn the frame
-before. It is the bones that collide, as with the body, so the cloth between two bones
-far apart can still meet another strand. The check is a few vector operations per pair
-of joint and bone, run in the frame only for chains that ask; it works with or without
-`nocollide`, which is about the body.
+into a lock. They do it by strands: a strand is the joints under one joint right below
+the line's anchor, so a `dynamic` line on a common hair root whose locks hang from it
+gives a strand per lock, and the locks keep off each other too. Each joint of a strand,
+and the middle of its bone, stays the two thicknesses away from every bone of another
+strand, or as far as it lies at rest if that is less, so standing still moves nothing
+and locks that start side by side (or at one root) are not shoved apart. Its speed
+towards the other bone stops, as at the body. A strand's own joints never push each
+other (a fork's branches are one strand), and a chain without the word neither pushes
+nor is pushed. Both strands move: each joint keeps off the bones already moved this frame
+where they now stand, and the others where they were drawn the frame before. It is the
+bones that collide, as with the body, so the cloth between two bones far apart can still
+meet another strand. It works with or without `nocollide`, which is about the body.
+
+The cost stays low. Each strand is cut into pieces of four bones, and each frame every
+piece gets a sphere round its bones (from where they were drawn), grown as they move; a
+joint farther from a piece's sphere than the two thicknesses passes the whole piece: a
+ponytail swinging behind the back hair, a ribbon by a far lock, the far end of a lock
+from the joints at the root. (A sphere round a whole lock would not do on a head: the
+locks all start at one root, so each lock's sphere would hold every other's.) The bones of
+a near piece are kept side by side with their middles and how far they reach, so a joint
+passes a far bone with one squared distance; a bone within that gets the full test, its
+start, direction and inverse squared length prepared once a frame so it takes no division,
+and how far the joint lay from it at rest is measured only for a bone the joint actually
+touches, so nothing per pair is kept in memory. Neither skips a bone that would push. The `strand_cost` tests time it in a release
+build: on a made-up head of 30 locks of 10 joints, and on an installed rig with
+every chain given a thickness (`strand_cost_of_an_installed_rig`).
 
 A chain kept out of the body (no `nocollide`) is kept off the ground too, so a long tail,
 cape or plait lies on the floor when the player kneels or crouches rather than going
