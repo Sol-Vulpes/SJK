@@ -8,9 +8,7 @@
 //! A hidden achievement not unlocked yet stands as a secret (`?`, no count); a retired
 //! one stands only once held, with "No longer obtainable".
 
-use super::view::{
-    LEAD_Y, LEFT_X, SHOWCASE_WIDTH, SHOWCASE_X, centred_lines, glow, label_width,
-};
+use super::view::{LEAD_Y, LEFT_X, SHOWCASE_WIDTH, SHOWCASE_X, centred_lines, glow, label_width};
 use super::*;
 use crate::achievements::medallion::{self, Medallion, tint};
 use crate::achievements::{Category, Page};
