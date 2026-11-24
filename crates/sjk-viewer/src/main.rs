@@ -238,6 +238,7 @@ mod player_trades;
 mod playstyle;
 mod portable_shields;
 mod portal;
+mod prediction_help;
 mod prediction_preview;
 mod ragdoll;
 mod scene_views;
