@@ -224,7 +224,7 @@ const HEAD_BONE: &str = "cranium";
 
 /// A `dynamic` line's words after the joint: `[gravity] [gravity <n>] [wag <n>]
 /// [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms]
-/// [head] [breeze <units>] [nocollide]`, any order after the bare gravity.
+/// [head] [breeze <units>] [shape] [nocollide]`, any order after the bare gravity.
 fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
     let mut settings = dynamics::Settings::default();
     let number = |word: &str| word.parse::<f32>().ok().filter(|n| n.is_finite());
@@ -249,6 +249,7 @@ fn dynamic_settings(words: &[&str]) -> Option<dynamics::Settings> {
             "arms" => settings.arms = true,
             "head" => settings.head = true,
             "breeze" => settings.breeze = number(words.next()?).filter(|n| *n >= 0.0)?,
+            "shape" => settings.shape = true,
             _ => return None,
         }
     }

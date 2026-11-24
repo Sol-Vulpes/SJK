@@ -151,6 +151,25 @@ for every player, and a player turning sees their hair blow the other way; the p
 every 1000 seconds, which keeps the clock precise. An actor whose movement is not followed takes
 its own clock and faces +X.
 
+`shape` keeps a chain's modelled curve as it hangs (19/11/2026). Without it each joint's spring
+pulls towards where the animation puts the joint in the model, so a strong `gravity` drags
+every point down on its own and a styled strand hangs flat, while `gravity 0` keeps the
+exported pose exactly (a coat's A-pose flare, hair that looks gelled). With `shape` the spring
+pulls each joint towards where its animated bend puts it under its parent as the chain draws
+it, so a parent's droop carries the rest of the strand with it. Gravity on such a chain is
+heavier towards the root: each point's share is the part of the chain hanging from its bone
+(1 for the first joint, one bone's share at a tip), so the strand bends most where it leaves
+its anchor and its curve rides down on that. The wag adds only each bone's own share of it,
+so the tip wags as far as without `shape` while the spring keeps up; with a soft spring the
+bones' lags add up down the chain and it swings further (a four-bone strand at the default
+stiffness: 6.3 units at the tip against 2.9). A `drag` or a `breeze` adds up down the chain
+the same way, so a `shape` chain wants less of it. In a test strand two bones out to the side with
+a 45 degree hook at the end, both ways dropping the tip about 20 units, the hook kept 34 degrees
+with `shape` (gravity 400) and 19 without (gravity 1600); on an installed rig's back hair
+(limit 22, 14 bends) gravity 800 changed the bends 2.7 degrees on average with `shape` and 7.2
+without. A limited joint's tilt is measured from where its parent now holds it, so the limit
+still bounds each bone.
+
 A chain may fork, and joints may be stacked on one spot, as some rigs do. Each joint
 is placed from where its parent now stands. A parent is turned towards its first child
 with a real length; its other children follow that turn, and their own chains go on
@@ -311,7 +330,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
 | `eyes <joint> [<joint> ...]` | these joints look at the player's look target (see [Eyes](#eyes)) | none |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
-| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0 |
+| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [shape] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, keeping their modelled curve as they hang with `shape`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0, no shape |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
 | `map <joint> <bone> <joint end> <bone end>` | ... aimed along the bone | |
 | `map <joint> <bone> as <other joint>` | ... with another joint's alignment (finger chains) | |
@@ -319,7 +338,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`, `shape`) does not load at all,
 rather than dropping that line.
 
 ### Variants

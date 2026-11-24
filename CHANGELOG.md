@@ -42,6 +42,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Rig models' hair can be kept out of the head (`head`) _(Kushina, PR #438)_
 - Rig models' chains can sway in a gusting breeze that blows the same way for everyone (`breeze`) _(Kushina, PR #440)_
 - Rig models' eyes can follow what the player looks at (`eyes`) _(Kushina, PR #441)_
+- Rig models' chains can keep their modelled curve as they hang (`shape`) _(Kushina, PR #443)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 
