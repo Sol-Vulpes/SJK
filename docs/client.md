@@ -1944,6 +1944,16 @@ gain it already multiplies by, so mixing costs what it did and still never alloc
 WAVs and MP3s decode straight to 16-bit mono (a WAV into room for its header's
 length), so decoding a long track no longer holds float copies of it as well.
 
+Music stays stereo (hub #284, 24/11/2026). Stock streams the background track in its
+own channels (`S_StartBackgroundTrack`); SJK mixed every track down to mono, and the
+retail tracks (`music/*.mp3`) are stereo or joint stereo. A track decoded as music
+(`MusicTrack`, and any file under `music/`, the duel music included) keeps a side
+channel with its mono mid (`decode_encoded_stereo`): mid `(L + R) / 2`, side
+`(L - R) / 2`, so the background track plays `mid + side` left and `mid - side` right,
+while a voice playing the same handle (an emote's or the boombox's track) hears the
+mid it always did. A stereo track takes twice the memory of its mono mix (about
+9.7 MiB for an average retail track); a mono file keeps no side.
+
 Music is no longer kept forever. A map's tracks are decoded as music, under handles of
 their own outside the shared sound cache (`MusicTrack` in
 [audio_assets.rs](../crates/sjk-viewer/src/audio_assets.rs)), and when the music is

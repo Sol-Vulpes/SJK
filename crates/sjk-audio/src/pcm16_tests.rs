@@ -289,3 +289,47 @@ fn mixing_and_releasing_never_allocate() {
     assert!(released.is_some());
     assert!(out.iter().any(|sample| *sample != 0.0));
 }
+
+/// A 16-bit two-channel WAV of `left` and `right` at `rate`.
+fn stereo_wav(left: &[i16], right: &[i16], rate: u32) -> Vec<u8> {
+    let interleaved: Vec<i16> = left.iter().zip(right).flat_map(|(l, r)| [*l, *r]).collect();
+    let mut bytes = wav(&interleaved, rate);
+    // Two channels: channel count, byte rate, block align.
+    bytes[22..24].copy_from_slice(&2_u16.to_le_bytes());
+    bytes[28..32].copy_from_slice(&(rate * 4).to_le_bytes());
+    bytes[32..34].copy_from_slice(&4_u16.to_le_bytes());
+    bytes
+}
+
+#[test]
+fn a_stereo_music_track_plays_its_own_left_and_right() {
+    let left: Vec<i16> = float_sound(3_000)
+        .into_iter()
+        .map(|x| quantize_sample(x * 0.8))
+        .collect();
+    let right: Vec<i16> = left.iter().map(|x| -x / 2).collect();
+    let bytes = stereo_wav(&left, &right, RATE);
+
+    // A sound effect still decodes to its mono mix.
+    let mono = decode_encoded(&bytes, "wav", RATE).unwrap();
+    assert!(mono.side().is_none());
+    let music = decode_encoded_stereo(&bytes, "wav", RATE).unwrap();
+    assert_eq!(music.samples(), mono.samples(), "the mid is the mono mix");
+    assert_eq!(music.side().map(<[i16]>::len), Some(left.len()));
+    assert_eq!(music.byte_len(), left.len() * 4);
+
+    let mut mixer = mixer();
+    let track = mixer.sound_bank_mut().register_decoded(music);
+    assert_eq!(mixer.sound_bank().sample_count(track), Some(left.len()));
+    assert!(mixer.start_background_track(track, track, 1.0));
+    let rendered = render(&mut mixer, 20);
+    for (index, frame) in rendered.chunks_exact(2).enumerate() {
+        let (want_left, want_right) = (sample_value(left[index]), sample_value(right[index]));
+        assert!((frame[0] - want_left).abs() <= 2.0 * STEP, "left {index}");
+        assert!((frame[1] - want_right).abs() <= 2.0 * STEP, "right {index}");
+    }
+
+    // A mono file decoded as music keeps no side and plays the same in both ears.
+    let mono_music = decode_encoded_stereo(&wav(&left, 22_050), "wav", RATE).unwrap();
+    assert!(mono_music.side().is_none());
+}

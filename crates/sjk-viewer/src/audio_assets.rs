@@ -371,7 +371,7 @@ impl GameAudio {
                 let handle = SoundHandle(self.next_handle);
                 self.next_handle = self.next_handle.wrapping_add(1);
                 let extension = resolved.rsplit('.').next().unwrap_or("mp3");
-                self.output.decode(handle, &asset.bytes, extension);
+                self.output.decode_music(handle, &asset.bytes, extension);
                 (handle, true)
             }
         };
@@ -441,7 +441,13 @@ impl GameAudio {
                 let extension = resolved.rsplit('.').next().unwrap_or("wav");
                 let handle = SoundHandle(self.next_handle);
                 self.next_handle = self.next_handle.wrapping_add(1);
-                self.output.decode(handle, &asset.bytes, extension);
+                // A track under music/ (the duel music) can become the background
+                // track: a stereo one keeps its stereo for it.
+                if resolved.starts_with("music/") {
+                    self.output.decode_music(handle, &asset.bytes, extension);
+                } else {
+                    self.output.decode(handle, &asset.bytes, extension);
+                }
                 self.handles.insert(resolved.clone(), handle);
                 if let Some(without) = resolved
                     .strip_suffix(".wav")

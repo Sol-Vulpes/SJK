@@ -7,7 +7,9 @@
 //! Decoded sounds are kept as 16-bit mono PCM at the mixer's rate, half the
 //! memory of floats; the mixer converts each sample as it reads it. A sound
 //! can be released ([`Mixer::release_sound`]): its PCM is handed back to the
-//! caller, who frees it off the audio thread.
+//! caller, who frees it off the audio thread. A stereo music track also keeps
+//! its side channel ([`decode_encoded_stereo`]): voices play its mono mid, the
+//! background track plays both.
 
 use std::error::Error;
 use std::fmt;
@@ -127,6 +129,7 @@ pub fn sample_value(sample: i16) -> f32 {
 #[derive(Clone, Debug)]
 struct Sound {
     samples: Box<[i16]>,
+    side: Option<Box<[i16]>>,
 }
 
 /// Decoded 16-bit mono PCM ready to install into a mixer-rate [`SoundBank`].
@@ -135,7 +138,11 @@ struct Sound {
 /// not, provided the bank was created with sufficient reserved capacity.
 #[derive(Clone, Debug)]
 pub struct DecodedSound {
+    /// The mono mid, `(left + right) / 2` for a stereo file.
     samples: Box<[i16]>,
+    /// A stereo file's side, `(left - right) / 2`, frame for frame with
+    /// `samples`, when it was decoded by [`decode_encoded_stereo`].
+    side: Option<Box<[i16]>>,
 }
 
 impl DecodedSound {
@@ -143,6 +150,7 @@ impl DecodedSound {
     pub fn silence() -> Self {
         Self {
             samples: Box::new([0]),
+            side: None,
         }
     }
 
@@ -151,6 +159,7 @@ impl DecodedSound {
     pub fn from_samples(samples: Vec<f32>) -> Self {
         Self {
             samples: samples.into_iter().map(quantize_sample).collect(),
+            side: None,
         }
     }
 
@@ -158,6 +167,7 @@ impl DecodedSound {
     pub fn from_pcm16(samples: Vec<i16>) -> Self {
         Self {
             samples: samples.into_boxed_slice(),
+            side: None,
         }
     }
 
@@ -166,9 +176,15 @@ impl DecodedSound {
         &self.samples
     }
 
+    /// The stereo side channel, when the sound keeps one.
+    pub fn side(&self) -> Option<&[i16]> {
+        self.side.as_deref()
+    }
+
     /// Bytes of PCM this sound keeps in memory.
     pub fn byte_len(&self) -> usize {
-        self.samples.len() * std::mem::size_of::<i16>()
+        (self.samples.len() + self.side.as_ref().map_or(0, |side| side.len()))
+            * std::mem::size_of::<i16>()
     }
 }
 
@@ -178,19 +194,42 @@ pub fn decode_encoded(
     extension: &str,
     target_sample_rate: u32,
 ) -> Result<DecodedSound, DecodeError> {
-    let (samples, source_rate) = decode_pcm16(bytes, extension)?;
-    let samples = if source_rate == target_sample_rate {
+    let (samples, _, source_rate) = decode_pcm16(bytes, extension, false)?;
+    Ok(DecodedSound::from_pcm16(to_rate(
+        samples,
+        source_rate,
+        target_sample_rate,
+    )))
+}
+
+/// [`decode_encoded`] for a music track: a stereo file also keeps its side
+/// channel, so the background track plays it in stereo as stock JA streams it
+/// (`S_StartBackgroundTrack`). Voices still play its mono mid.
+pub fn decode_encoded_stereo(
+    bytes: &[u8],
+    extension: &str,
+    target_sample_rate: u32,
+) -> Result<DecodedSound, DecodeError> {
+    let (samples, side, source_rate) = decode_pcm16(bytes, extension, true)?;
+    Ok(DecodedSound {
+        samples: to_rate(samples, source_rate, target_sample_rate).into_boxed_slice(),
+        side: side.map(|side| to_rate(side, source_rate, target_sample_rate).into_boxed_slice()),
+    })
+}
+
+/// 16-bit PCM at `source_rate` resampled to `target_rate`.
+fn to_rate(samples: Vec<i16>, source_rate: u32, target_rate: u32) -> Vec<i16> {
+    if source_rate == target_rate {
         samples
     } else {
         resample(
             &samples,
             source_rate,
-            target_sample_rate,
+            target_rate,
             sample_value,
             quantize_sample,
         )
-    };
-    Ok(DecodedSound::from_pcm16(samples))
+    }
 }
 
 /// Decode WAV or MP3 bytes to float mono PCM at `target_sample_rate`, for a
@@ -201,7 +240,7 @@ pub fn decode_mono(
     extension: &str,
     target_sample_rate: u32,
 ) -> Result<Vec<f32>, DecodeError> {
-    let (samples, source_rate) = decode_pcm16(bytes, extension)?;
+    let (samples, _, source_rate) = decode_pcm16(bytes, extension, false)?;
     Ok(resample(
         &samples,
         source_rate,
@@ -261,6 +300,7 @@ impl SoundBank {
         self.sample_bytes += decoded.byte_len();
         self.sounds.push(Some(Sound {
             samples: decoded.samples,
+            side: decoded.side,
         }));
         handle
     }
@@ -272,6 +312,7 @@ impl SoundBank {
         let sound = self.sounds.get_mut(handle.0 as usize)?.take()?;
         let decoded = DecodedSound {
             samples: sound.samples,
+            side: sound.side,
         };
         self.sample_bytes -= decoded.byte_len();
         Some(decoded)
@@ -1273,9 +1314,14 @@ impl Mixer {
             if sound.samples.is_empty() {
                 return;
             }
-            let sample = f32::from(sound.samples[track.cursor]) * scale;
-            frame[0] += sample;
-            frame[1] += sample;
+            let mid = f32::from(sound.samples[track.cursor]);
+            let side = sound
+                .side
+                .as_ref()
+                .and_then(|side| side.get(track.cursor))
+                .map_or(0.0, |side| f32::from(*side));
+            frame[0] += (mid + side) * scale;
+            frame[1] += (mid - side) * scale;
             track.cursor += 1;
         }
     }
@@ -1335,16 +1381,20 @@ fn doppler_scale(
     }
 }
 
-/// Decode WAV or MP3 bytes to 16-bit mono PCM at the file's own rate.
-fn decode_pcm16(bytes: &[u8], extension: &str) -> Result<(Vec<i16>, u32), DecodeError> {
+/// 16-bit mono mid, a stereo file's side when asked for, and the file's rate.
+type Pcm16 = (Vec<i16>, Option<Vec<i16>>, u32);
+
+/// Decode WAV or MP3 bytes to 16-bit mono PCM at the file's own rate; with
+/// `keep_side`, a two-channel file also gives its side, `(left - right) / 2`.
+fn decode_pcm16(bytes: &[u8], extension: &str, keep_side: bool) -> Result<Pcm16, DecodeError> {
     if extension.eq_ignore_ascii_case("mp3") {
-        decode_mp3(bytes)
+        decode_mp3(bytes, keep_side)
     } else {
-        decode_wav(bytes)
+        decode_wav(bytes, keep_side)
     }
 }
 
-fn decode_wav(bytes: &[u8]) -> Result<(Vec<i16>, u32), DecodeError> {
+fn decode_wav(bytes: &[u8], keep_side: bool) -> Result<Pcm16, DecodeError> {
     let mut reader = hound::WavReader::new(Cursor::new(bytes))
         .map_err(|error| DecodeError(format!("WAV: {error}")))?;
     let spec = reader.spec();
@@ -1352,63 +1402,94 @@ fn decode_wav(bytes: &[u8]) -> Result<(Vec<i16>, u32), DecodeError> {
     // The header's frame count, never more than the bytes could hold.
     let frames = (reader.len() as usize / channels).min(bytes.len());
     let mut output = Vec::with_capacity(frames);
+    let mut side = (keep_side && channels == 2).then(|| Vec::with_capacity(frames));
     match spec.sample_format {
         hound::SampleFormat::Float => {
             mix_down(
                 reader.samples::<f32>(),
                 channels,
                 &mut output,
+                side.as_mut(),
                 std::convert::identity,
             )?;
         }
         hound::SampleFormat::Int => {
             let scale = (1_u64 << spec.bits_per_sample.saturating_sub(1)) as f32;
-            mix_down(reader.samples::<i32>(), channels, &mut output, |value| {
-                value as f32 / scale
-            })?;
+            mix_down(
+                reader.samples::<i32>(),
+                channels,
+                &mut output,
+                side.as_mut(),
+                |value| value as f32 / scale,
+            )?;
         }
     }
-    Ok((output, spec.sample_rate))
+    Ok((output, side, spec.sample_rate))
 }
 
 /// Average each frame of `channels` interleaved WAV samples (read as [-1, 1]
 /// floats by `value`) into one 16-bit sample; a short last frame averages what
-/// it has.
+/// it has. A two-channel file also pushes each frame's side to `side`.
 fn mix_down<S>(
     samples: impl Iterator<Item = Result<S, hound::Error>>,
     channels: usize,
     output: &mut Vec<i16>,
+    mut side: Option<&mut Vec<i16>>,
     value: impl Fn(S) -> f32,
 ) -> Result<(), DecodeError> {
-    let (mut sum, mut count) = (0.0_f32, 0_usize);
+    let (mut sum, mut count, mut first) = (0.0_f32, 0_usize, 0.0_f32);
     for sample in samples {
-        sum += value(sample.map_err(|error| DecodeError(format!("WAV samples: {error}")))?);
+        let sample = value(sample.map_err(|error| DecodeError(format!("WAV samples: {error}")))?);
+        if count == 0 {
+            first = sample;
+        }
+        sum += sample;
         count += 1;
         if count == channels {
             output.push(quantize_sample(sum / count as f32));
+            if let Some(side) = side.as_deref_mut() {
+                // Two channels: (first - second) / 2 = first - sum / 2.
+                side.push(quantize_sample(first - sum / 2.0));
+            }
             (sum, count) = (0.0, 0);
         }
     }
     if count > 0 {
         output.push(quantize_sample(sum / count as f32));
+        if let Some(side) = side {
+            side.push(0);
+        }
     }
     Ok(())
 }
 
-fn decode_mp3(bytes: &[u8]) -> Result<(Vec<i16>, u32), DecodeError> {
+fn decode_mp3(bytes: &[u8], keep_side: bool) -> Result<Pcm16, DecodeError> {
     let bytes = id3::without_id3v1(bytes);
     let mut decoder = minimp3_fixed::Decoder::new(Cursor::new(bytes));
     let mut output = Vec::new();
+    // The side starts at the first stereo frame; mono frames keep a side of 0.
+    let mut side: Option<Vec<i16>> = None;
     let mut rate = None;
     loop {
         match decoder.next_frame() {
             Ok(frame) => {
                 rate.get_or_insert(frame.sample_rate as u32);
                 let channels = frame.channels.max(1);
+                if keep_side && channels == 2 {
+                    let side = side.get_or_insert_with(|| vec![0; output.len()]);
+                    side.extend(frame.data.chunks(2).map(|pair| {
+                        let second = pair.get(1).copied().unwrap_or(pair[0]);
+                        let difference = f32::from(pair[0]) - f32::from(second);
+                        quantize_sample(difference * SAMPLE_STEP / 2.0)
+                    }));
+                }
                 output.extend(frame.data.chunks(channels).map(|samples| {
                     let sum = samples.iter().map(|sample| f32::from(*sample)).sum::<f32>();
                     quantize_sample(sum * SAMPLE_STEP / samples.len() as f32)
                 }));
+                if let Some(side) = &mut side {
+                    side.resize(output.len(), 0);
+                }
             }
             Err(minimp3_fixed::Error::Eof) => break,
             Err(error) => return Err(DecodeError(format!("MP3: {error:?}"))),
@@ -1416,6 +1497,7 @@ fn decode_mp3(bytes: &[u8]) -> Result<(Vec<i16>, u32), DecodeError> {
     }
     Ok((
         output,
+        side,
         rate.ok_or_else(|| DecodeError("MP3 contained no frames".into()))?,
     ))
 }
