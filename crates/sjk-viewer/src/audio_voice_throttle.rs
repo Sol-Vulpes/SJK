@@ -1,7 +1,6 @@
 //! JoF EJK #287/#374 player voice holds. Fixed storage; no mixer or simulation changes.
 use sjk_client::LegacyVoiceLine;
-
-const CS_PLAYERS: usize = 1_131;
+use sjk_protocol::PLAYER_CAPACITY;
 
 #[derive(Clone, Copy, Default)]
 struct Timer {
@@ -11,9 +10,9 @@ struct Timer {
 
 pub(super) struct VoiceThrottle {
     pub(super) enabled: bool,
-    timers: [[Timer; 5]; 32],
+    timers: [[Timer; 5]; PLAYER_CAPACITY],
     /// Each slot's occupant as seen in CS_PLAYERS: its name, or None when empty.
-    owners: [Option<Vec<u8>>; 32],
+    owners: [Option<Vec<u8>>; PLAYER_CAPACITY],
     last_time: Option<i32>,
 }
 
@@ -21,8 +20,8 @@ impl Default for VoiceThrottle {
     fn default() -> Self {
         Self {
             enabled: true,
-            timers: [[Timer::default(); 5]; 32],
-            owners: Default::default(),
+            timers: [[Timer::default(); 5]; PLAYER_CAPACITY],
+            owners: std::array::from_fn(|_| None),
             last_time: None,
         }
     }
@@ -38,7 +37,7 @@ impl VoiceThrottle {
     }
 
     pub(super) fn reset(&mut self) {
-        self.timers = [[Timer::default(); 5]; 32];
+        self.timers = [[Timer::default(); 5]; PLAYER_CAPACITY];
         self.last_time = None;
     }
 
@@ -61,7 +60,7 @@ impl VoiceThrottle {
         for client in 0..self.owners.len() {
             self.observe_owner(
                 client,
-                game.config_string(CS_PLAYERS + client).unwrap_or_default(),
+                crate::player_info::player_info(game, client).unwrap_or_default(),
             );
         }
     }
@@ -80,7 +79,11 @@ impl VoiceThrottle {
         let Some(family) = family else {
             return true;
         };
-        let Some(slot) = self.timers.get_mut(source as usize) else {
+        let Some(slot) = self
+            .timers
+            .get_mut(source as usize)
+            .filter(|_| sjk_protocol::is_player_number(source as usize))
+        else {
             return true;
         };
         let timer = &mut slot[family as usize];

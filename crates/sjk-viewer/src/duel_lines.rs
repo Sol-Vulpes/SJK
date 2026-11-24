@@ -45,9 +45,6 @@ pub(crate) const GAP: Duration = Duration::from_secs(10);
 /// with the snapshot after the one that ends the duel).
 const LINGER: Duration = Duration::from_secs(2);
 
-/// Client slots; a duel index past them is no player.
-const PLAYERS: u16 = 32;
-
 /// The moment of a duel a line belongs to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Moment {
@@ -101,7 +98,8 @@ impl<'a> Seen<'a> {
             && !player.is_spectator();
         let opponent = (own && player.duel_in_progress())
             .then(|| player.duel_index())
-            .filter(|&index| index < PLAYERS && index != me);
+            // A duel index past the client slots is no player.
+            .filter(|&index| sjk_protocol::is_player_number(usize::from(index)) && index != me);
         Self {
             me,
             opponent,

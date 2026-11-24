@@ -4,9 +4,8 @@ use super::Page;
 use sjk_protocol::{GameState, InfoString};
 use sjk_vfs::VirtualFileSystem;
 
-const CS_PLAYERS: usize = 1_131;
 pub(super) const PAGE_ITEMS: usize = 16;
-const PLAYER_LIMIT: usize = 32;
+const PLAYER_LIMIT: usize = sjk_protocol::PLAYER_CAPACITY;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Action {
@@ -216,9 +215,8 @@ impl State {
     }
 
     fn read_players(&mut self, game_state: &GameState) {
-        for client in 0..PLAYER_LIMIT {
-            let Some(text) = game_state
-                .config_string(CS_PLAYERS + client)
+        for client in 0..sjk_protocol::player_slots() {
+            let Some(text) = crate::player_info::player_info(game_state, client)
                 .and_then(|value| std::str::from_utf8(value).ok())
             else {
                 continue;

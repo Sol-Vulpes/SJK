@@ -87,7 +87,7 @@ impl GpuState {
         let game = session.game_state();
         let own = usize::try_from(game.client_num)
             .ok()
-            .filter(|slot| *slot < 32);
+            .filter(|slot| sjk_protocol::is_player_number(*slot));
         let name = own
             .and_then(|slot| player_identity::shown_name(game, slot))
             .unwrap_or_default();
@@ -132,7 +132,7 @@ impl GpuState {
         let game = session.game_state();
         let own = usize::try_from(game.client_num)
             .ok()
-            .filter(|slot| *slot < 32);
+            .filter(|slot| sjk_protocol::is_player_number(*slot));
         let Some(reader) = own.and_then(|slot| world_ping::scope_in(game, slot)) else {
             return;
         };

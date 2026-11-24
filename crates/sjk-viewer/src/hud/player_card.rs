@@ -36,8 +36,6 @@ use sjk_shell::{CvarDefinition, CvarFlags, CvarRegistry};
 use sjk_ui::TextureId;
 use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, Rect, TextAlign, TextId, TextOverflow};
 
-/// `CS_PLAYERS`: the first player's configstring.
-const CS_PLAYERS: usize = 1131;
 /// A target may leave the crosshair this long without the dwell starting over, so
 /// a jittering aim does not flicker the card.
 const GAP_MS: i32 = 300;
@@ -1033,9 +1031,7 @@ impl State {
                     .world
                     .entity(sjk_runtime::EntityId::new(u64::from(client) + 1))
                     .is_some()
-                && input
-                    .game
-                    .config_string(CS_PLAYERS + usize::from(client))
+                && crate::player_info::player_info(input.game, usize::from(client))
                     .is_some_and(|info| !info.is_empty())
         });
         let step = self.pin.resolve(aimed, alive, restarted);
@@ -1149,10 +1145,8 @@ impl State {
 
     fn rebuild(&mut self, client: u16, input: &Input<'_>) {
         self.key = Self::key_of(client, input);
-        let info = input
-            .game
-            .config_string(CS_PLAYERS + usize::from(client))
-            .unwrap_or_default();
+        let info =
+            crate::player_info::player_info(input.game, usize::from(client)).unwrap_or_default();
         let name = LegacyClientInfo::new(info)
             .bytes("n")
             .map(|bytes| decode_legacy(bytes).into_owned())

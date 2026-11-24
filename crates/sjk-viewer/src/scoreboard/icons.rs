@@ -10,7 +10,8 @@ use crate::ui_renderer::SCOREBOARD_ICON_CELLS;
 use sjk_protocol::GameState;
 use sjk_ui::TextureId;
 
-const CS_PLAYERS: usize = 1_131;
+/// The icon cells the UI renderer keeps for heads, one a slot (`PART_ICON_FIRST` follows
+/// them): a player in a slot past them has no head icon.
 const SLOTS: usize = 32;
 const DECODES_PER_FRAME: usize = 2;
 
@@ -55,8 +56,7 @@ impl HeadIcons {
         if slot >= SLOTS {
             return;
         }
-        let model = game
-            .config_string(CS_PLAYERS + slot)
+        let model = crate::player_info::player_info(game, slot)
             .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).bytes("model"))
             .unwrap_or_default();
         if self.models[slot] != model {
@@ -82,8 +82,7 @@ impl HeadIcons {
         mut resolve: impl FnMut(&str, TextureId) -> bool,
     ) {
         for slot in 0..SLOTS {
-            let model = game
-                .config_string(CS_PLAYERS + slot)
+            let model = crate::player_info::player_info(game, slot)
                 .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).bytes("model"))
                 .unwrap_or_default();
             if self.models[slot] != model {
@@ -118,7 +117,7 @@ mod tests {
         let mut game = GameState::empty_local(0);
         for (slot, model) in models {
             game.replace_config_string(
-                CS_PLAYERS + slot,
+                sjk_protocol::CS_PLAYERS + slot,
                 format!("n\\P{slot}\\t\\0\\model\\{model}").into_bytes(),
             )
             .unwrap();

@@ -218,7 +218,7 @@ pub(crate) struct ChatOverlay {
     /// What SJK knows of each slot's player, for their game lines (`chat/marks.rs`).
     slot_marks: Vec<marks::SlotMark>,
     /// Chat lines each client slot has sent, for the scoreboard's away marks.
-    spoken: [u32; 32],
+    spoken: [u32; sjk_protocol::PLAYER_CAPACITY],
     /// What the marks were worked out from.
     marks_key: Option<marks::MarksKey>,
     layout_viewport: [f32; 2],
@@ -410,7 +410,7 @@ impl ChatOverlay {
             map_blocks: (0, 0, false),
             muted_slots: 0,
             slot_marks: Vec::new(),
-            spoken: [0; 32],
+            spoken: [0; sjk_protocol::PLAYER_CAPACITY],
             marks_key: None,
             layout_viewport: [0.0; 2],
             scoreboard_layout: crate::scoreboard::behavior::ChatLayout::Normal,
@@ -571,7 +571,7 @@ impl ChatOverlay {
     }
 
     /// Chat lines each client slot has sent: a counter that only grows (and wraps).
-    pub(crate) fn spoken(&self) -> &[u32; 32] {
+    pub(crate) fn spoken(&self) -> &[u32; sjk_protocol::PLAYER_CAPACITY] {
         &self.spoken
     }
 

@@ -32,9 +32,8 @@ const TEAM_BLUE: i32 = 2;
 const ET_PLAYER: u8 = 1;
 const EF_DEAD: u32 = 1 << 1;
 const PW_CLOAKED: u32 = 11;
-/// `CS_PLAYERS` and `MAX_CLIENTS`.
-const CS_PLAYERS: usize = 1_131;
-const MAX_CLIENTS: usize = 32;
+/// The size of a table by client slot.
+const MAX_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// Register the team outlines' setting.
 pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarError> {
@@ -72,14 +71,14 @@ pub(crate) struct ShotTeams {
 /// The client slots outlined this frame, as bits.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Groups {
-    friends: u32,
-    enemies: u32,
+    friends: u64,
+    enemies: u64,
 }
 
 impl Groups {
     /// The ring of the player in client slot `client`, if outlined.
     pub(crate) fn group(self, client: u64) -> Option<Group> {
-        let bit = 1_u32.checked_shl(u32::try_from(client).ok()?)?;
+        let bit = 1_u64.checked_shl(u32::try_from(client).ok()?)?;
         if self.enemies & bit != 0 {
             Some(Group::Enemy)
         } else if self.friends & bit != 0 {
@@ -90,7 +89,7 @@ impl Groups {
     }
 
     fn add(&mut self, client: u16, group: Group) {
-        let bit = 1 << client;
+        let bit = 1_u64 << client;
         match group {
             Group::Friend => self.friends |= bit,
             Group::Enemy => self.enemies |= bit,
@@ -207,7 +206,7 @@ impl State {
         }
         for entity in &snapshot.entities {
             let number = entity.number();
-            if usize::from(number) >= MAX_CLIENTS
+            if !sjk_protocol::is_player_number(usize::from(number))
                 || number == local
                 || entity.entity_type() != ET_PLAYER
                 || entity.e_flags() & EF_DEAD != 0
@@ -216,8 +215,15 @@ impl State {
             {
                 continue;
             }
-            let team = info_number(game.config_string(CS_PLAYERS + usize::from(number)), "t");
-            let group = if red & (1 << number) != 0 {
+            let team = info_number(
+                crate::player_info::player_info(game, usize::from(number)),
+                "t",
+            );
+            // `red` is a 32-bit mask: it marks nobody past its bits.
+            let marked = 1_u32
+                .checked_shl(u32::from(number))
+                .is_some_and(|bit| red & bit != 0);
+            let group = if marked {
                 Some(Group::Enemy)
             } else {
                 side(mode, local_team, team).filter(|_| teams)

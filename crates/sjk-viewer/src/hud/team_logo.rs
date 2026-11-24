@@ -19,9 +19,8 @@ use sjk_bsp::{Aabb, Bsp, TraceScratch};
 use sjk_protocol::{GameState, Snapshot};
 use sjk_ui::{Color, DrawCommand, DrawList, Rect, TextureId};
 
-/// `MAX_CLIENTS` and `CS_PLAYERS`.
-const MAX_CLIENTS: usize = 32;
-const CS_PLAYERS: usize = 1_131;
+/// The size of a table by client slot.
+const MAX_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// `ET_PLAYER`, `EF_DEAD`, `PW_CLOAKED` and `TEAM_SPECTATOR`.
 const ET_PLAYER: u8 = 1;
 const EF_DEAD: u32 = 1 << 1;
@@ -202,16 +201,19 @@ impl State {
         }
         let mode = info_number(game.config_string(0), "g_gametype");
         let local = snapshot.player.client_num();
-        let local_duel = info_number(game.config_string(CS_PLAYERS + usize::from(local)), "dt");
+        let local_duel = info_number(
+            crate::player_info::player_info(game, usize::from(local)),
+            "dt",
+        );
         let master = snapshot
             .entities
             .iter()
-            .any(|e| usize::from(e.number()) < MAX_CLIENTS && e.is_jedi_master());
+            .any(|e| sjk_protocol::is_player_number(usize::from(e.number())) && e.is_jedi_master());
         let local_master = snapshot.player.is_jedi_master();
         let unit = crate::ui_scale::height_scale(camera.viewport[1]);
         for entity in &snapshot.entities {
             let slot = entity.number();
-            if usize::from(slot) >= MAX_CLIENTS
+            if !sjk_protocol::is_player_number(usize::from(slot))
                 || slot == local
                 || entity.entity_type() != ET_PLAYER
                 || entity.e_flags() & EF_DEAD != 0
@@ -220,7 +222,7 @@ impl State {
             {
                 continue;
             }
-            let info = game.config_string(CS_PLAYERS + usize::from(slot));
+            let info = crate::player_info::player_info(game, usize::from(slot));
             let team = info_number(info, "t");
             if info.is_none() || team == TEAM_SPECTATOR {
                 continue;

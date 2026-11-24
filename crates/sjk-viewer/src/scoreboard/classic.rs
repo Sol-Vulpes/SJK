@@ -95,7 +95,7 @@ pub(super) struct LocalStatus {
     pub(super) intermission: bool,
     /// Client slots (bits) in quiet mode (`chat/quiet.rs`): today the player's own
     /// alone, while it is on; others' would need the hub to share it.
-    pub(super) quiet: u32,
+    pub(super) quiet: u64,
 }
 
 /// Flag icons from the HUD's item icons.
@@ -765,7 +765,11 @@ impl RowDraw<'_> {
             numbers(ui, format_args!("{}", row.client_num), self.columns.id, ink);
         }
         // Ready at intermission, else away, in the room left of the row.
-        let mark = if self.header.local.ready & (1 << row.client_num) != 0 {
+        // The server's ready bits are 32: a slot past them shows none.
+        let ready = 1_u32
+            .checked_shl(u32::from(row.client_num))
+            .is_some_and(|bit| self.header.local.ready & bit != 0);
+        let mark = if ready {
             Some("READY")
         } else {
             row.away.map(|_| "AFK")

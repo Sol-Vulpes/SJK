@@ -10,12 +10,19 @@
 //! point, and the beam keeps the server's muzzle, as stock does for a player
 //! without a Ghoul2 gun.
 
-/// `MAX_CLIENTS` (`codemp/qcommon/q_shared.h:890`).
-const MAX_CLIENTS: usize = 32;
+/// The size of a table by client slot (`MAX_CLIENTS`, `codemp/qcommon/q_shared.h:890`,
+/// on a classic server).
+const MAX_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// The world gun muzzle of every client drawn on the last frame.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Points([Option<[f32; 3]>; MAX_CLIENTS]);
+
+impl Default for Points {
+    fn default() -> Self {
+        Self([None; MAX_CLIENTS])
+    }
+}
 
 impl Points {
     /// Forget the last frame's points; a frame records the guns it draws.
@@ -25,7 +32,9 @@ impl Points {
 
     /// `client`'s gun was drawn with its muzzle at `point`.
     pub(crate) fn record(&mut self, client: u16, point: [f32; 3]) {
-        if let Some(slot) = self.0.get_mut(usize::from(client)) {
+        if sjk_protocol::is_player_number(usize::from(client))
+            && let Some(slot) = self.0.get_mut(usize::from(client))
+        {
             *slot = Some(point);
         }
     }

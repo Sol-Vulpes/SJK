@@ -114,7 +114,7 @@ mod tests {
     use sjk_protocol::GameState;
     use winit::keyboard::{Key, KeyCode, NamedKey};
 
-    const CS_PLAYERS: usize = 1131;
+    use sjk_protocol::CS_PLAYERS;
 
     fn roster(own: i32, names: &[(usize, &str)]) -> GameState {
         let mut game = GameState::empty_local(own);

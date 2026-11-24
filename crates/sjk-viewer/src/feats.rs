@@ -66,7 +66,7 @@ const FIRST_BLOOD_GRACE_MS: i32 = 10_000;
 /// `CS_LEVEL_START_TIME`.
 const CS_LEVEL_START_TIME: usize = 21;
 /// Client slots (`MAX_CLIENTS`).
-const CLIENTS: usize = 64;
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// JA+'s grapple hook kills as `MOD_STUN_BATON` (1) whatever weapon its owner holds: the
 /// hook is fired as a stun baton missile with `damage = 1` and `methodOfDeath =

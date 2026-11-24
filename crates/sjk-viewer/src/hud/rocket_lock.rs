@@ -31,8 +31,6 @@ pub(crate) const TICK_SOUND: &str = "sound/weapons/rocket/tick.wav";
 pub(crate) const LOCK_SOUND: &str = "sound/weapons/rocket/lock.wav";
 /// `ENTITYNUM_NONE`: no lock.
 const NO_TARGET: u16 = 1023;
-/// `MAX_CLIENTS`.
-const MAX_CLIENTS: u16 = 32;
 /// Slices in a complete lock.
 const SLICES: i32 = 8;
 /// `GT_TEAM`: from here on a teammate's lock is not drawn.
@@ -120,7 +118,10 @@ pub(crate) fn input(
     let target = player.raw_field(24).map_or(NO_TARGET, |index| index as u16);
     let since = f32::from_bits(player.raw_field(79).unwrap_or(0));
     let team = |client: u16| {
-        super::identification::info_number(game.config_string(1131 + usize::from(client)), "t")
+        super::identification::info_number(
+            crate::player_info::player_info(game, usize::from(client)),
+            "t",
+        )
     };
     Input {
         target,
@@ -128,7 +129,8 @@ pub(crate) fn input(
         now,
         gametype: super::identification::info_number(game.config_string(0), "g_gametype"),
         spectator: player.team() == 3,
-        teammate: target < MAX_CLIENTS && team(target) == team(player.client_num()),
+        teammate: sjk_protocol::is_player_number(usize::from(target))
+            && team(target) == team(player.client_num()),
         origin: (target < NO_TARGET)
             .then(|| world.entity(sjk_runtime::EntityId::new(u64::from(target) + 1)))
             .flatten()

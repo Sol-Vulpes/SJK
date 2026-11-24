@@ -27,7 +27,7 @@ use bytemuck::{Pod, Zeroable};
 use sjk_vfs::VirtualFileSystem;
 use std::sync::Arc;
 
-/// Players a game server can hold (`MAX_CLIENTS`); entity ids 1..=32 are their bodies.
+/// The size of the tables by client slot; a player's body is entity id slot + 1.
 pub(crate) const MAX_CLIENTS: usize = sjk_client::SABER_SOUND_CLIENTS;
 /// Most blade skins loaded at once: material slots and the storage array's length
 /// (`MAX_SKINS` in `saber.wgsl`). 512 skins are 496 KiB, far inside a storage binding.
@@ -1472,7 +1472,7 @@ impl LoadedSkins {
 
 /// Who wears which skin: one entry per client slot, and the local player's own choice
 /// for the menus' preview (no client slot there).
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub(crate) struct SaberSkins {
     /// What each slot is drawn wearing: `others`, with the local player's own in its slot.
     clients: [Option<SkinColor>; MAX_CLIENTS],
@@ -1527,6 +1527,40 @@ pub(crate) struct SaberSkins {
     /// 8 ms apart, the last at the frame's time, and what it wears (`saber_trail.rs`).
     #[cfg(test)]
     pub(crate) shot_swings: Vec<(Vec<crate::saber::Blade>, ShotColor)>,
+}
+
+// Written out: the tables are longer than the arrays `Default` is derived for.
+impl Default for SaberSkins {
+    fn default() -> Self {
+        Self {
+            clients: [None; MAX_CLIENTS],
+            seconds: [Second::default(); MAX_CLIENTS],
+            others: [None; MAX_CLIENTS],
+            other_seconds: [Second::default(); MAX_CLIENTS],
+            local: None,
+            local_second: Second::default(),
+            local_client: None,
+            sounds: [None; MAX_CLIENTS],
+            sound_others: [None; MAX_CLIENTS],
+            sound_local: None,
+            personas: [crate::saber_persona::Persona::default(); MAX_CLIENTS],
+            local_persona: crate::saber_persona::Persona::default(),
+            taken_at: None,
+            plain: false,
+            stock: crate::stock_blades::StockBlades::default(),
+            worn_revision: 0,
+            #[cfg(test)]
+            shot_blades: Vec::new(),
+            #[cfg(test)]
+            shot_seconds: None,
+            #[cfg(test)]
+            shot_ghosts: Vec::new(),
+            #[cfg(test)]
+            shot_persona: crate::saber_persona::Persona::default(),
+            #[cfg(test)]
+            shot_swings: Vec::new(),
+        }
+    }
 }
 
 /// What a player's second saber wears: the first saber's skin (players with one skin, and
@@ -1671,7 +1705,9 @@ impl SaberSkins {
     /// out-of-range slots are ignored, and the local player's own slot keeps its skin.
     #[cfg(test)]
     pub(crate) fn set(&mut self, client: usize, skin: Option<SkinColor>) {
-        if let Some(slot) = self.others.get_mut(client) {
+        if sjk_protocol::is_player_number(client)
+            && let Some(slot) = self.others.get_mut(client)
+        {
             *slot = skin;
             self.sound_others[client] = skin.map(|skin| skin.index);
             self.merge();
@@ -1680,7 +1716,7 @@ impl SaberSkins {
 
     /// Take every other slot's skin from the looks (`skin_of` a client slot) when their
     /// `revision` or the loaded skins' `generation` is not the one last taken; no
-    /// allocation, 32 lookups when it changed.
+    /// allocation, a lookup a slot when it changed.
     /// Each slot is heard with its blade's sound set, and both sabers wear the first's.
     #[cfg(test)]
     pub(crate) fn follow_looks(
@@ -1749,7 +1785,7 @@ impl SaberSkins {
         let Some(client) = entity_id
             .checked_sub(1)
             .and_then(|client| usize::try_from(client).ok())
-            .filter(|client| *client < MAX_CLIENTS)
+            .filter(|client| *client < MAX_CLIENTS && sjk_protocol::is_player_number(*client))
         else {
             return [None, None];
         };

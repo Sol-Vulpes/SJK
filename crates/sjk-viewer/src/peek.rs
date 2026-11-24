@@ -8,7 +8,6 @@ use glam::Vec3;
 use sjk_protocol::GameState;
 use sjk_runtime::EntityId;
 
-const CS_PLAYERS: usize = 1131;
 /// The watched player's point the camera looks at, above their origin.
 pub(crate) const FOCUS_HEIGHT: f32 = 26.;
 #[derive(Default)]
@@ -48,7 +47,7 @@ struct Target {
 }
 
 fn name(game: &GameState, client: u16) -> Option<&[u8]> {
-    sjk_client::LegacyClientInfo::new(game.config_string(CS_PLAYERS + usize::from(client))?)
+    sjk_client::LegacyClientInfo::new(crate::player_info::player_info(game, usize::from(client))?)
         .bytes("n")
 }
 fn map(game: &GameState) -> &[u8] {

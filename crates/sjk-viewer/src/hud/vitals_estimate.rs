@@ -59,7 +59,8 @@ use super::force_streams::{self, Effect};
 use sjk_game_jka::items::{ITEMS, Kind};
 use sjk_protocol::{EntityState, GameState, Snapshot};
 
-const CLIENTS: usize = 32;
+/// The size of a table by client slot; the masks by client are 64 bits.
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 const ENTITIES: usize = 1_024;
 const ET_PLAYER: u8 = 1;
 const ET_ITEM: u8 = 2;
@@ -288,7 +289,7 @@ pub(super) struct Estimator {
     last_death: Option<i32>,
     last_time: i32,
     /// Drained this snapshot, for the drain shots ([`super::force_streams`]).
-    drained: u32,
+    drained: u64,
     /// The last read snapshot's facts, until applied.
     facts: [Facts; CLIENTS],
     pending: bool,
@@ -386,7 +387,7 @@ impl Estimator {
     }
 
     /// Clients drained (`EV_FORCE_DRAINED`) in the last observed snapshot, as bits.
-    pub(super) fn drained(&self) -> u32 {
+    pub(super) fn drained(&self) -> u64 {
         self.drained
     }
 
@@ -415,7 +416,7 @@ impl Estimator {
         }
         self.last_time = time;
         let mut facts = [Facts::default(); CLIENTS];
-        let mut local_victims = 0_u32;
+        let mut local_victims = 0_u64;
         self.learn_local(snapshot);
         self.scan(snapshot, game, &mut facts, &mut local_victims);
         self.attribute_own_hit(snapshot, &mut facts, local_victims);
@@ -423,7 +424,7 @@ impl Estimator {
             .iter()
             .enumerate()
             .filter(|(_, fact)| fact.drained)
-            .fold(0_u32, |bits, (slot, _)| bits | 1 << slot);
+            .fold(0_u64, |bits, (slot, _)| bits | 1 << slot);
         self.facts = facts;
     }
 
@@ -490,7 +491,10 @@ impl Estimator {
         };
         for entity in &snapshot.entities {
             let number = entity.number();
-            if entity.entity_type() != ET_PLAYER || number >= CLIENTS as u16 || number == local {
+            if entity.entity_type() != ET_PLAYER
+                || !sjk_protocol::is_player_number(usize::from(number))
+                || number == local
+            {
                 continue;
             }
             let context = step(entity);
@@ -571,7 +575,7 @@ impl Estimator {
         snapshot: &Snapshot,
         game: &GameState,
         facts: &mut [Facts; CLIENTS],
-        local_victims: &mut u32,
+        local_victims: &mut u64,
     ) {
         let local = snapshot.player.client_num();
         let dmflags = super::identification::info_number(game.config_string(0), "dmflags") as u32;
@@ -603,7 +607,9 @@ impl Estimator {
             } else {
                 signature & EVENT_MASK
             };
-            let about = |slot: u16| (slot < CLIENTS as u16).then_some(usize::from(slot));
+            let about = |slot: u16| {
+                sjk_protocol::is_player_number(usize::from(slot)).then_some(usize::from(slot))
+            };
             let player = !temporary && entity.entity_type() == ET_PLAYER;
             match event {
                 EV_SHIELD_HIT => {
@@ -673,7 +679,8 @@ impl Estimator {
                 // 1: a team heal, raised where the caster stands, naming everyone it
                 // reached (2, an energize, gives Force, which is not estimated).
                 EV_TEAM_POWER if temporary && entity.event_parameter() == 1 => {
-                    let reached = (0..CLIENTS as u16).filter(|n| entity.client_bitflag(*n));
+                    let reached = (0..sjk_protocol::player_slots() as u16)
+                        .filter(|n| entity.client_bitflag(*n));
                     let amount = match reached.clone().count() {
                         0 => continue,
                         1 => 50.0,
@@ -736,7 +743,7 @@ impl Estimator {
         &mut self,
         snapshot: &Snapshot,
         facts: &mut [Facts; CLIENTS],
-        local_victims: u32,
+        local_victims: u64,
     ) {
         let player = &snapshot.player;
         let hits = player.persistent[PERS_HITS];
@@ -753,7 +760,8 @@ impl Estimator {
         let victim = if local_victims.count_ones() == 1 {
             Some(local_victims.trailing_zeros() as usize)
         } else if player.duel_in_progress() {
-            Some(usize::from(player.duel_index())).filter(|slot| *slot < CLIENTS)
+            Some(usize::from(player.duel_index()))
+                .filter(|slot| sjk_protocol::is_player_number(*slot))
         } else {
             let time = self.last_time;
             let fits =
@@ -855,7 +863,9 @@ fn nearest_player(snapshot: &Snapshot, origin: [f32; 3]) -> Option<usize> {
         }
     };
     for entity in &snapshot.entities {
-        if entity.entity_type() == ET_PLAYER && entity.number() < CLIENTS as u16 {
+        if entity.entity_type() == ET_PLAYER
+            && sjk_protocol::is_player_number(usize::from(entity.number()))
+        {
             consider(usize::from(entity.number()), entity.trajectory_base());
         }
     }

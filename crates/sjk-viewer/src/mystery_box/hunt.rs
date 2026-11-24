@@ -31,8 +31,8 @@ const END_EARLY: Duration = Duration::from_secs(1);
 /// How high over a player's origin the mark's label stands, and the point it is seen by.
 pub(super) const MARK_RISE: f32 = 70.0;
 pub(super) const MARK_SIGHT: f32 = 20.0;
-/// `MAX_CLIENTS`: slots of players.
-const SLOTS: u16 = 32;
+/// The player slots a mask of hunters holds, a bit each.
+const SLOTS: u16 = u32::BITS as u16;
 /// How long without a key or the mouse makes the player away for the hunt (Sol,
 /// 23/11/2026: "avoid ever getting someone afk or typing getting tagged"; two minutes
 /// before, what holocrons call idle). Short on purpose: the hub picks nobody away, so a
@@ -677,7 +677,7 @@ impl GpuState {
             .filter_map(|offset| self.obituaries.feed().newest(offset))
             .find(|kill| {
                 kill.target == u16::from(own)
-                    && kill.attacker < SLOTS
+                    && sjk_protocol::is_player_number(usize::from(kill.attacker))
                     && kill.attacker != kill.target
             })
             .map(|kill| kill.attacker as u8);

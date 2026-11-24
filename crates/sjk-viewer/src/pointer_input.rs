@@ -665,7 +665,9 @@ fn normalize_button(button: MouseButton) -> Option<PointerButton> {
 
 fn spectator_follow_target(spectator: bool, local_client: i32, aimed: Option<u16>) -> Option<u16> {
     let local_client = u16::try_from(local_client).ok()?;
-    aimed.filter(|target| spectator && *target < 32 && *target != local_client)
+    aimed.filter(|target| {
+        spectator && sjk_protocol::is_player_number(usize::from(*target)) && *target != local_client
+    })
 }
 
 pub(crate) fn normalize_button_event(

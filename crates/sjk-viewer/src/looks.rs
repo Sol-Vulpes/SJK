@@ -22,7 +22,7 @@ use sjk_identity::Look;
 use sjk_protocol::{GameState, PlayerState};
 
 /// Slots the table holds, as the emotes' do.
-pub(crate) const SLOTS: usize = 64;
+pub(crate) const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// Whose slots a session's view involves: the local player's own (the game state's
 /// `client_num`) and the one whose player state the snapshot carries. They differ

@@ -11,12 +11,12 @@
 //! blade too and a blade shader is still worn over it.
 
 use sjk_game_jka::siege_class::{MAX_SIEGE_CLASSES, SiegeRegistry};
-use sjk_protocol::{GameState, LEGACY_MAX_CLIENTS};
+use sjk_protocol::{GameState, PLAYER_CAPACITY};
 use sjk_vfs::VirtualFileSystem;
 
 /// Each client slot's class-forced colours (primary, secondary); `None` keeps the
 /// player's own.
-pub(crate) type Forced = [[Option<[u8; 3]>; 2]; LEGACY_MAX_CLIENTS];
+pub(crate) type Forced = [[Option<[u8; 3]>; 2]; PLAYER_CAPACITY];
 
 /// The map's classes and the colours they force, rebuilt on configstring changes.
 pub(crate) struct Cache {
@@ -33,7 +33,7 @@ impl Default for Cache {
             valid: false,
             map: String::new(),
             registry: SiegeRegistry::default(),
-            forced: [[None; 2]; LEGACY_MAX_CLIENTS],
+            forced: [[None; 2]; PLAYER_CAPACITY],
         }
     }
 }
@@ -62,7 +62,7 @@ impl Cache {
     /// Work the colours out again from `game`, reading a new map's classes with `load`.
     fn rebuild(&mut self, game: &GameState, load: impl FnOnce(&str) -> SiegeRegistry) {
         self.valid = true;
-        self.forced = [[None; 2]; LEGACY_MAX_CLIENTS];
+        self.forced = [[None; 2]; PLAYER_CAPACITY];
         let Some(map) = siege_map(game) else {
             return;
         };
@@ -70,7 +70,8 @@ impl Cache {
             self.registry = load(&map);
             self.map = map;
         }
-        for (client, forced) in (0u16..).zip(self.forced.iter_mut()) {
+        let slots = sjk_protocol::player_slots();
+        for (client, forced) in (0u16..).zip(self.forced.iter_mut().take(slots)) {
             *forced = sjk_client::legacy_siege_class_blades(game, &self.registry, client);
         }
     }
@@ -163,7 +164,7 @@ mod tests {
         assert_eq!(cache.forced[4], [Some(PURPLE), None]);
         // Other gametypes are untouched.
         rebuild(&mut cache, &game(8));
-        assert_eq!(cache.forced, [[None; 2]; LEGACY_MAX_CLIENTS]);
+        assert_eq!(cache.forced, [[None; 2]; PLAYER_CAPACITY]);
         assert_eq!(loads, 1);
     }
 }

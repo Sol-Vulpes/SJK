@@ -11,8 +11,6 @@ use super::{
 use crate::menu::sjk::color;
 use std::time::Instant;
 
-/// `CS_PLAYERS`, the first player's config string.
-const CS_PLAYERS: usize = 1_131;
 /// `persistant[PERS_SCORE]` and `persistant[PERS_RANK]`, and `RANK_TIED_FLAG`.
 const PERS_SCORE: usize = 0;
 const PERS_RANK: usize = 2;
@@ -73,8 +71,7 @@ impl crate::GpuState {
         // A new game state (a map change, another server) has a new checksum feed.
         let key = (u64::from(game.checksum_feed as u32) << 32) | u64::from(game.client_num as u32);
         self.status_bar.feed.observe(key, now, |slot| {
-            game.config_string(CS_PLAYERS + slot)
-                .filter(|info| !info.is_empty())?;
+            crate::player_info::player_info(game, slot).filter(|info| !info.is_empty())?;
             let (name, _) = crate::hud::client_name_and_team(game, slot as u16);
             Some(feed::Name::from(name.as_ref()))
         });
@@ -288,10 +285,9 @@ impl crate::GpuState {
         top.mode = gametype
             .map(|gametype| crate::server_browser::gametype_name(i32::try_from(gametype).ok()))
             .filter(|name| *name != "Unknown");
-        let count = (0..32)
-            .filter(|slot| {
-                game.config_string(CS_PLAYERS + slot)
-                    .is_some_and(|info| !info.is_empty())
+        let count = (0..sjk_protocol::player_slots())
+            .filter(|&slot| {
+                crate::player_info::player_info(game, slot).is_some_and(|info| !info.is_empty())
             })
             .count();
         let slots = info_number(info, b"sv_maxclients").unwrap_or(0);

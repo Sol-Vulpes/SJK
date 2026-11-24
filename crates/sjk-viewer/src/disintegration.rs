@@ -142,7 +142,7 @@ impl Forced {
                 body: None,
             });
         }
-        if usize::from(number) < crate::saber_skins::MAX_CLIENTS {
+        if sjk_protocol::is_player_number(usize::from(number)) {
             self.awaiting_body
                 .retain(|awaiting| awaiting.client != number);
             self.awaiting_body.push(Awaiting {
@@ -226,7 +226,7 @@ impl Forced {
                     })
             };
             let Some((dead, origin)) = seen else {
-                return usize::from(forcing.number) < crate::saber_skins::MAX_CLIENTS;
+                return sjk_protocol::is_player_number(usize::from(forcing.number));
             };
             forcing
                 .hit
@@ -315,7 +315,7 @@ impl crate::GpuState {
             let saber = u32::from(kill.means_of_death) == sjk_game_jka::means_of_death::MOD_SABER;
             if !saber
                 || kill.target == kill.attacker
-                || usize::from(kill.attacker) >= crate::saber_skins::MAX_CLIENTS
+                || !sjk_protocol::is_player_number(usize::from(kill.attacker))
             {
                 continue;
             }

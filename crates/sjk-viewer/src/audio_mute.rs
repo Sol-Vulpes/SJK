@@ -11,8 +11,8 @@ use sjk_protocol::EntityState;
 
 /// Entity numbers the legacy protocol uses.
 const ENTITIES: usize = 1_024;
-/// Game slots.
-const CLIENTS: usize = 32;
+/// Game slots the muted mask holds, one bit each.
+const CLIENTS: usize = u32::BITS as usize;
 
 /// Which sound sources are silenced.
 #[derive(Clone, Copy, Debug)]
@@ -53,7 +53,7 @@ impl AudioMute {
         self.entities[0] = self.clients;
         for state in entities {
             let number = usize::from(state.number());
-            if (CLIENTS..ENTITIES).contains(&number)
+            if (sjk_protocol::player_slots()..ENTITIES).contains(&number)
                 && sjk_client::legacy_thrown_saber_owner(state)
                     .is_some_and(|owner| self.client(owner))
             {

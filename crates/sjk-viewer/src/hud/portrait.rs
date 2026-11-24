@@ -14,7 +14,7 @@ pub(super) struct Portrait {
 
 fn model(game: &GameState, client: Option<u16>) -> &[u8] {
     client
-        .and_then(|id| game.config_string(1131 + usize::from(id)))
+        .and_then(|id| crate::player_info::player_info(game, usize::from(id)))
         .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).bytes("model"))
         .unwrap_or_default()
 }

@@ -939,7 +939,8 @@ impl Painter<'_> {
 
     /// Whether `row`'s player is in quiet mode (`chat/quiet.rs`).
     fn is_quiet(&self, row: &ScoreRow) -> bool {
-        row.client_num < 32 && self.header.local.quiet & (1 << row.client_num) != 0
+        usize::from(row.client_num) < sjk_protocol::PLAYER_CAPACITY
+            && self.header.local.quiet & (1 << row.client_num) != 0
     }
 
     /// Whether `row`'s player is ready, at intermission.

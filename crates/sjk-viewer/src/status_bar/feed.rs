@@ -18,8 +18,8 @@ use std::time::{Duration, Instant};
 pub(crate) const NAME_BYTES: usize = 64;
 /// A player's name, colour codes kept.
 pub(crate) type Name = Line<NAME_BYTES>;
-/// Client slots followed (`MAX_CLIENTS`).
-pub(crate) const SLOTS: usize = 32;
+/// Client slots followed.
+pub(crate) const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// How many joins and leaves show at once, the newest first.
 pub(crate) const SHOWN: usize = 3;
 /// How long an entry shows at full strength, then how long it takes to fade out.

@@ -23,7 +23,6 @@ use sjk_client::{ClientSession, ScoreEntry};
 use sjk_protocol::GameState;
 use sjk_ui::DrawList;
 
-const CS_PLAYERS: usize = 1_131;
 /// `CS_LEVEL_START_TIME`, `CS_CLIENT_DUELISTS`, `CS_CLIENT_DUELHEALTHS`.
 const CS_LEVEL_START_TIME: usize = 21;
 const CS_CLIENT_DUELISTS: usize = 30;
@@ -235,7 +234,7 @@ impl Scoreboard {
             intermission: player.movement_type() == PM_INTERMISSION,
             // The player's own slot, not a followed player's.
             quiet: if let Ok(own) = u16::try_from(session.game_state().client_num)
-                && own < 32
+                && usize::from(own) < sjk_protocol::PLAYER_CAPACITY
                 && options.is_some_and(|c| c.bool_cvar(crate::chat::quiet::CVAR) == Some(true))
             {
                 1 << own
@@ -424,8 +423,7 @@ impl Scoreboard {
                 .scores()
                 .iter()
                 .any(|score| score.client_num == client);
-            let connected = game
-                .config_string(CS_PLAYERS + usize::from(client))
+            let connected = crate::player_info::player_info(game, usize::from(client))
                 .is_some_and(|bytes| !bytes.is_empty());
             if listed || !connected {
                 continue;
@@ -581,7 +579,7 @@ fn duelists(game: &GameState) -> sjk::Duelists {
                 .trim()
                 .parse::<u8>()
                 .ok()
-                .filter(|client| *client < 32);
+                .filter(|client| sjk_protocol::is_player_number(usize::from(*client)));
         }
     }
     if let Some(text) = config_text(game, CS_CLIENT_DUELHEALTHS) {
@@ -611,7 +609,7 @@ impl Scoreboard {
         snapshot: &sjk_protocol::Snapshot,
         game: &GameState,
         scores: &[ScoreEntry],
-        spoken: &[u32; 32],
+        spoken: &[u32; sjk_protocol::PLAYER_CAPACITY],
     ) {
         self.afk.observe(snapshot, game, scores, spoken);
     }
@@ -728,8 +726,7 @@ fn server_info(game_state: &GameState) -> (String, &'static str) {
 }
 
 fn client_identity(game_state: &GameState, client_num: u8) -> (String, u8) {
-    let (name, team) = game_state
-        .config_string(CS_PLAYERS + usize::from(client_num))
+    let (name, team) = crate::player_info::player_info(game_state, usize::from(client_num))
         .map_or_else(
             || (format!("Client {client_num}"), 3),
             |bytes| client_identity_from_config(bytes, client_num),
@@ -764,8 +761,7 @@ struct ClientExtra {
 }
 
 fn client_extra(game_state: &GameState, client_num: u8) -> ClientExtra {
-    let info = game_state
-        .config_string(CS_PLAYERS + usize::from(client_num))
+    let info = crate::player_info::player_info(game_state, usize::from(client_num))
         .map(sjk_client::LegacyClientInfo::new);
     let integer = |key: &str| info.as_ref().and_then(|info| info.integer(key));
     ClientExtra {
@@ -786,10 +782,9 @@ fn config_signature(game_state: &GameState) -> u64 {
     // The connected roster also supplies fake rows and player counts. Watching
     // only clients already in `scores` misses joins and departures between
     // score responses, and leaves JoF's roster-dependent layout stale.
-    (0..32).fold(0xcbf29ce484222325_u64, |mut hash, client| {
-        if let Some(bytes) = game_state
-            .config_string(CS_PLAYERS + client)
-            .filter(|bytes| !bytes.is_empty())
+    (0..sjk_protocol::player_slots()).fold(0xcbf29ce484222325_u64, |mut hash, client| {
+        if let Some(bytes) =
+            crate::player_info::player_info(game_state, client).filter(|bytes| !bytes.is_empty())
         {
             hash ^= client as u64;
             hash ^= byte_signature(bytes);
@@ -924,14 +919,14 @@ mod tests {
     fn roster_signature_tracks_clients_without_score_rows() {
         let mut game = GameState::empty_local(0);
         let empty = config_signature(&game);
-        game.replace_config_string(CS_PLAYERS + 7, br"\n\Joining\t\3".to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 7, br"\n\Joining\t\3".to_vec())
             .unwrap();
         let joined = config_signature(&game);
         assert_ne!(empty, joined);
-        game.replace_config_string(CS_PLAYERS + 7, br"\n\Joining\t\0".to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 7, br"\n\Joining\t\0".to_vec())
             .unwrap();
         assert_ne!(joined, config_signature(&game));
-        game.replace_config_string(CS_PLAYERS + 7, Vec::new())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 7, Vec::new())
             .unwrap();
         // Empty and absent player configstrings describe the same roster.
         assert_eq!(empty, config_signature(&game));
