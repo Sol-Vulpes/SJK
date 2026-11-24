@@ -36,6 +36,7 @@ mod crosshair_target;
 pub mod default_model_random;
 mod demo_playback;
 mod demo_recorder;
+pub mod diagnostics;
 pub mod download;
 mod download_session;
 mod duel_isolation;
@@ -1011,10 +1012,10 @@ impl ClientSession {
                     self.server_id = system_info
                         .get_i32("sv_serverid")
                         .ok_or(ClientError::MissingServerId)?;
-                    eprintln!(
+                    diagnostics::line(format_args!(
                         "received replacement gamestate: serverId={} sequence={} map={:?}",
                         self.server_id, message.sequence, new_map
-                    );
+                    ));
                     self.gamestate_probe.arm(
                         Instant::now(),
                         previous_server_id,
@@ -1153,6 +1154,15 @@ impl ClientSession {
                 self.server_id,
                 self.reliable_sequence,
                 self.highest_server_command,
+                freeze_probe::Outbox {
+                    unacknowledged: self.pending_client_commands.len(),
+                    bytes: self
+                        .pending_client_commands
+                        .iter()
+                        .map(|(_, command)| command.len())
+                        .sum(),
+                    waiting: self.command_pacer.queued(),
+                },
             );
             if let Some(restart) = self.transitions.iter_mut().rev().find(|transition| {
                 matches!(

@@ -132,6 +132,9 @@ impl EventGap {
 
 pub(crate) fn init() {
     let _ = LAUNCH.set(Instant::now());
+    // The session's network probes (a command freeze, a serverId change) reach the
+    // session log a player sends, not only a console a release build lacks.
+    sjk_client::diagnostics::set_sink(|line| progress(format_args!("{line}")));
 }
 
 pub(crate) fn progress(arguments: fmt::Arguments<'_>) {

@@ -797,6 +797,23 @@ lines (Sol's JoF test at 350 FPS, 07/11/2026, a 3 ms frame under 10 to 25 ms of
 minute-to-minute swing); flip it a few times and read the changes. The kept
 snapshots cover 20 seconds at 100 a second for it.
 
+When snapshots keep coming but the server runs none of our commands (`ps.commandTime`
+still for 40 snapshots), a `clientthink freeze:` line a second names the server's
+gates: the serverId we send against the current one (a server ignores a whole packet
+from an older one, `SV_ExecuteClientMessage`), our stamps against the highest sent (it
+skips a usercmd not newer than the last it ran, `SV_UserMove`), the acknowledgements,
+and the outbox: reliable commands sent and not acknowledged, their bytes, and those
+waiting in the pacer. An outbox that grows through the freeze means no packet of ours
+gets as far as its commands (lost on the way, or dropped whole for its serverId, which
+the line shows); an empty one with a stuck `cmdTime`, that the server reads them and
+skips every usercmd (stamps no newer than one it already ran). A `STAMP WENT BACKWARDS` line marks the start of a run of stamps behind one
+already sent, and every new gamestate logs its serverId change. These lines come from
+`sjk-client` ([freeze_probe.rs](../crates/sjk-client/src/freeze_probe.rs),
+[gamestate_probe.rs](../crates/sjk-client/src/gamestate_probe.rs)); until 24/11/2026
+they went to stderr only, which a release build lacks, so a player's logs never held
+them (hub report #324: "connection interrupted", stuck in place, chat not sent). They
+now reach the session log through `sjk_client::diagnostics`.
+
 Each snapshot gets stock's ping, `cl.snap.ping`
 ([snapshot_ping.rs](../crates/sjk-client/src/snapshot_ping.rs),
 `ClientSession::snapshot_ping`), as `CL_WritePacket` and `CL_ParseSnapshot` make it: every
