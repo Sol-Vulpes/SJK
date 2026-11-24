@@ -138,7 +138,7 @@ struct Sinks<'a> {
     charges: crate::charge_flash::Charges,
     /// Client slots muted on this PC (bits): drawn with the default saber colour
     /// and without hat or cape (`muted_players.rs`).
-    muted: u32,
+    muted: u64,
     /// Client slots whose players chose toon shading for their model, while this PC shows
     /// it (`toon_choice.rs`, `r_toonModels`).
     toon_slots: u64,

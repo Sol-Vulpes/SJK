@@ -67,7 +67,7 @@ impl Cache {
         game: Option<&GameState>,
         enabled: bool,
         disabled: i64,
-        muted: u32,
+        muted: u64,
     ) -> Policy {
         let Some(game) = game else {
             return Policy::default();
@@ -115,13 +115,13 @@ pub(crate) struct Policy {
     black: [u64; 2],
     supported: bool,
     allowed: bool,
-    muted: u32,
+    muted: u64,
 }
 
 impl Policy {
     /// Uncached, for tests and one-off callers.
     #[cfg(test)]
-    pub(crate) fn new(game: Option<&GameState>, enabled: bool, disabled: i64, muted: u32) -> Self {
+    pub(crate) fn new(game: Option<&GameState>, enabled: bool, disabled: i64, muted: u64) -> Self {
         Cache::default().policy(game, enabled, disabled, muted)
     }
 
@@ -148,8 +148,7 @@ impl Policy {
         else {
             return fallback;
         };
-        // The muted slots are a 32-bit mask.
-        let muted = client < u64::from(u32::BITS) && self.muted & (1 << client) != 0;
+        let muted = self.muted & (1 << client) != 0;
         if muted || !self.supported {
             return fallback;
         }

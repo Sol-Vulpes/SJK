@@ -212,9 +212,9 @@ pub(crate) struct ChatOverlay {
     map_block_request: Option<card::MapBlockRequest>,
     /// The map blocks as the frame last said: the player's own slots, staff's, and
     /// whether the player is staff (`ChatOverlay::set_map_blocks`).
-    map_blocks: (u32, u32, bool),
+    map_blocks: (u64, u64, bool),
     /// Client slots muted on this PC (bits, `muted_players.rs`): their lines are hidden.
-    muted_slots: u32,
+    muted_slots: u64,
     /// What SJK knows of each slot's player, for their game lines (`chat/marks.rs`).
     slot_marks: Vec<marks::SlotMark>,
     /// Chat lines each client slot has sent, for the scoreboard's away marks.
@@ -516,7 +516,7 @@ impl ChatOverlay {
 
     /// The client slots muted on this PC changed (or not: this is called every frame):
     /// hide their lines, and show again those of players no longer muted.
-    pub(crate) fn set_muted_slots(&mut self, slots: u32) {
+    pub(crate) fn set_muted_slots(&mut self, slots: u64) {
         if self.muted_slots == slots {
             return;
         }
@@ -537,14 +537,15 @@ impl ChatOverlay {
 
     /// Whether `target`'s slot is muted on this PC.
     fn slot_muted(&self, target: ChatTarget) -> bool {
-        target.slot() < 32 && self.muted_slots & (1 << target.slot()) != 0
+        usize::from(target.slot()) < crate::chat_mutes::SLOTS
+            && self.muted_slots & (1 << target.slot()) != 0
     }
 
     /// Whether a line the server did not attribute starts with the name the game shows
     /// in a muted slot, then `: ` (colour codes ignored), as JA+ servers send chat.
     fn prefix_muted(&self, text: &str) -> bool {
         self.muted_slots != 0
-            && (0..32_u16)
+            && (0..crate::chat_mutes::SLOTS as u16)
                 .filter(|slot| self.muted_slots & (1 << slot) != 0)
                 .filter_map(|slot| self.roster.target(Some(slot)))
                 .filter_map(|target| self.roster.display_name(target))

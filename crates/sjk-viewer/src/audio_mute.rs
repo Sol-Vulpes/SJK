@@ -12,13 +12,13 @@ use sjk_protocol::EntityState;
 /// Entity numbers the legacy protocol uses.
 const ENTITIES: usize = 1_024;
 /// Game slots the muted mask holds, one bit each.
-const CLIENTS: usize = u32::BITS as usize;
+const CLIENTS: usize = u64::BITS as usize;
 
 /// Which sound sources are silenced.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct AudioMute {
     /// Muted client slots, as bits.
-    clients: u32,
+    clients: u64,
     /// Silenced entity numbers, as bits: the muted clients' own and their thrown sabers.
     entities: [u32; ENTITIES / 32],
 }
@@ -34,13 +34,12 @@ impl Default for AudioMute {
 
 impl AudioMute {
     /// The muted slots changed (or not: this is called every frame).
-    pub(crate) fn set_clients(&mut self, clients: u32) {
+    pub(crate) fn set_clients(&mut self, clients: u64) {
         if self.clients == clients {
             return;
         }
         self.clients = clients;
-        self.entities = [0; ENTITIES / 32];
-        self.entities[0] = clients;
+        self.entities = self.own_entities();
     }
 
     /// Note the entities the muted players own among a snapshot's `entities` (their
@@ -49,8 +48,7 @@ impl AudioMute {
         if self.clients == 0 {
             return;
         }
-        self.entities = [0; ENTITIES / 32];
-        self.entities[0] = self.clients;
+        self.entities = self.own_entities();
         for state in entities {
             let number = usize::from(state.number());
             if (sjk_protocol::player_slots()..ENTITIES).contains(&number)
@@ -60,6 +58,14 @@ impl AudioMute {
                 self.entities[number / 32] |= 1 << (number % 32);
             }
         }
+    }
+
+    /// The muted clients' own entities (a client's entity number is its slot).
+    fn own_entities(&self) -> [u32; ENTITIES / 32] {
+        let mut entities = [0; ENTITIES / 32];
+        entities[0] = self.clients as u32;
+        entities[1] = (self.clients >> 32) as u32;
+        entities
     }
 
     fn client(&self, client: u16) -> bool {
@@ -108,6 +114,18 @@ mod tests {
         assert!(!mute.silences(SourceId(300), Some(7)));
         // A source outside the table.
         assert!(!mute.silences(SourceId(5_000), None));
+    }
+
+    /// A server with more than 32 player slots: a player past slot 31 is silenced, and
+    /// nobody else is.
+    #[test]
+    fn a_muted_player_past_slot_31_is_silenced() {
+        let mut mute = AudioMute::default();
+        mute.set_clients(1 << 40);
+        assert!(mute.silences(SourceId(40), None));
+        assert!(mute.silences(SourceId(300), Some(40)));
+        assert!(!mute.silences(SourceId(8), Some(8)), "slot 40, not 8");
+        assert!(!mute.silences(SourceId(41), Some(41)));
     }
 
     #[test]

@@ -353,7 +353,7 @@ pub(crate) struct Looks {
     revision: u64,
     /// Client slots muted on this PC (bits, `muted_players.rs`): their looks are not
     /// drawn.
-    muted: u32,
+    muted: u64,
     /// Other players' toys not shown on this PC ([`crate::toy_sight`]): bits of
     /// [`Unseen`].
     unseen: u8,
@@ -482,7 +482,7 @@ impl Looks {
     /// What the player in `client` is drawn wearing: nothing while they are muted on
     /// this PC, which never mutes the local player's own slot.
     fn shown(&self, client: usize) -> Option<&Worn> {
-        let muted = client < 32
+        let muted = client < crate::chat_mutes::SLOTS
             && self.muted & (1 << client) != 0
             && self.own_slot.map(usize::from) != Some(client);
         self.worn.get(client).filter(|_| !muted)
@@ -490,7 +490,7 @@ impl Looks {
 
     /// The client slots muted on this PC changed (or not: this is called every frame):
     /// their looks are no longer drawn, or are again.
-    pub(crate) fn set_muted(&mut self, slots: u32) {
+    pub(crate) fn set_muted(&mut self, slots: u64) {
         if self.muted != slots {
             self.muted = slots;
             self.revision += 1;
