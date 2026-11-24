@@ -9,6 +9,12 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | help_prediction: the prediction, smoothing and command-timing settings with their values
+- 251b86f |  | help_prediction: the prediction, smoothing and command-timing settings with their values
++ 24/11/2026 | - | Vanilla preset turns sharpening off; the other presets leave it as the player set it (Creo)
+- 82ef573 |  | Vanilla preset turns sharpening off; the other presets leave it as the player set it (Creo)
++ 24/11/2026 | - | Missing-saber probe: the session log names why a held saber is not drawn (hub #248)
+- bba075b |  | Missing-saber probe: the session log names why a held saber is not drawn (hub #248)
 + 24/11/2026 | - | Ampsay keeps its reader out of the quoted message (hub #266)
 - 500e494 |  | ampsay keeps its reader out of the quoted message (hub #266)
 + 24/11/2026 | - | Reload card waits where the reload cannot run (hub #293)

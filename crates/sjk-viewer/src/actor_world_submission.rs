@@ -794,6 +794,13 @@ fn submit_actor(
     } else {
         entity.equipment()
     };
+    // Another living player's saber in hand, for the missing-saber probe (hub #248).
+    let saber_in_hand = !local
+        && entity.kind == EntityKind::Actor
+        && equipment.is_some_and(|held| {
+            held.kind == sjk_runtime::HeldItemKind::EnergyBlade && !held.primary_in_flight
+        })
+        && state.is_some_and(|state| state.e_flags() & 2 == 0);
     if let Some(body) = mesh.and_then(|index| sinks.actor_meshes[index].body_identity.as_ref()) {
         // CG_BodyQueueCopy removes dropped weapons above WP_BRYAR_PISTOL.
         equipment = equipment
@@ -895,6 +902,30 @@ fn submit_actor(
                 state.stow(presentation_time);
             }
         }
+    }
+    if let (Some(index), Ok(client)) = (mesh, usize::try_from(entity.id.get().wrapping_sub(1))) {
+        let actor = &sinks.actor_meshes[index];
+        let reason = (saber_in_hand
+            && !trick.hidden
+            && !holster.on_back
+            && actor.body_identity.is_none()
+            && !actor.corpse_pool
+            && actor.limb.is_none())
+        .then(|| {
+            crate::missing_saber_probe::reason(&crate::missing_saber_probe::Held {
+                weapon_lost: actor.surfaces.weapon_lost,
+                catalog: sinks.saber_hilts.is_some(),
+                hilt_name: actor.saber_names[0].as_deref(),
+                hand_bolt: actor.weapon_attachments[0].is_some(),
+            })
+        })
+        .flatten();
+        crate::missing_saber_probe::observe(
+            client,
+            reason,
+            presentation_time,
+            &actor.appearance.model,
+        );
     }
     // A hidden trickster keeps only a saber in flight (`cg_players.c:11732-11746`).
     if let Some((equipment, held_mesh)) = equipment

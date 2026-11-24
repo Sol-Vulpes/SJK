@@ -210,6 +210,7 @@ mod menu_widgets;
 mod menu_world;
 mod mimic;
 mod missile_trails;
+mod missing_saber_probe;
 mod mod_notice_card;
 mod model_materials;
 #[cfg(feature = "mod-jof")]
@@ -237,6 +238,7 @@ mod player_trades;
 mod playstyle;
 mod portable_shields;
 mod portal;
+mod prediction_help;
 mod prediction_preview;
 mod ragdoll;
 mod scene_views;
