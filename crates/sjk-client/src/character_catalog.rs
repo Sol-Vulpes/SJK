@@ -326,6 +326,7 @@ mod tests {
         vfs.mount_memory(
             "pack",
             [
+                ("models/players/jedi_zf/model.glm", Vec::new()),
                 ("models/players/jedi_zf/playerchoice.txt", Vec::new()),
                 ("models/players/jedi_zf/head_a1.skin", Vec::new()),
                 ("models/players/jedi_zf/icon_head_a1.jpg", Vec::new()),
@@ -337,6 +338,7 @@ mod tests {
                 ("models/players/jedi_zf/lower_e1.skin", Vec::new()),
                 ("models/players/jedi_zf/model_default.skin", Vec::new()),
                 // Skins with no icon at all make no species.
+                ("models/players/bare/model.glm", Vec::new()),
                 ("models/players/bare/playerchoice.txt", Vec::new()),
                 ("models/players/bare/head_a1.skin", Vec::new()),
                 ("models/players/bare/torso_a1.skin", Vec::new()),
