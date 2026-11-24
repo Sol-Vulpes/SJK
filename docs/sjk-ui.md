@@ -1756,8 +1756,12 @@ and out as the classic board does, settling into place as it opens.
   card. A power duel's pair stack two smaller cards facing the lone duelist.
   Under them "Waiting to duel": everyone else in turn, with their record
   (compact: one list up to 21, then two).
-- **Spectators:** one line at the bottom, "Watching" then their names without
-  colours.
+- **Spectators:** at the bottom, "Watching" then their names without colours,
+  broken between names into lines that end at the board's right end (a compact
+  board's band, else 1824). Three lines fit under the rows; more lift the rows'
+  end a line each, as far as the rows still fit at their least height. Names
+  that still do not fit are cut with ".." (to 180, then 110 frame pixels), and
+  only then does the last line end "and n more".
 - **Away players** ([client.md](client.md#away-players), `cg_scoreboardAfk`):
   below the others of their list, without a place, the name faint with its
   colours at 40%, numbers muted and "AFK 7m" (or "AFK") in the ping column. The
