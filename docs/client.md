@@ -1105,7 +1105,7 @@ own row in Settings and can be changed again there.
 | Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
 | Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
 | The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
-| Image and weather | The Vanilla preset (with its `r_autoExposure 0`: eye adaptation brightens dark rooms even without HDR), then `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
+| Image and weather | The Vanilla preset (with its `r_autoExposure 0`: eye adaptation brightens dark rooms even without HDR, and its `r_sharpen 0`), then `r_toneCurve 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
 
 Turning it on puts the player's value of each of those settings aside, as `cvar=value`
 pairs in `ui_ejkModeRestore` (the format `renderer vanilla` and Tactical use,
@@ -2778,6 +2778,8 @@ Eye adaptation (`r_autoExposure`) is set by every preset, off in Vanilla and on 
 others, but does not tell which preset the settings are (`ALSO_SETS`), so a profile on
 Vanilla saved before 24/11/2026, with it on, still reads as Vanilla (and Tactical's
 Medium, which takes the Vanilla preset's table, leaves it alone).
+Sharpening (`r_sharpen`) is in `ALSO_SETS` too, set to 0 by Vanilla only: the other
+presets' empty value leaves the player's (Creo, 24/11/2026).
 
 Profiles saved on the presets of 16/10/2026 read as their new names (a test pins it):
 the settings the Solar Renderer alone reads (bounced light, lamp shadows, the sharp
@@ -3126,6 +3128,12 @@ itself, once per server and value, with a line in orange saying the inputs are n
 going through at that rate and 125 picked.
 `help_gameplay_fps` prints the explanation and the value in use to the console and
 opens the card; `help_gameplay_fps <fps>` or `gameplay_fps <fps>` sets it (0 for Auto).
+`help_prediction` ([prediction_help.rs](../crates/sjk-viewer/src/prediction_help.rs), Sol,
+24/11/2026) prints the prediction, smoothing and command-timing cvars in four groups
+(your movement, commands and packets, other players and timing, the server's movement
+rules) with each one's value, default and registered description, a changed value in
+green, then `help_gameplay_fps`, `help_tickrate`, `fakenoclip` and `freecam`; a test
+checks every listed cvar is registered.
 `help_tickrate` ([tickrate_help.rs](../crates/sjk-viewer/src/tickrate_help.rs), Sol,
 08/11/2026) prints to the console what players call the tick rate, for staff to tell
 players to type: the frames drawn (`com_maxfps`), the commands sent (the gameplay FPS)

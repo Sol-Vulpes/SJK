@@ -185,11 +185,19 @@ const VALUES: &[(&str, [&str; 6])] = &[
 /// even on an 8-bit scene (`post_exposure.rs`), which the original game never did:
 /// Vanilla turns it off, for the look EternalJK draws (the graphics EJK mode sets, Creo's
 /// report of 23/11/2026 that Vanilla did not look like the original game); every other
-/// preset turns it back on, its default.
-const ALSO_SETS: &[(&str, [&str; 6])] = &[(
-    crate::frame_target::aa::exposure::ENABLED,
-    ["0", "1", "1", "1", "1", "1"],
-)];
+/// preset turns it back on, its default. Vanilla also turns sharpening off, which the
+/// original game never had (Creo, 24/11/2026); the others leave it as the player set it
+/// (an empty value: not set).
+const ALSO_SETS: &[(&str, [&str; 6])] = &[
+    (
+        crate::frame_target::aa::exposure::ENABLED,
+        ["0", "1", "1", "1", "1", "1"],
+    ),
+    (
+        crate::frame_target::aa::color::SHARPEN_CVAR,
+        ["0", "", "", "", "", ""],
+    ),
+];
 
 /// The video memory (MiB) each preset wants to run smoothly; [`Level::rating`] compares
 /// the card's with it. From the VRAM measurements in `docs/rendering.md` ("GPU memory"):
@@ -609,6 +617,7 @@ pub(crate) fn applied_cvars(level: Level) -> Vec<(&'static str, &'static str)> {
         .iter()
         .chain(ALSO_SETS)
         .map(|(cvar, values)| (*cvar, values[level.index()]))
+        .filter(|(_, value)| !value.is_empty())
         .collect()
 }
 
@@ -698,6 +707,13 @@ mod tests {
         console.set_cvar(exposure, "1");
         assert_eq!(Level::current(&console), Some(Level::Vanilla));
         assert!(applied_cvars(Level::Vanilla).contains(&(exposure, "0")));
+        // Sharpening: Vanilla turns it off, the others leave the player's.
+        let sharpen = crate::frame_target::aa::color::SHARPEN_CVAR;
+        console.set_cvar(sharpen, "40");
+        Level::VanillaPlus.apply(&mut console);
+        assert!(holds(&console, sharpen, "40"));
+        Level::Vanilla.apply(&mut console);
+        assert!(holds(&console, sharpen, "0"));
     }
 
     #[test]
@@ -706,6 +722,10 @@ mod tests {
         for level in Level::ALL {
             for (cvar, values) in VALUES.iter().chain(ALSO_SETS) {
                 let value = values[level.index()];
+                if value.is_empty() {
+                    // Not set by this preset.
+                    continue;
+                }
                 assert!(
                     crate::settings::row_takes(cvar, value),
                     "{cvar} {value}: no row in Settings shows it"
