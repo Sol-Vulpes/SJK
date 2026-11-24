@@ -9,6 +9,12 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Map music stays stereo (hub #284)
+- 5024237 |  | Map music stays stereo (hub #284)
++ 24/11/2026 | - | Dropped weapons lie on their side: Ghoul2's root turn for GLM pickups (hub #295)
+- 8ca4ca3 |  | Dropped weapons lie on their side: Ghoul2's root turn for GLM pickups (hub #295)
++ 24/11/2026 | - | Concussion rifle fire and alt fire sounds (hub #299); changelog and status
+- 4e76e27 |  | Concussion rifle fire and alt fire sounds (hub #299); changelog and status
 + 24/11/2026 | - | Prediction preview no longer delivers events: no phantom medium swing (hub #279)
 - 8c4123d |  | Prediction preview no longer delivers events: no phantom medium swing (hub #279)
 + 24/11/2026 | - | Freeze probe lines reach the session log, with the reliable outbox (#324)

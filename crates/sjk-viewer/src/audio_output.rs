@@ -4,7 +4,7 @@ use ringbuf::{HeapCons, HeapProd, HeapRb, traits::*};
 use rodio::{OutputStream, Source};
 use sjk_audio::{
     ChannelId, DecodedSound, Mixer, MixerConfig, PlayRequest, SoundHandle, SourceId,
-    decode_encoded, decode_mono,
+    decode_encoded, decode_encoded_stereo, decode_mono,
 };
 use std::sync::{
     Arc,
@@ -343,6 +343,9 @@ enum DecodeJob {
         bytes: Box<[u8]>,
         extension: Box<str>,
         length_ms: Arc<AtomicU32>,
+        /// A music track: a stereo file keeps its side channel
+        /// ([`decode_encoded_stereo`]), so the background track plays it in stereo.
+        stereo: bool,
     },
     /// A sound made from a decoded one: `make` turns its mixer-rate samples into the
     /// new sound's (`sjk_chat_sound.rs`).
@@ -589,6 +592,16 @@ impl AudioOutput {
     }
 
     pub(super) fn decode(&self, handle: SoundHandle, bytes: &[u8], extension: &str) {
+        self.queue_decode(handle, bytes, extension, false);
+    }
+
+    /// [`Self::decode`] for a music track: a stereo file stays stereo when it plays as
+    /// the background track (voices playing it still hear its mono mid).
+    pub(super) fn decode_music(&self, handle: SoundHandle, bytes: &[u8], extension: &str) {
+        self.queue_decode(handle, bytes, extension, true);
+    }
+
+    fn queue_decode(&self, handle: SoundHandle, bytes: &[u8], extension: &str, stereo: bool) {
         self.cache
             .borrow_mut()
             .push((handle, bytes.len(), extension.to_owned()));
@@ -600,6 +613,7 @@ impl AudioOutput {
             bytes: bytes.into(),
             extension: extension.into(),
             length_ms: self.reserve_length(handle),
+            stereo,
         };
         if sender.try_send(job).is_err() {
             crate::log::progress(format_args!(
@@ -735,8 +749,14 @@ fn decode(
                 bytes,
                 extension,
                 length_ms,
+                stereo,
             } => {
-                let decoded = match decode_encoded(&bytes, &extension, SAMPLE_RATE) {
+                let decoded = if stereo {
+                    decode_encoded_stereo(&bytes, &extension, SAMPLE_RATE)
+                } else {
+                    decode_encoded(&bytes, &extension, SAMPLE_RATE)
+                };
+                let decoded = match decoded {
                     Ok(decoded) => {
                         let milliseconds = (decoded.samples().len() as u64 * 1000)
                             .div_ceil(u64::from(SAMPLE_RATE))

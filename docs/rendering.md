@@ -2123,6 +2123,17 @@ taken at its bind pose, as the static mesh is; Ghoul2's frame 0 of `mp.gla` diff
 it by under a tenth of a unit. The muzzle flash and the dying gun's red pulse and
 damaged skin are not changed by this.
 
+### Pickups
+
+Items (`ET_ITEM`) follow `CG_Item` ([pickups.rs](../crates/sjk-viewer/src/pickups.rs)):
+bob, autorotation, the hologram and cone, the dropped heights. A `.glm` pickup (the
+weapons' `_w.glm`, the sentry, the E-Web) is drawn through Ghoul2's root quarter turn
+about the vertical (`RootMatrix`'s `identityMatrix`, `tr_ghoul2.cpp:128-135`) before the
+entity's angles, as every Ghoul2 model is; MD3 pickups are not. The weapon models lie
+along -Y, so without it a dropped weapon's roll of -90 (`LaunchItem`) stood it on its
+stock, barrel up, instead of laying it on its side (hub #295, 24/11/2026); a spinning
+pickup's middle (`weaponMidpoint`) is taken through the same turn. Untested in game.
+
 ### E-Webs
 
 An E-Web set down (`ET_GENERAL` with `models/map_objects/hoth/eweb_model.glm`: the
