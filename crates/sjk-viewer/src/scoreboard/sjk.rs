@@ -89,6 +89,10 @@ fn spectator_lines_under(bottom: f32) -> usize {
 const ROW_MOST: f32 = 52.0;
 const ROW_SPLIT: f32 = 34.0;
 const ROW_FLOOR: f32 = 26.0;
+/// The least height of a row once the board lists more players than a server of 32
+/// slots holds (a server with more than 32 player slots): rows as thin as the compact
+/// ones before any is left out, so two halves hold 64 players and a team's list 32.
+const ROW_LEAST: f32 = 20.0;
 /// Compact rows: the most, and the least before a list splits in two (only
 /// a list longer than a full server's team, such as a duel's queue, does).
 const COMPACT_MOST: f32 = 32.0;
@@ -707,6 +711,9 @@ struct Painter<'a> {
     /// Where the rows end: [`BOTTOM`], or higher to make room for many
     /// spectators ([`Painter::rows_bottom`]).
     bottom: f32,
+    /// The board lists more players than a server of 32 slots holds: its rows may be
+    /// as thin as [`ROW_LEAST`].
+    crowded: bool,
 }
 
 /// Build the SJK UI's scoreboard into `ui`.
@@ -732,6 +739,7 @@ pub(super) fn build(
         motion,
         clear: chat_clear(&frame, viewport),
         bottom: BOTTOM,
+        crowded: rows.len() > sjk_protocol::CLASSIC_PLAYER_SLOTS,
     };
     let mut board = painter.board(rows);
     // Spectators who need more than the lines under the rows lift the rows'
@@ -943,7 +951,8 @@ impl Painter<'_> {
             && self.header.local.quiet & (1 << row.client_num) != 0
     }
 
-    /// Whether `row`'s player is ready, at intermission.
+    /// Whether `row`'s player is ready, at intermission. The server's ready bits are
+    /// 32 (`STAT_CLIENTS_READY`): a slot past them shows none.
     fn is_ready(&self, row: &ScoreRow) -> bool {
         let local = self.header.local;
         local.intermission && row.client_num < 32 && local.ready & (1 << row.client_num) != 0
@@ -1109,6 +1118,16 @@ impl Painter<'_> {
             + 1.0
     }
 
+    /// The least row height where a board of at most 32 players has `floor`: thinner
+    /// on a crowded one ([`ROW_LEAST`]).
+    fn least(&self, floor: f32) -> f32 {
+        if self.crowded {
+            floor.min(ROW_LEAST)
+        } else {
+            floor
+        }
+    }
+
     /// How `total` rows stand in `list`: [`ROW_MOST`] tall at most, thinner
     /// as it fills, in two halves when it may split and rows would be thinner
     /// than [`ROW_SPLIT`], never thinner than [`ROW_FLOOR`] (compact:
@@ -1126,7 +1145,7 @@ impl Painter<'_> {
             1
         };
         let per = total.div_ceil(halves).max(1);
-        let row_height = (height / per as f32).clamp(floor, most);
+        let row_height = (height / per as f32).clamp(self.least(floor), most);
         Fit {
             halves,
             height: row_height,
@@ -1792,11 +1811,11 @@ impl Painter<'_> {
         if names.is_empty() {
             return BOTTOM;
         }
-        let floor = if self.header.compact {
+        let floor = self.least(if self.header.compact {
             COMPACT_FLOOR
         } else {
             ROW_FLOOR
-        };
+        });
         let (top, per) = if self.header.gametype >= TEAM {
             let most = [RED, BLUE]
                 .into_iter()
@@ -3128,6 +3147,173 @@ mod tests {
                 assert_eq!(cut, !compact, "{viewport:?}");
             }
         }
+    }
+
+    /// Rows for the players `teams` puts on a team (`None`: no such player), named by
+    /// their slot, best score first.
+    fn crowd(teams: impl Fn(u8) -> Option<u8>) -> Vec<ScoreRow> {
+        (0..sjk_protocol::PLAYER_CAPACITY as u8)
+            .filter_map(|client| {
+                let mut row = row(client, teams(client)?, 90 - i32::from(client));
+                row.name = format!("Player {client:02}");
+                row.deaths = Some(3);
+                Some(row)
+            })
+            .collect()
+    }
+
+    /// A server with more than 32 player slots: every player's row is drawn (no "and n
+    /// more"), on the screen, readable and clear of the rows about it, every spectator
+    /// is named, and nothing is lost to the canvas's storage; full and compact, at
+    /// every window size.
+    #[test]
+    fn more_than_32_players_all_stand_on_the_board() {
+        let sides = |client: u8| Some(1 + client % 2);
+        let boards: Vec<(&str, i32, Vec<ScoreRow>)> = vec![
+            ("33 playing", 0, crowd(|client| (client < 33).then_some(0))),
+            ("48 playing", 0, crowd(|client| (client < 48).then_some(0))),
+            ("64 playing", 0, crowd(|_| Some(0))),
+            (
+                "40 playing, 24 watching",
+                0,
+                crowd(|client| Some(if client < 40 { 0 } else { SPECTATOR })),
+            ),
+            (
+                "58 playing, 6 watching",
+                0,
+                crowd(|client| Some(if client < 58 { 0 } else { SPECTATOR })),
+            ),
+            (
+                "17 a side",
+                TEAM,
+                crowd(|client| (client < 34).then(|| sides(client)).flatten()),
+            ),
+            (
+                "24 a side",
+                TEAM,
+                crowd(|client| (client < 48).then(|| sides(client)).flatten()),
+            ),
+            ("32 a side", TEAM, crowd(sides)),
+            ("32 a side, capture the flag", CTF, crowd(sides)),
+            (
+                "25 a side, 14 watching",
+                TEAM,
+                crowd(|client| {
+                    if client < 50 {
+                        sides(client)
+                    } else {
+                        Some(SPECTATOR)
+                    }
+                }),
+            ),
+            (
+                "20 a side, 24 watching",
+                CTF,
+                crowd(|client| {
+                    if client < 40 {
+                        sides(client)
+                    } else {
+                        Some(SPECTATOR)
+                    }
+                }),
+            ),
+        ];
+        for (name, gametype, rows) in &boards {
+            for viewport in VIEWPORTS {
+                let frame = Frame::new(viewport);
+                for compact in [false, true] {
+                    let mut header = header(*gametype, 40);
+                    header.compact = compact;
+                    header.ids = true;
+                    // Intermission, everyone the server's 32 bits can tell ready.
+                    header.local.intermission = true;
+                    header.match_over = true;
+                    header.local.ready = u32::MAX;
+                    let ui = draw(rows, &header, viewport);
+                    let case = format!("{name}, compact {compact}, at {viewport:?}");
+                    assert!(!ui.overflowed(), "{case}");
+                    let runs = placed_runs(&ui);
+                    let sizes: Vec<f32> = ui
+                        .draw_list()
+                        .commands()
+                        .iter()
+                        .filter_map(|command| match *command {
+                            DrawCommand::Text { size, .. } => Some(size),
+                            _ => None,
+                        })
+                        .collect();
+                    assert!(
+                        !runs.iter().any(|(run, _)| run.contains(" more")),
+                        "{case}: a row or a spectator is left out"
+                    );
+                    let on_screen = |rect: &Rect| {
+                        rect.x >= 0.0
+                            && rect.y >= 0.0
+                            && rect.right() <= viewport[0] + 0.5
+                            && rect.bottom() <= viewport[1] + 0.5
+                    };
+                    let mut names = Vec::new();
+                    for row in rows {
+                        if watching(row) {
+                            let line = runs
+                                .iter()
+                                .find(|(run, _)| run.contains(&row.name))
+                                .unwrap_or_else(|| panic!("{case}: {} is not named", row.name));
+                            assert!(on_screen(&line.1), "{case}: {line:?}");
+                            continue;
+                        }
+                        let mut found = runs
+                            .iter()
+                            .zip(&sizes)
+                            .filter(|((run, _), _)| *run == row.name);
+                        let ((_, rect), size) = found
+                            .next()
+                            .unwrap_or_else(|| panic!("{case}: {}", row.name));
+                        assert!(found.next().is_none(), "{case}: {} twice", row.name);
+                        assert!(on_screen(rect), "{case}: {} at {rect:?}", row.name);
+                        names.push((*rect, *size));
+                    }
+                    // Names in a column stand a text's height apart at least, and
+                    // their text is no smaller than the compact board's.
+                    names.sort_by(|(a, _), (b, _)| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+                    for pair in names.windows(2) {
+                        let [(first, size), (second, _)] = [pair[0], pair[1]];
+                        assert!(size >= 16.0 * frame.s - 0.01, "{case}: text of {size}");
+                        if (first.x - second.x).abs() < 0.5 {
+                            let apart = second.y - first.y;
+                            assert!(apart >= size.max(ROW_LEAST * frame.s) - 0.01, "{case}");
+                        } else {
+                            assert!(first.right() <= second.x + 0.5, "{case}: {pair:?}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// At 32 players the rows keep their floor: thinner rows are only for a board with
+    /// more players than a server of 32 slots holds.
+    #[test]
+    fn thinner_rows_are_only_for_more_than_32_players() {
+        let viewport = [1920.0, 1080.0];
+        let s = Frame::new(viewport).s;
+        let apart = |rows: &[ScoreRow], next: &str| {
+            let ui = draw(rows, &header(TEAM, 0), viewport);
+            let runs = placed_runs(&ui);
+            let y = |name: &str| {
+                runs.iter()
+                    .find(|(run, _)| run == name)
+                    .map(|(_, rect)| rect.y)
+            };
+            (y(next).unwrap() - y("Player 00").unwrap()) / s
+        };
+        // 25 on a team of 32 players: the floor, and the list cut, as before.
+        let few = crowd(|client| (client < 32).then_some(if client < 25 { 1 } else { 2 }));
+        assert!((apart(&few, "Player 01") - ROW_FLOOR).abs() < 0.01);
+        // 32 a side: every row, thinner.
+        let many = crowd(|client| Some(1 + client % 2));
+        let height = apart(&many, "Player 02");
+        assert!((ROW_LEAST..ROW_FLOOR).contains(&height), "{height}");
     }
 
     #[test]

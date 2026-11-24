@@ -27,11 +27,12 @@ use sjk_ui::DrawList;
 const CS_LEVEL_START_TIME: usize = 21;
 const CS_CLIENT_DUELISTS: usize = 30;
 const CS_CLIENT_DUELHEALTHS: usize = 31;
-/// The board's text runs and draw commands a frame: 32 rows of up to seven
-/// runs (a capture mode's, or any at intermission) and their shapes, with room for
-/// three medal ribbon bars of four rectangles on every row.
-const TEXT_SLOTS: usize = 320;
-const DRAWS: usize = 1_536;
+/// The board's text runs and draw commands a frame: a row for every slot a server
+/// can have, of up to seven runs (a capture mode's, or any at intermission) and
+/// their shapes, with room for three medal ribbon bars of four rectangles on every
+/// row.
+const TEXT_SLOTS: usize = 10 * sjk_protocol::PLAYER_CAPACITY;
+const DRAWS: usize = 48 * sjk_protocol::PLAYER_CAPACITY;
 
 /// Chat remains available beside the scoreboard.
 pub(crate) fn chat_visible(information: bool, history: bool) -> bool {
@@ -125,7 +126,7 @@ impl Scoreboard {
             team_game: false,
             map: String::with_capacity(64),
             mode: String::with_capacity(32),
-            rows: Vec::with_capacity(32),
+            rows: Vec::with_capacity(sjk_protocol::PLAYER_CAPACITY),
             ui: MenuCanvas::with_capacities(TEXT_SLOTS, 96, DRAWS),
             deaths: deaths::Deaths::default(),
             afk: afk::Afk::default(),
@@ -418,7 +419,7 @@ impl Scoreboard {
         }
         // Connected clients the scores do not list yet (`CG_TeamScoreboard`'s
         // "fake" rows); only the classic style shows them.
-        for client in 0..32_u8 {
+        for client in 0..sjk_protocol::player_slots() as u8 {
             let listed = session
                 .scores()
                 .iter()
