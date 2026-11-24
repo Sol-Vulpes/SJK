@@ -102,6 +102,12 @@ impl ViewerConsole {
                 let game_data = self.model_sync_page.game_data().to_owned();
                 crate::model_sync::refresh_index(self, &game_data);
             }
+            PageAction::GetAll => {
+                let line = format!("{} all", crate::model_sync::GET);
+                if let Err(why) = self.queue_command(&line) {
+                    self.push_log(format!("^3Model sync: {why}"));
+                }
+            }
             PageAction::Run(action, model) => {
                 // The command prints how it went, which the page shows too.
                 let line = format!("{} {model}", action.command());

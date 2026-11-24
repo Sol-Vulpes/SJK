@@ -1,5 +1,6 @@
 //! The Model sync page in the SJK UI (`docs/sjk-ui.md`), over the darkened map as the
-//! model viewer: the title and what the page is for, the search with Refresh beside it,
+//! model viewer: the title and what the page is for, the search with Refresh and Get
+//! players' models beside it,
 //! the list (each model's name, a gold "Worn" on the one the player wears, where it
 //! stands, and its buttons on the right), then what model sync said last, and the keys
 //! along the foot.
@@ -13,10 +14,11 @@ use sjk_ui::{FontWeight, TextAlign};
 const LEFT_X: f32 = 96.0;
 const WIDTH: f32 = 1_728.0;
 const RIGHT_X: f32 = LEFT_X + WIDTH;
-/// The search pill and Refresh beside it.
+/// The search pill, Refresh and Get players' models beside it.
 const SEARCH_Y: f32 = 196.0;
-const SEARCH_WIDTH: f32 = 860.0;
+const SEARCH_WIDTH: f32 = 700.0;
 const REFRESH_WIDTH: f32 = 160.0;
+const GET_ALL_WIDTH: f32 = 260.0;
 /// The list's top and row pitch.
 const LIST_Y: f32 = 276.0;
 const ROW_HEIGHT: f32 = 52.0;
@@ -62,6 +64,7 @@ impl Page {
                 (slot * ROW_BUTTONS + button) as u16
             }
             Focus::Refresh => REFRESH_TOKEN,
+            Focus::GetAll => GET_ALL_TOKEN,
             Focus::Close => BACK_TOKEN,
         }
     }
@@ -161,7 +164,22 @@ impl Page {
             self.focus == Focus::Refresh,
             REFRESH_TOKEN,
         );
-        let auto_x = LEFT_X + SEARCH_WIDTH + REFRESH_WIDTH + 40.0;
+        kit::button(
+            &mut self.ui,
+            &frame,
+            [
+                LEFT_X + SEARCH_WIDTH + REFRESH_WIDTH + 40.0,
+                SEARCH_Y + 5.0,
+                GET_ALL_WIDTH,
+                46.0,
+            ],
+            "Get players' models",
+            false,
+            !self.busy,
+            self.focus == Focus::GetAll,
+            GET_ALL_TOKEN,
+        );
+        let auto_x = LEFT_X + SEARCH_WIDTH + REFRESH_WIDTH + GET_ALL_WIDTH + 60.0;
         text(
             &mut self.ui,
             TextFamily::Body,
@@ -397,4 +415,5 @@ impl Page {
 // The said lines end above the keys, and the status column has room.
 const _: () = assert!(SAID_Y + 18.0 + 6.0 * SAID_LINE < KEYS_Y - 6.0);
 const _: () = assert!(STATUS_WIDTH >= 400.0);
-const _: () = assert!(LEFT_X + SEARCH_WIDTH + REFRESH_WIDTH + 40.0 < RIGHT_X - 400.0);
+const _: () =
+    assert!(LEFT_X + SEARCH_WIDTH + REFRESH_WIDTH + GET_ALL_WIDTH + 60.0 < RIGHT_X - 400.0);

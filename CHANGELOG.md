@@ -43,6 +43,9 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Rig models' chains can sway in a gusting breeze that blows the same way for everyone (`breeze`) _(Kushina, PR #440)_
 - Rig models' eyes can follow what the player looks at (`eyes`) _(Kushina, PR #441)_
 - Rig models' chains can keep their modelled curve as they hang (`shape`) _(Kushina, PR #443)_
+- Model sync shares a model whole: its voice (`sounds.cfg` and its sound folder, even under another name), the sounds its animations play, its shaders from any shader file (community packs keep many models' shaders in one), and the textures it uses from outside its folder; what the game itself has stays out. Others hear the model's own pain, jump, taunt and death sounds (hub #313) _(Sol; reported by Rollembones)_
+- A model whose voice table starts with a setting line (JoF's Mandalorians: `breathes "0"`) speaks with its own voice instead of the generic one: the voice folder is the first one-word line _(Sol)_
+- Model sync is easier: a share says what went in (files, size, sounds, what it took from elsewhere, what is missing on your PC) and how to fix a refused one; `modelsync check` says it without sending; `getmodel all` and the page's Get players' models fetch the shared models of everyone here you lack; `modelsync share`, `modelsync get <name>` work too; a downloaded model shows on the map at once, without waiting for the next map _(Sol)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 

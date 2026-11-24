@@ -29,13 +29,17 @@ Changes go live at once, with no review queue: the tick is the trust.
 ## Upload
 
 1. Share or Update on the [Model sync page](#the-model-sync-page) (for JoF and Sith
-   verified players), or `sharemodel [<name>]` in the console (the worn model without a
-   name). The client finds the model wherever it is installed (a folder, or a large
-   PK3 with other things in it), and packs only `models/players/<name>/` and that
-   model's `shaders/<name>.shader` into a new PK3
+   verified players), or `sharemodel [<name>]` (also `modelsync share [<name>]`) in the
+   console (the worn model without a name). The client gathers what the model needs
+   wherever it is installed (a folder, or a large PK3 with other things in it; see
+   [What a share takes](#what-a-share-takes)) and packs it into a new PK3
    ([`pack`](../crates/sjk-model-sync/src/pack.rs)).
 2. The client checks the pack itself (the same checks as the server), so the player
-   learns what is wrong before sending.
+   learns what is wrong before sending, with how to fix it (smaller textures, fewer
+   long sounds, a file to remove). It says what went in: the files and size, how many
+   sounds, the voice it uses when its own is not shared, how many files came from
+   outside the folder, and what the model names that this PC has nowhere.
+   `modelsync check [<name>]` says the same without sending.
 3. The client asks the hub for an **upload ticket**: a short signed note (key, tick
    group, model name, content MD5, ten minutes valid), signed with the hub's ed25519
    key. The hub never sees the file.
@@ -44,6 +48,32 @@ Changes go live at once, with no review queue: the tick is the trust.
    again, and publishes it as the name's next version, also over a name the hosts'
    packs hold. If the same content (same MD5) is already there, it only links it and
    nothing is stored.
+
+## What a share takes
+
+[`gather`](../crates/sjk-model-sync/src/gather.rs) collects the model (Sol, 24/11/2026,
+after Rollembones' hub #313: shared models had no voice and lost shaders):
+
+- **Its folder**, `models/players/<name>/`: the mesh, skins, textures, a rig model's
+  manifests and glTF, the voice tables (`sounds.cfg`, `sounds_<skin>.cfg`) and
+  `animevents.cfg`.
+- **Its shaders, from any `.shader` file**: every shader named in its folder, wherever
+  it is defined (community packs keep many models' shaders in one file), goes in
+  `shaders/<name>.shader`.
+- **Its voice**: the folder its `sounds.cfg` names, `sound/chars/<voice>/`. When that is
+  `<name>`, it is taken as it is; a voice folder of another name is copied to
+  `sound/chars/<name>/` (a skin's own voice to `sound/chars/<name>/<skin>/`) and the
+  table rewritten to point at the copy. A voice the retail game has (`jan`, `kyle`), even
+  partly, is not taken: everyone has it.
+- **Its animation sounds**: a sound `animevents.cfg` plays from elsewhere (with its
+  numbered variants, `step1` to `step4`) is copied under `sound/chars/<name>/x/` and the
+  event rewritten; the retail game's stay as they are.
+- **What it uses from outside its folder**: a custom texture or shader its skins or mesh
+  name, or a texture its shaders read, is copied under `models/players/<name>/x/...`
+  (the path after `models/players/`, or the whole path) and every reference rewritten.
+
+What the retail game has (its `assets*.pk3`) is never taken or moved. A texture or
+shader named nowhere on this PC is reported, as it shows plain for everyone.
 
 ## What a pack may contain
 
@@ -68,22 +98,34 @@ viewers are protected even if the server is wrong. One rule fails the whole pack
   Community shader files often define their sibling models' shaders too
   (`krovos.shader` holds `krovos2`'s): when packing, the client keeps only the model's
   own and leaves the rest out ([`pack`](../crates/sjk-model-sync/src/pack.rs)).
-- **Nothing else:** no other `.cfg` (`sounds.cfg`, `animation.cfg`), `.menu`, `.qvm`,
-  `.dll`, `.bsp`, `.sab`, sounds, emotes or other folders. Sounds may come later with
-  their own checks.
+- **Model tables:** `sounds.cfg`, `sounds_<skin>.cfg` and `animevents.cfg` in the
+  folder, plain text; a voice table's first one-word line names its voice folder (`a-z
+  0-9 _ - /`, no `..`); lines with spaces or quotes before it, such as JoF's
+  Mandalorians' `breathes "0"`, are settings, passed over as the client passes them.
+- **Sounds, only under `sound/chars/<name>/`:** `.wav` (RIFF with a format the game
+  plays: PCM, ADPCM or MP3 in WAV, 1 or 2 channels, 4-48 kHz) and `.mp3` (a frame header
+  within 64 KB after any ID3 tag: many community MP3s start with zeros). Sounds anywhere else are refused, so a pack can never change Kyle's
+  voice, a weapon or another model's voice for whoever loads it (since 24/11/2026).
+- **Nothing else:** no other `.cfg` (`animation.cfg`), `.menu`, `.qvm`, `.dll`, `.bsp`,
+  `.sab`, emotes or other folders.
 - **Limits** (`Limits::DEFAULT`, raised on 11/11/2026 after checking the Sith cloud's
-  137 skin packs: 132 pass, against 97 before):
+  137 skin packs: 132 pass, against 97 before; on 24/11/2026 the PK3 from 25 to 40 MB
+  and the unpacked size from 128 to 160 MB, for the voices):
 
 | Limit | Value |
 |---|---|
-| PK3 size | 25 MB |
-| Unpacked size | 128 MB, and each entry at most 200 times its packed size |
+| PK3 size | 40 MB |
+| Unpacked size | 160 MB, and each entry at most 1000 times its packed size (200 until 24/11/2026: silent WAVs and flat textures reach 350) |
 | Files | 512 |
 | Texture side | 4096 pixels |
 | All textures unpacked (RGBA) | 256 MB |
 | Vertices, every GLM LOD and glTF together | 300 000 |
 | `.skin`, `.shader` and `sjk_rig*.cfg` text | 256 KB each |
 | `.gltf` JSON | 16 MB |
+| Sounds | 32 MB together, 2 MB each |
+
+Clients from before these rules (2026.1124.1 and older) check downloads with the old
+ones, so they refuse a pack with sounds; the auto-update brings them over.
 
 ### Rig models: the author's leave
 
@@ -117,6 +159,8 @@ cloud: v3", "In the Sith cloud's packs", "Not shared", "Downloaded v2") and offe
 - **Share** (a model nobody shared) or **Update** (one on the cloud, or in the hosts'
   packs): only to players with a JoF or Sith tick, or staff. It runs
   `sharemodel <name>`.
+- **Get players' models** (beside Refresh): `getmodel all`, the shared models of the
+  players on the server that this game lacks; the lines name those nobody shared.
 - **Download**: a version on the cloud this game did not fetch (none fetched, or an
   older one), even of a model it has from elsewhere: the shared version then wins over
   the local copy, as the player chose (since 11/11/2026; before, an installed model
@@ -140,8 +184,12 @@ press, Esc to close; the mouse clicks and the wheel scrolls.
   the hosts' packs with a shared version (the newer one wins over the pack).
 - `modelrollback <name> <version>` (staff) asks the hub for a rollback ticket and
   makes that version current again.
-- A download loads from the next map, as Sith cloud files do, and goes where they go
-  (`base`, or `assets/S/base`).
+- A download goes where Sith cloud files go (`base`, or `assets/S/base`). In a game it
+  shows at once (since 24/11/2026): the client mounts the map's files again on a worker,
+  as `rig_reload` does, and the players whose clientinfo names the model load it ("X
+  shows now"). The shader scripts stay those the map loaded, so a downloaded model's
+  shader effects (glow, animated stages) come with the next map; its textures show at
+  once. Outside a game it loads with the next map.
 
 ## Wire
 
@@ -198,7 +246,10 @@ has, unless it is a hosts' pack name with a shared version.
 
 `cargo test -p sjk-model-sync --features client`: allowed and refused packs (paths,
 types, the shader's names, images, GLM, limits, zip bombs), the packer's output
-passing the checks, a download checked against its listing, and the record replacing
+passing the checks, sounds (WAV and MP3 headers, only under the model's name, sizes),
+the gatherer (a voice of another name moved and its table rewritten, shaders from a
+shared file, outside textures copied and their references rewritten, stock files left
+alone, animation event sounds), a download checked against its listing, and the record replacing
 only its own file. `sjk-identity`'s `model_tickets_come_back_with_a_serial` covers the
 ticket request; `model_sync::tests` in the viewer the setting's default and the files
 a share takes; `model_sync_page::tests` the page's buttons for each state, its status
@@ -206,6 +257,7 @@ words, the search, keys and clicks, and that it fits windows from 1280x720 to 4K
 `model_sync_page_shot` (ignored, GPU and game data) renders it. Not verified: an
 upload and a download against a running Sith cloud and hub, and the page in game.
 
-Known limits: a model's textures outside its own folder, or shaders in a file not
-named `shaders/<name>.shader`, are not shared (viewers see those parts untextured or
-plain); sounds are not shared; a download loads from the next map.
+Known limits: a shared model's shader effects show from the next map (its textures at
+once); textures named in a rig model's glTF outside its folder, and effects (`.efx`)
+its `animevents.cfg` plays, are not shared; a sound over 2 MB refuses the share rather
+than being left out.

@@ -1,15 +1,21 @@
 //! Model sync in the client (`docs/model-sync.md`): JoF- and Sith-verified players
 //! share the model they wear through the Sith cloud, and others fetch it.
 //!
-//! - `sharemodel` packs the model the player wears ([`sjk_model_sync::pack`]), asks
-//!   the hub for an upload ticket and sends the pack to the Sith cloud.
-//! - `getmodel <name>` fetches a synced model; `cl_autoModels` (off by default)
-//!   fetches those of the players met, and new versions of fetched ones every hour.
+//! - `sharemodel` gathers the model the player wears with its voice, shaders and the
+//!   textures it uses from elsewhere ([`sjk_model_sync::gather`]), packs it, asks the
+//!   hub for an upload ticket and sends the pack to the Sith cloud; it says what went
+//!   in first. `modelsync check` does the same without sending.
+//! - `getmodel <name>` fetches a synced model, `getmodel all` those of the players on
+//!   the server this game lacks; `cl_autoModels` (off by default) fetches those of the
+//!   players met, and new versions of fetched ones every hour.
+//! - `modelsync share|get|check|rollback ...` are the same commands under one name;
+//!   `modelsync` alone opens the page.
 //! - `modelrollback <name> <version>` (staff) makes an earlier version current.
 //!
 //! Every download is checked again here before it is written ([`sjk_model_sync::client`]),
-//! and goes where the Sith cloud's files go ([`crate::sith_cloud::folder`]); it loads
-//! from the next map. A model the game already has is never fetched. Network calls
+//! and goes where the Sith cloud's files go ([`crate::sith_cloud::folder`]); in a game,
+//! the files are mounted again at once and the players wearing it load it on this map
+//! ([`take_downloaded`], `rig_reload.rs`), else it loads with the next map. A model the game already has is never fetched. Network calls
 //! run on a thread of their own; the frame only hands jobs over and reads results.
 
 use crate::console::ViewerConsole;
@@ -27,16 +33,19 @@ pub(crate) const AUTO: &str = "cl_autoModels";
 pub(crate) const GET: &str = "getmodel";
 pub(crate) const SHARE: &str = "sharemodel";
 pub(crate) const ROLLBACK: &str = "modelrollback";
-/// Opens the Model sync page (`console_model_sync.rs`).
+/// Opens the Model sync page (`console_model_sync.rs`); with a word, the command it
+/// names ([`subcommand`]).
 pub(crate) const PAGE: &str = "modelsync";
+/// What `sharemodel` would send, said without sending (`modelsync check`).
+pub(crate) const CHECK: &str = "modelcheck";
 pub(crate) const COMMANDS: &[(&str, &str)] = &[
     (
         PAGE,
-        "Open the Model sync page: share your models through the Sith cloud and download the ones others shared",
+        "Open the Model sync page: share your models (with their voice) through the Sith cloud and download the ones others shared; modelsync share [name], modelsync get <name|all>, modelsync check [name]",
     ),
     (
         GET,
-        "Download a player model other players shared through the Sith cloud: getmodel <name>",
+        "Download a player model other players shared through the Sith cloud: getmodel <name>, or getmodel all for every player here whose model you lack",
     ),
     (
         SHARE,
@@ -95,6 +104,9 @@ enum Job {
     /// players', said only when fetched, and one the game has only when it overrides
     /// a host pack's).
     Fetch(Vec<(String, bool)>, bool),
+    /// Fetch the shared ones of these models (the players here), and say which were
+    /// not shared.
+    FetchAll(Vec<String>),
     /// Read the index again (the Model sync page).
     Index,
     /// Fetch what changed of the models fetched before.
@@ -114,6 +126,8 @@ enum Job {
 struct Worker {
     agent: ureq::Agent,
     index: Option<(Instant, String, Arc<Index>)>,
+    /// The models written during the current job.
+    installed: std::cell::RefCell<Vec<String>>,
 }
 
 impl Worker {
@@ -147,6 +161,7 @@ impl Worker {
         Done {
             lines,
             index: self.index.as_ref().map(|(_, _, index)| Arc::clone(index)),
+            installed: self.installed.take(),
         }
     }
 
@@ -162,6 +177,24 @@ impl Worker {
                     })
                     .filter_map(|(name, _)| self.fetch(&cloud, &index, place, name, quiet))
                     .collect())
+            }
+            Job::FetchAll(names) => {
+                let index = self.index(&cloud, place, true)?;
+                let (shared, unshared): (Vec<&String>, Vec<&String>) = names
+                    .iter()
+                    .partition(|name| index.models.contains_key(*name));
+                let mut lines: Vec<String> = shared
+                    .iter()
+                    .filter_map(|name| self.fetch(&cloud, &index, place, name, false))
+                    .collect();
+                if !unshared.is_empty() {
+                    let listed: Vec<&str> = unshared.iter().map(|name| name.as_str()).collect();
+                    lines.push(format!(
+                        "Model sync: not shared yet: {}.",
+                        listed.join(", ")
+                    ));
+                }
+                Ok(lines)
             }
             Job::Index => {
                 self.index(&cloud, place, true)?;
@@ -248,10 +281,10 @@ impl Worker {
                     .map_err(|error| error.to_string())
             });
         Some(match result {
-            Ok(_) => format!(
-                "Model sync: {name} version {} downloaded; it shows from the next map.",
-                entry.version
-            ),
+            Ok(_) => {
+                self.installed.borrow_mut().push(name.to_owned());
+                format!("Model sync: {name} version {} downloaded.", entry.version)
+            }
             Err(why) => format!("^3Model sync: {name}: {why}."),
         })
     }
@@ -271,6 +304,8 @@ struct Waiting {
 struct Done {
     lines: Vec<String>,
     index: Option<Arc<Index>>,
+    /// The models it wrote.
+    installed: Vec<String>,
 }
 
 /// The jobs sent to the thread and what it sends back.
@@ -289,11 +324,15 @@ struct State {
     /// A rig model waiting for its share to be confirmed, since when.
     confirm: Option<(String, Instant)>,
     met_at: Option<Instant>,
+    /// The models the other players on the server wear, read every [`MET_EVERY`].
+    here: Vec<String>,
     update_at: Option<Instant>,
     /// The index the thread last read, for the Model sync page.
     index: Option<Arc<Index>>,
     /// The last lines said, newest last, for the page.
     recent: Vec<String>,
+    /// Models downloaded and not yet shown on the map ([`take_downloaded`]).
+    downloaded: BTreeSet<String>,
     /// Jobs sent and not answered yet.
     pending: usize,
     /// Bumped whenever something the page shows may have changed (a line said, a job
@@ -308,9 +347,11 @@ static STATE: Mutex<State> = Mutex::new(State {
     offered: BTreeSet::new(),
     confirm: None,
     met_at: None,
+    here: Vec::new(),
     update_at: None,
     index: None,
     recent: Vec::new(),
+    downloaded: BTreeSet::new(),
     pending: 0,
     changes: 0,
 });
@@ -330,6 +371,7 @@ impl State {
                     let mut worker = Worker {
                         agent: sjk_model_sync::client::agent(crate::build_info::VERSION),
                         index: None,
+                        installed: Default::default(),
                     };
                     for (job, place) in incoming {
                         if answers.send(worker.run(job, &place)).is_err() {
@@ -355,8 +397,22 @@ impl State {
     }
 }
 
-/// `getmodel`, `sharemodel` and `modelrollback`; lines for the console, which the
-/// Model sync page shows too ([`recent_lines`]).
+/// The command `modelsync <word> ...` names, with its arguments: `share`, `get`,
+/// `check`, `rollback`; `None` for another word (the page opens).
+pub(crate) fn subcommand(args: &[String]) -> Option<(&'static str, &[String])> {
+    let (word, rest) = args.split_first()?;
+    let name = match word.to_ascii_lowercase().as_str() {
+        "share" | "update" => SHARE,
+        "get" | "download" => GET,
+        "check" => CHECK,
+        "rollback" => ROLLBACK,
+        _ => return None,
+    };
+    Some((name, rest))
+}
+
+/// `getmodel`, `sharemodel`, `modelsync check` and `modelrollback`; lines for the
+/// console, which the Model sync page shows too ([`recent_lines`]).
 pub(crate) fn command(
     name: &str,
     args: &[String],
@@ -384,12 +440,39 @@ fn run_command(
 ) -> Result<Vec<String>, String> {
     let place = Place::of(console, game_data);
     match name {
+        GET if args
+            .first()
+            .is_some_and(|word| word.eq_ignore_ascii_case("all")) =>
+        {
+            let record = Record::load(game_data);
+            let mut state = lock();
+            let wanted: Vec<String> = state
+                .here
+                .iter()
+                .filter(|model| !installed(model) && !record.models.contains_key(*model))
+                .cloned()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            if wanted.is_empty() {
+                return Ok(vec![
+                    "Model sync: you have the model of every player here.".to_owned(),
+                ]);
+            }
+            state.asked.extend(wanted.iter().cloned());
+            let count = wanted.len();
+            state.send(Job::FetchAll(wanted), place);
+            Ok(vec![format!(
+                "Model sync: looking for the {count} model{} you lack on the Sith cloud...",
+                if count == 1 { "" } else { "s" }
+            )])
+        }
         GET => {
             let model = args
                 .first()
                 .map(|model| model.trim().to_ascii_lowercase())
                 .filter(|model| sjk_model_sync::valid_name(model))
-                .ok_or("usage: getmodel <name> (a-z 0-9 _ -)")?;
+                .ok_or("usage: getmodel <name> (a-z 0-9 _ -), or getmodel all")?;
             let mut state = lock();
             state.asked.insert(model.clone());
             let has = installed(&model);
@@ -398,7 +481,7 @@ fn run_command(
                 "Model sync: looking for {model} on the Sith cloud..."
             )])
         }
-        SHARE => {
+        SHARE | CHECK => {
             let model = match args.first() {
                 Some(model) => model.trim().to_ascii_lowercase(),
                 None => {
@@ -413,9 +496,24 @@ fn run_command(
                 ));
             }
             let vfs = vfs.ok_or("the game data is not loaded yet")?;
+            let gathered = gather(vfs, &model);
+            let notes = notes(&gathered);
             let (pk3, checked) =
-                sjk_model_sync::pack::pack(&model, files_of(vfs, &model), &Limits::DEFAULT)
-                    .map_err(|why| format!("{model} cannot be shared: {why}"))?;
+                sjk_model_sync::pack::pack(&model, gathered.files, &Limits::DEFAULT)
+                    .map_err(|why| format!("{model} cannot be shared: {why}.{}", hint(&why)))?;
+            let packed = format!(
+                "Model sync: {model} packs into {} files, {}{notes}",
+                checked.files.len(),
+                sjk_jof_content::human_size(pk3.len() as u64)
+            );
+            if name == CHECK {
+                let mut lines = vec![packed];
+                lines.extend(missing_line(&gathered.missing));
+                lines.push(format!(
+                    "Model sync: {model} can be shared (sharemodel {model}, or Share on the Model sync page)."
+                ));
+                return Ok(lines);
+            }
             // A rig model is most often taken from another game: share one only with
             // its author's leave (Sol, 11/11/2026). The second press within a minute,
             // or `sharemodel <name> mine`, confirms it.
@@ -435,11 +533,10 @@ fn run_command(
                 at: Instant::now(),
                 rollback: false,
             });
-            Ok(vec![format!(
-                "Model sync: {model} packed ({} files, {}); asking the SJK hub...",
-                checked.files.len(),
-                sjk_jof_content::human_size(checked.files.iter().map(|(_, size)| size).sum())
-            )])
+            let mut lines = vec![packed];
+            lines.extend(missing_line(&gathered.missing));
+            lines.push("Model sync: asking the SJK hub...".to_owned());
+            Ok(lines)
         }
         ROLLBACK => {
             if !crate::player_identity::is_staff() {
@@ -492,32 +589,112 @@ fn confirmed(model: &str, word: Option<&str>) -> bool {
     false
 }
 
-/// The game's files of model `name`: its folder (a stock model's, or a rig model's
-/// manifests, glTF and buffers too), and its own shader file.
-fn files_of(vfs: &sjk_vfs::VirtualFileSystem, name: &str) -> Vec<(String, Vec<u8>)> {
-    let folder = format!("models/players/{name}");
-    let mut files = Vec::new();
-    for extension in [
-        ".glm", ".skin", ".tga", ".jpg", ".png", ".gltf", ".glb", ".bin", ".cfg",
-    ] {
-        for path in vfs.list_files(&folder, extension) {
-            // Only a rig model's manifests: `sounds.cfg` and `animation.cfg` are not
-            // shared.
-            let file = path.rsplit('/').next().unwrap_or(&path);
-            if extension == ".cfg" && !file.to_ascii_lowercase().starts_with("sjk_rig") {
-                continue;
+/// The game's files, for [`sjk_model_sync::gather`]: what the retail game has is
+/// stock (its `assets*.pk3`), never packed or moved.
+struct GameFiles<'a> {
+    vfs: &'a sjk_vfs::VirtualFileSystem,
+    retail: Option<sjk_vfs::VirtualFileSystem>,
+}
+
+impl sjk_model_sync::gather::Source for GameFiles<'_> {
+    fn list(&self, dir: &str, extension: &str) -> Vec<String> {
+        self.vfs
+            .list_files(dir, extension)
+            .into_iter()
+            .map(|path| format!("{dir}/{path}"))
+            .collect()
+    }
+
+    fn read(&self, path: &str) -> Option<Vec<u8>> {
+        self.vfs.read(path).ok().flatten().map(|asset| asset.bytes)
+    }
+
+    fn has(&self, path: &str) -> bool {
+        self.vfs.contains(path).unwrap_or(false)
+    }
+
+    fn stock(&self, path: &str) -> bool {
+        self.retail
+            .as_ref()
+            .is_some_and(|retail| retail.contains(path).unwrap_or(false))
+    }
+}
+
+/// Everything model `name` needs, from wherever this game has it: its folder, its
+/// voice, its shaders and what it uses from elsewhere (docs/model-sync.md).
+fn gather(vfs: &sjk_vfs::VirtualFileSystem, name: &str) -> sjk_model_sync::gather::Gathered {
+    let files = GameFiles {
+        vfs,
+        retail: sjk_client::retail_view(vfs),
+    };
+    sjk_model_sync::gather::gather(name, &files)
+}
+
+/// What a share took beyond the folder, for the line that says it was packed: the
+/// voice, and what came from elsewhere.
+fn notes(gathered: &sjk_model_sync::gather::Gathered) -> String {
+    let mut notes = Vec::new();
+    if gathered.sounds > 0 {
+        notes.push(format!("{} sounds (its voice)", gathered.sounds));
+    }
+    if let Some(voice) = &gathered.other_voice {
+        notes.push(format!(
+            "it speaks with the {voice} voice, not shared (the game's own, or not on this PC)"
+        ));
+    } else if gathered.sounds == 0 {
+        notes.push("no voice of its own: others hear the game's generic voice".to_owned());
+    }
+    if gathered.pulled_in > 0 {
+        notes.push(format!(
+            "{} file{} it uses from outside its folder",
+            gathered.pulled_in,
+            if gathered.pulled_in == 1 { "" } else { "s" }
+        ));
+    }
+    format!(": {}.", notes.join("; "))
+}
+
+/// The textures and shaders the model names that this game has nowhere: they show
+/// plain for everyone, the sender too.
+fn missing_line(missing: &[String]) -> Option<String> {
+    const SHOWN: usize = 4;
+    (!missing.is_empty()).then(|| {
+        let more = missing.len().saturating_sub(SHOWN);
+        format!(
+            "^3Model sync: not found on this PC, so plain for others too: {}{}.",
+            missing[..missing.len().min(SHOWN)].join(", "),
+            if more > 0 {
+                format!(" and {more} more")
+            } else {
+                String::new()
             }
-            let path = format!("{folder}/{path}");
-            if let Ok(Some(asset)) = vfs.read(&path) {
-                files.push((path, asset.bytes));
-            }
+        )
+    })
+}
+
+/// How to fix a refused pack, after the reason.
+fn hint(why: &sjk_model_sync::Rejection) -> &'static str {
+    use sjk_model_sync::Rejection;
+    match why {
+        Rejection::TooLarge { what, .. } if what.contains("sound") => {
+            " Drop the long sounds (songs, long taunts) from its voice folder, or save them as .mp3"
         }
+        Rejection::TooLarge { what, .. } if what.contains("texture") => {
+            " Make its largest textures smaller (2048 pixels is plenty) or save them as .jpg"
+        }
+        Rejection::TooLarge { what, .. } if what.contains("vertex") => {
+            " The mesh is too detailed: share a lighter version of it"
+        }
+        Rejection::TooLarge { .. } => {
+            " Remove the skins and textures it does not use from its folder, or save textures as .jpg"
+        }
+        Rejection::FileType(_) => " Remove that file from the model's folder",
+        Rejection::Broken { .. } => " Open that file in an image or sound editor and save it again",
+        Rejection::BadName(_) => {
+            " Rename the model's folder (and its .skin and shader names) to a-z 0-9 _ -"
+        }
+        _ => "",
     }
-    let shader = sjk_model_sync::shader_file(name);
-    if let Ok(Some(asset)) = vfs.read(&shader) {
-        files.push((shader, asset.bytes));
-    }
-    files
 }
 
 /// The inspected player's `(name, model)`: when this game lacks the model, says once
@@ -574,6 +751,7 @@ pub(crate) fn update(
         if done.index.is_some() {
             state.index = done.index;
         }
+        state.downloaded.extend(done.installed);
         lines.extend(done.lines);
     }
     if let Some(waiting) = &state.waiting {
@@ -607,16 +785,21 @@ pub(crate) fn update(
             lines.push("^3Model sync: the SJK hub did not answer; try again.".to_owned());
         }
     }
-    if console.bool_cvar(AUTO) == Some(true) {
-        if state
-            .met_at
-            .is_none_or(|at| now.duration_since(at) >= MET_EVERY)
-        {
-            state.met_at = Some(now);
+    if state
+        .met_at
+        .is_none_or(|at| now.duration_since(at) >= MET_EVERY)
+    {
+        state.met_at = Some(now);
+        state.here = met()
+            .into_iter()
+            .filter(|model| sjk_model_sync::valid_name(model))
+            .collect();
+        if console.bool_cvar(AUTO) == Some(true) {
             let record = Record::load(game_data);
-            let wanted: Vec<(String, bool)> = met()
+            let wanted: Vec<(String, bool)> = state
+                .here
+                .clone()
                 .into_iter()
-                .filter(|model| sjk_model_sync::valid_name(model))
                 .filter(|model| !record.models.contains_key(model))
                 .filter(|model| !state.asked.contains(model))
                 .map(|model| {
@@ -631,6 +814,8 @@ pub(crate) fn update(
                 state.send(Job::Fetch(wanted, true), Place::of(console, game_data));
             }
         }
+    }
+    if console.bool_cvar(AUTO) == Some(true) {
         let first = state.update_at.is_none();
         if first
             || state
@@ -821,6 +1006,16 @@ pub(crate) fn busy() -> bool {
     state.pending > 0 || state.waiting.is_some()
 }
 
+/// The models downloaded since the last call, to show on the map at once.
+pub(crate) fn take_downloaded() -> BTreeSet<String> {
+    std::mem::take(&mut lock().downloaded)
+}
+
+/// Give back models [`take_downloaded`] gave that could not be shown yet.
+pub(crate) fn keep_downloaded(models: BTreeSet<String>) {
+    lock().downloaded.extend(models);
+}
+
 /// The last lines model sync said, newest last (colour codes kept).
 pub(crate) fn recent_lines() -> Vec<String> {
     lock().recent.clone()
@@ -838,7 +1033,7 @@ mod tests {
     }
 
     #[test]
-    fn the_shared_files_are_the_models_folder_and_its_shader() {
+    fn a_share_takes_the_models_folder_its_voice_and_its_shaders() {
         let mut vfs = sjk_vfs::VirtualFileSystem::new();
         vfs.mount_memory(
             "test",
@@ -855,20 +1050,32 @@ mod tests {
                     "models/players/solfox/sjk_rig_cloth.cfg",
                     b"model c.gltf".to_vec(),
                 ),
-                ("models/players/solfox/sounds.cfg", b"x".to_vec()),
+                ("models/players/solfox/animation.cfg", b"x".to_vec()),
+                (
+                    "models/players/solfox/sounds.cfg",
+                    b"SolFox
+f"
+                    .to_vec(),
+                ),
+                ("sound/chars/solfox/misc/pain25.wav", b"wav".to_vec()),
                 ("models/players/solfox/model.gltf", b"{}".to_vec()),
                 ("models/players/solfox/model.bin", b"bin".to_vec()),
                 ("models/players/kyle/model.glm", b"glm".to_vec()),
-                ("shaders/solfox.shader", b"x".to_vec()),
-                ("shaders/other.shader", b"x".to_vec()),
+                (
+                    "shaders/community.shader",
+                    b"models/players/solfox/body { }
+models/players/other/x { }"
+                        .to_vec(),
+                ),
             ],
         )
         .unwrap();
-        let mut paths: Vec<String> = files_of(&vfs, "solfox")
-            .into_iter()
-            .map(|(path, _)| path)
+        let gathered = gather(&vfs, "solfox");
+        let paths: Vec<&str> = gathered
+            .files
+            .iter()
+            .map(|(path, _)| path.as_str())
             .collect();
-        paths.sort();
         assert_eq!(
             paths,
             [
@@ -878,10 +1085,79 @@ mod tests {
                 "models/players/solfox/model.gltf",
                 "models/players/solfox/sjk_rig.cfg",
                 "models/players/solfox/sjk_rig_cloth.cfg",
+                "models/players/solfox/sounds.cfg",
                 "models/players/solfox/sub/eyes.png",
                 "shaders/solfox.shader",
+                "sound/chars/solfox/misc/pain25.wav",
             ]
         );
+        assert_eq!(gathered.sounds, 1);
+        assert_eq!(notes(&gathered), ": 1 sounds (its voice).");
+    }
+
+    /// Packs every non-retail model of the installed game, as a share would, and
+    /// prints what each takes or why it is refused (`SJK_GAME_DATA`, the GameData
+    /// folder).
+    #[test]
+    #[ignore = "reads the installed game"]
+    fn every_installed_model_gathers_and_packs() {
+        let Some(root) = std::env::var_os("SJK_GAME_DATA") else {
+            return;
+        };
+        let vfs = crate::assets::mount_game_data(Path::new(&root)).unwrap();
+        let retail = sjk_client::retail_view(&vfs).unwrap();
+        let retail_models: BTreeSet<String> = retail
+            .list_files("models/players", ".glm")
+            .into_iter()
+            .filter_map(|path| path.split_once('/').map(|(name, _)| name.to_owned()))
+            .collect();
+        let names: BTreeSet<String> = vfs
+            .list_files("models/players", ".glm")
+            .into_iter()
+            .filter_map(|path| path.split_once('/').map(|(name, _)| name.to_owned()))
+            .filter(|name| !retail_models.contains(name) && sjk_model_sync::valid_name(name))
+            .collect();
+        let (mut packed, mut voiced, mut pulled) = (0, 0, 0);
+        for name in &names {
+            let gathered = gather(&vfs, name);
+            let line = notes(&gathered);
+            let missing = gathered.missing.len();
+            let sounds = gathered.sounds;
+            let outside = gathered.pulled_in;
+            match sjk_model_sync::pack::pack(name, gathered.files, &Limits::DEFAULT) {
+                Ok((pk3, _)) => {
+                    packed += 1;
+                    voiced += usize::from(sounds > 0);
+                    pulled += usize::from(outside > 0);
+                    println!("OK {name} {} KB{line} missing {missing}", pk3.len() / 1024);
+                }
+                Err(why) => println!("NO {name}: {why}.{}", hint(&why)),
+            }
+        }
+        println!(
+            "{packed} of {} pack; {voiced} with a voice, {pulled} with outside files",
+            names.len()
+        );
+    }
+
+    #[test]
+    fn modelsync_words_name_the_commands() {
+        let args = |words: &[&str]| {
+            words
+                .iter()
+                .map(|word| (*word).to_owned())
+                .collect::<Vec<_>>()
+        };
+        let share = args(&["Share", "solfox"]);
+        assert_eq!(subcommand(&share), Some((SHARE, &share[1..])));
+        let get = args(&["get", "all"]);
+        assert_eq!(subcommand(&get), Some((GET, &get[1..])));
+        assert_eq!(
+            subcommand(&args(&["check"])).map(|(name, _)| name),
+            Some(CHECK)
+        );
+        assert_eq!(subcommand(&args(&["page"])), None);
+        assert_eq!(subcommand(&[]), None);
     }
 
     #[test]
