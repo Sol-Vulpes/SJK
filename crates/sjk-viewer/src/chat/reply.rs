@@ -53,7 +53,7 @@ impl ChatOverlay {
     pub(super) fn whisper_sender(&self, display: &str) -> Option<ChatTarget> {
         let rest = display.strip_prefix('[')?;
         let name = sjk_client::chat_name_key(&rest[..rest.find("]: ")?]);
-        (0..32_u16)
+        (0..sjk_protocol::player_slots() as u16)
             .filter_map(|slot| self.roster.target(Some(slot)))
             .find(|target| self.roster.name(*target) == Some(name.as_str()))
     }

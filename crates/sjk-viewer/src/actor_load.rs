@@ -316,7 +316,9 @@ pub(crate) fn load_actor_meshes(
     let random = random_stand_ins(console);
     let mut actors = BTreeMap::new();
     if let Some(game_state) = game_state {
-        for client_num in (0..32_u16).filter(|&client| built_now(u64::from(client))) {
+        for client_num in
+            (0..sjk_protocol::player_slots() as u16).filter(|&client| built_now(u64::from(client)))
+        {
             if let Some(appearance) =
                 legacy_client_appearance_with_policy(game_state, client_num, None, |appearance| {
                     eligible_appearance(appearance, true, eligibility, options)
