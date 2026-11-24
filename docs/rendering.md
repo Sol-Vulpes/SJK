@@ -2197,6 +2197,12 @@ Private duels are drawn as JoF EJK's `CG_Player` draws them (EternalJK
   blue added over all, at 0.6 of full rather than EternalJK's 0.9 (at 0.9 the figure read
   as solid in SJK). Its plain `textures/colors/red` and `blue` are mounted below game
   data in case an installation lacks them.
+- What is bolted on the body (the JoF hat and cape, the saber hilts held or holstered,
+  the gun, the jetpack, the boombox) takes its look: the figure's shader, the dark grey
+  below and a mind trick's fade
+  ([bolt_on_look.rs](../crates/sjk-viewer/src/bolt_on_look.rs)), as EJK draws them
+  with the body's `renderfx` and `customShader` (`CG_DrawCosmeticOnPlayer`). Hub #323:
+  a hat stayed solid on the figure.
 - With `cg_duelGhost 0`, the duellist is drawn flat dark grey (`RF_RGB_TINT` at 50 50
   50) under the `gfx/misc/sightbubble` shell at JoF EJK's 100 100 255
   ([force_overlays.rs](../crates/sjk-client/src/force_overlays.rs)), a lighter blue than

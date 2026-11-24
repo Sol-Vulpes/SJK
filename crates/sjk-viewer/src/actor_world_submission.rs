@@ -716,6 +716,24 @@ fn submit_actor(
     // A monster's victim is drawn in its hand or jaw (`cg_players.c:9220-9244`).
     let local = Some(entity.id.get()) == local_entity_id;
     let trick = trick_fade(sinks, snapshot, state, local, presentation_time);
+    let duel = snapshot.map_or_else(DuelBody::default, |snapshot| {
+        duel_body(snapshot, state, local, entity.color(), sinks.duel_ghosts)
+    });
+    // The body's look, which everything bolted on it takes (hub #323).
+    let bolt_on_look = crate::bolt_on_look::BoltOnLook {
+        tint: duel
+            .tint
+            .map(|[r, g, b]| duel_tint(r, g, b, entity.color())),
+        pass: if trick.fading {
+            crate::bolt_on_look::Pass::Faded(trick.alpha)
+        } else if duel.ghost {
+            crate::bolt_on_look::Pass::Ghost(
+                sinks.material_overrides.force(crate::duel_ghost::SHADER),
+            )
+        } else {
+            crate::bolt_on_look::Pass::Plain
+        },
+    };
     if let Some(snapshot) = snapshot.filter(|_| local || state.is_some()) {
         monster_hold::place(
             sinks.world,
@@ -860,6 +878,7 @@ fn submit_actor(
             local,
             draw_actor,
             trick.hidden || trick.fading,
+            bolt_on_look,
         )
     });
     if holster.blades_in {
@@ -903,7 +922,7 @@ fn submit_actor(
             draw_actor,
             local,
             holster.on_back || npc_primary_missing,
-            trick.fading.then_some(trick.alpha),
+            bolt_on_look,
             presentation_time,
             visual_now,
             attacking,
@@ -941,7 +960,7 @@ fn submit_actor(
                 e_flags,
                 tricked,
                 hidden: trick.hidden,
-                fade: trick.fading.then_some(trick.alpha),
+                look: bolt_on_look,
                 draw_actor,
                 muted,
             },
@@ -962,7 +981,12 @@ fn submit_actor(
             crate::boombox::instance(&actor.preview, actor.animator.matrices(), *transform)
         }) {
             instance.view_flags = sinks.entity_view_flags | u32::from(!draw_actor);
-            sinks.object_groups[boombox].push(instance);
+            crate::bolt_on_look::BoltOns {
+                look: bolt_on_look,
+                groups: sinks.object_groups,
+                overrides: sinks.overrides,
+            }
+            .push(boombox, instance);
         }
     }
     // Everything after stock's mind-trick cut-off is skipped for a hidden trickster:
@@ -1049,9 +1073,6 @@ fn submit_actor(
             transform.scale,
         )
         .with_model_color(entity.color());
-        let duel = snapshot.map_or_else(DuelBody::default, |snapshot| {
-            duel_body(snapshot, state, local, entity.color(), sinks.duel_ghosts)
-        });
         let inside_body = local
             && sinks.detached_flight
             && !limp(&sinks.actor_meshes[mesh])
@@ -1066,11 +1087,8 @@ fn submit_actor(
             sinks.entity_view_flags | u32::from((!draw_actor && !saber_body) || inside_body);
         // The body as drawn: flat in the duel colour where `CG_Player` tints it. The
         // shells over it and the outline mask keep the untinted instance.
-        let body = match duel.tint {
-            Some([r, g, b]) => {
-                let [r, g, b, a] = [r, g, b, entity.color()[3]].map(|c| f32::from(c) / 255.0);
-                instance.with_rgb_tint([r, g, b, a])
-            }
+        let body = match bolt_on_look.tint {
+            Some(tint) => instance.with_rgb_tint(tint),
             None => instance,
         };
         if trick.fading {
@@ -1147,7 +1165,11 @@ fn submit_actor(
                         crate::cosmetics::actors::visible_in_state(&snapshot.player, state, local)
                     }),
                 },
-                sinks.object_groups,
+                &mut crate::bolt_on_look::BoltOns {
+                    look: bolt_on_look,
+                    groups: sinks.object_groups,
+                    overrides: sinks.overrides,
+                },
             );
         }
         // The copies share the actor's pose, scale, colour (its duel tint too) and view
@@ -1245,6 +1267,11 @@ struct DuelBody {
     tint: Option<[u8; 3]>,
     /// Drawn as JoF EJK's blue figure instead (`sjk_client::legacy_duel_ghost`).
     ghost: bool,
+}
+
+/// `RF_RGB_TINT`'s duel colour as an instance colour, with the body's alpha.
+fn duel_tint(r: u8, g: u8, b: u8, color: [u8; 4]) -> [f32; 4] {
+    [r, g, b, color[3]].map(|c| f32::from(c) / 255.0)
 }
 
 /// `CG_Player`'s duel rules for one actor's body.
@@ -1370,7 +1397,7 @@ fn submit_equipment(
     draw_actor: bool,
     local: bool,
     holstered_primary: bool,
-    forced_alpha: Option<u8>,
+    look: crate::bolt_on_look::BoltOnLook,
     presentation_time: i64,
     visual_now: Instant,
     attacking: Option<bool>,
@@ -1407,7 +1434,11 @@ fn submit_equipment(
         sinks.saber_hilts,
         sinks.saber_states,
         sinks.saber_segments,
-        sinks.object_groups,
+        &mut crate::bolt_on_look::BoltOns {
+            look,
+            groups: sinks.object_groups,
+            overrides: sinks.overrides,
+        },
         sinks.saber_instances,
         presentation_time,
         sinks.trail_edges.as_mut(),
@@ -1460,20 +1491,13 @@ fn submit_equipment(
             sinks.view_height,
         );
     instance.view_flags = sinks.entity_view_flags | u32::from(!draw_actor || inside_body);
-    match forced_alpha {
-        // The gun is a bolt-on of the body's Ghoul2 instance in stock, so it fades with it.
-        Some(alpha) if sinks.overrides.len() < sinks.overrides.capacity() => {
-            sinks.overrides.push(entity_materials::OverrideInstance {
-                mesh: entity_materials::OverrideMesh::Object(weapon_mesh),
-                material: None,
-                instance: instance.with_forced_alpha(alpha),
-                no_depth: false,
-                forced_alpha: true,
-            });
-        }
-        Some(_) => {}
-        None => sinks.object_groups[weapon_mesh].push(instance),
+    // The gun is a bolt-on of the body's Ghoul2 instance in stock, so it fades with it.
+    crate::bolt_on_look::BoltOns {
+        look,
+        groups: sinks.object_groups,
+        overrides: sinks.overrides,
     }
+    .push(weapon_mesh, instance);
     // The main first-person flash already owns event/audio spawning. A
     // second view must never advance effects or play a second sound.
     if !draw_actor {
