@@ -634,7 +634,7 @@ when they are drawn.
 | `r_bouncedLight` | With real-time lighting, light bounces through the GI probes (`gi_probes.rs`); 0 leaves the probes out (the voxel scene stays: lamp visibility needs it); default 1, applies after a graphics reload (10/11/2026) |
 | `r_lampShadows` | With real-time lighting, the nearest lamps' shadow maps (`lamp_shadows`); 0 leaves them out; default 1, applies after a graphics reload (10/11/2026) |
 | `r_daySky` | Without real-time lighting, the sky still shows `r_dayHour` turning with `r_dayMinutes` (the sky's day tint, as `r_dayClock` does for the PC's hour), and its night darkens the exposure (`day_live::night_tint` of the set hour); default 0, applies after a graphics reload (10/11/2026). World shot `solar_day_sky_without_live_light`: ground brightness 100, 79 and 64 of 255 at 12:00, 19:30 and 23:00 on ffa3 |
-| `r_lowFpsNight`, `r_lowFpsNightLevel`, `r_lowFpsNightLamps` | Low FPS Night, its own renderer tab: a fixed 22:00 night on baked lighting at no cost; default 0 (off), 0.2 and 0.1; all live, its night sky from the next map or graphics reload. See [Low FPS Night](#low-fps-night) |
+| `r_lowFpsNight`, `r_lowFpsNightLevel`, `r_lowFpsNightLamps`, `r_lowFpsNightSaber` | Low FPS Night, its own renderer tab: a fixed 22:00 night on baked lighting at no cost; default 0 (off), 0.2, 0.1 and 0.5; all live, its night sky from the next map or graphics reload. See [Low FPS Night](#low-fps-night) |
 | `r_liveLighting` | Lighting tier; default 0. Tier 1 retains world shadow casters between frames; tier 0 also uses available baked indirect light. Applies at map load |
 | `r_dayHour` | Solar hour; default 12 (noon, SJK); updated live when day/night resources are installed |
 | `r_dayMinutes` | Minutes per simulated day; 0 holds the hour |
@@ -4762,15 +4762,23 @@ shadow cascades being drawn every frame even with the sun below the horizon.
   from it, are darkened to the level as seen, so fog does not glow in the dark map
   (`FogGpu::set_night`, `fog_gpu.rs`). The fog table is rewritten only when the level
   changes, never per frame.
-- Dynamic lights (sabers, shots, explosions) on the world are divided by the level
-  (`dynamic_light_modulation` in `point_lights.wgsl`), so they light the dark as brightly
-  as by day. Models take the darkened light grid, minimum ambient included, before the
+- Dynamic lights (sabers, shots, explosions) on the world are a soft glow in their own
+  colour (`dynamic_light_modulation` in `point_lights.wgsl`, 24/11/2026). The glow reaches
+  0.6 of the light's radius (`NIGHT_GLOW_REACH`) and fades in the square of the distance,
+  so no rim shows on the dark ground. The stage shader keeps the fragment's night bake
+  (`night_bake_light`) and the modulation is divided by it, so the light falls on the
+  texture alone: the day's bake (a sunlit floor) never shows through the glow, which
+  first lit the dark as by day, a near-white disc with an edge. `r_lowFpsNightSaber`
+  (default 0.5, 0.01 to 1) scales it, times 4 (`NIGHT_GLOW_GAIN`), so its top is a clear
+  pool of the light's colour. A stage without its bake (a texture over a
+  separate lightmap stage) divides by the night's level instead. Models take the darkened light grid, minimum ambient included, before the
   dynamic lights join it at full strength (`entity_lighting::finish`,
   `finish_model_light`); saber blade skins keep the day's grid light.
 - The whole-picture night tint of `r_dayClock` and `r_daySky` is off in this mode, and
   eye adaptation does not brighten the view back (`max_ev` 0, `post_exposure.rs`).
 - The switch rides the model word of the scene-light block
-  (`dynamic_light_settings::night_bits`: bit 5, level bits 8 to 15, lamps 16 to 23).
+  (`dynamic_light_settings::night_bits`: bit 5, level bits 8 to 15, lamps 16 to 23,
+  saber glow 24 to 31).
 - Cost: a few multiplies a pixel and one per entity; no pass, texture or allocation. The
   fog table is written again only when the level changes.
 - Limits: the lamp test goes by brightness, so the brightest sunlit bake of a map keeps

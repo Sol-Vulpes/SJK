@@ -14,7 +14,8 @@ pub(crate) const SKY_CVAR: &str = "r_daySky";
 /// `r_lowFpsNight`: Low FPS Night, a fixed night on baked lighting alone (real-time
 /// lighting off): the sky held at [`LOW_FPS_NIGHT_HOUR`], the map's bake darkened to
 /// `r_lowFpsNightLevel` with its brightest (lamp) light kept by `r_lowFpsNightLamps`,
-/// dynamic lights (sabers, shots, explosions) and emission at full strength. It costs a
+/// dynamic lights (sabers, shots, explosions) a soft glow in their own colour by
+/// `r_lowFpsNightSaber`, emission at full strength. It costs a
 /// few multiplies a pixel, never turns real-time lighting on and does nothing under it.
 pub(crate) const LOW_FPS_NIGHT_CVAR: &str = "r_lowFpsNight";
 /// The sky's hour in Low FPS Night.
@@ -116,10 +117,10 @@ impl PcClock {
 /// diagnostics bitmask, contact shadows, gap closure, ambient readability fill and
 /// indirect-light controls and whether the hour follows the PC's clock.
 #[derive(Clone)]
-pub(crate) struct Clock(Arc<[AtomicU32; 15]>, Arc<PcClock>);
+pub(crate) struct Clock(Arc<[AtomicU32; 16]>, Arc<PcClock>);
 
 /// Names in slot order; every slot is a live cvar registered by `day::register`.
-pub(crate) const LIVE_CVARS: [&str; 15] = [
+pub(crate) const LIVE_CVARS: [&str; 16] = [
     "r_dayHour",
     "r_dayMinutes",
     "r_volumetricClarity",
@@ -135,6 +136,7 @@ pub(crate) const LIVE_CVARS: [&str; 15] = [
     LOW_FPS_NIGHT_CVAR,
     "r_lowFpsNightLevel",
     "r_lowFpsNightLamps",
+    "r_lowFpsNightSaber",
 ];
 
 impl Default for Clock {
@@ -156,6 +158,7 @@ impl Default for Clock {
                 AtomicU32::new(0),
                 AtomicU32::new(LOW_FPS_NIGHT_LEVEL.to_bits()),
                 AtomicU32::new(LOW_FPS_NIGHT_LAMPS.to_bits()),
+                AtomicU32::new(LOW_FPS_NIGHT_SABER.to_bits()),
             ]),
             Arc::default(),
         )
@@ -200,6 +203,7 @@ impl Clock {
             10..=12 => f32::from(u8::from(value != 0.)),
             13 => value.clamp(0.05, 1.),
             14 => value.clamp(0., 1.),
+            15 => value.clamp(LOW_FPS_NIGHT_SABER_MIN, 1.),
             _ => value.clamp(0., 4095.),
         };
         self.0[index].store(value.to_bits(), Ordering::Relaxed);
@@ -282,6 +286,12 @@ impl Clock {
             .then(|| [13, 14].map(|i| f32::from_bits(self.0[i].load(Ordering::Relaxed))))
     }
 
+    /// Low FPS Night's saber glow (`r_lowFpsNightSaber`): how brightly dynamic lights
+    /// light the night's ground and walls, [`LOW_FPS_NIGHT_SABER_MIN`] to 1.
+    pub(crate) fn night_saber(&self) -> f32 {
+        f32::from_bits(self.0[15].load(Ordering::Relaxed))
+    }
+
     /// `r_dayDebug` plus the contact shadow toggle folded into bit 2: which real-time
     /// terms to leave out (see `day::register`).
     pub(crate) fn debug(&self) -> u32 {
@@ -295,6 +305,10 @@ impl Clock {
 pub(crate) const LOW_FPS_NIGHT_LEVEL: f32 = 0.2;
 /// `r_lowFpsNightLamps`'s default.
 pub(crate) const LOW_FPS_NIGHT_LAMPS: f32 = 0.1;
+/// `r_lowFpsNightSaber`'s default: the saber glow's strength.
+pub(crate) const LOW_FPS_NIGHT_SABER: f32 = 0.5;
+/// `r_lowFpsNightSaber`'s least: a faint glow, never none.
+pub(crate) const LOW_FPS_NIGHT_SABER_MIN: f32 = 0.01;
 
 #[cfg(test)]
 mod tests {
@@ -335,6 +349,11 @@ mod tests {
         );
         clock.store(13, &CvarValue::Float(0.));
         assert_eq!(clock.night().expect("on")[0], 0.05, "never pitch black");
+        assert_eq!(clock.night_saber(), LOW_FPS_NIGHT_SABER);
+        clock.store(15, &CvarValue::Float(0.));
+        assert_eq!(clock.night_saber(), 0.01, "the saber glow goes down to 1%");
+        clock.store(15, &CvarValue::Float(3.));
+        assert_eq!(clock.night_saber(), 1.);
         clock.store(12, &CvarValue::Integer(0));
         assert_eq!(clock.night(), None);
     }

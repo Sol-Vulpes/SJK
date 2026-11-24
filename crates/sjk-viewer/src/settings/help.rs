@@ -2157,7 +2157,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         "r_lowFpsNight",
-        "A fixed 22:00 night at no FPS cost, without real-time lighting: the map goes dark, lamps and sabers keep their light.",
+        "A fixed 22:00 night at no FPS cost, without real-time lighting: the map goes dark, lamps keep their light, sabers glow softly.",
     ),
     (
         "r_lowFpsNightLevel",
@@ -2166,6 +2166,10 @@ const HELP: &[(&str, &str)] = &[
     (
         "r_lowFpsNightLamps",
         "Low FPS Night: how much of their light the map's lamps keep.",
+    ),
+    (
+        "r_lowFpsNightSaber",
+        "Low FPS Night: how brightly sabers and shots light the ground around them, a soft glow in their own colour.",
     ),
     (
         "r_dayMinutes",

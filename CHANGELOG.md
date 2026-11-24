@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Low FPS Night: sabers, shots and explosions no longer throw a bright white disc on the ground. They light it with a soft glow in their own colour that fades out without an edge, the same on sunlit and shaded ground; Saber glow (`r_lowFpsNightSaber`, 0.01 to 1) sets how bright. Models are lit as before _(Kushina)_
+
 ## 2026.1124.2 (Beta) | 24/11/2026
 
 Low FPS Night, whole models through model sync, the Varykino Blossom's extras and a round of fixes from Kushina.

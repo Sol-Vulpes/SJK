@@ -223,7 +223,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         0_i64,
         CvarFlags::ARCHIVE,
         "Low FPS Night: a fixed night (22:00) on baked lighting at no cost; the map's light \
-        darkened, lamps, sabers and shots keep theirs; never turns real-time lighting on, \
+        darkened, lamps keep theirs, sabers and shots light it with a soft glow; never turns real-time lighting on, \
         does nothing under it; live, its night sky from the next map or vid_restart",
     ))?;
     for (name, value, help) in [
@@ -246,6 +246,11 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
             "r_lowFpsNightLamps",
             f64::from(live::LOW_FPS_NIGHT_LAMPS),
             "Low FPS Night: how much light the brightest baked spots (lamps) keep, 0..1; live",
+        ),
+        (
+            "r_lowFpsNightSaber",
+            f64::from(live::LOW_FPS_NIGHT_SABER),
+            "Low FPS Night: how brightly sabers and shots light the ground, a soft glow in              their own colour, 0.01..1; live",
         ),
         (
             "r_volumetricClarity",

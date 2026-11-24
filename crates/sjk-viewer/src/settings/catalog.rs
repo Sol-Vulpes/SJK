@@ -2755,4 +2755,13 @@ pub(super) const RENDER_LOW_FPS_NIGHT: &[Setting] = &[
             step: 0.05,
         },
     },
+    Setting {
+        label: "Saber glow",
+        cvar: "r_lowFpsNightSaber",
+        kind: ValueKind::Float {
+            min: 0.01,
+            max: 1.0,
+            step: 0.01,
+        },
+    },
 ];

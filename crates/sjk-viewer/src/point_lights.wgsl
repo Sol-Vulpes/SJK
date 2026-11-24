@@ -145,6 +145,7 @@ fn emitted_light(input: VertexOutput) -> vec3<f32> {
 fn dynamic_light_modulation(input: VertexOutput) -> vec3<f32> {
     var result = vec3(0.0);
     let normal = normalize(input.world_normal);
+    let night = night_on() && !realtime_active();
     var remaining = fragment_point_mask;
     if realtime_active() { remaining &= ~point_lights.metadata.w; }
     while remaining != 0u {
@@ -156,15 +157,35 @@ fn dynamic_light_modulation(input: VertexOutput) -> vec3<f32> {
         if any(abs(delta) > vec3(light.origin_radius.w)) { continue; }
         let distance = length(delta);
         if distance < light.origin_radius.w && distance > 0.0001 {
-            let attenuation = 1.0 - distance / light.origin_radius.w;
+            var attenuation = 1.0 - distance / light.origin_radius.w;
+            // Low FPS Night: a glow, not a disc: it reaches NIGHT_GLOW_REACH of the radius
+            // and fades in the square there, so no rim shows on the dark ground.
+            if night {
+                let near = max(1.0 - distance / (light.origin_radius.w * NIGHT_GLOW_REACH), 0.0);
+                attenuation = near * near;
+                if attenuation <= 0.0 { continue; }
+            }
             let facing = max(dot(normal, delta / distance), 0.0);
             if facing <= 0.0 { continue; }
             result += light.color.rgb * attenuation * facing *
                 point_light_visibility(index, input.world_position, input.world_normal);
         }
     }
-    // Low FPS Night: the bake this modulates is darker by the level, so the light relative
-    // to it is that much stronger: sabers and shots light as brightly as by day.
-    if night_on() && !realtime_active() { return result / night_level(); }
+    // Low FPS Night: the light falls on the texture in its own colour, scaled by
+    // `r_lowFpsNightSaber`: the modulation is relative to the stage's bake, so it is
+    // divided by that night bake, and the day's bake (a sunlit floor) never shows through
+    // the glow. A stage without its bake (a texture drawn over a separate lightmap stage)
+    // takes the night's level for it.
+    if night {
+        let bake = select(vec3(night_level()), night_bake_light,
+            any(night_bake_light > vec3(0.0)));
+        return result * (night_glow() * NIGHT_GLOW_GAIN) / max(bake, vec3(1e-6));
+    }
     return result;
 }
+
+// Low FPS Night: the share of a dynamic light's radius its glow reaches.
+const NIGHT_GLOW_REACH: f32 = 0.6;
+// Low FPS Night: the glow's light at `r_lowFpsNightSaber` 1, so the slider's top is a
+// clear pool of the light's colour, not yet a white disc.
+const NIGHT_GLOW_GAIN: f32 = 4.0;
