@@ -10,9 +10,11 @@ use crate::ui_renderer::SCOREBOARD_ICON_CELLS;
 use sjk_protocol::GameState;
 use sjk_ui::TextureId;
 
-/// The icon cells the UI renderer keeps for heads, one a slot (`PART_ICON_FIRST` follows
-/// them): a player in a slot past them has no head icon.
-const SLOTS: usize = 32;
+/// The icon cells the UI renderer keeps for heads, one a slot a server can have
+/// (`PART_ICON_FIRST` follows them).
+const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
+const _: () =
+    assert!(SCOREBOARD_ICON_CELLS as usize + SLOTS == crate::ui_renderer::PART_ICON_FIRST as usize);
 const DECODES_PER_FRAME: usize = 2;
 
 /// Resolved head icons by client slot.
