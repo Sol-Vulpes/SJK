@@ -41,6 +41,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - Settings > Graphics has a Low FPS Night tab (`r_lowFpsNight`): a fixed 22:00 night on the map's own baked lighting, for slower PCs, at no FPS cost. The map's light goes dark (Night brightness, `r_lowFpsNightLevel`), the brightest lamp spots keep some (Lamp light kept, `r_lowFpsNightLamps`), and sabers, shots and explosions light the dark as brightly as by day. The dark leans a cool moonlit blue while lamp pools stay warm, and map fog darkens with the night instead of glowing; it never turns real-time lighting on _(Kushina, PR #444)_
 - Rig models' hair can be kept out of the head (`head`) _(Kushina, PR #438)_
 - Rig models' chains can sway in a gusting breeze that blows the same way for everyone (`breeze`) _(Kushina, PR #440)_
+- Rig models' eyes can follow what the player looks at (`eyes`) _(Kushina, PR #441)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 

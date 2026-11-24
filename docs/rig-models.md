@@ -242,6 +242,25 @@ long is left alone: the body itself is under the floor there (some death poses s
 head below it), and no chain can fix that. A player with no ground in reach, in the air,
 has none. Nothing new goes in the manifest, so older clients still load the model.
 
+### Eyes
+
+An `eyes <joint> [<joint> ...]` line names the rig's eye joints, which then look at the
+player's look target: the player the game turns the head towards (`hasLookTarget`,
+`cg_players.c:4279-4289`; the server sets it, as for an NPC watching a player). The head
+turns only in yaw and only so far, and a stock model has no eyes, so the look ended
+there; a rig's eyes look at the target's eyes (36 units over its origin,
+`DEFAULT_VIEWHEIGHT`), up and down too, at most 30 degrees past where the head points,
+and back to rest when there is no target. They ease there in about a tenth of a second
+rather than snap. Each eye's rest is its bind pose, taken as looking at the model's
+front (-Y), so the eyes should look straight ahead in the export.
+
+Only the eye joint turns, about its own origin, so it should sit in the eyeball's middle
+(the usual face rig). The joints under it stay where the head holds them: a rig may hang
+its lids from the eye (an Unreal face rig's `eye_lid_upper_mid` is under `eye`), and lids
+turning with the eye would drag the skin round it. The turn comes after the animation and
+any clip and before the dynamic chains. A joint the line names that the glTF does not have
+is logged when the model loads.
+
 ### Bolts on the rig
 
 The driver's bolts (`*r_hand`, `*l_hand`, `*head_top`, the feet, cosmetics, the
@@ -264,6 +283,7 @@ traces and hit boxes stay the driver's.
 | Manifest, presets, fit (axes, scale, alignments, anchors), pose, CPU skin | [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), tests in `rig_model_tests.rs` |
 | Rig surfaces put in the shared vertex buffer | `append_rig_mesh` in [actor_load.rs](../crates/sjk-viewer/src/actor_load.rs) |
 | Per-frame pose and palette upload (GPU and CPU paths) | [actor_pose_steps.rs](../crates/sjk-viewer/src/actor_pose_steps.rs), `rig_skin_records` in [gpu_skinning.rs](../crates/sjk-viewer/src/gpu_skinning.rs) |
+| Eyes on the look target | `Eyes` and `turn` in [rig_eyes.rs](../crates/sjk-viewer/src/rig_eyes.rs), `look_point` and `Scratch::look_at` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), [actor_pose_steps.rs](../crates/sjk-viewer/src/actor_pose_steps.rs) |
 | Dynamic joints (tails, capes), their settings and body capsules | `Settings`, `Capsule`, `Chains`, `simulate` and `on_the_ground` in [rig_dynamics.rs](../crates/sjk-viewer/src/rig_dynamics.rs), `ground_under` in [actor_pose_steps.rs](../crates/sjk-viewer/src/actor_pose_steps.rs), `ground_plane` and `Scratch::stand_on` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), `dynamic_settings` and `body_capsules` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), `RigModel::pose_after` |
 | Feet planted on the driver's ground | `Feet`, `Soles`, `sole`, `RigModel::with_feet`, `with_soles` and `planted` in [rig_model.rs](../crates/sjk-viewer/src/rig_model.rs), the ignored tests `feet_against_the_driver` and `walk_against_the_driver` |
 | Bolts and Force points moved onto the rig | `PlayerPreview::bolt`, `RigModel::retarget_bolt` and `retarget_point`, [force_bones.rs](../crates/sjk-viewer/src/force_bones.rs) |
@@ -289,6 +309,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `preset <name>` | the bone map to start from ([`PRESETS`](../crates/sjk-viewer/src/rig_model.rs)) | `mannequin` |
 | `scale <n>` or `scale auto` | game units per glTF metre | `auto` |
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
+| `eyes <joint> [<joint> ...]` | these joints look at the player's look target (see [Eyes](#eyes)) | none |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
 | `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0 |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
@@ -298,7 +319,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`) does not load at all,
 rather than dropping that line.
 
 ### Variants

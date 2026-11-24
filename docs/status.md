@@ -975,6 +975,18 @@ settings are untouched: `cg_nameplate` and `cg_nameplateStyle` stay in Settings 
 under Nameplates ([sjk-ui.md](sjk-ui.md#collection)). Verified: build, clippy (no new
 warning) and `cargo test -p sjk-viewer`. Not tried in a game; the world shots were not run.
 
+## Rig model eyes follow the look target (19/11/2026)
+
+19/11/2026, `feat/rig-eye-look` based on `main` `afd16b60`. A rig model's `sjk_rig.cfg` can
+name its eye joints (`eyes <joint> [<joint> ...]`); they look at the player's look target,
+the one the game turns the head towards, up and down too, at most 30 degrees past the head,
+eased, and back to rest without a target. Only the eye joint turns, so lids hung under it
+stay put ([rig-models.md](rig-models.md#eyes)). Verified: `cargo test -p sjk-viewer --bin sjk
+rig_` (unit tests for the turn, the limit, the easing, the manifest line and the target's
+model-space point) and a probe on an installed rig model with a face rig: both eyes found,
+turning about the eyeball's middle towards targets ahead, above, beside and below, stopping
+at the limit. Not tried in a game.
+
 ## Rig chains: the head as a capsule (18/11/2026)
 
 18/11/2026, `feat/rig-head-collision` based on `main` `afd16b609`. Hair on rig models was kept
