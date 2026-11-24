@@ -365,6 +365,10 @@ pub(super) const COMMANDS: &[(&str, &str)] = &[
     (crate::gameplay_fps::COMMAND, crate::gameplay_fps::HELP),
     (crate::tickrate_help::COMMAND, crate::tickrate_help::HELP),
     (
+        crate::prediction_help::COMMAND,
+        crate::prediction_help::HELP,
+    ),
+    (
         "snd_restart",
         "Recreate audio output and reload sound assets",
     ),
@@ -1495,6 +1499,7 @@ impl crate::GpuState {
             crate::news_panel::NEWS_COMMAND => return self.news_command(),
             crate::gameplay_fps::COMMAND => return self.gameplay_fps_command(args),
             crate::tickrate_help::COMMAND => return self.tickrate_help_command(),
+            crate::prediction_help::COMMAND => return self.prediction_help_command(),
             crate::fs_restart::COMMAND => return self.fs_restart_command(),
             crate::rig_reload::COMMAND => return self.rig_reload_command(),
             crate::chat_gifs::hidden::UNHIDE_ALL => {
