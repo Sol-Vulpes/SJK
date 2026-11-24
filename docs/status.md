@@ -1,3 +1,27 @@
+## Missing-saber probe: why a player's saber is not drawn (24/11/2026)
+
+Branch `personal/missing-saber-probe`, based on `main` `5aa0d0a4c`. Hub #248, and Sol saw it
+too: now and then another player holds a saber with no hilt and no blade at all, and
+stays so. Not reproduced, and every path read draws one:
+
+- a knocked-down saber becomes an `ET_MISSILE` (`saberKnockDown`, JoF `w_saber.c:6764`)
+  drawn on the floor with its hilt, the hand empty until its owner calls it back: stock;
+- a cut limb's `weapon_lost` is cleared once the owner is alive again
+  (`dismember.rs`, `CG_ReattachLimb`);
+- an unknown or failed hilt falls back to `single_1` or keeps its blades
+  (`saber_hilts.rs`, `clientinfo_refresh.rs`).
+
+Left: `weapon_lost` stuck, no hilt name, no catalog, or no right-hand bolt
+(`saber::attachment_from_bolt` refuses a degenerate or mirrored matrix). The probe
+(`missing_saber_probe.rs`) follows every other living player whose saber should be in hand
+(not thrown, not mind-tricked, not on the back) and writes to the session log, once, which
+of those held for 2 s ("saber probe: client N (model) holds a saber but none is drawn ...")
+and again when it is drawn again. Not a fix: the next session log where it happens names the
+check.
+
+Verified: fmt, clippy, the probe's unit tests, the release startup stack check. Not seen in
+game.
+
 ## Stereo music, dropped weapons on their side, the concussion rifle's shots (24/11/2026)
 
 Branch `personal/weapon-sounds`, based on `main` `203a8185d`. Hub #284, #295, #299.

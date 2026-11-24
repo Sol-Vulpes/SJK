@@ -210,6 +210,7 @@ mod menu_widgets;
 mod menu_world;
 mod mimic;
 mod missile_trails;
+mod missing_saber_probe;
 mod mod_notice_card;
 mod model_materials;
 #[cfg(feature = "mod-jof")]
