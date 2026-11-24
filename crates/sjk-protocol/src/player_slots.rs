@@ -55,10 +55,15 @@ pub fn reset_player_slots() {
 /// be shown more than 32 players.
 pub const EXTENDED_SLOTS_KEY: &str = "jof64";
 
-/// The slot count a server's serverinfo (configstring 0) announces: its
-/// `sv_maxclients`, held between 32 and [`PLAYER_CAPACITY`]. A stock server cannot
-/// have more than 32, so a larger number is a server with more player slots.
+/// The slot count a server's serverinfo (configstring 0) gives this client. A server
+/// with more than 32 player slots answers a client that sent [`EXTENDED_SLOTS_KEY`]
+/// with the same key set to 1 and its real `sv_maxclients`; any other client is sent
+/// a 32-slot serverinfo without the key. So the key is what says this client is shown
+/// every slot, and without it the count is the classic 32 whatever else is written.
 pub fn server_info_slots(server_info: &[u8]) -> usize {
+    if crate::info_value(server_info, EXTENDED_SLOTS_KEY.as_bytes()) != Some(b"1".as_slice()) {
+        return CLASSIC_PLAYER_SLOTS;
+    }
     crate::info_value(server_info, b"sv_maxclients")
         .and_then(|value| std::str::from_utf8(value).ok())
         .and_then(|value| value.trim().parse::<usize>().ok())
@@ -67,18 +72,12 @@ pub fn server_info_slots(server_info: &[u8]) -> usize {
 }
 
 /// Takes the slot count for a new gamestate, before anything reads its players.
-/// `extended` is whether this client told the server it can be shown more than 32
-/// players ([`EXTENDED_SLOTS_KEY`]): a client that did not is sent the classic 32,
-/// whatever the server holds.
-pub fn set_player_slots_for(game_state: &crate::GameState, extended: bool) {
-    let slots = if extended {
+pub fn set_player_slots_for(game_state: &crate::GameState) {
+    set_player_slots(
         game_state
             .config_string(0)
-            .map_or(CLASSIC_PLAYER_SLOTS, server_info_slots)
-    } else {
-        CLASSIC_PLAYER_SLOTS
-    };
-    set_player_slots(slots);
+            .map_or(CLASSIC_PLAYER_SLOTS, server_info_slots),
+    );
 }
 
 /// Whether `number` (a client number, which is also that player's entity number) names
@@ -138,12 +137,18 @@ mod tests {
 
     #[test]
     fn the_serverinfo_gives_the_slot_count() {
-        assert_eq!(server_info_slots(br"\sv_maxclients\64\mapname\mp/ffa3"), 64);
-        assert_eq!(server_info_slots(br"\sv_maxclients\48"), 48);
-        assert_eq!(server_info_slots(br"\sv_maxclients\24"), 32);
-        assert_eq!(server_info_slots(br"\sv_maxclients\200"), 64);
+        assert_eq!(
+            server_info_slots(br"\sv_maxclients\64\jof64\1\mapname\mp/ffa3"),
+            64
+        );
+        assert_eq!(server_info_slots(br"\jof64\1\sv_maxclients\48"), 48);
+        assert_eq!(server_info_slots(br"\jof64\1\sv_maxclients\24"), 32);
+        assert_eq!(server_info_slots(br"\jof64\1\sv_maxclients\200"), 64);
+        assert_eq!(server_info_slots(br"\jof64\1\sv_maxclients\many"), 32);
+        // Without the server's own key this client is shown the classic 32.
+        assert_eq!(server_info_slots(br"\sv_maxclients\64\mapname\mp/ffa3"), 32);
+        assert_eq!(server_info_slots(br"\sv_maxclients\64\jof64\0"), 32);
         assert_eq!(server_info_slots(br"\mapname\mp/ffa3"), 32);
-        assert_eq!(server_info_slots(br"\sv_maxclients\many"), 32);
     }
 
     #[test]

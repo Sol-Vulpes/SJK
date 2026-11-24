@@ -43,7 +43,8 @@ const TAYSTJK_USERINFO: [(&str, &str); 5] = [
 ///
 /// [`sjk_protocol::EXTENDED_SLOTS_KEY`] tells a server with more than 32 player
 /// slots that this client can be shown all of them; a server without them ignores
-/// the key ([`CompatProfile::extended_slots`]).
+/// the key, and one with them answers with the same key in the serverinfo it sends
+/// this client ([`sjk_protocol::server_info_slots`]).
 ///
 /// `cp_sbRGB1`/`cp_sbRGB2` are added by the userinfo codec whenever a blade
 /// selects RGB, for every profile. The plugin's other USERINFO cvars
@@ -106,15 +107,6 @@ impl CompatProfile {
             Self::JaPlus { .. } => &JAPLUS_USERINFO,
             Self::BaseJka | Self::Unknown(_) => &[],
         }
-    }
-
-    /// Whether this profile's connect userinfo tells the server that the client can
-    /// be shown more than 32 players. Only then does the client take the server's
-    /// slot count; otherwise the server shows it the classic 32.
-    pub fn extended_slots(&self) -> bool {
-        self.userinfo_extensions()
-            .iter()
-            .any(|(key, _)| *key == sjk_protocol::EXTENDED_SLOTS_KEY)
     }
 
     /// The player's userinfo as this profile sends it: plugin servers (JA+,
@@ -295,9 +287,6 @@ mod tests {
                 ("jof64", "1")
             ]
         );
-        assert!(CompatProfile::JaPlus { version: None }.extended_slots());
-        assert!(!CompatProfile::BaseJka.extended_slots());
-        assert!(!CompatProfile::TaystJk.extended_slots());
         // 1536 opts out of exactly holstered sabers (bit 9) and ledge grab (bit 10).
         assert_eq!(PLUGIN_DISABLE_DEFAULT, (1 << 9) | (1 << 10));
         assert!(CompatProfile::BaseJka.userinfo_extensions().is_empty());

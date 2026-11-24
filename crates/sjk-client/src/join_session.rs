@@ -84,7 +84,7 @@ impl ClientSession {
             }
         };
         let (gamestate_sequence, initial) = initial;
-        sjk_protocol::set_player_slots_for(&initial.game_state, profile.extended_slots());
+        sjk_protocol::set_player_slots_for(&initial.game_state);
         observe(JoinPhase::Gamestate);
         let system_info = initial
             .game_state
