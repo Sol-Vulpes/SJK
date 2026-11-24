@@ -1227,6 +1227,23 @@ impl crate::GpuState {
                 self.sync_cursor_policy();
             }
             #[cfg(feature = "mod-jof")]
+            crate::model_sync::PAGE if crate::model_sync::subcommand(args).is_some() => {
+                let Some(console) = self.console.as_ref() else {
+                    return Ok(Vec::new());
+                };
+                let (command, rest) =
+                    crate::model_sync::subcommand(args).expect("the guard found a word");
+                let worn = crate::player_identity::own_model_folder();
+                return crate::model_sync::command(
+                    command,
+                    rest,
+                    console,
+                    &self.game_data,
+                    self.vfs.as_deref(),
+                    worn,
+                );
+            }
+            #[cfg(feature = "mod-jof")]
             crate::model_sync::PAGE => {
                 if let Some(console) = &mut self.console {
                     console.toggle_model_sync(&self.game_data);

@@ -217,6 +217,50 @@ impl crate::GpuState {
                 })
                 .collect()
         });
+        self.show_downloaded_models();
+    }
+
+    /// Mount the files again for the models model sync just downloaded, so the players
+    /// wearing them show them on this map (`rig_reload.rs` finishes it). Outside a game
+    /// they load with the next map; while another mount runs they wait for it.
+    fn show_downloaded_models(&mut self) {
+        let downloaded = crate::model_sync::take_downloaded();
+        if downloaded.is_empty() {
+            return;
+        }
+        let Some(game) = self
+            .live_session
+            .as_ref()
+            .map(sjk_client::ClientSession::game_state)
+        else {
+            return;
+        };
+        let busy = self
+            .console
+            .as_mut()
+            .is_none_or(|console| console.rig_reload_task().busy());
+        if busy {
+            crate::model_sync::keep_downloaded(downloaded);
+            return;
+        }
+        let selection = match crate::assets::session_content::Selection::from_game(game) {
+            Ok(selection) => selection,
+            Err(error) => {
+                crate::log::progress(format_args!("model sync: no mount for the map: {error}"));
+                return;
+            }
+        };
+        let root = self.game_data.clone();
+        let Some(console) = self.console.as_mut() else {
+            return;
+        };
+        if console
+            .rig_reload_task()
+            .start_mount(move || selection.mount(&root))
+            .is_ok()
+        {
+            self.clientinfo_watch.downloaded.extend(downloaded);
+        }
     }
 }
 

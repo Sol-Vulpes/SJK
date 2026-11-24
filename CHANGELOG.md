@@ -30,6 +30,11 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Model sync shares a model whole: its voice (`sounds.cfg` and its sound folder, even under another name), the sounds its animations play, its shaders from any shader file (community packs keep many models' shaders in one), and the textures it uses from outside its folder; what the game itself has stays out. Others hear the model's own pain, jump, taunt and death sounds (hub #313) _(Sol; reported by Rollembones)_
+- Model sync is easier: a share says what went in (files, size, sounds, what it took from elsewhere, what is missing on your PC) and how to fix a refused one; `modelsync check` says it without sending; `getmodel all` and the page's Get players' models fetch the shared models of everyone here you lack; `modelsync share`, `modelsync get <name>` work too; a downloaded model shows on the map at once, without waiting for the next map _(Sol)_
+
 ## 2026.1124.1 (Beta) | 24/11/2026
 
 Fixes from your reports: smoother players, sounds back, the KR server and a lighter Collection.

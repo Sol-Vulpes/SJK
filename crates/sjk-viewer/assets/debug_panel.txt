@@ -545,6 +545,22 @@ test: Share a rig model (solfox5): first press asks to confirm, second press upl
 test: Share a Sith skin pack model with a shared shader file (krovos): it uploads now.
 note: Uploads need the new Sith cloud build with the hub key (Krovos); hub is deployed.
 
+[model-sync-voice]
+area: Menus & settings
+title: Model sync 2: voices, shaders from any file, outside textures, Get all, shown at once
+change: A share takes the model's voice (sounds.cfg, sound/chars), animevents sounds, its shaders
+change: from any .shader file and the custom textures it uses from elsewhere (copied under it).
+change: getmodel all / Get players' models; modelsync share|get|check; a download shows at once.
+test: modelsync check: says files, size, how many sounds, files pulled in, what is missing.
+test: Share a model with its own voice (sanjigato?): line says N sounds (its voice).
+test: On another PC: Download it while its wearer is here: it shows on this map, no map change.
+test: Its pain, jump, taunt and death sounds are the model's, not the generic ones.
+test: A model whose shaders are in a shared .shader file (JoF packs) shows its glow/effects.
+test: A model with a stock voice (sounds.cfg says jan): line says it speaks with jan.
+test: Get players' models on the page (or getmodel all): fetches every shared one you lack.
+test: modelsync get <name>, modelsync share: same as getmodel, sharemodel.
+note: Needs the Sith cloud redeployed with the new checks; 2026.1124.1 refuses voiced downloads.
+
 [chat-translate]
 area: Console & chat
 title: Chat translation on request (click a line, /tr, tr, Translate)

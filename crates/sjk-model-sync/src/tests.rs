@@ -529,3 +529,123 @@ fn packing_keeps_only_the_models_own_shaders() {
         text.contains("solfox/body") && !text.contains("solfox2") && !text.contains("weapons2")
     );
 }
+
+#[test]
+fn a_voice_and_animation_events_under_the_models_name_pass() {
+    let wav = crate::sound::test_wav();
+    let mut files = good();
+    files.extend([
+        (
+            "models/players/solfox/sounds.cfg".into(),
+            b"solfox\nf".to_vec(),
+        ),
+        (
+            "models/players/solfox/sounds_red.cfg".into(),
+            b"solfox/red\nm".to_vec(),
+        ),
+        (
+            "models/players/solfox/animevents.cfg".into(),
+            b"aev_sound 1 sound/chars/solfox/x/step 1 2 100".to_vec(),
+        ),
+        ("sound/chars/solfox/misc/pain25.wav".into(), wav.clone()),
+        (
+            "sound/chars/solfox/red/misc/death1.mp3".into(),
+            vec![0xff, 0xfb, 0x90, 0x44],
+        ),
+    ]);
+    let checked = check_list(files).expect("a voiced model");
+    assert_eq!(checked.files.len(), 11);
+}
+
+#[test]
+fn sounds_elsewhere_or_broken_are_refused() {
+    let wav = crate::sound::test_wav();
+    for (path, bytes) in [
+        // Another voice: every player loading the pack would hear Kyle change.
+        ("sound/chars/kyle/misc/pain25.wav", wav.clone()),
+        ("sound/weapons/saber/saberon.wav", wav.clone()),
+    ] {
+        assert!(
+            matches!(check_list(with(path, &bytes)), Err(Rejection::Outside(_))),
+            "{path}"
+        );
+    }
+    assert_eq!(
+        check_list(with("sound/chars/solfox/misc/run.ogg", b"x")),
+        Err(Rejection::FileType(
+            "sound/chars/solfox/misc/run.ogg".into()
+        ))
+    );
+    assert!(matches!(
+        check_list(with("sound/chars/solfox/misc/pain25.wav", b"MZ")),
+        Err(Rejection::Broken { .. })
+    ));
+    let mut big = wav.clone();
+    big.resize(Limits::DEFAULT.sound_file_bytes as usize + 1, 0);
+    assert!(matches!(
+        check_list(with("sound/chars/solfox/misc/pain25.wav", &big)),
+        Err(Rejection::TooLarge {
+            what: "a sound file",
+            ..
+        })
+    ));
+    for table in ["../kyle\nm", "\n\n", "Bad Dir\nm"] {
+        assert!(
+            matches!(
+                check_list(with("models/players/solfox/sounds.cfg", table.as_bytes())),
+                Err(Rejection::Broken { .. })
+            ),
+            "{table:?}"
+        );
+    }
+}
+
+#[test]
+fn a_gathered_model_packs_and_passes() {
+    use crate::gather::{Source, gather};
+    struct Game(Vec<(String, Vec<u8>)>);
+    impl Source for Game {
+        fn list(&self, dir: &str, extension: &str) -> Vec<String> {
+            let prefix = format!("{dir}/");
+            self.0
+                .iter()
+                .map(|(path, _)| path.clone())
+                .filter(|path| {
+                    path.strip_prefix(&prefix).is_some_and(|rest| {
+                        rest.matches('/').count() <= 1 && rest.ends_with(extension)
+                    })
+                })
+                .collect()
+        }
+        fn read(&self, path: &str) -> Option<Vec<u8>> {
+            self.0
+                .iter()
+                .find(|(known, _)| known == path)
+                .map(|(_, bytes)| bytes.clone())
+        }
+        fn stock(&self, _: &str) -> bool {
+            false
+        }
+    }
+    let mut files = good();
+    files.extend([
+        (
+            "models/players/solfox/sounds.cfg".into(),
+            b"FoxVoice\nf".to_vec(),
+        ),
+        (
+            "sound/chars/foxvoice/misc/pain25.wav".into(),
+            crate::sound::test_wav(),
+        ),
+    ]);
+    let gathered = gather("solfox", &Game(files));
+    assert_eq!(gathered.sounds, 1);
+    let (_, checked) =
+        crate::pack::pack("solfox", gathered.files, &Limits::DEFAULT).expect("packs");
+    assert!(
+        checked
+            .files
+            .iter()
+            .any(|(path, _)| path == "sound/chars/solfox/misc/pain25.wav")
+    );
+}

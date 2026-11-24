@@ -3,16 +3,19 @@
 //!
 //! The same [`check`] runs in three places: the client before it sends a pack, the
 //! Sith cloud before it publishes one, and the client again before it loads a
-//! download. A pack holds one model, `models/players/<name>/`, and at most its
-//! `shaders/<name>.shader`; any rule broken refuses the whole pack. The model is a
+//! download. A pack holds one model, `models/players/<name>/`, at most its
+//! `shaders/<name>.shader`, and its voice and sounds under `sound/chars/<name>/`; any
+//! rule broken refuses the whole pack. The model is a
 //! stock one (a `.glm`) or a rig model (`sjk_rig.cfg` with its glTF: players' own
 //! models with an Unreal-style skeleton, docs/rig-models.md).
 
 #[cfg(feature = "client")]
 pub mod client;
+pub mod gather;
 mod image;
 pub mod pack;
 mod shader;
+mod sound;
 
 use md5::{Digest, Md5};
 use std::fmt;
@@ -39,13 +42,18 @@ pub struct Limits {
     pub text_bytes: u64,
     /// A `.gltf` file (its JSON; the `.bin` buffers count in the unpacked size).
     pub gltf_bytes: u64,
+    /// Every `.wav` and `.mp3` together, as stored.
+    pub sound_bytes: u64,
+    /// One sound file.
+    pub sound_file_bytes: u64,
 }
 
 impl Limits {
     /// The limits the Sith cloud and SJK use (docs/model-sync.md, "Limits").
     pub const DEFAULT: Self = Self {
-        pk3_bytes: 25 * 1024 * 1024,
-        unpacked_bytes: 128 * 1024 * 1024,
+        // 25 and 128 MB until 24/11/2026, when sounds came in with their own 32 MB.
+        pk3_bytes: 40 * 1024 * 1024,
+        unpacked_bytes: 160 * 1024 * 1024,
         // Bombs are held by the sizes above; this only catches an entry that claims a
         // little and unpacks to a lot (a mostly black JPEG reaches 60, 11/11/2026).
         max_ratio: 200,
@@ -57,6 +65,9 @@ impl Limits {
         glm_vertices: 300_000,
         text_bytes: 256 * 1024,
         gltf_bytes: 16 * 1024 * 1024,
+        // A full voice is about 60 short clips; long taunts and songs stay out.
+        sound_bytes: 32 * 1024 * 1024,
+        sound_file_bytes: 2 * 1024 * 1024,
     };
 
     /// Entries this small are not held to [`Limits::max_ratio`]: text and blank
@@ -107,7 +118,10 @@ impl fmt::Display for Rejection {
             Self::NotAZip(why) => write!(f, "not a readable PK3: {why}"),
             Self::Empty => f.write_str("the pack is empty"),
             Self::BadPath(path) => write!(f, "bad file path: {path}"),
-            Self::Outside(path) => write!(f, "{path} is not part of the model"),
+            Self::Outside(path) => write!(
+                f,
+                "{path} is not part of the model (a pack holds models/players/<name>/, shaders/<name>.shader and sound/chars/<name>/)"
+            ),
             Self::TwoModels(a, b) => write!(f, "one model per pack ({a} and {b})"),
             Self::BadName(name) => write!(
                 f,
@@ -151,6 +165,36 @@ pub fn model_folder(name: &str) -> String {
 /// The one shader file a pack may carry.
 pub fn shader_file(name: &str) -> String {
     format!("shaders/{name}.shader")
+}
+
+/// The folder a pack's sounds sit in: the model's voice (`sounds.cfg` names `<name>`)
+/// and the sounds its `animevents.cfg` plays.
+pub fn sound_folder(name: &str) -> String {
+    format!("sound/chars/{name}/")
+}
+
+/// Whether `file` (in the model's folder) is a voice table: `sounds.cfg`, or a
+/// skin's `sounds_<skin>.cfg`.
+pub fn is_sounds_table(file: &str) -> bool {
+    file == "sounds.cfg"
+        || file
+            .strip_prefix("sounds_")
+            .and_then(|rest| rest.strip_suffix(".cfg"))
+            .is_some_and(|skin| !skin.is_empty() && !skin.contains('/'))
+}
+
+/// The model data tables a pack may carry beside a rig model's manifests: the voice
+/// tables and `animevents.cfg` (footsteps and other sounds the animations play).
+fn is_model_table(file: &str) -> bool {
+    is_sounds_table(file) || file == "animevents.cfg"
+}
+
+/// The voice folder a `sounds.cfg` names (`sound/chars/<it>/misc/`): its first line
+/// that is not blank or a comment, as the client reads it.
+pub fn sound_dir(text: &str) -> Option<&str> {
+    text.lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('/') && !line.starts_with('#'))
 }
 
 /// Whether `name` may be a synced model's name.
@@ -255,6 +299,8 @@ pub fn check_files(
     let mut has_glm = false;
     let mut has_rig = false;
     let mut has_gltf = false;
+    let sounds = sound_folder(&name);
+    let mut sound_bytes = 0u64;
     for (path, bytes) in &files {
         let broken = |why: String| Rejection::Broken {
             path: path.clone(),
@@ -268,6 +314,28 @@ pub fn check_files(
                     return Err(Rejection::ForeignShader(defined));
                 }
             }
+            continue;
+        }
+        if let Some(rest) = path.strip_prefix(&sounds) {
+            let kind = extension(rest);
+            if !matches!(kind, "wav" | "mp3") {
+                return Err(Rejection::FileType(path.clone()));
+            }
+            let size = bytes.len() as u64;
+            if size > limits.sound_file_bytes {
+                return Err(Rejection::TooLarge {
+                    what: "a sound file",
+                    limit: limits.sound_file_bytes,
+                });
+            }
+            sound_bytes += size;
+            if sound_bytes > limits.sound_bytes {
+                return Err(Rejection::TooLarge {
+                    what: "the sounds together",
+                    limit: limits.sound_bytes,
+                });
+            }
+            sound::check(kind, bytes).map_err(|why| broken(why.into()))?;
             continue;
         }
         if !path.starts_with(&folder) {
@@ -294,6 +362,26 @@ pub fn check_files(
             "cfg" if is_rig_manifest(&path[folder.len()..]) => {
                 check_text(path, bytes, limits)?;
                 has_rig |= &path[folder.len()..] == RIG_MANIFEST;
+            }
+            "cfg" if is_model_table(&path[folder.len()..]) => {
+                check_text(path, bytes, limits)?;
+                if is_sounds_table(&path[folder.len()..]) {
+                    let text = String::from_utf8_lossy(bytes);
+                    let dir = sound_dir(&text).unwrap_or("");
+                    let fine = !dir.is_empty()
+                        && dir.len() <= 64
+                        && dir.split('/').all(|part| !part.is_empty() && part != "..")
+                        && dir.bytes().all(|b| {
+                            b.is_ascii_lowercase()
+                                || b.is_ascii_digit()
+                                || matches!(b, b'_' | b'-' | b'/')
+                        });
+                    if !fine {
+                        return Err(broken(
+                            "its first line must name a voice folder (a-z 0-9 _ - /)".into(),
+                        ));
+                    }
+                }
             }
             kind @ ("gltf" | "glb") => {
                 if kind == "gltf" && bytes.len() as u64 > limits.gltf_bytes {

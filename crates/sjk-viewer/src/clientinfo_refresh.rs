@@ -49,6 +49,9 @@ pub(crate) struct ClientInfoWatch {
     /// Model folders `rig_reload` reads again: a player already wearing one loads it
     /// anew instead of keeping the mesh up.
     pub(crate) reload: BTreeSet<String>,
+    /// Models model sync just downloaded (folder names): the next `rig_reload` mount
+    /// loads them for the players wearing them, on this map (`rig_reload.rs`).
+    pub(crate) downloaded: BTreeSet<String>,
     /// Players' models being read on workers.
     loads: player_loads::Loads,
     /// The NPC model being read on a worker (`npc_loads.rs`).
@@ -82,6 +85,7 @@ impl ClientInfoWatch {
             local_identity: (-1, -1),
             failed: BTreeSet::new(),
             reload: BTreeSet::new(),
+            downloaded: BTreeSet::new(),
             loads: player_loads::Loads::default(),
             npc_loads: Default::default(),
             appended: Vec::new(),
