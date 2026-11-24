@@ -31,8 +31,6 @@ const END_EARLY: Duration = Duration::from_secs(1);
 /// How high over a player's origin the mark's label stands, and the point it is seen by.
 pub(super) const MARK_RISE: f32 = 70.0;
 pub(super) const MARK_SIGHT: f32 = 20.0;
-/// The player slots a mask of hunters holds, a bit each.
-const SLOTS: u16 = u32::BITS as u16;
 /// How long without a key or the mouse makes the player away for the hunt (Sol,
 /// 23/11/2026: "avoid ever getting someone afk or typing getting tagged"; two minutes
 /// before, what holocrons call idle). Short on purpose: the hub picks nobody away, so a
@@ -209,15 +207,15 @@ impl Hunt {
 
     /// The hunters still after the player, the mark on slot `own`, as the hub last said:
     /// a bit a slot.
-    fn chasers(&self, own: u8) -> u32 {
+    fn chasers(&self, own: u8) -> u64 {
         let Some((_, state)) = self.state.as_ref().filter(|_| self.marked(own)) else {
             return 0;
         };
         state
             .chasers
             .iter()
-            .filter(|slot| u16::from(**slot) < SLOTS && **slot != own)
-            .fold(0, |bits, slot| bits | 1 << slot)
+            .filter(|slot| sjk_protocol::is_player_number(usize::from(**slot)) && **slot != own)
+            .fold(0, |bits, slot| bits | 1u64 << slot)
     }
 
     /// The hunter on `slot` is out: no longer ringed for the mark.
@@ -778,7 +776,7 @@ impl GpuState {
     /// The players ringed in red ([`crate::hud::team_outline`]), a bit a client slot,
     /// while the player takes part and is in the chase: the mark for a hunter, and for
     /// the mark the hunters still after them (Sol, 02/11/2026).
-    pub(crate) fn box_hunt_outlined(&self) -> u32 {
+    pub(crate) fn box_hunt_outlined(&self) -> u64 {
         let hunt = &self.mystery_boxes.hunt;
         if !self.box_hunt.on() || hunt.out.is_some() {
             return 0;
@@ -794,8 +792,8 @@ impl GpuState {
             return hunt.chasers(own);
         }
         hunt.mark()
-            .filter(|mark| u16::from(mark.slot) < SLOTS)
-            .map_or(0, |mark| 1 << mark.slot)
+            .filter(|mark| sjk_protocol::is_player_number(usize::from(mark.slot)))
+            .map_or(0, |mark| 1u64 << mark.slot)
     }
 
     /// The mark on `slot` blew up (the player's slot `own`): the box's explosion where

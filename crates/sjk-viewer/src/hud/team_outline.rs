@@ -165,7 +165,7 @@ impl State {
         now: i64,
         camera: Camera,
         hidden: bool,
-        red: u32,
+        red: u64,
     ) {
         #[cfg(test)]
         if let Some(shot) = self.shot.take() {
@@ -195,7 +195,7 @@ impl State {
         ),
         camera: Camera,
         hidden: bool,
-        red: u32,
+        red: u64,
     ) {
         self.clear();
         let mode = info_number(game.config_string(0), "g_gametype");
@@ -219,8 +219,8 @@ impl State {
                 crate::player_info::player_info(game, usize::from(number)),
                 "t",
             );
-            // `red` is a 32-bit mask: it marks nobody past its bits.
-            let marked = 1_u32
+            // `red` is a 64-bit mask: it marks nobody past its bits.
+            let marked = 1_u64
                 .checked_shl(u32::from(number))
                 .is_some_and(|bit| red & bit != 0);
             let group = if marked {
