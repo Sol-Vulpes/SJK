@@ -250,7 +250,7 @@ pub(crate) fn append_instances(
         let Some(mesh_index) = catalog.mesh(item.item_index) else {
             continue;
         };
-        let rotation = Quat::from_array(item.rotation);
+        let rotation = Quat::from_array(item.rotation) * model_turn(&meshes[mesh_index]);
         let mut position = Vec3::from_array(item.origin);
         if matches!(item_kind(item.item_index), Kind::Weapon) && !item.dropped {
             // weaponMidpoint is derived from model bounds during
@@ -258,17 +258,18 @@ pub(crate) fn append_instances(
             position -= rotation * Vec3::from_array(meshes[mesh_index].center);
             position.z += 8.0;
         }
+        let turned = rotation.to_array();
         let instance = if matches!(
             item.material_override,
             Some(MaterialOverride::LightDisabled | MaterialOverride::DarkDisabled)
         ) {
-            ActorInstance::new(position.to_array(), item.rotation, item.scale)
+            ActorInstance::new(position.to_array(), turned, item.scale)
                 .with_rgba_tint(item.entity_color)
         } else if item.material_override == Some(MaterialOverride::Placeholder) {
-            ActorInstance::new(position.to_array(), item.rotation, item.scale)
+            ActorInstance::new(position.to_array(), turned, item.scale)
                 .with_rgb_tint(item.entity_color)
         } else {
-            ActorInstance::new(position.to_array(), item.rotation, item.scale)
+            ActorInstance::new(position.to_array(), turned, item.scale)
         };
         let material = item.material_override.map(|material| match material {
             MaterialOverride::Placeholder => overrides.placeholder,
@@ -295,6 +296,21 @@ pub(crate) fn append_instances(
                 ActorInstance::new(holo.origin, holo.rotation, [1.0; 3]).with_rgb_tint(holo.color)
             });
         }
+    }
+}
+
+/// Ghoul2's root turn for a `.glm` pickup: a quarter turn about the vertical that
+/// every Ghoul2 model is drawn through before the entity's axis (`RootMatrix` and its
+/// `identityMatrix`, `tr_ghoul2.cpp:128-135,3197`). The weapons' `_w.glm` models lie
+/// along -Y; without the turn a dropped weapon's roll of -90 (`LaunchItem`) stood it on
+/// its stock, barrel up, instead of laying it on its side (hub #295). MD3 pickups have
+/// no such turn.
+fn model_turn(mesh: &StaticModelMesh) -> Quat {
+    let model = mesh.appearance.model.as_bytes();
+    if model.len() >= 4 && model[model.len() - 4..].eq_ignore_ascii_case(b".glm") {
+        Quat::from_rotation_z(std::f32::consts::FRAC_PI_2)
+    } else {
+        Quat::IDENTITY
     }
 }
 
@@ -400,5 +416,48 @@ mod duel_visibility_tests {
             &mut output,
         );
         assert_eq!(output.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod ghoul2_turn_tests {
+    use super::*;
+
+    fn mesh(model: &str) -> StaticModelMesh {
+        StaticModelMesh {
+            appearance: Appearance {
+                model: model.to_owned(),
+                variant: String::new(),
+            },
+            draws: Vec::new(),
+            center: [0.0; 3],
+            flash_bolt: None,
+            turning_bone: None,
+            eweb_part: None,
+        }
+    }
+
+    #[test]
+    fn a_dropped_ghoul2_weapon_lies_on_its_side_with_its_barrel_level() {
+        // blaster_w.glm's barrel runs along -Y (retail bounds y -15..6); LaunchItem
+        // rolls a dropped blaster by -90 about its length.
+        let placed = Quat::from_array(legacy_angles_to_quaternion([0.0, 30.0, -90.0]));
+        let rotation = placed * model_turn(&mesh("models/weapons2/blaster_r/blaster_w.GLM"));
+        let barrel = rotation * Vec3::new(0.0, -15.0, 0.0);
+        assert!(
+            barrel.z.abs() < 1e-4,
+            "barrel level, not standing: {barrel}"
+        );
+        // It points along the throw's yaw, as Ghoul2's turned model faces +X.
+        let yaw = barrel.y.atan2(barrel.x).to_degrees();
+        assert!((yaw - 30.0).abs() < 1e-3, "{yaw}");
+        // The model's top (+Z) faces the entity's left, as in stock.
+        let top = rotation * Vec3::Z;
+        assert!(top.z.abs() < 1e-4);
+        // MD3 pickups have no root turn.
+        assert_eq!(
+            model_turn(&mesh("models/map_objects/mp/medpac.md3")),
+            Quat::IDENTITY
+        );
     }
 }
