@@ -107,14 +107,19 @@ pub(crate) fn update(gpu: &mut GpuState, time: i64, audio: &mut Option<GameAudio
                     .unwrap_or(standard);
                 // A blade skin's swing plays over the stock or the hilt's own, on a
                 // channel of its own so that it does not cut it; with
-                // `s_saberSkinSounds 2` it plays in their place, with 0 not at all. One
-                // not in the game data (yet) is left out, the stock one playing alone.
+                // `s_saberSkinSounds 2`, or a skin whose sounds always replace them
+                // (`replace`), it plays in their place, with 0 not at all. One not in the
+                // game data (yet) is left out, the stock one playing alone.
                 let swing = skin
                     .filter(|_| !audio.skin_sounds_off)
                     .and_then(|skin| skin_swing(&skins, skin, standard, variant))
                     .filter(|swing| audio.has_sound(swing));
+                let alone = audio.skin_sounds_only
+                    || skin
+                        .and_then(|skin| skins.sounds(skin))
+                        .is_some_and(|sounds| sounds.replace);
                 match swing {
-                    Some(swing) if audio.skin_sounds_only => {
+                    Some(swing) if alone => {
                         audio.play_animation(swing, *channel, false, origin, id, is_local);
                     }
                     _ => {

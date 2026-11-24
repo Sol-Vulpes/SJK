@@ -442,6 +442,12 @@ pub(crate) struct Sounds {
     pub(crate) off: String,
     pub(crate) hum: String,
     pub(crate) swings: [String; 3],
+    /// Whether they are heard in place of the stock saber sounds whatever
+    /// `s_saberSkinSounds` is (but 0, which plays no skin's sounds), not over them: for
+    /// sounds too soft to be heard over the stock hum (the Varykino Blossom's breeze,
+    /// Kushina, 21/11/2026). Absent: over them, as every skin before.
+    #[serde(default)]
+    pub(crate) replace: bool,
 }
 
 /// `base + grain × granulation`.
@@ -910,6 +916,15 @@ pub(crate) fn read(vfs: &sjk_vfs::VirtualFileSystem, id: &str) -> Result<BladeSk
         .and_then(|text| lay_over(text, solids::SOLIDS_ADDITIONS))
         .and_then(|text| lay_over(text, smoke::SMOKE_ADDITIONS))
         .and_then(|text| parse(id, &text))
+        .and_then(|def| {
+            // Clients before `replace` refuse the whole file (`deny_unknown_fields`), so
+            // only a signature's built-in file may set it, never a pack's or the Lab's.
+            if def.sounds.replace {
+                Err("`sounds.replace` is only for a signature's built-in file".to_owned())
+            } else {
+                Ok(def)
+            }
+        })
 }
 
 #[cfg(test)]

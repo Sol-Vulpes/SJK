@@ -2140,7 +2140,7 @@ fn skin_glow_at(input: VertexOutput, pixel: f32, x: f32) -> vec3<f32> {
             1.0 - smoothstep(input.length - 1.0, input.length + 1.0, place.y));
         let own = max(sig_glow(glow, place + vec2(x - input.blade.x, 0.0), r, pixel), vec3(0.0))
             * sig_kept(input, place);
-        glow = mix(glow, own, shown_glow) + glow * mouth * step(-6.0, place.y);
+        glow = mix(glow, own, shown_glow) + sig_mouth(glow) * mouth * step(-6.0, place.y);
         // Round 20 (Creyon: close up, the blade's glow came to the front and its effects hid
         // behind it; from afar they showed): the glow round the blade (not its core, drawn on
         // its own) softens as the camera comes near, to about half within a few metres.
@@ -4518,9 +4518,9 @@ var<private> uSide: f32;
 // Which of a signature's own parts its wearer left on (round 11: every effect can be
 // switched off): bit k set when part k (`// @part` line k) is off, read by `part(k)`.
 var<private> uParts: f32;
-// The section bits a signature's parts ride on, part 0 to 5 (sections it never uses).
-const SIG_PART_BITS: array<u32, 6> = array<u32, 6>(OFF_SPUTTER, OFF_GLITCH, OFF_SCAN, OFF_BANDS,
-    OFF_SEGMENTS, OFF_FILM);
+// The section bits a signature's parts ride on, part 0 to 7 (sections it never uses).
+const SIG_PART_BITS: array<u32, 8> = array<u32, 8>(OFF_SPUTTER, OFF_GLITCH, OFF_SCAN, OFF_BANDS,
+    OFF_SEGMENTS, OFF_FILM, OFF_BLOBS, OFF_FRONT);
 
 // The lab's ignition takes 0.42 s and its clash fades at 2.2 a second.
 const SIG_IGNITION: f32 = 0.42;
@@ -4551,7 +4551,7 @@ fn sig_take(input: VertexOutput) {
         uSince = 1000.0;
     }
     var parts = 0u;
-    for (var k = 0u; k < 6u; k++) {
+    for (var k = 0u; k < 8u; k++) {
         if (input.off.x & SIG_PART_BITS[k]) != 0u {
             parts |= 1u << k;
         }
@@ -4794,7 +4794,7 @@ fn sig_mythic(input: VertexOutput, place: vec2<f32>, ray: SigRay, pixel: f32) ->
     // its breath: a slow wave of light rising up it
     let beat = fract(uClock / 6.5 + uSeed * 0.37);
     let wave = beat * (len + 10.0) - 5.0;
-    light += c * exp(-pow((place.y - wave) / 3.2, 2.0)) * near * 0.45 * smoothstep(1.4, 2.4, age);
+    light += sig_mythic_breath(c * exp(-pow((place.y - wave) / 3.2, 2.0)) * near * 0.45 * smoothstep(1.4, 2.4, age));
     // a clash rings out round it (with its swing and clash bursts: `uClash`)
     let clash = clamp(uClash, 0.0, 1.0);
     if clash > 0.01 {
@@ -4802,7 +4802,7 @@ fn sig_mythic(input: VertexOutput, place: vec2<f32>, ray: SigRay, pixel: f32) ->
         light += (white * exp(-pow(ring / max(0.1, pixel), 2.0)) * 1.4 + c * exp(-pow(ring / 0.5, 2.0)) * 0.5)
             * clash;
     }
-    return light;
+    return sig_mythic_light(light);
 }
 
 // 1 along a signature's blade from just past the hilt's mouth, 0 behind it; 1 for other skins.
@@ -4895,6 +4895,24 @@ fn sig_glow(g: vec3<f32>, b: vec2<f32>, r: f32, px: f32) -> vec3<f32> {
 
 fn sig_core(c: vec3<f32>, b: vec2<f32>, px: f32) -> vec3<f32> {
     return c;
+}
+
+fn sig_mythic_breath(b: vec3<f32>) -> vec3<f32> {
+    // A mythical's breath rising up it (`sig_mythic`), as the signature keeps it (the Varykino
+    // Blossom's Lilac light leaves it out).
+    return b;
+}
+
+fn sig_mythic_light(l: vec3<f32>) -> vec3<f32> {
+    // All a mythical's shared light (`sig_mythic`: its awakening, flare and rings), as the
+    // signature colours it (the Varykino Blossom's Lilac light turns it lilac).
+    return l;
+}
+
+fn sig_mouth(g: vec3<f32>) -> vec3<f32> {
+    // The file's glow kept round the emitter (the Varykino Blossom's Lilac light turns it
+    // lilac); a stand-in function must start with `fn` (`module_source` names it so).
+    return g;
 }
 
 fn sig_solid(o: vec4<f32>, b: vec2<f32>, px: f32) -> vec4<f32> {

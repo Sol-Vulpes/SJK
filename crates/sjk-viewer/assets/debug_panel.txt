@@ -4549,6 +4549,17 @@ test: Menu and Force icons look as before, edges not cut.
 
 # ---- Rendering & effects ----
 
+[varykino-extras]
+area: Rendering & effects
+title: Varykino Blossom: locked extras, thinner mist, breeze sounds (Kushina, PR #446)
+change: The Lavender mist is narrower; the blade's sounds are a soft breeze.
+change: With a Solar SJK Alpha 014: Blossom mist, Ink stroke, Silk threads, Butterfly, Lilac light.
+test: Wear the Varykino Blossom: the mist no longer thickens the blade; blossoms still fall.
+test: Ignite, swing, hum: breeze sounds once the hub pack has them, else the stock ones.
+test: Holder of a Solar SJK Alpha 014: Extra features lists the five, all off by default.
+test: Turn each on: it shows; off again: the blade is as before. Other sabers' trails unchanged.
+note: Others see the extras only once the hub's EXTRAS_GATES lists the blade (hub deploy).
+
 [low-fps-night]
 area: Rendering & effects
 title: Low FPS Night: a fixed night on baked lighting (Kushina, PR #444)

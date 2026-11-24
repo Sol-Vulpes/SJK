@@ -148,3 +148,15 @@ gfx/sjk/petals/doom_cinder
 		alphaGen vertex
 	}
 }
+
+gfx/sjk/petals/mist
+{
+	nopicmip
+	cull none
+	{
+		map gfx/sjk/petals/mist
+		blendFunc GL_ONE GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}

@@ -303,6 +303,24 @@ fn the_folder_loads_by_id_and_names_the_bad_file() {
     assert_eq!(skins[0].0, "saber_test");
 }
 
+#[test]
+fn a_pack_file_may_not_replace_the_stock_sounds() {
+    let swings = r#""swings": ["sound/test/blade/s1.wav", "sound/test/blade/s2.wav", "sound/test/blade/s3.wav"]"#;
+    let replacing = sample_with(swings, &format!("{swings}, \"replace\": true"));
+    // The built-in signature files read it ...
+    assert!(parse("saber_test", &replacing).unwrap().sounds.replace);
+    // ... but a pack's file with it is refused by name, as older clients refuse it.
+    let mut vfs = sjk_vfs::VirtualFileSystem::new();
+    vfs.mount_memory(
+        "pack",
+        [("skins/blades/saber_test.bladeskin", replacing.into_bytes())],
+    )
+    .unwrap();
+    let why = read(&vfs, "saber_test").unwrap_err();
+    assert!(why.contains("sounds.replace"), "{why}");
+    assert!(load(&vfs).is_empty());
+}
+
 /// A made-up additions file (no real skin's values): a glint, wisps, haze, an echo and
 /// options switching them and the sample's arcs and motes.
 pub(crate) const ADDITIONS: &str = r#"{

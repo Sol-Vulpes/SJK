@@ -3545,6 +3545,12 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 24/11/2026 | SJK #446 | Varykino Blossom: locked extras (Blossom mist, Ink stroke, Silk threads, Butterfly, Lilac light), thinner Lavender mist, breeze sounds
+- 4bc724f |  | Add Varykino Blossom extras and thin its Lavender mist
+- b1cddbd |  | Note the Varykino Blossom extras in the changelog
+- e751316 |  | Varykino Blossom: soft breeze sounds that replace the stock ones
+- e159750 |  | Varykino Blossom: Butterfly and Lilac light extras
+- d103c44 |  | Varykino Blossom: fix the review findings
 + 24/11/2026 | SJK #451 | Show whole part pictures and list the Hoth gear in character creation
 - 894120c |  | Show whole part pictures and list the Hoth gear in character creation
 - c8bd28f |  | Give the species test folders their model

@@ -159,13 +159,14 @@
     }
   },
   "sounds": {
-    "on": "sound/sjk/creyon/royal_naboo/on.wav",
-    "off": "sound/sjk/creyon/royal_naboo/off.wav",
-    "hum": "sound/sjk/creyon/royal_naboo/hum.wav",
+    "on": "sound/sjk/sabers/varykino_blossom/on.wav",
+    "off": "sound/sjk/sabers/varykino_blossom/off.wav",
+    "hum": "sound/sjk/sabers/varykino_blossom/hum.wav",
     "swings": [
-      "sound/sjk/creyon/royal_naboo/swing1.wav",
-      "sound/sjk/creyon/royal_naboo/swing2.wav",
-      "sound/sjk/creyon/royal_naboo/swing3.wav"
-    ]
+      "sound/sjk/sabers/varykino_blossom/swing1.wav",
+      "sound/sjk/sabers/varykino_blossom/swing2.wav",
+      "sound/sjk/sabers/varykino_blossom/swing3.wav"
+    ],
+    "replace": true
   }
 }

@@ -1244,7 +1244,9 @@ from the looks.
   own, so the skin's does not cut them), at the paths the file names in its pack, unless
   the wearer chose other saber sounds ([Saber sounds](#saber-sounds)). With
   `s_saberSkinSounds 2` (Settings > Sound > Kyber sounds: Only skin) they play in
-  the stock ones' place, and with `0` (Off) they are not played: the stock ones alone. A sound
+  the stock ones' place, as a skin whose `sounds` say `replace` always does (since
+  21/11/2026, the Varykino Blossom's soft breeze, which the stock hum drowned), and with
+  `0` (Off) they are not played: the stock ones alone. A sound
   the file names that is not in the game data (no pack carries it yet) is left out: the
   stock one plays there as for a player without a skin, in either mode, never silence
   (`sound_present` in `sjk-client`, the viewer's `has_sound` for animation swings). The viewer
@@ -1746,7 +1748,7 @@ rooted at the emitter, running up the blade for their span, instead of anywhere 
 | `trail` | Blur trail colour | 0-1 |
 | `light.color` | Dynamic light colour (stock gain) | 0-4 |
 | `light.flicker` | `amount` and up to 2 `waves` (`rate`, `weight`, `phase` per hilt): brightness `1 − amount + amount × Σ weight × sin(t × rate + phase × hilt phase)` | amount 0-1 |
-| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack | 1-63 characters, relative, no `..` |
+| `sounds` | `on`, `off`, `hum`, `swings` (three): game paths in the pack; optional `replace` (`true`): heard in place of the stock saber sounds with `s_saberSkinSounds 1` too, as `2` makes every skin's (for sounds too soft to be heard over the stock hum: the Varykino Blossom's breeze, 21/11/2026). A client from before refuses a file with `replace`, so only a signature's built-in file names it: a pack's or the Saber Lab's file that sets it is refused by name (`blade_skin_file::read`). A stock on/off sound heard with no owner (`G_Sound`, guessed by the nearest player) is replaced only when no other player stands within reach; otherwise the set's sound plays over the stock one, so a bystander's ignition is never silenced | 1-63 characters, relative, no `..` |
 
 Other coefficients are any number from -1000 to 1000.
 
@@ -1943,14 +1945,21 @@ that only a holder of a given card in a given finish may switch on
 | --- | --- | --- | --- |
 | Sun | the plasma trail | `flare_trail` Flare trail (flames and loops licking past the tip), `swing_embers` Swing embers (sparks flung off the swing), `heat_wake` Heat wake (the air behind the trail shimmers) | a Solar copy of SJK Alpha 000 (Sol) |
 | Moon blade | the moonlight trail | `moonshadow_trail` Moonshadow trail (the eclipse's dark band and diamond flash), `starfall_trail` Starfall trail (shooting stars streaking out of the swing), `moonlit_wake` Moonlit wake (the air behind the trail shimmers) | a Solar copy of SJK Alpha 002 (Creyon) |
+| Varykino Blossom (Kushina's, 20/11/2026) | its pink blur | `blossom_mist` Blossom mist (the blade breathes out a faint, puffy lavender cloud that drifts down with its blossoms, [rendering.md](rendering.md#falling-blossoms)), `ink_stroke` Ink stroke (a lilac sumi-e brush stroke drawn where the tip passes, round where it starts and pointed where it ends, over the same blur, [rendering.md](rendering.md#saber-trails)), `silk_threads` Silk threads (short, dense bindings of thread-thin white-lilac silk wound tight here and there round the wood of the blossom branch, the bark bare between them; `"layer": 5`, gone with the branch), `butterfly` Butterfly (22/11/2026: a white butterfly with a lilac disc across its wings sits on the tip in the Sakura droplet's place, the droplet gone whatever its part switch says; it beats its wings slowly now and then, and a clash startles it up into a little loop above the tip until it settles back; `"layer": 6`), `lilac_light` Lilac light (22/11/2026: every effect turns lilac but the blossoms the swing sheds: the blade's glow (narrower) and core, the light it casts, the trail's blur, the branch's blossoms and bud, the petals drifting round it, the droplet, the clash's ring of petals and the mythical's awakening, flare and rings; its slow light rising up the blade is left out, and its brightest light is held down so a high exposure leaves it lilac, not white or pink; `"layer": 7`, `"light"`, `"trail_color"`) | a Solar copy of SJK Alpha 014 (Kushina) |
 
 - **Declared** by the signature's header: `// @trail plasma` (the trail every wearer gets),
   `// @extras {"card":..,"card_name":..,"finish":..}` (the card that unlocks them) and an
   `// @extra {"id":..,"name":..}` line each, with what it does: `"trail"` (another trail,
   [rendering.md](rendering.md#saber-trails)), `"sheds"` (a `@petals` spec without its part,
-  [rendering.md](rendering.md#falling-blossoms)) or `"wake": true`. At most 6 extras;
-  a test checks every line parses and that no extra's bit takes an option's or another
-  extra's.
+  [rendering.md](rendering.md#falling-blossoms)), `"wake": true`, `"light": [r,g,b]` (the
+  colour of the light the blade casts instead of its file's, each 0 to 4), `"trail_color": [r,g,b]`
+  (its trail's blur instead of its file's `trail`, each 0 to 1) or `"layer": k` (a
+  layer the signature draws itself, on its blade, read in its shader as part slot `k` past
+  its own `@part`s, 0 to 7, with `part(k)`: `blade_extras::Worn::hidden` switches the slot's
+  section off while the extra is off, so its shader leaves the layer out; the Varykino
+  Blossom's Silk threads, 20/11/2026, its Butterfly and Lilac light, 22/11/2026). At most 6 extras; a test checks every line parses,
+  that no extra's bit takes an option's or another extra's, and that a layer takes no slot
+  of the signature's own parts.
 - **Kept** in `cg_saberSkinOptions` with the parts: a word there names a part switched off
   and an extra switched on, so a word always names a choice that differs from its default
   (`saber_skin_options.rs`). In a frame both ride on the same 64 bits.

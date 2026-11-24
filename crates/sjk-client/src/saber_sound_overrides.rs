@@ -51,6 +51,10 @@ pub struct SaberSoundSet<'a> {
     pub hum: &'a str,
     /// Swings, chosen like `.sab` `swingSound1`-`3`.
     pub swings: [&'a str; 3],
+    /// Whether the set's sounds replace the stock ones for its wearer in either
+    /// `s_saberSkinSounds` mode, as `s_saberSkinSounds 2` does for every set: for a set
+    /// too soft to be heard over the stock hum (the Varykino Blossom's breeze).
+    pub replace: bool,
 }
 
 /// A set's sounds in the event adapter's table; `None` where the set's file did not
@@ -61,6 +65,8 @@ pub(crate) struct EventSet {
     on: Option<u16>,
     off: Option<u16>,
     swings: [Option<u16>; 3],
+    /// [`SaberSoundSet::replace`].
+    replace: bool,
 }
 
 /// Whether a sound switches a saber on or off.
@@ -93,11 +99,11 @@ pub(crate) struct SaberSoundOverrides {
 pub(crate) enum GeneralSkin {
     /// Not a toggle of a client wearing a set with that sound: the stock sound alone.
     Stock,
-    /// The set's sound, over the stock one or in its place.
-    Skin(u16),
+    /// The set's sound, over the stock one or, `alone`, in its place.
+    Skin { sound: u16, alone: bool },
     /// Another sound of a toggle the set already voiced: the stock sound alone, or
-    /// nothing with `s_saberSkinSounds 2`.
-    Voiced,
+    /// nothing when the set's sounds play `alone`.
+    Voiced { alone: bool },
 }
 
 impl SaberSoundOverrides {
@@ -121,6 +127,7 @@ impl SaberSoundOverrides {
                 on: intern(set.on),
                 off: intern(set.off),
                 swings: set.swings.map(&mut intern),
+                replace: set.replace,
             })
             .collect();
         self.toggles.clear();
@@ -162,6 +169,13 @@ impl SaberSoundOverrides {
         self.sets.get(usize::from(set)).copied()
     }
 
+    /// Whether the set entity `source` wears plays in place of the stock sounds:
+    /// with `s_saberSkinSounds 2`, or a set that always replaces them
+    /// ([`SaberSoundSet::replace`]).
+    pub(crate) fn alone(&self, source: u16) -> bool {
+        self.only || self.for_source(source).is_some_and(|set| set.replace)
+    }
+
     /// The set's swing for `variant`, as `ci->saber[0].swingSound[Q_irand(0, 2)]`.
     pub(crate) fn swing(&self, source: u16, variant: usize) -> Option<u16> {
         self.for_source(source)?.swings[variant % 3]
@@ -195,12 +209,16 @@ impl SaberSoundOverrides {
         let Some(toggle) = self.toggle(&path.path) else {
             return GeneralSkin::Stock;
         };
-        let Some(client) = nearest_player(snapshot, origin) else {
+        let Some((client, sure)) = nearest_player_and_whether_alone(snapshot, origin) else {
             return GeneralSkin::Stock;
         };
         let Some(set) = self.for_source(client) else {
             return GeneralSkin::Stock;
         };
+        // The owner of a general sound is a guess by distance: a set's `replace` drops
+        // the stock sound only when no other player stands within reach, so a
+        // bystander's own ignition is never silenced in mode 1.
+        let alone = self.only || (set.replace && sure);
         let skin = match toggle {
             Toggle::On => set.on,
             Toggle::Off => set.off,
@@ -211,10 +229,10 @@ impl SaberSoundOverrides {
         let voiced = &mut self.voiced[usize::from(client)];
         let key = (snapshot.server_time, toggle);
         if *voiced == Some(key) {
-            return GeneralSkin::Voiced;
+            return GeneralSkin::Voiced { alone };
         }
         *voiced = Some(key);
-        GeneralSkin::Skin(skin)
+        GeneralSkin::Skin { sound: skin, alone }
     }
 
     fn toggle(&self, path: &str) -> Option<Toggle> {
@@ -257,6 +275,11 @@ fn stem(path: &str) -> &str {
 /// The client whose body is nearest `origin`, within [`TOGGLE_REACH`]: the local
 /// player from its own state, others from their entities.
 fn nearest_player(snapshot: &Snapshot, origin: [f32; 3]) -> Option<u16> {
+    nearest_player_and_whether_alone(snapshot, origin).map(|(client, _)| client)
+}
+
+/// [`nearest_player`], and whether it is the only player within [`TOGGLE_REACH`].
+fn nearest_player_and_whether_alone(snapshot: &Snapshot, origin: [f32; 3]) -> Option<(u16, bool)> {
     let distance = |at: [f32; 3]| {
         (0..3)
             .map(|axis| (at[axis] - origin[axis]).powi(2))
@@ -275,8 +298,14 @@ fn nearest_player(snapshot: &Snapshot, origin: [f32; 3]) -> Option<u16> {
         .map(|state| (state.number(), distance(state.trajectory_base())))
         .chain(std::iter::once(local))
         .filter(|(_, squared)| *squared <= TOGGLE_REACH * TOGGLE_REACH)
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(client, _)| client)
+        .fold(None, |nearest: Option<((u16, f32), usize)>, candidate| {
+            Some(match nearest {
+                None => (candidate, 1),
+                Some((best, count)) if candidate.1 < best.1 => (candidate, count + 1),
+                Some((best, count)) => (best, count + 1),
+            })
+        })
+        .map(|((client, _), count)| (client, count == 1))
 }
 
 impl LegacySoundAdapter {
@@ -309,7 +338,7 @@ impl LegacySoundAdapter {
     ) {
         self.saber_overrides
             .register(sets, &mut self.sounds, vfs, &mut register);
-        let hums: Vec<&str> = sets.iter().map(|set| set.hum).collect();
+        let hums: Vec<(&str, bool)> = sets.iter().map(|set| (set.hum, set.replace)).collect();
         self.loops.register_saber_hums(&hums, vfs, &mut register);
         // The clients' hums point into the table just rebuilt: an unchanged client list
         // would not refresh them ([`Self::set_saber_sound_overrides`]).
