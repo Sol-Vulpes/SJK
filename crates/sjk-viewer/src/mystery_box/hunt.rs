@@ -33,13 +33,14 @@ pub(super) const MARK_RISE: f32 = 70.0;
 pub(super) const MARK_SIGHT: f32 = 20.0;
 /// `MAX_CLIENTS`: slots of players.
 const SLOTS: u16 = 32;
-/// How long the mark may type in the chat before blowing up, and when they are warned
-/// (the hub hands an away mark on after a minute; this comes first).
 /// How long without a key or the mouse makes the player away for the hunt (Sol,
 /// 23/11/2026: "avoid ever getting someone afk or typing getting tagged"; two minutes
 /// before, what holocrons call idle). Short on purpose: the hub picks nobody away, so a
-/// player who stepped away from the keyboard is passed over within seconds.
+/// player who stepped away from the keyboard is passed over within seconds. The mark
+/// alone keeps the two minutes ([`idle`], hub report #334).
 const IDLE: Duration = Duration::from_secs(15);
+/// How long the mark may type in the chat before blowing up, and when they are warned
+/// (the hub hands an away mark on after a minute; this comes first).
 const CHAT_LIMIT: Duration = Duration::from_secs(30);
 const CHAT_WARN: Duration = Duration::from_secs(20);
 /// The sound source of a mark's explosion, past the alarm's.
@@ -274,9 +275,16 @@ fn mark_ends(mark: &wire::HuntMark, now: Instant, unix: i64) -> Instant {
 }
 
 /// Whether a player whose last key or mouse input was `since` ago (never, for `None`)
-/// is away for the hunt.
-fn idle(since: Option<Duration>) -> bool {
-    since.is_none_or(|since| since >= IDLE)
+/// is away for the hunt by [`IDLE`]; `marked` when they are the mark.
+///
+/// The mark is not: [`IDLE`] keeps a player who stepped off the keys from being picked,
+/// and once picked the mark is away only as any player is (two minutes idle, a menu, the
+/// chat). Else a mark who stood still a few seconds as the alarm rang was away within the
+/// hub's 20 seconds after the pick and lost the mark at once, again and again, the marks
+/// coming and going seconds apart (hub report #334, 24/11/2026: "10 sec new target comes,
+/// ends in 3 sec").
+fn idle(since: Option<Duration>, marked: bool) -> bool {
+    !marked && since.is_none_or(|since| since >= IDLE)
 }
 
 /// What the player is told when slot `slot` (named `name`) becomes the mark; `own` is
@@ -452,11 +460,12 @@ impl GpuState {
         now: Instant,
     ) {
         let on = self.box_hunt.on();
-        // Away: not playing (a menu, the console, spectating), typing in the chat, or
-        // hands off the keys and the mouse for [`IDLE`].
+        // Away: not playing (a menu, the console, spectating, idle two minutes), typing
+        // in the chat, or, but for the mark, hands off the keys and the mouse for [`IDLE`].
+        let marked = on && self.mystery_boxes.hunt.marked(own);
         let away = !self.actively_playing(now)
             || self.chat.is_typing()
-            || idle(crate::holocrons::activity::since_input(now));
+            || idle(crate::holocrons::activity::since_input(now), marked);
         let hunt = &mut self.mystery_boxes.hunt;
         if on && hunt.away != Some(away) {
             hunt.away = Some(away);
@@ -878,8 +887,10 @@ mod tests {
         assert!(!centre);
         assert!(words.contains("the tomb has marked Kyle^7"));
         // Hands off the keys for a quarter of a minute, or never on them: away.
-        assert!(idle(None) && idle(Some(IDLE)));
-        assert!(!idle(Some(IDLE - Duration::from_millis(1))));
+        assert!(idle(None, false) && idle(Some(IDLE), false));
+        assert!(!idle(Some(IDLE - Duration::from_millis(1)), false));
+        // The mark is not (hub report #334): only the two minutes all players have.
+        assert!(!idle(Some(IDLE * 4), true));
     }
 
     #[test]

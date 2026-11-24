@@ -289,7 +289,11 @@ getting tagged for the hunt"). Three holes let it happen, and each is closed:
 
 - idle meant two minutes without input, so a player who had walked off a minute ago was
   picked. For the hunt a player is away after 15 seconds without a key or the mouse
-  (`hunt::IDLE`; holocrons keep their two minutes);
+  (`hunt::IDLE`; holocrons keep their two minutes). The mark is not (24/11/2026, hub
+  report #334): once picked they are away only as any player is, two minutes idle, a
+  menu or the chat. With the 15 seconds a mark who stood still a moment as the alarm rang
+  was away within the hub's 20 seconds and lost the mark at once, the marks coming and
+  going seconds apart ("10 sec new target comes, ends in 3 sec");
 - a player who opened the chat as the hub made its pick was picked on a read a moment
   old. The mark's client reads the hunt at once on being told and says it is away; the
   hub (branch `hunt-in-play`) hands a mark found away within 20 seconds of the pick on
