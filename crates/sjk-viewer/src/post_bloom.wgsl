@@ -1,5 +1,7 @@
 // Linear-light LDR brightness bloom. Peak RGB preserves saturated saber colors.
 override HORIZONTAL: bool = false;
+// The brightest linear value a scene pixel blooms with (`extract`).
+const PEAK_CAP: f32 = 4.0;
 @group(0) @binding(0) var source: texture_2d<f32>;
 @group(0) @binding(1) var linear_clamp: sampler;
 
@@ -17,7 +19,15 @@ override HORIZONTAL: bool = false;
             // Clamp partial blocks at the right/bottom edge, never sample outside the image.
             let at = min(base + vec2<i32>(x, y), size - 1);
             let uv = (vec2<f32>(at) + 0.5) / vec2<f32>(size);
-            let c = textureSampleLevel(source, linear_clamp, uv, 0.0).rgb;
+            var c = textureSampleLevel(source, linear_clamp, uv, 0.0).rgb;
+            // A pixel past PEAK_CAP blooms as one at PEAK_CAP, its hue kept, and a NaN as
+            // black: a stack of `GL_DST_COLOR GL_ONE` layers (the light side's
+            // body fade, hub #243) multiplies the HDR scene far past where rd-vanilla's
+            // 8-bit target clips at white, up to infinity, and the blur spread such a pixel
+            // into a solid square.
+            c = clamp(select(c, vec3(0.0), c != c), vec3(0.0), vec3(65504.0));
+            let raw_peak = max(c.r, max(c.g, c.b));
+            if raw_peak > PEAK_CAP { c *= PEAK_CAP / raw_peak; }
             let peak = max(c.r, max(c.g, c.b));
             sum += c * (max(peak - 0.8, 0.0) / max(peak, 0.00001));
         }

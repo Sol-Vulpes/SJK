@@ -1477,6 +1477,10 @@ Both follow EternalJK's cgame (`cg_ents.c`, `cg_players.c`) and rd-vanilla's ren
   to 1, so there each stage lifts the scene at most twice in linear light, less than
   rd-vanilla's brightest; with HDR nothing saturates at display white as rd-vanilla's
   8-bit framebuffer does, so the brightest texels can go past it (into bloom).
+  Where the body's surfaces overlap (hands, head) the layers multiply each other, up to
+  the half-float limit; the scene bloom (`post_bloom.wgsl`) takes no pixel past a linear
+  4 (a NaN as black), since its blur spread those pixels into solid blue squares (hub
+  report #243; Absorb's shield hits, which blend the same way, could do it too).
   At 2.513 s that glow burns away from the body's origin (`RF_DISINTEGRATE2`), with the
   Force Sight sound for the light side and lightning for the dark. For the first 3.4 s
   the light side hums (`saberhum1`, for 2.2 s, at most once per 100 ms as EternalJK
