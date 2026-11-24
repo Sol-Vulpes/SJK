@@ -3025,6 +3025,12 @@ not drawn and take no input. The same look in every menu style, on the 16:9 fram
 - **Reloading:** on the main page the card stays while the menu map is built again,
   without its buttons: "Reloading the graphics..." and that it takes a few seconds.
   On a server the loading screen shows instead.
+- **Waits where a reload cannot run** (`reload_refusal`, the same reasons `vid_restart`
+  gives): while a map loads, while the menu world is built again after a match (the last
+  server's world under the menus meanwhile), in a demo or a map explored. Until 24/11/2026
+  it showed there too, and Reload now was refused while its Later mark kept the card
+  away for those changes, so the preset was not applied until it was picked and reloaded
+  a second time (hub #293).
 
 ## Playstyle card
 

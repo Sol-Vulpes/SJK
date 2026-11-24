@@ -27,8 +27,8 @@ use crate::console::ViewerConsole;
 /// presets were quality levels).
 pub(crate) const COMMAND: &str = "graphicsquality";
 /// Help text for completion and `cmdlist`.
-pub(crate) const HELP: &str = "Show or set the graphics preset: vanilla, vanillaplus, low, medium, \
-     high, ultra (the Solar Renderer's) or recommended";
+pub(crate) const HELP: &str = "Show or set the graphics preset: vanilla (EJK's look; ejk works \
+     too), vanillaplus, low, medium, high, ultra (the Solar Renderer's) or recommended";
 /// The Graphics preset row's stand-in for a cvar name: the command that sets it.
 pub(crate) const ROW_NAME: &str = COMMAND;
 /// Console command that sets the preset recommended for this PC ([`recommended`]); the
@@ -179,6 +179,18 @@ const VALUES: &[(&str, [&str; 6])] = &[
     // choice under every preset (Sol, 05/11/2026).
 ];
 
+/// Settings a preset sets, in the same order, that do not tell which preset the settings
+/// are ([`Level::current`] reads [`VALUES`] only), so a profile saved before one was
+/// added reads as the preset it was. Eye adaptation brightens dark rooms by up to 1 EV
+/// even on an 8-bit scene (`post_exposure.rs`), which the original game never did:
+/// Vanilla turns it off, for the look EternalJK draws (the graphics EJK mode sets, Creo's
+/// report of 23/11/2026 that Vanilla did not look like the original game); every other
+/// preset turns it back on, its default.
+const ALSO_SETS: &[(&str, [&str; 6])] = &[(
+    crate::frame_target::aa::exposure::ENABLED,
+    ["0", "1", "1", "1", "1", "1"],
+)];
+
 /// The video memory (MiB) each preset wants to run smoothly; [`Level::rating`] compares
 /// the card's with it. From the VRAM measurements in `docs/rendering.md` ("GPU memory"):
 /// the Vanilla family runs in 1-2 GB, the Solar Renderer's lamp cache, GI and shadow maps
@@ -308,13 +320,9 @@ impl Level {
             .count()
     }
 
-    /// Set the preset's values, saving the profile once.
+    /// Set the preset's values ([`VALUES`] and [`ALSO_SETS`]), saving the profile once.
     pub(crate) fn apply(self, console: &mut ViewerConsole) {
-        console.set_cvars(
-            VALUES
-                .iter()
-                .map(|(cvar, values)| (*cvar, values[self.index()])),
-        );
+        console.set_cvars(applied_cvars(self));
     }
 
     /// How the preset should run on a card of `mib` MiB of video memory (`None`: not
@@ -411,7 +419,7 @@ pub(crate) const VANILLA_MODE: crate::cvar_restore::Mode = crate::cvar_restore::
 };
 
 fn vanilla_values(_: &ViewerConsole) -> Vec<(&'static str, &'static str)> {
-    preset_cvars(Level::Vanilla)
+    applied_cvars(Level::Vanilla)
 }
 
 /// Set the renderer to `value` ([`VANILLA`] or [`SJK`], any case), as the
@@ -442,7 +450,7 @@ pub(crate) fn toggle_vanilla(console: &mut ViewerConsole) {
 }
 
 fn enter_vanilla(console: &mut ViewerConsole) {
-    crate::cvar_restore::put_aside(console, &VANILLA_MODE, &preset_cvars(Level::Vanilla));
+    crate::cvar_restore::put_aside(console, &VANILLA_MODE, &applied_cvars(Level::Vanilla));
 }
 
 /// Give back what `renderer vanilla` put aside. Still on Vanilla with no other mode
@@ -594,6 +602,16 @@ pub(crate) fn preset_cvars(level: Level) -> Vec<(&'static str, &'static str)> {
         .collect()
 }
 
+/// Every cvar picking `level` sets: [`preset_cvars`], then [`ALSO_SETS`]'s. `renderer
+/// vanilla` and EJK mode set Vanilla's.
+pub(crate) fn applied_cvars(level: Level) -> Vec<(&'static str, &'static str)> {
+    VALUES
+        .iter()
+        .chain(ALSO_SETS)
+        .map(|(cvar, values)| (*cvar, values[level.index()]))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -662,11 +680,31 @@ mod tests {
         }
     }
 
+    /// Vanilla turns eye adaptation off and the others on again, while a profile with it
+    /// on still reads as Vanilla (saved before Vanilla set it).
+    #[test]
+    fn vanilla_fixes_the_exposure_without_telling_presets_by_it() {
+        let (_directory, mut console) = console();
+        let exposure = crate::frame_target::aa::exposure::ENABLED;
+        for (cvar, _) in ALSO_SETS {
+            assert!(VALUES.iter().all(|(other, _)| other != cvar), "{cvar}");
+        }
+        Level::Vanilla.apply(&mut console);
+        assert!(holds(&console, exposure, "0"));
+        assert!(vanilla(&console));
+        Level::VanillaPlus.apply(&mut console);
+        assert!(holds(&console, exposure, "1"));
+        Level::Vanilla.apply(&mut console);
+        console.set_cvar(exposure, "1");
+        assert_eq!(Level::current(&console), Some(Level::Vanilla));
+        assert!(applied_cvars(Level::Vanilla).contains(&(exposure, "0")));
+    }
+
     #[test]
     fn every_value_is_one_its_settings_row_can_show() {
         let (_directory, mut console) = console();
         for level in Level::ALL {
-            for (cvar, values) in VALUES {
+            for (cvar, values) in VALUES.iter().chain(ALSO_SETS) {
                 let value = values[level.index()];
                 assert!(
                     crate::settings::row_takes(cvar, value),

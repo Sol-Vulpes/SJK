@@ -243,11 +243,7 @@ pub(crate) const TABLE: &[Entry] = &[
     entry(crate::tags::SHOW_CVAR, "0", "No tags on the walls"),
     entry(crate::tags::GIF_SHOW_CVAR, "0", "No GIF tags on the walls"),
     // The image and the weather, past the Vanilla preset.
-    entry(
-        crate::frame_target::aa::exposure::ENABLED,
-        "0",
-        "A fixed exposure: eye adaptation brightens dark rooms even without HDR",
-    ),
+    // A fixed exposure (`r_autoExposure 0`) is the Vanilla preset's since 24/11/2026.
     entry("r_toneCurve", "0", "No filmic curve over the image"),
     entry(
         crate::frame_target::aa::color::SHARPEN_CVAR,
@@ -276,7 +272,8 @@ pub(crate) const TABLE: &[Entry] = &[
 /// Every setting the mode sets and its value: the Vanilla graphics preset's, then
 /// [`TABLE`]'s (which names none of the preset's, a test).
 pub(crate) fn values() -> Vec<(&'static str, &'static str)> {
-    let mut values = crate::graphics_quality::preset_cvars(crate::graphics_quality::Level::Vanilla);
+    let mut values =
+        crate::graphics_quality::applied_cvars(crate::graphics_quality::Level::Vanilla);
     values.extend(TABLE.iter().map(|entry| (entry.cvar, entry.value)));
     values
 }
@@ -345,7 +342,7 @@ pub(crate) fn command(console: &mut ViewerConsole, args: &[String]) -> Result<Ve
         [word] if word.eq_ignore_ascii_case("list") => {
             let mut lines = vec![format!(
                 "EJK mode sets the Vanilla graphics preset ({} settings) and:",
-                crate::graphics_quality::preset_cvars(crate::graphics_quality::Level::Vanilla)
+                crate::graphics_quality::applied_cvars(crate::graphics_quality::Level::Vanilla)
                     .len()
             )];
             lines.extend(

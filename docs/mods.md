@@ -172,7 +172,12 @@ chat) and `clanwhois` (JoF), whose arguments are masked, and `loginpass`, which 
 `amsay` and `ampsay`, keep a line typed with one out of the session log, crash
 reports and log uploads, and divide a message over the server chat limit into complete
 word-boundary pieces through the same outgoing chat path as stock chat
-([identity.md](identity.md#crash-reports)). The console shows `amlogin ********` in its echo,
+([identity.md](identity.md#crash-reports)). `ampsay` is also an addressed chat command
+(`addressed_chat_commands`): its first word, the reader (`-1` for everyone), stays a
+word of its own ahead of the quoted message, `ampsay -1 "text"`, as JA+ reads it. Sent
+as one quoted argument, `ampsay "-1 text"`, JA+ took the whole line for the reader and
+printed nothing (hub #266); jaPRO's `amPsay <text>` joins its arguments again, so it
+reads the same either way. The console shows `amlogin ********` in its echo,
 listings and binds, and keeps no password in the scrollback, `qconsole.log`, the
 session log, crash reports or log uploads ([client.md](client.md#passwords-in-the-console)).
 The table applies from startup whatever the server and `mod_japlus`, and no setting

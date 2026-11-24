@@ -9,6 +9,12 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Ampsay keeps its reader out of the quoted message (hub #266)
+- 500e494 |  | ampsay keeps its reader out of the quoted message (hub #266)
++ 24/11/2026 | - | Reload card waits where the reload cannot run (hub #293)
+- b0ae96a |  | Reload card waits where the reload cannot run (hub #293)
++ 24/11/2026 | - | Vanilla preset holds the exposure fixed: EJK's graphics (Creo)
+- ce34b7c |  | Vanilla preset holds the exposure fixed: EJK's graphics (Creo)
 + 24/11/2026 | - | Bloom: no solid squares from a fading light-side body (hub #243)
 - d058b54 |  | Bloom: no solid squares from a fading light-side body (hub #243)
 + 24/11/2026 | - | Draw Ghoul2 bones unsquashed, as rd-vanilla's EvalRender (hub #246)

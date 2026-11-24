@@ -170,6 +170,10 @@ pub struct Secrets {
     pub cvar_parts: &'static [&'static str],
     /// Commands whose arguments are a chat message (`amsay`).
     pub chat_commands: &'static [&'static str],
+    /// Those of [`Self::chat_commands`] whose first argument names who reads the
+    /// message (a client number, or `-1` for everyone: JA+ `ampsay`). The client
+    /// sends it as its own word ahead of the quoted message, as typed.
+    pub addressed_chat_commands: &'static [&'static str],
 }
 
 /// A client mod.

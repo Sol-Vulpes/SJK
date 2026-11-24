@@ -560,12 +560,17 @@ impl crate::GpuState {
     }
 
     fn outgoing_chat_parts(&mut self, command: &str) -> Option<Vec<String>> {
-        let mod_chat = self
+        let (mod_chat, addressed) = self
             .console
             .as_ref()
-            .map(|console| console.mod_chat_commands())
+            .map(|console| {
+                (
+                    console.mod_chat_commands(),
+                    console.mod_addressed_chat_commands(),
+                )
+            })
             .unwrap_or_default();
-        match split_outgoing_chat(command, mod_chat) {
+        match split_outgoing_chat(command, mod_chat, addressed) {
             Ok(commands) => Some(commands),
             Err(_) => {
                 const TOO_LONG: &str = "Message is too long (four chat messages maximum).";
@@ -603,9 +608,13 @@ impl crate::GpuState {
     }
 }
 
+/// `command` in pieces the server takes, each a whole chat command. `mod_chat` are
+/// the mods' chat commands; `addressed`, those of them whose first argument is the
+/// reader (JA+ `ampsay <player|-1> <text>`), which stays a word of its own.
 fn split_outgoing_chat(
     command: &str,
     mod_chat: &[&str],
+    addressed: &[&str],
 ) -> Result<Vec<String>, sjk_client::ChatDraftTooLong> {
     let Ok(tokens) = sjk_shell::tokenize(command) else {
         return Ok(vec![command.to_owned()]);
@@ -629,16 +638,40 @@ fn split_outgoing_chat(
     } else {
         return Ok(vec![command.to_owned()]);
     };
+    // `ampsay -1 hi` sent as `ampsay "-1 hi"` reached JA+ as one argument, a
+    // reader with no message, and nothing showed (hub #266).
+    let lead = match tokens.as_slice() {
+        [_, reader, _, ..]
+            if destination.is_none()
+                && addressed.iter().any(|name| verb.eq_ignore_ascii_case(name)) =>
+        {
+            Some(reader)
+        }
+        _ => None,
+    };
+    let text = match lead {
+        Some(_) => tokens[2..].join(" "),
+        None => text,
+    };
     let text = sjk_client::chat_unescape(&text);
     if let Some(destination) = destination {
         return sjk_client::chat_commands(destination, &text);
     }
+    let lead = lead.map_or_else(String::new, |reader| format!(" {}", command_word(reader)));
     sjk_client::chat_commands(ChatDestination::Global, &text).map(|commands| {
         commands
             .into_iter()
-            .map(|piece| format!("{verb}{}", &piece[3..]))
+            .map(|piece| format!("{verb}{lead}{}", &piece[3..]))
             .collect()
     })
+}
+
+/// `word` as one command argument: bare when it needs no quotes.
+fn command_word(word: &str) -> String {
+    if !word.is_empty() && !word.contains(|c: char| c.is_whitespace() || c == '"' || c == ';') {
+        return word.to_owned();
+    }
+    format!("\"{}\"", word.replace('"', "'"))
 }
 
 fn whisper_destination(command: &str) -> Option<u16> {
@@ -670,7 +703,7 @@ mod whisper_destination_tests {
         let text = format!("{} % \"end\"", "many words ".repeat(40));
         let full = sjk_client::chat_command_full(sjk_client::ChatDestination::Global, &text)
             .expect("chat");
-        let pieces = split_outgoing_chat(&full, &[]).expect("four messages");
+        let pieces = split_outgoing_chat(&full, &[], &[]).expect("four messages");
         assert!(pieces.len() >= 3);
         assert!(pieces.iter().all(|piece| {
             let tokens = sjk_shell::tokenize(piece).expect("safe command");
@@ -680,6 +713,7 @@ mod whisper_destination_tests {
         let pieces = split_outgoing_chat(
             &format!("clansay \"{}\"", "clan words ".repeat(30)),
             &["clansay"],
+            &[],
         )
         .expect("four messages");
         assert!(pieces.len() > 1);
@@ -687,17 +721,43 @@ mod whisper_destination_tests {
 
         // The encrypted-whisper failure card's Send unencrypted choice uses this
         // same splitter instead of handing its full stored command to the server.
-        let pieces =
-            split_outgoing_chat(&format!("tell 7 \"{}\"", "private words ".repeat(30)), &[])
-                .expect("four-message whisper");
+        let pieces = split_outgoing_chat(
+            &format!("tell 7 \"{}\"", "private words ".repeat(30)),
+            &[],
+            &[],
+        )
+        .expect("four-message whisper");
         assert!(pieces.len() > 1);
         assert!(pieces.iter().all(|piece| piece.starts_with("tell 7 \"")));
     }
 
     #[test]
+    fn an_addressed_mod_chat_keeps_its_reader_out_of_the_message() {
+        let mods = ["ampsay", "clansay"];
+        let addressed = ["ampsay"];
+        let pieces = split_outgoing_chat("ampsay -1 hello there", &mods, &addressed).unwrap();
+        assert_eq!(pieces, ["ampsay -1 \"hello there\""]);
+        let pieces = split_outgoing_chat("AMPSAY 3 hi", &mods, &addressed).unwrap();
+        assert_eq!(pieces, ["AMPSAY 3 \"hi\""]);
+        let tokens = sjk_shell::tokenize(&pieces[0]).unwrap();
+        assert_eq!(tokens, ["AMPSAY", "3", "hi"]);
+        // A long message keeps its reader in every piece.
+        let long = format!("ampsay -1 {}", "centre words ".repeat(30));
+        let pieces = split_outgoing_chat(&long, &mods, &addressed).unwrap();
+        assert!(pieces.len() > 1);
+        assert!(pieces.iter().all(|piece| piece.starts_with("ampsay -1 \"")));
+        // Only the reader: no message to keep apart.
+        let pieces = split_outgoing_chat("ampsay -1", &mods, &addressed).unwrap();
+        assert_eq!(pieces, ["ampsay \"-1\""]);
+        // An unaddressed mod chat is one quoted message, as before.
+        let pieces = split_outgoing_chat("clansay -1 hi", &mods, &addressed).unwrap();
+        assert_eq!(pieces, ["clansay \"-1 hi\""]);
+    }
+
+    #[test]
     fn refuses_more_than_four_pieces() {
         assert_eq!(
-            split_outgoing_chat(&format!("say \"{}\"", "%".repeat(1_200)), &[]),
+            split_outgoing_chat(&format!("say \"{}\"", "%".repeat(1_200)), &[], &[]),
             Err(sjk_client::ChatDraftTooLong)
         );
     }

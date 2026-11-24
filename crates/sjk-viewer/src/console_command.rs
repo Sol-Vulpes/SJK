@@ -6,6 +6,9 @@ impl ViewerConsole {
     pub(crate) fn mod_chat_commands(&self) -> &[&'static str] {
         self.mods.chat_commands()
     }
+    pub(crate) fn mod_addressed_chat_commands(&self) -> &[&'static str] {
+        self.mods.addressed_chat_commands()
+    }
 
     pub(crate) fn drain_input(&mut self) -> std::vec::Drain<'_, String> {
         self.pending_input.drain(..)

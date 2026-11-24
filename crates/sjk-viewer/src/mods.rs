@@ -71,6 +71,9 @@ pub(crate) struct Mods {
     /// Every built-in mod's chat commands ([`sjk_mod::Secrets::chat_commands`]),
     /// whatever its switch and the server.
     chat_commands: Vec<&'static str>,
+    /// Those whose first argument is the reader
+    /// ([`sjk_mod::Secrets::addressed_chat_commands`]).
+    addressed_chat_commands: Vec<&'static str>,
 }
 
 impl Mods {
@@ -82,6 +85,11 @@ impl Mods {
         let chat_commands = modules
             .iter()
             .flat_map(|module| module.secrets().chat_commands)
+            .copied()
+            .collect();
+        let addressed_chat_commands = modules
+            .iter()
+            .flat_map(|module| module.secrets().addressed_chat_commands)
             .copied()
             .collect();
         Self {
@@ -96,6 +104,7 @@ impl Mods {
                 .collect(),
             server: None,
             chat_commands,
+            addressed_chat_commands,
         }
     }
 
@@ -103,6 +112,12 @@ impl Mods {
     /// with one stays out of crash reports and logs (`crash_report::typed_chat`).
     pub(crate) fn chat_commands(&self) -> &[&'static str] {
         &self.chat_commands
+    }
+
+    /// The chat commands whose first argument names the reader (JA+ `ampsay`): the
+    /// outgoing splitter keeps it out of the quoted message.
+    pub(crate) fn addressed_chat_commands(&self) -> &[&'static str] {
+        &self.addressed_chat_commands
     }
 
     /// Register every mod's switch and settings; settings are kept while a mod

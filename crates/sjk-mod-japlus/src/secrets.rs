@@ -48,11 +48,19 @@ const CHAT_COMMANDS: &[&str] = &[
     "ampsay",
 ];
 
+/// Chat commands whose first argument is the reader: `ampsay <player|-1> <text>`
+/// (JA+ 2.4; SJK's JA+ server mode, `sjk-dedicated` `bridge_admin_effects.rs`).
+/// Sent quoted with the message, the number was read as part of it and JA+ printed
+/// nothing (hub #266). jaPRO's `amPsay <text>` (JoF EJK `g_cmds.c` `Cmd_Ampsay_f`)
+/// joins every argument again, so the separate word changes nothing there.
+const ADDRESSED_CHAT_COMMANDS: &[&str] = &["ampsay"];
+
 /// The table the client applies from startup.
 pub(crate) const SECRETS: Secrets = Secrets {
     commands: COMMANDS,
     cvar_parts: CVAR_PARTS,
     chat_commands: CHAT_COMMANDS,
+    addressed_chat_commands: ADDRESSED_CHAT_COMMANDS,
 };
 
 #[cfg(test)]
@@ -79,8 +87,12 @@ mod tests {
             .iter()
             .chain(SECRETS.cvar_parts)
             .chain(SECRETS.chat_commands)
+            .chain(SECRETS.addressed_chat_commands)
         {
             assert_eq!(*word, word.to_ascii_lowercase());
+        }
+        for word in SECRETS.addressed_chat_commands {
+            assert!(SECRETS.chat_commands.contains(word), "{word}");
         }
     }
 
