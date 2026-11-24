@@ -137,6 +137,7 @@ impl Tools {
         let mut tools = Self {
             said: snapshot
                 .and_then(|snapshot| snapshot.tag_trade.as_ref())
+                .filter(|outcome| answers(outcome, tag, finish))
                 .map(|outcome| (crate::tag_copies::outcome_words(outcome), outcome.done())),
             ..Self::default()
         };
@@ -170,6 +171,18 @@ impl Tools {
             None => {}
         }
         tools
+    }
+}
+
+/// Whether `outcome` answers a Break down or Craft of `tag` in `finish`: only that
+/// card shows it. A GIF tag's answer, or one for another tag, stood under every
+/// tag's buttons in place of why Craft waits (24/11/2026).
+fn answers(outcome: &sjk_identity::TagOutcome, tag: &crate::tags::Tag, finish: &str) -> bool {
+    let this = |copy: &sjk_identity::TagCopy| copy.id == tag.id && copy.finish == finish;
+    match &outcome.trade {
+        sjk_identity::TagTrade::Shatter(copy) => this(copy),
+        sjk_identity::TagTrade::Craft(copies) => copies.iter().any(this),
+        sjk_identity::TagTrade::Gif(_) => false,
     }
 }
 
@@ -1476,6 +1489,36 @@ mod tests {
     use super::*;
 
     const TAGS_HEAD: &str = "Alpha collection";
+
+    /// A tag's card shows only the answer to its own Break down or Craft, never a GIF
+    /// tag's or another tag's, so why Craft waits is not hidden.
+    #[test]
+    fn a_card_shows_only_its_own_answer() {
+        let gonk = crate::tags::get("tag_gonk").unwrap();
+        let copy = |id: &str, finish: &str| sjk_identity::TagCopy::new(id, finish);
+        let outcome = |trade| sjk_identity::TagOutcome {
+            serial: 1,
+            trade,
+            shards: 0,
+            crafted: None,
+            message: String::new(),
+        };
+        let gif = outcome(sjk_identity::TagTrade::Gif("abc".to_owned()));
+        assert!(!answers(&gif, gonk, "normal"));
+        let shatter = outcome(sjk_identity::TagTrade::Shatter(copy("tag_gonk", "holo")));
+        assert!(answers(&shatter, gonk, "holo"));
+        assert!(!answers(&shatter, gonk, "normal"));
+        let craft = outcome(sjk_identity::TagTrade::Craft([
+            copy("tag_kyber", "normal"),
+            copy("tag_gonk", "normal"),
+        ]));
+        assert!(answers(&craft, gonk, "normal"));
+        let kyber_only = outcome(sjk_identity::TagTrade::Craft([
+            copy("tag_kyber", "normal"),
+            copy("tag_kyber", "normal"),
+        ]));
+        assert!(!answers(&kyber_only, gonk, "normal"));
+    }
 
     /// The tags stand under their collections, Alpha then Community, then the cards.
     #[test]

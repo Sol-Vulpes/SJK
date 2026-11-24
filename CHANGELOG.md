@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 - Collection > Achievements: a category's count no longer runs into its name, and a medallion's name no longer runs into the next one's with a larger menu text size or letter spacing; a name too wide for its cell breaks into two lines. A category with every achievement held says "Completed" in gold instead of "5 of 5" _(Kushina, PR #448)_
+- Collection > Tags: the line under Break down and Craft no longer says "Made: your GIF tag. It is yours for good." on every tag after a GIF tag is made; the hub's answer shows only on the card of the tag and finish it was for, and the others say again why Craft waits _(Kushina, PR #449)_
 
 ## 2026.1124.1 (Beta) | 24/11/2026
 
