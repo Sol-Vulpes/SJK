@@ -5,7 +5,10 @@
 //! +1 ms or -2 ms if a frame approached the newest snapshot within 5 ms.
 //! The feedback ignores time nudge; sampling subtracts it and never rewinds.
 //! Unlike stock's first/reset frame, seed one interval behind the newest
-//! snapshot: our runtime retains only the last two samples, not a snap queue.
+//! snapshot: the runtime keeps a few samples per entity
+//! ([`sjk_runtime::MOTION_HISTORY`]), not a snap queue. That drift settles the drawn
+//! time a little more than one interval behind the newest snapshot, so the runtime
+//! must still interpolate the pair before it.
 //! Keep fractional milliseconds across arrivals; never clamp time to a packet.
 
 use std::sync::Arc;
@@ -172,5 +175,94 @@ impl SnapshotPresentationClock {
         let elapsed = now.saturating_duration_since(self.anchor_instant);
         self.anchor_server_micros
             .saturating_add(i64::try_from(elapsed.as_micros()).unwrap_or(i64::MAX))
+    }
+}
+
+#[cfg(test)]
+mod remote_motion_tests {
+    use super::*;
+    use sjk_runtime::{EntityId, EntityKind, MotionSample, Transform, World, WorldId};
+    use std::time::Duration;
+
+    /// Run 20 s of a remote player running at 300 units/s, its snapshots every
+    /// `interval` ms after 40 ms plus up to `jitter` ms, through this clock and a
+    /// presentation world, drawing every 4 ms. Returns the frames drawn, how many were
+    /// drawn before the second newest snapshot, and the largest distance from where
+    /// cgame, interpolating its snapshot queue, would draw the player.
+    fn run(interval: i64, jitter: i64) -> (u32, u32, f32) {
+        let start = Instant::now();
+        let mut world = World::new(WorldId::new(1));
+        let id = EntityId::new(1);
+        let mut clock: Option<SnapshotPresentationClock> = None;
+        let mut next_snapshot = 1_000_i64;
+        let mut in_flight: Vec<(i64, i64)> = Vec::new();
+        let (mut frames, mut behind, mut worst) = (0, 0, 0.0_f32);
+        let mut seed = 1_u32;
+        for millis in 0..20_000_i64 {
+            let now = start + Duration::from_millis(millis as u64);
+            while next_snapshot - 1_000 <= millis {
+                seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+                let delay = 40 + i64::from(seed >> 16) % (jitter + 1);
+                in_flight.push((next_snapshot, next_snapshot - 1_000 + delay));
+                next_snapshot += interval;
+            }
+            in_flight.sort_by_key(|&(_, arrival)| arrival);
+            while in_flight
+                .first()
+                .is_some_and(|&(_, arrival)| arrival <= millis)
+            {
+                let (server_time, _) = in_flight.remove(0);
+                let transform = Transform {
+                    translation: [server_time as f32 * 0.3, 0.0, 0.0],
+                    ..Transform::IDENTITY
+                };
+                world.upsert(
+                    id,
+                    EntityKind::Actor,
+                    MotionSample {
+                        time_millis: server_time,
+                        transform,
+                    },
+                );
+                match &mut clock {
+                    None => clock = Some(SnapshotPresentationClock::new(server_time as i32, now)),
+                    Some(clock) => {
+                        clock.receive_snapshot(server_time as i32, now);
+                    }
+                }
+            }
+            // Past the clock's settling, on the frames drawn.
+            let Some(clock) = clock
+                .as_mut()
+                .filter(|_| millis >= 5_000 && millis % 4 == 0)
+            else {
+                continue;
+            };
+            let time = clock.sample(now);
+            let entity = world.entity(id).expect("player");
+            let newest = entity.current().time_millis;
+            let drawn = entity.sample(time).translation[0];
+            // cgame holds the newest snapshot once past it, and interpolates otherwise.
+            let stock = time.min(newest) as f32 * 0.3;
+            frames += 1;
+            behind += u32::from(time < newest - interval);
+            worst = worst.max((drawn - stock).abs());
+        }
+        (frames, behind, worst)
+    }
+
+    #[test]
+    fn remote_players_move_between_the_snapshots_the_stock_clock_draws() {
+        // JoF's sv_fps 30, base 20 and 40, with and without arrival jitter.
+        for (interval, jitter) in [(33, 0), (33, 6), (33, 15), (50, 0), (25, 0)] {
+            let (frames, behind, worst) = run(interval, jitter);
+            // The stock clock draws a good share of frames before the second newest
+            // snapshot; those held it with only two kept (up to 4.5 units off).
+            assert!(
+                behind * 20 > frames,
+                "{interval}/{jitter}: {behind} of {frames}"
+            );
+            assert!(worst < 0.01, "{interval}/{jitter}: {worst} units off");
+        }
     }
 }
