@@ -62,9 +62,28 @@ const GUTTER: f32 = 40.0;
 /// Free-for-all's first row; a team's, under its head.
 const LIST_TOP: f32 = 206.0;
 const TEAM_TOP: f32 = 316.0;
-/// Rows end here; the spectators' line sits under them.
+/// Rows end here; the spectators' lines sit under them.
 const BOTTOM: f32 = 962.0;
 const SPECTATORS_Y: f32 = 1002.0;
+/// The spectators' lines: how far apart, how many fit under [`BOTTOM`]
+/// (more lift the rows' end), the names' size and what parts them.
+const SPECTATOR_LINE: f32 = 24.0;
+const SPECTATOR_LINES: usize = 3;
+const SPECTATOR_SIZE: f32 = 17.0;
+const SPECTATOR_SEPARATOR: &str = "  ·  ";
+/// The widths a spectator's name is cut to, in turn, while the names do not
+/// fit (frame pixels at [`SPECTATOR_SIZE`]).
+const SPECTATOR_NAME_CUTS: [f32; 2] = [180.0, 110.0];
+const SPECTATORS_LABEL: &str = "Watching";
+
+/// How many spectators' lines fit under rows that end at `bottom`: the first
+/// as far under them as [`SPECTATORS_Y`] is under [`BOTTOM`], the last where
+/// the last of [`SPECTATOR_LINES`] stands under [`BOTTOM`].
+fn spectator_lines_under(bottom: f32) -> usize {
+    let first = bottom + (SPECTATORS_Y - BOTTOM);
+    let last = SPECTATORS_Y + (SPECTATOR_LINES - 1) as f32 * SPECTATOR_LINE;
+    ((last - first) / SPECTATOR_LINE + 1e-3).floor().max(0.0) as usize + 1
+}
 /// Row heights: the most, the least before a list splits in two, the least
 /// at all.
 const ROW_MOST: f32 = 52.0;
@@ -330,19 +349,105 @@ impl fmt::Display for LimitWords {
     }
 }
 
-/// The spectators' names without their colours, one after another.
-struct Watching<'a>(&'a [ScoreRow]);
+/// The spectators' names without their colours.
+fn spectator_names(rows: &[ScoreRow]) -> Vec<String> {
+    rows.iter()
+        .filter(|row| watching(row))
+        .map(|row| Plain(&row.name).to_string())
+        .collect()
+}
 
-impl fmt::Display for Watching<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (index, row) in self.0.iter().filter(|row| watching(row)).enumerate() {
-            if index > 0 {
-                formatter.write_str("  ·  ")?;
-            }
-            write!(formatter, "{}", Plain(&row.name))?;
-        }
-        Ok(())
+/// `name` as it is when `width` of it is at most `most`, else cut to fit
+/// with ".." after it.
+fn cut_name(name: &str, most: f32, width: &impl Fn(&str) -> f32) -> String {
+    if width(name) <= most {
+        return name.to_owned();
     }
+    let mut kept = name.trim_end().to_owned();
+    while !kept.is_empty() {
+        kept.pop();
+        let cut = format!("{}..", kept.trim_end());
+        if width(&cut) <= most {
+            return cut;
+        }
+    }
+    "..".to_owned()
+}
+
+/// `names` one after another in lines at most `room` wide, broken between
+/// names (a name wider than a line stands alone): at most `most` lines, the
+/// last ending "and n more" when they do not all fit.
+fn spectator_lines(
+    names: &[String],
+    room: f32,
+    most: usize,
+    width: &impl Fn(&str) -> f32,
+) -> Vec<String> {
+    let most = most.max(1);
+    let mut lines: Vec<Vec<&str>> = Vec::new();
+    for (index, name) in names.iter().enumerate() {
+        if let Some(line) = lines.last_mut() {
+            line.push(name.as_str());
+            if width(&line.join(SPECTATOR_SEPARATOR)) <= room {
+                continue;
+            }
+            line.pop();
+        }
+        if lines.len() == most {
+            let mut last = lines.pop().unwrap_or_default();
+            let mut left = names.len() - index;
+            let cut = loop {
+                let more = format!("and {left} more");
+                if last.is_empty() {
+                    break more;
+                }
+                let line = format!("{}{SPECTATOR_SEPARATOR}{more}", last.join(SPECTATOR_SEPARATOR));
+                if width(&line) <= room {
+                    break line;
+                }
+                last.pop();
+                left += 1;
+            };
+            let mut joined: Vec<String> = lines
+                .iter()
+                .map(|line| line.join(SPECTATOR_SEPARATOR))
+                .collect();
+            joined.push(cut);
+            return joined;
+        }
+        lines.push(vec![name.as_str()]);
+    }
+    lines
+        .iter()
+        .map(|line| line.join(SPECTATOR_SEPARATOR))
+        .collect()
+}
+
+/// The spectators' lines in `most` lines `room` wide: the whole names when
+/// they fit, else cut shorter in turn ([`SPECTATOR_NAME_CUTS`]) until they
+/// do, the shortest cut ending "and n more" when even that does not fit.
+fn spectator_block(
+    names: &[String],
+    room: f32,
+    most: usize,
+    width: &impl Fn(&str) -> f32,
+) -> Vec<String> {
+    let whole = spectator_lines(names, room, usize::MAX, width);
+    if whole.len() <= most {
+        return whole;
+    }
+    let mut shortest = Vec::new();
+    for limit in SPECTATOR_NAME_CUTS {
+        shortest = names
+            .iter()
+            .map(|name| cut_name(name, limit, width))
+            .collect();
+        let lines = spectator_lines(&shortest, room, usize::MAX, width);
+        if lines.len() <= most {
+            return lines;
+        }
+    }
+    spectator_lines(&shortest, room, most, width)
 }
 
 fn watching(row: &ScoreRow) -> bool {
@@ -596,6 +701,9 @@ struct Painter<'a> {
     motion: &'a mut Motion,
     /// The least left edge a compact board takes ([`chat_clear`]).
     clear: f32,
+    /// Where the rows end: [`BOTTOM`], or higher to make room for many
+    /// spectators ([`Painter::rows_bottom`]).
+    bottom: f32,
 }
 
 /// Build the SJK UI's scoreboard into `ui`.
@@ -620,8 +728,17 @@ pub(super) fn build(
         flags,
         motion,
         clear: chat_clear(&frame, viewport),
+        bottom: BOTTOM,
     };
-    let board = painter.board(rows);
+    let mut board = painter.board(rows);
+    // Spectators who need more than the lines under the rows lift the rows'
+    // end; the board is laid out again for the room left.
+    if !rows.is_empty() && !matches!(header.gametype, DUEL | POWER_DUEL) {
+        painter.bottom = painter.rows_bottom(rows, &board);
+        if painter.bottom < BOTTOM {
+            board = painter.board(rows);
+        }
+    }
     dim(painter.ui, &frame, viewport, board.span);
     match outcome(header) {
         Some(Outcome::Won(RED)) => won_tint(painter.ui, viewport, RED_TEAM),
@@ -998,7 +1115,7 @@ impl Painter<'_> {
         } else {
             (ROW_MOST, ROW_SPLIT, ROW_FLOOR)
         };
-        let height = list.bottom - list.top;
+        let height = self.bottom - list.top;
         let halves = if list.split && total > 0 && height / (total as f32) < split_below {
             2
         } else {
@@ -1605,37 +1722,90 @@ impl Painter<'_> {
         });
     }
 
-    /// Spectators on one line under the lists, from their left edge, their
-    /// names without colours.
+    /// Spectators under the lists, from their left edge after "Watching",
+    /// their names without colours in as many lines as the board's width
+    /// needs ([`spectator_block`]).
     fn spectators(&mut self, rows: &[ScoreRow], board: &Board) {
-        if !rows.iter().any(watching) {
+        let names = spectator_names(rows);
+        if names.is_empty() {
             return;
         }
-        let label = "Watching";
-        let label_width = self.width(TextFamily::Display, label, 20.0, FontWeight::Semibold);
+        let (x, room) = self.spectator_room(board);
+        let most = spectator_lines_under(self.bottom);
+        let width = |line: &str| self.spectator_width(line);
+        let lines = spectator_block(&names, room, most, &width);
+        let y = self.bottom + (SPECTATORS_Y - BOTTOM);
         self.run(
             TextFamily::Display,
-            format_args!("{label}"),
+            format_args!("{SPECTATORS_LABEL}"),
             board.x,
-            SPECTATORS_Y,
-            label_width + 8.0,
+            y,
+            x - board.x,
             20.0,
             color::holo(),
             FontWeight::Semibold,
             TextAlign::Start,
         );
-        let x = board.x + label_width + 18.0;
-        self.run(
-            TextFamily::Body,
-            format_args!("{}", Watching(rows)),
-            x,
-            SPECTATORS_Y + 1.0,
-            RIGHT - x,
-            17.0,
-            color::muted(),
-            FontWeight::Regular,
-            TextAlign::Start,
-        );
+        for (index, line) in lines.iter().enumerate() {
+            self.run(
+                TextFamily::Body,
+                format_args!("{line}"),
+                x,
+                y + 1.0 + index as f32 * SPECTATOR_LINE,
+                room,
+                SPECTATOR_SIZE,
+                color::muted(),
+                FontWeight::Regular,
+                TextAlign::Start,
+            );
+        }
+    }
+
+    /// Where the spectators' names start and how wide their lines may be: to
+    /// the board's right end, a compact board's band included.
+    fn spectator_room(&self, board: &Board) -> (f32, f32) {
+        let label = self.width(TextFamily::Display, SPECTATORS_LABEL, 20.0, FontWeight::Semibold);
+        let x = board.x + label + 18.0;
+        let right = board.span.map_or(RIGHT, |[_, right]| right);
+        (x, (right - x).max(0.0))
+    }
+
+    /// Width of a spectators' line.
+    fn spectator_width(&self, line: &str) -> f32 {
+        self.width(TextFamily::Body, line, SPECTATOR_SIZE, FontWeight::Regular)
+    }
+
+    /// Where the rows end: [`BOTTOM`], or as many lines higher as the
+    /// spectators need past [`SPECTATOR_LINES`], as far as the rows still
+    /// fit at their least height.
+    fn rows_bottom(&self, rows: &[ScoreRow], board: &Board) -> f32 {
+        let names = spectator_names(rows);
+        if names.is_empty() {
+            return BOTTOM;
+        }
+        let floor = if self.header.compact {
+            COMPACT_FLOOR
+        } else {
+            ROW_FLOOR
+        };
+        let (top, per) = if self.header.gametype >= TEAM {
+            let most = [RED, BLUE]
+                .into_iter()
+                .map(|team| rows.iter().filter(|row| row.team == team).count())
+                .max()
+                .unwrap_or(0);
+            (TEAM_TOP, most)
+        } else {
+            // Free for all splits a long list in two.
+            let players = rows.iter().filter(|row| !watching(row)).count();
+            (LIST_TOP, players.div_ceil(2))
+        };
+        let highest = (top + per as f32 * floor).min(BOTTOM);
+        let (_, room) = self.spectator_room(board);
+        let width = |line: &str| self.spectator_width(line);
+        let lines = spectator_block(&names, room, spectator_lines_under(highest), &width);
+        let extra = lines.len().saturating_sub(SPECTATOR_LINES) as f32 * SPECTATOR_LINE;
+        (BOTTOM - extra).max(highest)
     }
 
     /// The rows `member` takes from `rows`, in their order, as `list` says:
@@ -2079,7 +2249,6 @@ struct List {
     x: f32,
     width: f32,
     top: f32,
-    bottom: f32,
     kind: Kind,
     numbered: bool,
     /// The rows may stand in two lists side by side.
@@ -2095,7 +2264,6 @@ impl List {
             x: BOARD_LEFT,
             width: BOARD_WIDTH,
             top: LIST_TOP,
-            bottom: BOTTOM,
             kind: Kind::Free,
             numbered: true,
             split: true,
@@ -2109,7 +2277,6 @@ impl List {
             x: BOARD_LEFT,
             width: (BOARD_WIDTH - GUTTER) * 0.5,
             top: TEAM_TOP,
-            bottom: BOTTOM,
             kind: Kind::Team { capture },
             numbered: false,
             split: false,
@@ -2123,7 +2290,6 @@ impl List {
             x: BOARD_LEFT,
             width: BOARD_WIDTH,
             top: 530.0,
-            bottom: BOTTOM,
             kind: Kind::Waiting,
             numbered: true,
             split: true,
@@ -2640,6 +2806,99 @@ mod tests {
                 let watching: Vec<_> = (0..32).map(|client| row(client, SPECTATOR, 0)).collect();
                 let ui = draw(&watching, &with(header(0, 0)), viewport);
                 assert!(!ui.overflowed(), "spectators at {viewport:?}");
+            }
+        }
+    }
+
+    /// Spectators' names break into lines between names, no line wider than
+    /// its room; past the lines there is room for, the last ends "and n more".
+    #[test]
+    fn spectator_names_break_into_lines() {
+        let width = |line: &str| line.chars().count() as f32 * 10.0;
+        let names: Vec<String> = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
+            .map(String::from)
+            .to_vec();
+        let lines = spectator_lines(&names, 200.0, usize::MAX, &width);
+        assert_eq!(lines, ["Alpha  ·  Bravo", "Charlie  ·  Delta", "Echo"]);
+        let lines = spectator_lines(&names, 240.0, 2, &width);
+        assert_eq!(lines, ["Alpha  ·  Bravo", "Charlie  ·  and 2 more"]);
+        // Too many for the lines: the names are cut before any is left out.
+        let long: Vec<String> = ["Alpha Centauri Prime", "Bravo Company Leader", "Charlie Unit"]
+            .map(String::from)
+            .to_vec();
+        let block = spectator_block(&long, 280.0, 2, &width);
+        assert_eq!(block, ["Alpha Cen..  ·  Bravo Com..", "Charlie U.."]);
+        assert_eq!(cut_name("JoF Slayer", 70.0, &width), "JoF S..");
+        assert_eq!(cut_name("JoF", 70.0, &width), "JoF");
+    }
+
+    /// Many spectators with long names stay on the board: their lines break
+    /// before its right end, lift the rows' end when they need more than the
+    /// lines under it, and stay on the screen, every one of them told.
+    #[test]
+    fn many_spectators_break_into_lines_on_the_board() {
+        for viewport in VIEWPORTS {
+            let frame = Frame::new(viewport);
+            for compact in [false, true] {
+                for gametype in [0, CTF] {
+                    let rows: Vec<_> = (0..32)
+                        .map(|client| {
+                            let team = match (client < 6, gametype) {
+                                (false, _) => SPECTATOR,
+                                (true, 0) => 0,
+                                (true, _) => 1 + client % 2,
+                            };
+                            let mut row = row(client, team, 5);
+                            if team == SPECTATOR {
+                                row.name = format!("^3{{JoFA}}^7Spectator number {client}");
+                            }
+                            row
+                        })
+                        .collect();
+                    let mut header = header(gametype, 0);
+                    header.compact = compact;
+                    let ui = draw(&rows, &header, viewport);
+                    let case = format!("{gametype} compact {compact} at {viewport:?}");
+                    assert!(!ui.overflowed(), "{case}");
+                    let right = if compact {
+                        edges(&ui)[1]
+                    } else {
+                        frame.point(RIGHT, 0.0)[0]
+                    };
+                    let runs = placed_runs(&ui);
+                    let (_, label) = runs
+                        .iter()
+                        .find(|(run, _)| run == SPECTATORS_LABEL)
+                        .expect("Watching");
+                    let rules_end = list_rules(&ui)
+                        .iter()
+                        .map(|rule| rule.y + rule.height)
+                        .fold(0.0, f32::max);
+                    assert!(rules_end <= label.y, "{case}: rows under the spectators");
+                    let lines: Vec<_> = runs
+                        .iter()
+                        .filter(|(_, rect)| rect.y >= label.y - 0.5 && rect.x > label.x + 1.0)
+                        .collect();
+                    assert!(lines.len() > 1, "{case}: one line");
+                    let mut told = 0;
+                    for (line, rect) in &lines {
+                        let width = Measure::default().width(
+                            TextFamily::Body,
+                            line,
+                            SPECTATOR_SIZE * frame.s,
+                            FontWeight::Regular,
+                        );
+                        assert!(rect.x + width <= right + 0.5, "{case}: {line}");
+                        assert!(rect.y + rect.height <= viewport[1], "{case}: {line}");
+                        for name in line.split(SPECTATOR_SEPARATOR) {
+                            told += name
+                                .strip_prefix("and ")
+                                .and_then(|more| more.strip_suffix(" more"))
+                                .map_or(1, |more| more.parse::<usize>().expect("count"));
+                        }
+                    }
+                    assert_eq!(told, 26, "{case}");
+                }
             }
         }
     }

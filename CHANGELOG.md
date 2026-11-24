@@ -30,6 +30,10 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
+## Unreleased
+
+- Scoreboard: the spectators' names no longer run past the board's edge. They break into more lines under "Watching", the rows make room when many watch, and long names are shortened with ".." only when they still would not fit _(Kushina)_
+
 ## 2026.1124.1 (Beta) | 24/11/2026
 
 Fixes from your reports: smoother players, sounds back, the KR server and a lighter Collection.
