@@ -74,12 +74,15 @@ impl WidgetData<'_> {
     /// The classic layout's centre weapon panel: on foot, holding a weapon that counts
     /// ammunition or a saber with a style. It gives way to the weapon selection row,
     /// which retail draws in the same place (`y = 410`) and which names the weapon.
+    /// A saber's panel only names the weapon and its style, which the ground HUD's
+    /// stance dot already shows, so it gives way to the ground HUD too (24/11/2026);
+    /// a weapon's ammunition stays.
     fn weapon_panel(&self) -> bool {
         self.visibility.weapon
             && !self.visibility.menu_hud
             && !self.weapon_row
             && self.vehicle.is_none()
-            && (self.has_ammo || self.saber_style.is_some())
+            && (self.has_ammo || (self.saber_style.is_some() && !self.visibility.ground_hud))
     }
 
     /// The turbo's phase while the vehicle HUD shows and the vehicle has one.
