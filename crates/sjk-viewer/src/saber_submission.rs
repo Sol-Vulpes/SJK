@@ -31,7 +31,7 @@ pub(crate) fn submit(
     catalog: Option<&HiltCatalog>,
     states: &mut StateSlab,
     segments: &mut SegmentPool,
-    object_groups: &mut [Vec<ActorInstance>],
+    hilts: &mut crate::bolt_on_look::BoltOns<'_>,
     saber_instances: &mut Vec<Instance>,
     presentation_time: i64,
     mut trails: Option<&mut Edges<'_>>,
@@ -67,11 +67,11 @@ pub(crate) fn submit(
         let hilt = catalog.get(name);
         let (grip, weapon_rotation) =
             saber::world_attachment(actor_origin, actor_rotation, attachment);
-        object_groups[hilt.mesh_index].push(ActorInstance::new(
-            grip.to_array(),
-            weapon_rotation.to_array(),
-            scale,
-        ));
+        // In the body's look: a duellist's figure takes its hilts (hub #323).
+        hilts.push(
+            hilt.mesh_index,
+            ActorInstance::new(grip.to_array(), weapon_rotation.to_array(), scale),
+        );
         let stock = black_sabers.color(
             entity_id,
             saber_index,

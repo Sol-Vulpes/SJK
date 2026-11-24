@@ -24,6 +24,30 @@ Kushina's two reports on 2026.1123.2. Branch `personal/beta-blades-fix`, based o
   Unconfirmed until her `color1`, `cp_sbRGB1` and `cg_saberLabDesigns` and a session log
   (`signature shader:` lines) are known.
 
+## Duellists' bolt-ons take the duel look; dual sabers in Siege (24/11/2026)
+
+Branch `personal/duel-hats-sabers`, based on `main` `a07faf673`:
+
+- **Hub #323** (JoF FFA1): outside a duel, a duellist drawn as JoF's blue figure
+  (`cg_duelGhost 1`) kept a solid hat. The body took the figure's shader, but the JoF hat
+  and cape (`cosmetics::actors::submit`), the saber hilts held and holstered, the gun,
+  the jetpack and the boombox went into the plain rigid-model groups, so neither the
+  figure, the dark grey of `cg_duelGhost 0` nor (for hats and hilts) a mind trick's fade
+  reached them. [bolt_on_look.rs](../crates/sjk-viewer/src/bolt_on_look.rs) now carries
+  the body's look (tint, fade, figure) to every bolt-on, as EJK copies the body's
+  `renderfx` and `customShader` (`CG_DrawCosmeticOnPlayer`)
+  ([rendering.md](rendering.md#entity-render-effects)). Untested in game.
+- **Hub #327** (Siege_Desert, "single red stance but holding 2 sabers"): not the client.
+  The Siege classes Jedi Duelist and Jedi Lightsaber Master (`ext_data/Siege/Classes`,
+  retail `assets1.pk3`) give `single_5` in both hands and allow `SS_FAST|SS_MEDIUM|SS_STRONG`;
+  `ClientUserinfoChanged` sets the class's sabers over the userinfo (`G_SetSaber(...,
+  qtrue)`), and outside Siege a new `saber2` only applies at the next spawn
+  (`ClientSpawn`). A stance cycle with two sabers turns the second blade off
+  (`saberHolstered 1`) and allows single stances (`Cmd_SaberAttackCycle_f`,
+  `WP_SaberStyleValidForSaber`), the second hilt staying in the left hand, as in stock.
+  SJK draws the hilts from `CS_PLAYERS` `st`/`st2` and the blades from `saberHolstered`
+  like the stock cgame; the mimic stance work (f79c8d253) only runs under `mimic`.
+
 ## Clean-up ahead of v1: the last leftovers (23/11/2026)
 
 Branch `personal/v1-leftovers`, based on `main` `632a3f521`, Sol's approval of the

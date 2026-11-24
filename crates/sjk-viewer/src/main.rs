@@ -25,6 +25,7 @@ mod avatars;
 mod away_emote;
 mod block_command;
 mod bolt;
+mod bolt_on_look;
 mod boombox;
 mod box_hunt;
 mod brush_view;

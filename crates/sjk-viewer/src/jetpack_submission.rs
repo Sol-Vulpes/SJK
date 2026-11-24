@@ -11,9 +11,10 @@ pub(super) struct Body {
     pub(super) e_flags: u32,
     /// `CG_IsMindTricked` for the viewer: the pack draws no flames and makes no sound.
     pub(super) tricked: bool,
-    /// The body is hidden by a mind trick, or fading with this alpha.
+    /// The body is hidden by a mind trick.
     pub(super) hidden: bool,
-    pub(super) fade: Option<u8>,
+    /// The body's look (a mind trick's fade, the duel's), which the pack takes.
+    pub(super) look: crate::bolt_on_look::BoltOnLook,
     pub(super) draw_actor: bool,
     pub(super) muted: bool,
 }
@@ -53,20 +54,13 @@ pub(super) fn submit(sinks: &mut Sinks<'_>, body: Body, time: i32, now: Instant)
         let mut instance =
             ActorInstance::new(pack_origin.to_array(), pack_rotation.to_array(), [1.0; 3]);
         instance.view_flags = sinks.entity_view_flags | u32::from(!body.draw_actor);
-        match body.fade {
-            // A bolt-on of the body's Ghoul2 instance fades with it.
-            Some(alpha) if sinks.overrides.len() < sinks.overrides.capacity() => {
-                sinks.overrides.push(entity_materials::OverrideInstance {
-                    mesh: entity_materials::OverrideMesh::Object(mesh),
-                    material: None,
-                    instance: instance.with_forced_alpha(alpha),
-                    no_depth: false,
-                    forced_alpha: true,
-                });
-            }
-            Some(_) => {}
-            None => sinks.object_groups[mesh].push(instance),
+        // A bolt-on of the body's Ghoul2 instance fades with it.
+        crate::bolt_on_look::BoltOns {
+            look: body.look,
+            groups: sinks.object_groups,
+            overrides: sinks.overrides,
         }
+        .push(mesh, instance);
     }
     // Re-played on the reference 8 ms cadence, not per rendered frame (`effect_cadence.rs`).
     if !jetpack.active || body.tricked || !sinks.effect_aux.continuous.due(now) {

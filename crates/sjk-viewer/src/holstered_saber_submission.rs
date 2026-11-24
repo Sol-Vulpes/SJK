@@ -20,6 +20,7 @@ pub(super) fn submit(
     local: bool,
     draw_actor: bool,
     hidden: bool,
+    look: crate::bolt_on_look::BoltOnLook,
 ) -> Plan {
     let mesh = &sinks.actor_meshes[index];
     // Off (setting, plugin bit or a server without the contract): no per-actor work.
@@ -168,10 +169,16 @@ pub(super) fn submit(
         let mut instance =
             ActorInstance::new(origin.to_array(), rotation.to_array(), transform.scale);
         instance.view_flags = sinks.entity_view_flags | u32::from(!draw_actor);
-        let group = &mut sinks.object_groups[catalog.get(name).mesh_index];
+        let mesh_index = catalog.get(name).mesh_index;
         // Shared groups are preallocated; never grow them in the frame loop.
-        if group.len() < group.capacity() {
-            group.push(instance);
+        if sinks.object_groups[mesh_index].len() < sinks.object_groups[mesh_index].capacity() {
+            // In the body's look: a duellist's figure takes its hilts (hub #323).
+            crate::bolt_on_look::BoltOns {
+                look,
+                groups: sinks.object_groups,
+                overrides: sinks.overrides,
+            }
+            .push(mesh_index, instance);
         }
     }
     plan

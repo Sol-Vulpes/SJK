@@ -7,7 +7,6 @@
 //! following `CG_DrawCosmeticOnPlayer`'s rules.
 
 use super::{Visibility, fitting_offset, model_path, placement};
-use crate::actor_instance::ActorInstance;
 use crate::actor_world_submission::monster_hold;
 use crate::bolt::BoltMatrix;
 use sjk_client::CosmeticSlot;
@@ -182,8 +181,10 @@ pub(crate) fn visible_in_state(
 
 /// Bolt the actor's pieces on for this frame, under `CG_DrawCosmeticOnPlayer`'s
 /// rules: none on the dead, tricked, held, unsupported cloaked or scaled model; the local
-/// first-person player's only in mirrors and portals.
-pub(crate) fn submit(worn: &Worn, frame: &Frame, object_groups: &mut [Vec<ActorInstance>]) {
+/// first-person player's only in mirrors and portals. They take the body's look, as EJK
+/// draws them with its `renderfx` and `customShader` (hub #323: a hat stayed solid on a
+/// duellist drawn as JoF's figure).
+pub(crate) fn submit(worn: &Worn, frame: &Frame, pieces: &mut crate::bolt_on_look::BoltOns<'_>) {
     if !frame.state_visible
         || frame.dead
         || frame.tricked
@@ -200,15 +201,14 @@ pub(crate) fn submit(worn: &Worn, frame: &Frame, object_groups: &mut [Vec<ActorI
             continue;
         };
         instance.view_flags = frame.view_flags | u32::from(!frame.draw_actor);
-        if let Some(group) = object_groups.get_mut(piece.mesh) {
-            group.push(instance);
-        }
+        pieces.push(piece.mesh, instance);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::actor_instance::ActorInstance;
 
     fn frame() -> Frame {
         Frame {
@@ -242,10 +242,45 @@ mod tests {
         }
     }
 
+    /// Submit for a body drawn in its own shaders.
+    fn plain(worn: &Worn, frame: &Frame, groups: &mut [Vec<ActorInstance>]) {
+        submit(
+            worn,
+            frame,
+            &mut crate::bolt_on_look::BoltOns {
+                look: crate::bolt_on_look::BoltOnLook::default(),
+                groups,
+                overrides: &mut Vec::new(),
+            },
+        );
+    }
+
+    #[test]
+    fn a_duellists_hat_is_drawn_as_its_figure() {
+        // Hub #323: the hat is drawn in the duel figure's shader, not solid.
+        let mut groups = vec![Vec::new(), Vec::new()];
+        let mut overrides = Vec::with_capacity(2);
+        submit(
+            &worn(),
+            &frame(),
+            &mut crate::bolt_on_look::BoltOns {
+                look: crate::bolt_on_look::BoltOnLook {
+                    tint: None,
+                    pass: crate::bolt_on_look::Pass::Ghost(Some(3)),
+                },
+                groups: &mut groups,
+                overrides: &mut overrides,
+            },
+        );
+        assert!(groups.iter().all(Vec::is_empty));
+        assert_eq!(overrides.len(), 1);
+        assert_eq!(overrides[0].material, Some(3));
+    }
+
     #[test]
     fn pieces_follow_the_rules_of_cg_draw_cosmetic_on_player() {
         let mut groups = vec![Vec::new(), Vec::new()];
-        submit(&worn(), &frame(), &mut groups);
+        plain(&worn(), &frame(), &mut groups);
         assert_eq!(groups[1].len(), 1);
         assert!(groups[0].is_empty());
         for hidden in [
@@ -274,7 +309,7 @@ mod tests {
             },
         ] {
             let mut groups = vec![Vec::new(), Vec::new()];
-            submit(&worn(), &hidden, &mut groups);
+            plain(&worn(), &hidden, &mut groups);
             assert!(groups.iter().all(Vec::is_empty));
         }
         // The first-person local player's hat shows only in mirrors.
@@ -284,7 +319,7 @@ mod tests {
             draw_actor: false,
             ..frame()
         };
-        submit(&worn(), &first_person, &mut groups);
+        plain(&worn(), &first_person, &mut groups);
         assert_eq!(groups[1][0].view_flags, 1);
     }
     #[test]

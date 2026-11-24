@@ -4490,6 +4490,15 @@ test: Menu and Force icons look as before, edges not cut.
 
 # ---- Rendering & effects ----
 
+[duel-bolt-ons]
+area: Rendering & effects
+title: A duellist's hat, cape, hilts, gun and jetpack take its duel look (hub #323)
+change: Outside a duel, a duellist's hat stayed solid on the blue figure (cg_duelGhost 1).
+change: Bolt-ons now take the body's figure, its dark grey (0) and a mind trick's fade.
+test: Local server, two SJK clients duel, a third watches: hats, capes, hilts are blue too.
+test: cg_duelGhost 0: the hat is dark grey with the body; 2: nothing of them shows.
+test: Fight in the duel: both duellists' hats look as they always did.
+
 [load-marks-saber]
 area: Rendering & effects
 title: Map load logs three more steps after the effect atlas
