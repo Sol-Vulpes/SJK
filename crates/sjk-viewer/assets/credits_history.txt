@@ -9,6 +9,32 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Duellists' bolt-ons take the duel look (hub #323); #327 is the server's state
+- af52738 |  | Duellists' bolt-ons take the duel look (hub #323); #327 is the server's state
++ 24/11/2026 | - | Beta blades say they come from Beta holocrons only
+- 4762fa4 |  | Beta blades say they come from Beta holocrons only
++ 24/11/2026 | - | Box hunt: the mark is not away for 15 s off the keys (hub report #334)
+- b823e83 |  | Box hunt: the mark is not away for 15 s off the keys (hub report #334)
++ 23/11/2026 | - | Collection: "Preparing kyber pictures N / M" while the kybers' loops first bake
+- ebc9a47 |  | Collection: "Preparing kyber pictures N / M" while the kybers' loops first bake
++ 23/11/2026 | - | Release 2026.1123.2 (Beta): the Beta season, Creyon's Beta blades found in holocrons
+- 1429503 |  | Release 2026.1123.2 (Beta): the Beta season, Creyon's Beta blades found in holocrons
++ 23/11/2026 | - | Creyon's 130 Beta blades are found in holocrons
+- 10439ad |  | Creyon's 130 Beta blades are found in holocrons
++ 23/11/2026 | - | Release 2026.1123.1 (Beta): the first Sun JK beta
+- 3d13b80 |  | Release 2026.1123.1 (Beta): the first Sun JK beta
++ 23/11/2026 | - | Config import copies Brightness (r_gamma)
+- 82b5cb8 |  | Config import copies Brightness (r_gamma)
++ 23/11/2026 | - | v1 leftovers: the WHEEL OF DOOM toy, the Log book and Support SJK removed
+- 636ee9c |  | v1 leftovers: the WHEEL OF DOOM toy, the Log book and Support SJK removed
++ 23/11/2026 | - | Remove profile banners from the client
+- 0de0a31 |  | Remove profile banners from the client
++ 23/11/2026 | - | Remove the placed WHEEL OF DOOM's code and assets
+- 62518c2 |  | Remove the placed WHEEL OF DOOM's code and assets
++ 23/11/2026 | - | v1 clean-up sweep: stale site rows, a dead script link, the website badge
+- 268bd2e |  | v1 clean-up sweep: stale site rows, a dead script link, the website badge
++ 23/11/2026 | - | Classic chat style: JoF EJK's message field and chat box, set by EJK mode
+- 64b8fe5 |  | Classic chat style: JoF EJK's message field and chat box, set by EJK mode
 + 23/11/2026 | - | Box hunt: the tomb's look and alert; nobody away or typing is tagged
 - 4cd07d9 |  | Box hunt: the tomb's look and alert; nobody away or typing is tagged
 + 23/11/2026 | - | First setup: the player's name, a finish, every menu style; modes that hold settings in any order
@@ -3846,6 +3872,10 @@
 - fed9acd |  | Hide duel opponents' bars and send nothing while duelling
 
 = Slash
++ 24/11/2026 | SJK #445 | Read CS_SERVERINFO lossily: KR main server stuck on loading (#319, #325)
+- 83240ca |  | Read CS_SERVERINFO lossily: KR main server stuck on loading (#319, #325)
+- f015ac7 |  | Read the Siege class menu's serverinfo lossily too
+- c652a2b | Sol | Read the last strict CS_SERVERINFO readers lossily; changelog line under Unreleased
 + 20/11/2026 | SJK #437 | Emotes: hide others' emotes, hide or mute single emotes
 - ade10ab |  | Emotes: hide others' emotes, hide or mute single emotes
 - d5ca364 |  | Changelog: PR number for the emote filters

@@ -24,7 +24,14 @@ impl MovementConfig {
 
     /// Refresh advertised policy, retaining already-loaded saber restrictions/scales.
     pub fn refresh_game_state(&mut self, game: &GameState) {
+        // CS_SERVERINFO is read lossily (`GameState::server_info`, #319).
         let integer = |index, key, default| {
+            if index == 0 {
+                return game
+                    .server_info()
+                    .and_then(|info| info.get_i32(key))
+                    .unwrap_or(default);
+            }
             game.config_string(index)
                 .and_then(|bytes| std::str::from_utf8(bytes).ok())
                 .and_then(|text| InfoString::parse(text).ok())
@@ -76,5 +83,25 @@ impl MovementConfig {
             let msec = i64::from(msec.clamp(8, 33));
             (((i64::from(time) + msec - 1) / msec) * msec) as i32
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A hostname padded with 0x80 bytes (the KR main server, #319) must not hide
+    /// the serverinfo's movement keys.
+    #[test]
+    fn non_utf8_hostname_keeps_the_serverinfo_movement_keys() {
+        let mut serverinfo = br"\g_stepSlideFix\1\g_noSpecMove\1\sv_hostname\".to_vec();
+        serverinfo.extend_from_slice(&[0x80; 8]);
+        serverinfo.extend_from_slice(b" KR");
+        let mut game = GameState::empty_local(0);
+        game.replace_config_string(0, serverinfo).unwrap();
+
+        let config = MovementConfig::from_game_state(&game);
+        assert!(config.step_slide_fix);
+        assert!(config.no_spectator_move);
     }
 }

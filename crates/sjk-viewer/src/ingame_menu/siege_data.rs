@@ -14,9 +14,7 @@ pub(super) struct Classes {
 
 /// Reject commands outside Siege, just as UI_SetSiegeTeams does.
 pub(crate) fn is_siege(game: Option<&GameState>) -> bool {
-    game.and_then(|g| g.config_string(0))
-        .and_then(|b| std::str::from_utf8(b).ok())
-        .and_then(|s| InfoString::parse(s).ok())
+    game.and_then(GameState::server_info)
         .is_some_and(|info| info.get_i32("g_gametype") == Some(7))
 }
 
@@ -55,9 +53,7 @@ impl Classes {
         if !is_siege(Some(game)) {
             return Err("Class selection is only available in Siege".into());
         }
-        let info =
-            std::str::from_utf8(game.config_string(0).unwrap()).map_err(|e| e.to_string())?;
-        let info = InfoString::parse(info).map_err(|e| e.to_string())?;
+        let info = game.server_info().ok_or("Missing server info")?;
         let map = info.get("mapname").ok_or("Missing Siege map name")?;
         let map_data = read(vfs, &format!("maps/{map}.siege"))?;
         let teams = group(&map_data, "Teams").ok_or("Missing Siege Teams group")?;

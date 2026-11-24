@@ -427,7 +427,7 @@ link: Lukas's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+
 
 [Slash]
 github: JoFSlash
-role: Contributor: 167 merged pull requests
+role: Contributor: 168 merged pull requests
 did: #114 Tab completes cfg file names after exec and writeconfig
 did: #113 CTF team saber colours, an option
 did: #153 The SJK scoreboard tells who won the Siege round or team match
@@ -595,6 +595,7 @@ did: #430 tell_attacker and duel start, won and lost lines
 did: #432 Console: Ctrl+F find bar over the scrollback (headshots' idea)
 did: #436 Duels: hide others' duellists completely, cg_duelGhost 2 (headshots' idea)
 did: #437 Emotes: hide others' emotes, hide or mute single emotes (mg.perso's idea)
+did: #445 Server names with odd bytes: the KR main server loads again
 link: Slash's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AJoFSlash
 
 [Milamber]
