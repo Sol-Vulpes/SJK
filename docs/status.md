@@ -48,6 +48,43 @@ Branch `personal/duel-hats-sabers`, based on `main` `a07faf673`:
   SJK draws the hilts from `CS_PLAYERS` `st`/`st2` and the blades from `saberHolstered`
   like the stock cgame; the mimic stance work (f79c8d253) only runs under `mimic`.
 
+## Weak PCs: the Collection's light path, a music change reads its track once (24/11/2026)
+
+Branch `personal/potato-perf`, based on `main` `a07faf673`. Hub #328 (2026.1123.1: "collection
+menu drops me into single digit fps and makes it almost unusable"), #318 (a ~900 ms hitch
+when the music changes); #329 and #330 investigated, not fixed (below).
+
+- **What the Collection costs:** baking the kybers' loops. `duel6_collection_cold` (release,
+  1080p, RTX 5080, Vulkan, the GPU shared with a running client, so absolute times are
+  noisy; both runs in one sitting): the cold wall walk with loops baking had a median frame
+  of 14.70 ms (p95 26.40, 24 frames over 33 ms) against 4.64 ms for the warm walk; the
+  acrylic blur is about 0.02 ms (18/11 measures above). A GPU a tenth as fast is in single
+  digits while the loops bake.
+- **The menus' light path** (`blade_pictures::light_menus`,
+  [unlockables.md](unlockables.md#client)): the menu pictures on (already set at start on
+  cards of 4 GB or less, integrated GPUs included) or the Collection measured under 20 FPS
+  for 3 s while its kyber pictures show (no new cvar; for the session; the log says
+  `menus: the Collection ran under 20 FPS`). Kybers show their first picture, one baked a
+  frame, only on screen; nothing live; no "Preparing" count; the menus' glass plain
+  ([sjk-ui.md](sjk-ui.md#acrylic-glass)). The same run with it forced (`SJK_LIGHT_MENUS=1`):
+  cold walk median 4.80 ms (p95 6.35, 1 frame over 33 ms), warm 4.65 ms.
+- **#318:** a music change read and inflated each track once to see that it exists, then
+  again to play it; it now asks the VFS (`audio_assets::sound_exists`,
+  [client.md](client.md)). The rest of the stall is not measured.
+- **#330 / #329, suspects (not changed):** sun cascades draw every caster of the map
+  (`sun_shadows.rs` `draw_world_casters`, far cascade fit to the whole map, refreshed 4 times a
+  second while a mover moves; Solar presets only); outside Solar each visible range of each
+  stage is its own draw (`world_material_draw.rs`, the multi-draw table needs
+  `r_dayNight 1`), costly on an open map whose PVS lets most through; a joining player's new
+  saber hilt is loaded and its pipelines compiled on the render thread
+  (`clientinfo_refresh.rs` `load_hilt`); a pk3's lock is held through a whole inflate
+  (`sjk-vfs` `Pk3Source::read`), so render-thread reads wait on model workers.
+
+Verified: unit tests (the slow watch, `sound_exists` against `resolve_sound`), the timing
+runs above, fmt, build, workspace tests, Clippy and the startup stack check. Not verified: in
+the client, on a weak PC (the 20 FPS mark is a choice, not tuned on one), and that the
+reporter's PC falls under it.
+
 ## Clean-up ahead of v1: the last leftovers (23/11/2026)
 
 Branch `personal/v1-leftovers`, based on `main` `632a3f521`, Sol's approval of the

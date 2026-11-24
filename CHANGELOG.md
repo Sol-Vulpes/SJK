@@ -37,6 +37,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 - A duellist's hat, cape, saber hilts, gun and jetpack are drawn in its duel look, the blue figure or the dark grey, instead of staying solid on it (hub #323) _(Sol)_
 - Servers whose name carries unusual bytes (the KR main server) no longer leave you stuck on the loading screen, and a JA+ one among them is seen as JA+ again, without a second connect that lost the client plugin _(Slash)_
 - The first time the Collection bakes the kybers' looping pictures (once per kyber, then kept on disk), a line at the bottom says "Preparing kyber pictures" with how many are done, as the Collection can run slowly meanwhile on a modest graphics card _(Sol)_
+- On a weak PC the Collection lightens itself: when it runs under 20 FPS for a few seconds (or with Menu pictures on, as on graphics cards of 4 GB or less), its kybers show still pictures, only those on screen are baked, and the menus' glass is drawn plain, until the client is closed (hub #328) _(Sol)_
 
 ## 2026.1123.2 (Beta) | 23/11/2026
 

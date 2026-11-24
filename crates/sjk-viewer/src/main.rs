@@ -2903,7 +2903,9 @@ impl GpuState {
             timings_shown.then(|| self.frame_timings.draw_list()),
             hud_edit_shown.then(|| self.hud_edit.draw_list()),
         ];
-        let backdrop = self.hud_target_sampleable();
+        // The menus' light path for a weak PC draws the glass as its plain tint (hub #328).
+        let backdrop = self.hud_target_sampleable()
+            && !(self.menus_only() && crate::blade_pictures::light_menus());
         self.ui_shapes.prepare_backdrop(
             &self.device,
             [self.configuration.width, self.configuration.height],

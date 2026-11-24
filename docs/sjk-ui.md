@@ -157,6 +157,12 @@ it covers), blurred at a quarter of the screen's size and below, its brightness 
 under a ceiling (`sjk_ui::acrylic::LUMA_CEILING`, 0.42) so text over it reads over snow
 as over a dark corridor, the tint over it, a faint grain and a light top edge.
 
+In the menus on their light path for a weak PC (the menu pictures on, or the Collection
+measured under 20 FPS this session: `blade_pictures::light_menus`,
+[unlockables.md](unlockables.md#client), hub #328) every backdrop draws its plain tint
+(`sjk_ui::acrylic::fallback`) instead, as where the frame cannot be sampled; a game's
+HUD glass is not affected.
+
 How much of the ground's tint each kind lays over the scene (`color::acrylic`):
 
 | Kind | Tint | Where |

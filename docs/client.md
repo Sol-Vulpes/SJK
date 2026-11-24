@@ -1959,6 +1959,14 @@ without releasing it, and a dynamic music level keeps its states' tracks until t
 level changes. A map change only stops the old music: the next map's prefetch may hold
 the same tracks, so they are released when its music is chosen.
 
+A music change mid-map reads its track on the render thread (the prefetch covers the
+map's own music only). Since 24/11/2026 (hub #318, a ~900 ms hitch when the music
+changed) it asks whether the track and a dynamic level's tracks exist with
+`sound_exists` (the VFS's `contains`) before reading the one it plays, where it used to
+read and inflate each whole MP3 once to check and again to play. The decode itself is
+on the decode worker; whether the rest of #318's stall was the read, the pk3's lock held
+by a model worker's read of the same archive, or the decode queue is not measured.
+
 Retail figures, mono at 44.1 kHz (`crates/sjk-audio/tests/retail_memory.rs`, ignored;
 `JKA_GAME_DATA=<GameData> cargo test --release -p sjk-audio --test retail_memory --
 --ignored --nocapture`): the 302 effect WAVs under `sound/`, 31.5 MiB of files, took

@@ -263,6 +263,9 @@ fn duel6_collection_cold() {
             return;
         };
         gpu.looks.shot_owns_unlocks = true;
+        // `SJK_LIGHT_MENUS=1`: the menus' light path, as a Collection measured slow takes.
+        let light = std::env::var_os("SJK_LIGHT_MENUS").is_some();
+        crate::blade_pictures::set_slow_for_shot(light);
         let _ = frame(&mut gpu, 30);
         // What a picture's key costs to work out (each hashes its skin's file and images).
         let skins = std::sync::Arc::clone(&gpu.blade_skins);
@@ -367,6 +370,7 @@ fn duel6_collection_cold() {
             }
         }
         crate::blade_stills::set_folder(None);
+        crate::blade_pictures::set_slow_for_shot(false);
     });
 }
 

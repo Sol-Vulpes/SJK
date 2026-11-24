@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Weak PCs: the Collection takes a light path; a music change reads its track once
+- 3bb1092 |  | Weak PCs: the Collection takes a light path; a music change reads its track once
 + 24/11/2026 | - | Duellists' bolt-ons take the duel look (hub #323); #327 is the server's state
 - af52738 |  | Duellists' bolt-ons take the duel look (hub #323); #327 is the server's state
 + 24/11/2026 | - | Beta blades say they come from Beta holocrons only

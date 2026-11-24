@@ -28,6 +28,16 @@
 //! With the menu pictures on (`ui_menuPictures`, a card short of video memory) no swatch
 //! asks ([`set_live`]): every swatch shows the drawing, and the picture's target is
 //! freed, or never made.
+//!
+//! The menus' light path for weak PCs ([`light_menus`], 24/11/2026, hub #328: "collection
+//! menu drops me into single digit fps"): the same as with the menu pictures on, for the
+//! rest of the session, once the Collection was measured slow ([`note_frame_rate`]: under
+//! [`SLOW_FPS`] for [`SLOW_FOR`] while its kyber pictures show, the frame cap allowing
+//! more). The kybers then show their first picture, still, baked one a frame and only those
+//! on screen ([`crate::blade_stills`]), no blade is drawn live, and the acrylic glass draws
+//! its plain tint (`GpuState::frame_overlays`). No setting changes: a faster PC never
+//! falls under the mark, and a weak one finds its loops again at the next start if it
+//! keeps up then.
 
 use crate::camera_uniform::CameraUniform;
 use glam::Vec3;
@@ -100,15 +110,83 @@ static STATE: Mutex<State> = Mutex::new(State {
 
 /// Whether swatches show live pictures: off while the menus stand on pictures.
 static LIVE: AtomicBool = AtomicBool::new(true);
+/// Set for the session once the Collection was measured slow ([`note_frame_rate`]).
+static SLOW: AtomicBool = AtomicBool::new(false);
+
+/// Frames a second under which the Collection counts as slow.
+pub(crate) const SLOW_FPS: u32 = 20;
+/// How long it must stay under [`SLOW_FPS`] before the menus take their light path.
+pub(crate) const SLOW_FOR: std::time::Duration = std::time::Duration::from_secs(3);
 
 /// Show live pictures (`true`) or the drawings (`false`, with the menu pictures on).
 pub(crate) fn set_live(live: bool) {
     LIVE.store(live, Ordering::Relaxed);
 }
 
-/// Whether swatches may show live pictures (the menu pictures off).
+/// Whether swatches may show live pictures: the menu pictures off and the menus not on
+/// their light path ([`light_menus`]).
 pub(crate) fn live() -> bool {
-    LIVE.load(Ordering::Relaxed)
+    LIVE.load(Ordering::Relaxed) && !SLOW.load(Ordering::Relaxed)
+}
+
+/// Whether the menus take their light path for a weak PC: the menu pictures on (chosen,
+/// or set at start for a card of 4 GB or less, `video_memory.rs`) or the Collection
+/// measured slow this session. The kybers show still pictures and the acrylic glass its
+/// plain tint.
+pub(crate) fn light_menus() -> bool {
+    !live()
+}
+
+/// Whether frames at `fps` under a cap of `cap` (0 uncapped) count as slow: under
+/// [`SLOW_FPS`], with a cap that allows at least twice that (an unfocused or minimized
+/// window's low cap, or a player's own, is no sign of a weak PC).
+pub(crate) fn is_slow(fps: u32, cap: u32) -> bool {
+    fps < SLOW_FPS && (cap == 0 || cap >= SLOW_FPS * 2)
+}
+
+/// Since when the frames have been slow in a row.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct SlowWatch {
+    since: Option<std::time::Instant>,
+}
+
+impl SlowWatch {
+    /// Note the frame rate `fps` measured `now` under a cap of `cap`: true once the
+    /// frames have been slow ([`is_slow`]) for [`SLOW_FOR`] in a row.
+    pub(crate) fn note(&mut self, fps: Option<u32>, cap: u32, now: std::time::Instant) -> bool {
+        if !fps.is_some_and(|fps| is_slow(fps, cap)) {
+            self.since = None;
+            return false;
+        }
+        let started = *self.since.get_or_insert(now);
+        now.duration_since(started) >= SLOW_FOR
+    }
+}
+
+static WATCH: Mutex<SlowWatch> = Mutex::new(SlowWatch { since: None });
+
+/// Note the frame rate measured `now` while the Collection shows kyber pictures: after
+/// [`SLOW_FOR`] of slow frames the menus take their light path for the rest of the
+/// session. True on the frame they do.
+pub(crate) fn note_frame_rate(fps: Option<u32>, cap: u32, now: std::time::Instant) -> bool {
+    if !live() {
+        return false;
+    }
+    let slow = WATCH
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .note(fps, cap, now);
+    if slow {
+        SLOW.store(true, Ordering::Relaxed);
+    }
+    slow
+}
+
+/// Put the menus on their light path, or off it, as a slow Collection would (the world
+/// shots that time it, `SJK_LIGHT_MENUS`).
+#[cfg(test)]
+pub(crate) fn set_slow_for_shot(slow: bool) {
+    SLOW.store(slow, Ordering::Relaxed);
 }
 
 /// Whether a swatch the player looks at asked for skin `id` while this UI was built
@@ -706,6 +784,33 @@ mod tests {
         for slot in state.slots.iter_mut().flatten() {
             slot.drawn = true;
         }
+    }
+
+    #[test]
+    fn slow_menus_are_told_after_a_run_of_slow_frames_only() {
+        let start = std::time::Instant::now();
+        let at = |seconds: f32| start + std::time::Duration::from_secs_f32(seconds);
+        let mut watch = SlowWatch::default();
+        // 9 FPS uncapped: slow, told once it lasted SLOW_FOR.
+        assert!(!watch.note(Some(9), 0, at(0.0)));
+        assert!(!watch.note(Some(9), 0, at(2.5)));
+        assert!(watch.note(Some(9), 0, at(3.0)));
+        // A fast frame between starts the run again.
+        let mut watch = SlowWatch::default();
+        assert!(!watch.note(Some(9), 0, at(0.0)));
+        assert!(!watch.note(Some(60), 0, at(2.0)));
+        assert!(!watch.note(Some(9), 0, at(4.0)));
+        assert!(!watch.note(Some(9), 0, at(6.5)));
+        assert!(watch.note(Some(9), 0, at(7.0)));
+        // No measure yet, a low cap (an unfocused window's, a player's 30) or a rate at
+        // the mark: never slow.
+        let mut watch = SlowWatch::default();
+        for seconds in [0.0, 5.0, 10.0] {
+            assert!(!watch.note(None, 0, at(seconds)));
+            assert!(!watch.note(Some(9), 30, at(seconds)));
+            assert!(!watch.note(Some(SLOW_FPS), 0, at(seconds)));
+        }
+        assert!(is_slow(9, 60) && is_slow(9, 40) && !is_slow(9, 39));
     }
 
     #[test]
