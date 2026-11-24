@@ -662,7 +662,12 @@ impl LocalPrediction {
             self.movement_config.roll_rules.gametype,
             self.predict_items,
         );
-        preview.emit_events(|event| self.pending_events.push(event));
+        // The preview's events are not delivered: they come from a command the server
+        // never runs, at a time no sent command has. The draws `PM_irand_timesync` seeds
+        // with that time (the medium style's chain end, `bg_saber.c:825`) then differ
+        // from the server's, and a swing it started was heard though none was made
+        // (hub report #279). Stock cgame only predicts commands it sends
+        // (`cg_predict.c:1124-1237`); the next one raises the event, a command step later.
         self.view_height = preview.state().view_height as f32;
         Some(Vec3::from_array(preview.state().origin) + Vec3::Z * self.view_height)
     }
@@ -860,6 +865,44 @@ mod fake_noclip_tests {
             0,
             "the server is sent no move"
         );
+    }
+}
+
+#[cfg(test)]
+mod preview_event_tests {
+    use super::*;
+
+    /// Hub report #279: a frame's preview runs a command the server never gets, so only
+    /// the sent command's events are heard (and shown).
+    #[test]
+    fn only_a_sent_command_raises_events() {
+        for step in [8, 7, 4, 3] {
+            let mut prediction = LocalPrediction::new(None, None, None, &VirtualFileSystem::new());
+            let state = MovementState {
+                health: 100,
+                weapon: 2,
+                weapons: (1 << 2) | (1 << 4),
+                command_time: 100,
+                ..MovementState::default()
+            };
+            prediction.predictor = Some(Predictor::from_state(state, MovementConfig::default()));
+            let bsp = Bsp::empty([-2000.0; 3], [2000.0; 3]);
+            let mut scratch = TraceScratch::new();
+            // Switching to the pistol raises `EV_CHANGE_WEAPON`.
+            let command = UserCommand {
+                server_time: 100 + step,
+                weapon: 4,
+                ..UserCommand::default()
+            };
+            prediction.preview_command(command, &bsp, &mut scratch);
+            let mut previewed = 0;
+            prediction.drain_events(|_| previewed += 1);
+            assert_eq!(previewed, 0, "step {step}: the preview raises nothing");
+            prediction.apply_command(command, command, &bsp, &mut scratch);
+            let mut sent = 0;
+            prediction.drain_events(|_| sent += 1);
+            assert!(sent > 0, "step {step}: the sent command raises its events");
+        }
     }
 }
 
