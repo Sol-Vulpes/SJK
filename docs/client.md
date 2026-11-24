@@ -6756,7 +6756,8 @@ sees it there.
   free tags never take part. Craft is greyed with the reason when every tag of the tier
   is held in that finish or two spare copies are lacking. The hub's answer reads under the
   buttons ("Holo Gonk tag broken down: +25 kyber shards.", "Crafted: Kyber tag. It is
-  yours."). Spare copies trade too: the trade window lists them with their finish beside
+  yours."), only on the card of the tag and finish it was for: until 24/11/2026 any last
+  answer, a GIF tag's too, stood under every tag's buttons in place of the reason. Spare copies trade too: the trade window lists them with their finish beside
   the duplicate kybers, counted as duplicates in the day's limits
   ([tag_copies.rs](../crates/sjk-viewer/src/tag_copies.rs)).
 - **Choosing:** Collection > Tags shows every tag under its collection's heading, then
