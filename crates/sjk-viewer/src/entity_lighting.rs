@@ -159,11 +159,8 @@ fn finish(
             .fold(0.0_f32, f32::max)
             .powf(2.2);
         let factor = crate::world_materials::shadows::day::live::night_factor(night, peak);
-        for ((ambient, directed), factor) in grid
-            .ambient
-            .iter_mut()
-            .zip(&mut grid.directed)
-            .zip(factor)
+        for ((ambient, directed), factor) in
+            grid.ambient.iter_mut().zip(&mut grid.directed).zip(factor)
         {
             *ambient *= factor;
             *directed *= factor;

@@ -9,6 +9,10 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Low FPS Night: rustfmt the entity light grid loop
+- d93a5cb |  | Low FPS Night: rustfmt the entity light grid loop
++ 24/11/2026 | - | Credits, debug panel and history for the PR batch of 24/11 (Kushina #438 #440 #441 #443 #444 #448 #449 #450 #452)
+- 6cba458 |  | Credits, debug panel and history for the PR batch of 24/11 (Kushina #438 #440 #441 #443 #444 #448 #449 #450 #452)
 + 24/11/2026 | - | Model sync shares a model whole: voice, animation sounds, shaders from any file, outside textures; easier to use
 - db8585f |  | Model sync shares a model whole: voice, animation sounds, shaders from any file, outside textures; easier to use
 + 24/11/2026 | - | Model sync: real community models pack (803 of 830): MP3s after padding, voice tables with setting lines, leading-slash references, ratio 1000
