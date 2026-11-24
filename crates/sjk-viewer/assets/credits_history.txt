@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Bloom: no solid squares from a fading light-side body (hub #243)
+- d058b54 |  | Bloom: no solid squares from a fading light-side body (hub #243)
 + 24/11/2026 | - | Draw Ghoul2 bones unsquashed, as rd-vanilla's EvalRender (hub #246)
 - 846c1d9 |  | Draw Ghoul2 bones unsquashed, as rd-vanilla's EvalRender (hub #246)
 + 24/11/2026 | - | Interpolate remote entities across the last four snapshots (hub #261)
