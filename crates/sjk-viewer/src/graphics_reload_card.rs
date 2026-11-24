@@ -300,7 +300,14 @@ impl crate::GpuState {
             .console
             .as_ref()
             .is_some_and(crate::console::ViewerConsole::is_open);
-        let open = self.graphics_reload.card.wants()
+        // Reload now only where the reload can run (`reload_refusal`): offered while the
+        // menu world was being built again after a match, or over the last server's
+        // world, it was refused, and Later's mark kept the card away for those changes,
+        // so the preset stayed unapplied until it was picked and reloaded again (hub
+        // #293). The card waits instead, and the world it reloads is the one on show.
+        let card = &self.graphics_reload.card;
+        let open = card.wants()
+            && (card.reloading || self.reload_refusal().is_none())
             && place
             && !covered
             && !console_open

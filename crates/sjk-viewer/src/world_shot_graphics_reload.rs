@@ -224,3 +224,131 @@ fn graphics_reload_on_server() {
         shoot(&mut gpu, 4, "graphics-reload-menu-after-server");
     });
 }
+
+/// Hub #293: preset after preset on the menu world, each through the card's own
+/// `vid_restart`, every reload building the world on the preset just picked.
+#[test]
+#[ignore = "renders with the GPU and the installed game data named by JKA_GAME_DATA"]
+fn graphics_reload_menu_preset_after_preset() {
+    use crate::graphics_quality::Level;
+    on_big_stack(|| {
+        let size = [1280, 720];
+        let menu = menu::ClientMenu::new(true, String::new());
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+        ];
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars) else {
+            return;
+        };
+        gpu.graphics_reload.map = "maps/mp/duel6.bsp".to_owned();
+        gpu.is_menu_world = true;
+        let mut parked = crate::menu_world::Parked::new();
+        let _ = frame(&mut gpu, 10);
+        for (round, level) in [
+            Level::Vanilla,
+            Level::SolarHigh,
+            Level::VanillaPlus,
+            Level::SolarLow,
+            Level::Vanilla,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if let Some(console) = gpu.console.as_mut() {
+                level.apply(console);
+            }
+            let _ = frame(&mut gpu, 2);
+            assert!(
+                !gpu.graphics_changes().is_empty(),
+                "round {round}: something to reload"
+            );
+            let before = gpu.context.id;
+            gpu.reload_card_choice(Some(crate::graphics_reload::card::Choice::Reload));
+            until(&mut gpu, &mut parked, size, 120, "rebuilt", |gpu| {
+                gpu.context.id != before && !gpu.graphics_reload.rebuilding()
+            });
+            for _ in 0..10 {
+                step(&mut gpu, &mut parked, size);
+            }
+            let changes = gpu.graphics_changes();
+            eprintln!(
+                "round {round} {level:?}: context {} changes {changes:?}",
+                gpu.context.id
+            );
+            assert!(changes.is_empty(), "round {round} {level:?}: {changes:?}");
+            assert_eq!(
+                gpu.context.sun_shadows.day.enabled,
+                level.family() == crate::graphics_quality::Family::Solar,
+                "round {round} {level:?}"
+            );
+        }
+    });
+}
+
+/// Hub #293 on a server: preset after preset on a local `devmap mp/ffa3`, each through
+/// the card's `vid_restart`, every reload building ffa3 on the preset just picked.
+#[test]
+#[ignore = "renders with the GPU, the installed game data named by JKA_GAME_DATA and a local sjk-server named by JKA_DEDICATED"]
+fn graphics_reload_on_server_preset_after_preset() {
+    use crate::graphics_quality::Level;
+    on_big_stack(|| {
+        let size = [1280, 720];
+        let menu = menu::ClientMenu::new(true, String::new());
+        let cvars = [
+            ("ui_menuStyle", "sjk"),
+            (crate::settings::quick::HIDE_CVAR, "1"),
+        ];
+        let Some((mut gpu, _profile)) = open("maps/mp/duel6.bsp", size, Some(menu), &cvars) else {
+            return;
+        };
+        gpu.graphics_reload.map = "maps/mp/duel6.bsp".to_owned();
+        let mut parked = crate::menu_world::Parked::new();
+        gpu.console
+            .as_mut()
+            .expect("a console")
+            .queue_command("devmap mp/ffa3")
+            .expect("the command queues");
+        until(&mut gpu, &mut parked, size, 120, "joined ffa3", |gpu| {
+            gpu.live_map_installed && gpu.live_session.is_some()
+        });
+        for (round, level) in [
+            Level::Vanilla,
+            Level::SolarHigh,
+            Level::VanillaPlus,
+            Level::SolarLow,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            for _ in 0..30 {
+                step(&mut gpu, &mut parked, size);
+            }
+            if let Some(console) = gpu.console.as_mut() {
+                level.apply(console);
+            }
+            step(&mut gpu, &mut parked, size);
+            let wanted = gpu.graphics_changes();
+            assert!(!wanted.is_empty(), "round {round}: something to reload");
+            let before = gpu.context.id;
+            gpu.reload_card_choice(Some(crate::graphics_reload::card::Choice::Reload));
+            until(&mut gpu, &mut parked, size, 120, "ffa3 reloaded", |gpu| {
+                gpu.live_map_installed && gpu.live_session.is_some() && gpu.context.id != before
+            });
+            for _ in 0..10 {
+                step(&mut gpu, &mut parked, size);
+            }
+            let changes = gpu.graphics_changes();
+            eprintln!(
+                "server round {round} {level:?}: wanted {wanted:?}, context {} changes {changes:?}",
+                gpu.context.id
+            );
+            assert!(changes.is_empty(), "round {round} {level:?}: {changes:?}");
+            assert_eq!(
+                gpu.context.sun_shadows.day.enabled,
+                level.family() == crate::graphics_quality::Family::Solar,
+                "round {round} {level:?}"
+            );
+        }
+    });
+}

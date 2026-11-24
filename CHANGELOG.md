@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- The graphics reload card no longer shows while the reload cannot run (the menu map being built again after a match, a map loading, a demo): Reload now was refused there and the card went away, so a new graphics preset only applied after picking it and reloading a second time (hub #293) _(Sol)_
 - `ampsay` (ampsay <player|-1> <text>) typed in the console shows its centre print again on JA+ servers: the player number now goes as its own word ahead of the message, as JA+ reads it, instead of inside the quoted message, where JA+ found no text to print (hub #266) _(Sol)_
 - Box hunt: the mark no longer loses the mark for standing still a few seconds as the alarm rings; marks came and went seconds apart. Away after 15 seconds still keeps a player from being picked _(Sol; reported by Kushina)_
 - Creyon's Beta blades now say "Found in Beta holocrons.", and the Collection's "Where it drops" says Beta holocrons only: an Alpha holocron never brings one. They can still be crafted, bought in the shop and traded like every kyber holocrons drop. The chances shown for the other kybers now count only what an Alpha holocron can bring _(Kushina's report)_

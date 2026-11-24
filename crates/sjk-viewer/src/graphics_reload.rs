@@ -239,6 +239,35 @@ impl crate::GpuState {
             .changes(Startup::read(console, self.context.anisotropy_limit))
     }
 
+    /// Why the graphics cannot be reloaded here now, or `None` when they can: a map
+    /// loading or a world being built again (the menu world coming back after a match
+    /// above all), a demo or a map explored, or no world of a map to build again (the
+    /// last server's world under the menus until the menu world is back). The reload
+    /// card waits while there is one (hub #293).
+    pub(crate) fn reload_refusal(&self) -> Option<&'static str> {
+        if self.world_load_task.is_some()
+            || self.world_install_task.is_some()
+            || self.pending_map_reload
+            || self.join_task.is_some()
+            || self.resident.session.is_some()
+            || self.graphics_reload.rebuilding()
+        {
+            return Some("A map is loading: reload the graphics once it is in");
+        }
+        if self.demo_session.is_some() || self.resident.exploring() {
+            return Some(
+                "The graphics reload with the next map; leave the demo or map to reload now",
+            );
+        }
+        let on_server = self.live_session.is_some();
+        if (on_server && (!self.live_map_installed || self.is_menu_world))
+            || (!on_server && self.graphics_reload.map.is_empty())
+        {
+            return Some("Nothing to reload here: the graphics reload with the next map");
+        }
+        None
+    }
+
     /// Build the world on show again on a context with the settings read anew. Returns
     /// the console's answer. Without `force` it does nothing while the graphics run with
     /// the settings; with it the world is built again all the same, on a context that
@@ -252,26 +281,10 @@ impl crate::GpuState {
         if !wanted(force, &changes) {
             return Ok("The graphics already run with these settings".into());
         }
-        if self.world_load_task.is_some()
-            || self.world_install_task.is_some()
-            || self.pending_map_reload
-            || self.join_task.is_some()
-            || self.resident.session.is_some()
-            || self.graphics_reload.rebuilding()
-        {
-            return Err("A map is loading: reload the graphics once it is in".into());
-        }
-        if self.demo_session.is_some() || self.resident.exploring() {
-            return Err(
-                "The graphics reload with the next map; leave the demo or map to reload now".into(),
-            );
+        if let Some(refusal) = self.reload_refusal() {
+            return Err(refusal.into());
         }
         let on_server = self.live_session.is_some();
-        if (on_server && (!self.live_map_installed || self.is_menu_world))
-            || (!on_server && self.graphics_reload.map.is_empty())
-        {
-            return Err("Nothing to reload here: the graphics reload with the next map".into());
-        }
         let summary = reason(&changes);
         let context = self.context.resampled(self.console.as_ref());
         if on_server {
