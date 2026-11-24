@@ -37,7 +37,7 @@ pub(super) struct PartIcons {
 impl PartIcons {
     pub(super) fn new() -> Self {
         Self {
-            loader: IconLoader::new(),
+            loader: IconLoader::opaque(),
             species: None,
             counts: [0; 3],
         }
@@ -59,7 +59,7 @@ impl PartIcons {
             species.torsos.len(),
             species.legs.len(),
         ];
-        self.loader = IconLoader::new();
+        self.loader = IconLoader::opaque();
         self.loader
             .request_paths(Arc::clone(vfs), requests(vfs, species));
     }
@@ -72,7 +72,7 @@ impl PartIcons {
     /// next [`Self::show`] loads them again.
     pub(super) fn forget_uploads(&mut self) {
         self.species = None;
-        self.loader = IconLoader::new();
+        self.loader = IconLoader::opaque();
     }
 
     pub(super) fn upload(
@@ -105,6 +105,16 @@ impl PartIcons {
 
     fn ready(&self, species: usize, texture: TextureId) -> bool {
         self.species == Some(species) && self.loader.is_texture_ready(texture)
+    }
+}
+
+/// What a part without a picture is called on its tile: "Hoth" for the stock
+/// species' Hoth gear (`torso_g1`, `lower_e1`, which have no icon), else its name
+/// after the part's prefix (`torso_h2` is "h2").
+pub(super) fn part_label(name: &str) -> &str {
+    match name {
+        "torso_g1" | "lower_e1" => "Hoth",
+        _ => name.split_once('_').map_or(name, |(_, rest)| rest),
     }
 }
 
@@ -185,6 +195,14 @@ mod tests {
         );
         assert_eq!(requests[5].1, ["gfx/menus/players/jedi_hm/hmtintbase.jpg"]);
         assert!(PART_ICON_FIRST + PART_ICON_CELLS <= crate::ui_renderer::ATLAS_CELLS);
+    }
+
+    #[test]
+    fn the_hoth_gear_is_named_and_other_parts_by_their_variant() {
+        assert_eq!(part_label("torso_g1"), "Hoth");
+        assert_eq!(part_label("lower_e1"), "Hoth");
+        assert_eq!(part_label("torso_h2"), "h2");
+        assert_eq!(part_label("plain"), "plain");
     }
 
     #[test]

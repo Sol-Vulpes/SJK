@@ -47,11 +47,11 @@ pub struct LegacySpeciesColor {
 pub struct LegacySpecies {
     /// Directory component below `models/players`.
     pub model: String,
-    /// Icon-backed head skin names, including their `head_` prefix.
+    /// Head skin names, including their `head_` prefix.
     pub heads: Vec<String>,
-    /// Icon-backed torso skin names, including their `torso_` prefix.
+    /// Torso skin names, including their `torso_` prefix.
     pub torsos: Vec<String>,
-    /// Icon-backed lower-body skin names, including their `lower_` prefix.
+    /// Lower-body skin names, including their `lower_` prefix.
     pub legs: Vec<String>,
     /// Colour actions offered by `playerchoice.txt`.
     pub colors: Vec<LegacySpeciesColor>,
@@ -233,6 +233,8 @@ fn parse_species(
     let mut heads = Vec::new();
     let mut torsos = Vec::new();
     let mut legs = Vec::new();
+    // Each list's parts with an icon, which make the folder a species as in retail.
+    let mut pictured = [false; 3];
     for path in paths {
         let Some(stem) = path
             .as_str()
@@ -241,18 +243,21 @@ fn parse_species(
         else {
             continue;
         };
-        if icon_path(vfs, model, stem)?.is_none() {
-            continue;
-        }
-        if stem.starts_with("head_") {
-            heads.push(stem.to_owned());
+        let (list, kind) = if stem.starts_with("head_") {
+            (&mut heads, 0)
         } else if stem.starts_with("torso_") {
-            torsos.push(stem.to_owned());
+            (&mut torsos, 1)
         } else if stem.starts_with("lower_") {
-            legs.push(stem.to_owned());
-        }
+            (&mut legs, 2)
+        } else {
+            continue;
+        };
+        // A part without an icon is listed too (retail left it out): the Hoth gear,
+        // `torso_g1` and `lower_e1` of every stock species, has none (24/11/2026).
+        pictured[kind] |= icon_path(vfs, model, stem)?.is_some();
+        list.push(stem.to_owned());
     }
-    if heads.is_empty() || torsos.is_empty() || legs.is_empty() {
+    if pictured.contains(&false) {
         return Ok(None);
     }
     Ok(Some(LegacySpecies {
@@ -314,6 +319,39 @@ fn icon_path(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_species_lists_its_parts_without_an_icon_too() {
+        let mut vfs = VirtualFileSystem::new();
+        vfs.mount_memory(
+            "pack",
+            [
+                ("models/players/jedi_zf/playerchoice.txt", Vec::new()),
+                ("models/players/jedi_zf/head_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_head_a1.jpg", Vec::new()),
+                ("models/players/jedi_zf/torso_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_torso_a1.png", Vec::new()),
+                ("models/players/jedi_zf/torso_g1.skin", Vec::new()),
+                ("models/players/jedi_zf/lower_a1.skin", Vec::new()),
+                ("models/players/jedi_zf/icon_lower_a1.png", Vec::new()),
+                ("models/players/jedi_zf/lower_e1.skin", Vec::new()),
+                ("models/players/jedi_zf/model_default.skin", Vec::new()),
+                // Skins with no icon at all make no species.
+                ("models/players/bare/playerchoice.txt", Vec::new()),
+                ("models/players/bare/head_a1.skin", Vec::new()),
+                ("models/players/bare/torso_a1.skin", Vec::new()),
+                ("models/players/bare/lower_a1.skin", Vec::new()),
+            ],
+        )
+        .expect("mounts");
+        let catalog = legacy_character_catalog(&vfs).expect("the catalogue");
+        assert_eq!(catalog.species.len(), 1);
+        let species = &catalog.species[0];
+        assert_eq!(species.model, "jedi_zf");
+        assert_eq!(species.heads, ["head_a1"]);
+        assert_eq!(species.torsos, ["torso_a1", "torso_g1"]);
+        assert_eq!(species.legs, ["lower_a1", "lower_e1"]);
+    }
 
     #[test]
     fn rig_models_with_an_icon_are_listed_as_their_default_skin() {

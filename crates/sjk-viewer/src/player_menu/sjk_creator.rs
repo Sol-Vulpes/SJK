@@ -869,9 +869,7 @@ impl PlayerMenu {
                                 Part::Torso => species.torsos.get(item),
                                 Part::Legs => species.legs.get(item),
                             })
-                            .map_or("", |name| {
-                                name.split_once('_').map_or(name.as_str(), |(_, rest)| rest)
-                            });
+                            .map_or("", |name| super::part_icons::part_label(name));
                         self.canvas.text_aligned(
                             name,
                             rect,

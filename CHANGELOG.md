@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Character creation: the head, torso and legs pictures of the custom species show the whole outfit, not only its tinted bits, and the Hoth gear (torso `torso_g1`, legs `lower_e1`) can be chosen in the Torso and Legs lists, with jaPRO's pictures of it where JoF EJK's `japro-assets.pk3` is installed in the EternalJK folder (named "Hoth" without them) _(Kushina, pictures after jaPRO)_
 - A saber swing is no longer heard when none is made: with the medium style a chain of 3 swings could sound like 4, as the client played a swing it guessed between two commands that the server then did not make (hub #279) _(Sol)_
 - Map music plays in stereo again, as in stock Jedi Academy: tracks were mixed down to mono (hub #284) _(Sol)_
 - Dropped weapons lie on their side on the ground, as in stock, instead of standing on their stock with the barrel up (hub #295) _(Sol)_

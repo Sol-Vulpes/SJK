@@ -1367,7 +1367,7 @@ impl PlayerMenu {
                 continue;
             }
             self.canvas.text_aligned(
-                name,
+                crate::player_menu::part_icons::part_label(name),
                 Rect::new(
                     rect.x + 2.0 * s,
                     rect.y + rect.height * 0.5 - 8.0 * s,

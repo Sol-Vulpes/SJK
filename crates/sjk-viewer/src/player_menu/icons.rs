@@ -34,6 +34,8 @@ pub(crate) struct IconLoader {
     requested: bool,
     /// One bit per atlas cell that holds a finished upload.
     ready: [u64; TRACKED_CELLS.div_ceil(64)],
+    /// Draw the pictures whole, their alpha set to opaque ([`Self::opaque`]).
+    opaque: bool,
 }
 
 impl IconLoader {
@@ -44,6 +46,17 @@ impl IconLoader {
             uploaded: 0,
             requested: false,
             ready: [0; TRACKED_CELLS.div_ceil(64)],
+            opaque: false,
+        }
+    }
+
+    /// A loader whose pictures are drawn whole: character creation's part icons keep
+    /// in their alpha the mask the colour swatches tint, not a cut-out, and drawn with
+    /// it only the tinted bits of each outfit showed (24/11/2026).
+    pub(crate) fn opaque() -> Self {
+        Self {
+            opaque: true,
+            ..Self::new()
         }
     }
 
@@ -88,10 +101,11 @@ impl IconLoader {
 
     fn spawn(&mut self, vfs: Arc<VirtualFileSystem>, requests: Vec<IconRequest>) {
         let (sender, receiver) = mpsc::sync_channel(1);
+        let opaque = self.opaque;
         std::thread::spawn(move || {
             let decoded = requests
                 .into_iter()
-                .filter_map(|(id, paths)| decode_first(&vfs, id, &paths))
+                .filter_map(|(id, paths)| decode_first(&vfs, id, &paths, opaque))
                 .collect();
             let _ = sender.send(decoded);
         });
@@ -135,7 +149,14 @@ impl IconLoader {
     }
 }
 
-fn decode_first(vfs: &VirtualFileSystem, id: TextureId, paths: &[String]) -> Option<DecodedIcon> {
+/// The first of `paths` that decodes, at the atlas cell's size; with `opaque` its
+/// alpha is set to full.
+fn decode_first(
+    vfs: &VirtualFileSystem,
+    id: TextureId,
+    paths: &[String],
+    opaque: bool,
+) -> Option<DecodedIcon> {
     for path in paths {
         let Ok(Some(image)) = crate::decoded_image_cache::cached_decoded_image(vfs, path) else {
             continue;
@@ -147,14 +168,32 @@ fn decode_first(vfs: &VirtualFileSystem, id: TextureId, paths: &[String]) -> Opt
             image::imageops::FilterType::Triangle,
         )
         .into_raw();
+        let mut rgba = rgba;
+        if opaque {
+            opaque_alpha(&mut rgba);
+        }
         return Some(DecodedIcon { id, rgba });
     }
     None
 }
 
+/// Set every pixel of `rgba` fully opaque.
+fn opaque_alpha(rgba: &mut [u8]) {
+    for pixel in rgba.chunks_exact_mut(4) {
+        pixel[3] = u8::MAX;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_opaque_picture_keeps_its_colours_and_drops_its_mask() {
+        let mut rgba = vec![10, 20, 30, 0, 40, 50, 60, 128];
+        opaque_alpha(&mut rgba);
+        assert_eq!(rgba, [10, 20, 30, 255, 40, 50, 60, 255]);
+    }
 
     #[test]
     fn force_cells_leave_the_model_grid_its_full_range() {
