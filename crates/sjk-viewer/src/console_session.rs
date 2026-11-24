@@ -1002,12 +1002,15 @@ impl ViewerConsole {
         .into_iter()
         .enumerate()
         {
-            let mut value = game
-                .config_string(index)
-                .and_then(|bytes| std::str::from_utf8(bytes).ok())
-                .and_then(|text| sjk_protocol::InfoString::parse(text).ok())
-                .and_then(|info| info.get_i32(name))
-                .unwrap_or(default);
+            // CS_SERVERINFO is read lossily (`GameState::server_info`, #319).
+            let info = if index == 0 {
+                game.server_info()
+            } else {
+                game.config_string(index)
+                    .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                    .and_then(|text| sjk_protocol::InfoString::parse(text).ok())
+            };
+            let mut value = info.and_then(|info| info.get_i32(name)).unwrap_or(default);
             if name == "pmove_msec" {
                 value = value.clamp(8, 33);
             }

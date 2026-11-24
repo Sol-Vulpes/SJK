@@ -289,9 +289,9 @@ pub(crate) fn levelshot_key(map: &str) -> String {
     stem.to_owned()
 }
 
-/// `CS_SERVERINFO`, parsed.
+/// `CS_SERVERINFO`, parsed lossily ([`GameState::server_info`]).
 pub(crate) fn server_info(game: &GameState) -> Option<InfoString> {
-    config_text(game, 0).and_then(|text| InfoString::parse(text).ok())
+    game.server_info()
 }
 
 /// Config string `index` as text.

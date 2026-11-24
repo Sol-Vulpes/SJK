@@ -19,7 +19,6 @@ use crate::ingame_menu::players::{self, Action, Gate};
 use crate::text_dialog::Report;
 use sjk_client::ServerEventKind;
 use sjk_identity::Category;
-use sjk_protocol::InfoString;
 use std::time::Instant;
 
 /// `CS_LEVEL_START_TIME`: when the map started, in server milliseconds.
@@ -227,8 +226,8 @@ impl crate::GpuState {
             game.config_string(index)
                 .and_then(|bytes| std::str::from_utf8(bytes).ok())
         };
-        let server_name = config(0)
-            .and_then(|text| InfoString::parse(text).ok())
+        let server_name = game
+            .server_info()
             .and_then(|info| info.get("sv_hostname").map(str::to_owned))
             .unwrap_or_default();
         let level_time = config(CS_LEVEL_START_TIME)
