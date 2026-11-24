@@ -2758,19 +2758,33 @@ impl Panel {
 
     /// Where a locked `skin` drops, from `[x, y]`: a chip for each holocron tier that may
     /// bring it, in the tier's colour, with the chance an opening of one does (the hub's
-    /// odds, [`crate::loot_odds`], split evenly among the droppable shaders of its tier).
+    /// odds, [`crate::loot_odds`], split evenly among the droppable shaders of its tier that
+    /// an Alpha holocron can bring). A Beta one comes from Beta holocrons alone, whose
+    /// tables (guaranteed kybers, bonus rolls, `docs/cards.md` "Seasons") those odds are
+    /// not: it says so, without chances (Kushina, 24/11/2026: the card read as if any
+    /// holocron brought it).
     fn drops(&mut self, frame: &Frame, skin: &Unlockable, [x, y]: [f32; 2]) {
         let s = frame.s;
         let rarity = skin.tier as usize;
+        let alpha = crate::editions::within(skin.edition, crate::editions::ALPHA);
         let pool = unlockables::blade_skins()
-            .filter(|other| other.droppable && other.tier == skin.tier)
+            .filter(|other| {
+                other.droppable
+                    && other.tier == skin.tier
+                    && crate::editions::within(other.edition, crate::editions::ALPHA)
+            })
             .count();
         text(
             &mut self.ui,
             TextFamily::Body,
             format_args!(
-                "{}  Where it drops, a chance per opening",
-                symbols::HOLOCRON
+                "{}  {}",
+                symbols::HOLOCRON,
+                if alpha {
+                    "Where it drops, a chance per Alpha holocron opened"
+                } else {
+                    "Found in Beta holocrons only"
+                }
             ),
             frame.rect(x, y, CARD_WIDTH - CARD_PAD * 2.0, 22.0),
             16.0 * s,
@@ -2778,6 +2792,9 @@ impl Panel {
             FontWeight::Semibold,
             TextAlign::Start,
         );
+        if !alpha {
+            return;
+        }
         let mut left = x;
         for tier in &crate::holocrons::TIERS {
             let chance = crate::cards::loot::shader_in(tier.index, rarity, pool);

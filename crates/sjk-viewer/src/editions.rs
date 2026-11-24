@@ -67,9 +67,30 @@ pub(crate) fn name(id: &str) -> String {
     }
 }
 
+/// Whether a thing of edition `item` may come from a holocron or kyber crystal of edition
+/// `holocron`: the same edition or an older one, as the hub's `editions::within` decides. A
+/// holocron of an edition the client does not know counts as Alpha; a thing of one never
+/// comes.
+pub(crate) fn within(item: &str, holocron: &str) -> bool {
+    let order = |id: &str| ALL.iter().position(|edition| edition.id == id);
+    let holocron = order(holocron).unwrap_or(0);
+    order(item).is_some_and(|item| item <= holocron)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_alpha_holocron_brings_alpha_things_and_a_beta_one_both() {
+        assert!(within(ALPHA, ALPHA));
+        assert!(!within(BETA, ALPHA));
+        assert!(within(ALPHA, BETA));
+        assert!(within(BETA, BETA));
+        assert!(!within(BETA, "zeta"));
+        assert!(within(ALPHA, "zeta"));
+        assert!(!within("zeta", BETA));
+    }
 
     #[test]
     fn an_edition_reads_in_full() {

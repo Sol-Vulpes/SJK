@@ -1,3 +1,29 @@
+## Beta blades: where they come from, and the "flat" report (24/11/2026)
+
+Kushina's two reports on 2026.1123.2. Branch `personal/beta-blades-fix`, based on `main`
+`a07faf673`.
+
+- **"Beta locked sabers can be bought through the shop, can be used":** as built. The hub's
+  trade (`economy::in_trade`: shop, craft, Forge, trades) is `droppable` with no edition
+  check, and since the Beta season opened the 131 Beta blades are droppable on both sides,
+  as the 2026.1123.2 notes say. What was wrong was the client's wording: every Beta blade
+  said "Found in holocrons." and its "Where it drops" chips gave chances from the Alpha
+  tables, though an Alpha holocron never brings one (`editions::within`). They now say
+  "Found in Beta holocrons." (`unlockables::FROM_BETA_HOLOCRONS`) and "Found in Beta
+  holocrons only", without chances; an Alpha blade's chances count only the kybers an Alpha
+  holocron can bring ([unlockables.md](unlockables.md)). The opening's crate strip still
+  shows neighbours of any edition (a dressing only).
+- **"All beta sabers flat ... most appear grey" in the Collection:** not reproduced. The Beta
+  signatures are built into the client (`blade_signatures/`, all 131), the hub's
+  `sjk_skins_2.pk3` carries the same 131 files byte for byte, they build without error in
+  Sol's logs and their baked loops (`cache/blades`) are coloured. Two drawings by design match
+  the words: a kyber not held is drawn greyed and dimmed in the Collection, and a chroma
+  (50 of the 131, 14 of the 18 Mythical, 26 of the 38 Legendary) worn with a pale custom RGB
+  colour takes its paleness (`Chroma::grey`, Dante's idea): Kushina's pastel of the chroma
+  cliff report (207, 190, 234) greys a well-coloured one by 75 %, white by 100 %, in game and in the Collection.
+  Unconfirmed until her `color1`, `cp_sbRGB1` and `cg_saberLabDesigns` and a session log
+  (`signature shader:` lines) are known.
+
 ## Clean-up ahead of v1: the last leftovers (23/11/2026)
 
 Branch `personal/v1-leftovers`, based on `main` `632a3f521`, Sol's approval of the
