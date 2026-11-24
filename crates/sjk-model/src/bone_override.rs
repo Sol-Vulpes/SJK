@@ -83,6 +83,8 @@ pub struct BoneOverridePose {
     inherited: Vec<Option<EvaluatedOverride>>,
     local_matrices: Vec<[[f32; 4]; 3]>,
     matrices: Vec<[[f32; 4]; 3]>,
+    /// The drawn pose: [`Self::matrices`] after Ghoul2's render unsquash.
+    render_matrices: Vec<[[f32; 4]; 3]>,
     states: Vec<u8>,
     /// Whether a looping override's start is moved up as it wraps (`G2_Animate_Bone_List`).
     rebase_loops: bool,
@@ -97,6 +99,7 @@ impl BoneOverridePose {
             inherited: vec![None; bone_count],
             local_matrices: vec![[[0.0; 4]; 3]; bone_count],
             matrices: vec![[[0.0; 4]; 3]; bone_count],
+            render_matrices: vec![[[0.0; 4]; 3]; bone_count],
             states: vec![0; bone_count],
             rebase_loops: true,
         }
@@ -296,6 +299,39 @@ impl BoneOverridePose {
         &self.matrices
     }
 
+    /// Mutable [`Self::matrices`], for callers that adjust the evaluated pose.
+    pub fn matrices_mut(&mut self) -> &mut [[[f32; 4]; 3]] {
+        &mut self.matrices
+    }
+
+    /// Fill [`Self::render_matrices`] from the most recent evaluation: Ghoul2's
+    /// render-side unsquash (`CBoneCache::SmoothLow`, rd-vanilla `tr_ghoul2.cpp:289-302`,
+    /// reached through `EvalRender` for every skinned vertex, `tr_ghoul2.cpp:457-473`).
+    /// Frames and blends are lerped component by component, which shrinks a bone whose
+    /// keys turn far apart (a flip or a dual-saber spin) and flattens the mesh it
+    /// carries; the renderer gives each axis of the bone's model-space frame (the bone
+    /// times its base pose) back the base pose's length. The stock renderer does this
+    /// whenever `r_ghoul2animsmooth` is in (0, 1), its default being 0.3
+    /// (`tr_init.cpp:1767`, `tr_ghoul2.cpp:2072-2120`); its frame-to-frame smoothing of
+    /// 0.3 is not reproduced. Bolts and traces keep the raw
+    /// [`Self::matrices`], as Ghoul2's do (`EvalUnsmooth`, `G2_ConstructGhoulSkeleton`
+    /// without smoothing).
+    pub fn update_render_matrices(&mut self, animation: &Gla) {
+        for ((bone, matrix), render) in animation
+            .bones
+            .iter()
+            .zip(&self.matrices)
+            .zip(&mut self.render_matrices)
+        {
+            *render = unsquash(*matrix, bone.base_pose, bone.inverse_base_pose);
+        }
+    }
+
+    /// The drawn pose from the last [`Self::update_render_matrices`].
+    pub fn render_matrices(&self) -> &[[[f32; 4]; 3]] {
+        &self.render_matrices
+    }
+
     /// Local matrices from the most recent evaluation, before parent composition.
     pub fn local_matrices(&self) -> &[[[f32; 4]; 3]] {
         &self.local_matrices
@@ -312,6 +348,30 @@ impl BoneOverridePose {
             self.states.as_ptr() as usize,
         ]
     }
+}
+
+/// One bone of `CBoneCache::SmoothLow`'s unsquash (`tr_ghoul2.cpp:289-302`): normalize
+/// the three axis rows of `matrix * base_pose`, scale them to the length of the base
+/// pose's first row, and return to bone space with `inverse_base_pose`. A row that has
+/// collapsed to zero stays zero, as `VectorNormalize` leaves it.
+fn unsquash(
+    matrix: [[f32; 4]; 3],
+    base_pose: [[f32; 4]; 3],
+    inverse_base_pose: [[f32; 4]; 3],
+) -> [[f32; 4]; 3] {
+    let mut frame = multiply_3x4(matrix, base_pose);
+    let length = |row: &[f32; 4]| (row[0] * row[0] + row[1] * row[1] + row[2] * row[2]).sqrt();
+    let base_length = length(&base_pose[0]);
+    for row in &mut frame {
+        let row_length = length(row);
+        if row_length > 0.0 {
+            let scale = base_length / row_length;
+            for component in &mut row[..3] {
+                *component *= scale;
+            }
+        }
+    }
+    multiply_3x4(frame, inverse_base_pose)
 }
 
 fn validate_command(
@@ -463,4 +523,117 @@ fn evaluate_bone(
     inherited[bone] = Some(evaluated);
     states[bone] = 2;
     Ok(evaluated)
+}
+
+#[cfg(test)]
+mod render_unsquash_tests {
+    use super::{BoneAnimationCommand, BoneOverridePose, OverrideEndBehavior};
+    use crate::{Gla, GlaBone, multiply_3x4};
+
+    /// A GLA-compressed bone turned `degrees` about z, at the origin.
+    fn compressed_turn(degrees: f32) -> [u8; 14] {
+        let (sin, cos) = (degrees.to_radians() / 2.0).sin_cos();
+        let mut bytes = [0; 14];
+        for (index, value) in [cos, 0.0, 0.0, sin].into_iter().enumerate() {
+            let encoded = ((value + 2.0) * 16_383.0).round() as u16;
+            bytes[index * 2..index * 2 + 2].copy_from_slice(&encoded.to_le_bytes());
+        }
+        for axis in 0..3 {
+            bytes[8 + axis * 2..10 + axis * 2].copy_from_slice(&(512_u16 * 64).to_le_bytes());
+        }
+        bytes
+    }
+
+    /// One bone whose base pose is turned 90 degrees about x and moved off the origin,
+    /// with its frames 0 and 1 a 170-degree turn apart (a spin's keys).
+    fn spinning_bone() -> Gla {
+        let base_pose = [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0, 2.0],
+            [0.0, 1.0, 0.0, 3.0],
+        ];
+        let inverse_base_pose = [
+            [1.0, 0.0, 0.0, -1.0],
+            [0.0, 0.0, 1.0, -3.0],
+            [0.0, -1.0, 0.0, 2.0],
+        ];
+        Gla {
+            name: "spin".into(),
+            scale: 1.0,
+            bones: vec![GlaBone {
+                name: "model_root".into(),
+                flags: 0,
+                parent: None,
+                base_pose,
+                inverse_base_pose,
+                children: Vec::new(),
+            }],
+            frames: vec![vec![0], vec![1]],
+            compressed_bones: vec![compressed_turn(0.0), compressed_turn(170.0)],
+        }
+    }
+
+    fn row_length(row: [f32; 4]) -> f32 {
+        (row[0] * row[0] + row[1] * row[1] + row[2] * row[2]).sqrt()
+    }
+
+    #[test]
+    fn a_bone_lerped_across_a_wide_turn_is_drawn_full_size() {
+        let animation = spinning_bone();
+        let mut pose = BoneOverridePose::new(1);
+        pose.set_bone_animation(
+            &animation,
+            0,
+            BoneAnimationCommand {
+                clip: 0,
+                start_frame: 0,
+                end_frame: 2,
+                speed: 1.0,
+                time_millis: 0,
+                set_frame: None,
+                end_behavior: OverrideEndBehavior::Freeze,
+                blend: false,
+                blend_millis: 0,
+            },
+        )
+        .expect("command");
+        // Halfway between the two keys, as G2_TransformBone lerps them.
+        pose.evaluate(&animation, 25).expect("pose");
+        pose.update_render_matrices(&animation);
+        let base_pose = animation.bones[0].base_pose;
+        let raw = multiply_3x4(pose.matrices()[0], base_pose);
+        // The component-wise lerp alone squashes the turned axes to cos(85 degrees).
+        assert!(row_length(raw[0]) < 0.1 && row_length(raw[1]) < 0.1);
+        let drawn = multiply_3x4(pose.render_matrices()[0], base_pose);
+        for (index, row) in drawn.iter().enumerate() {
+            assert!(
+                (row_length(*row) - 1.0).abs() < 1e-3,
+                "row {index}: {row:?}"
+            );
+            for other in &drawn[index + 1..] {
+                let dot: f32 = (0..3).map(|axis| row[axis] * other[axis]).sum();
+                assert!(
+                    dot.abs() < 1e-3,
+                    "rows {row:?} and {other:?} are not orthogonal"
+                );
+            }
+            // The bone stays where it is; only its axes are restored.
+            assert!((row[3] - raw[index][3]).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn a_rigid_pose_is_drawn_as_evaluated() {
+        let animation = spinning_bone();
+        let mut pose = BoneOverridePose::new(1);
+        pose.evaluate(&animation, 0).expect("pose");
+        pose.update_render_matrices(&animation);
+        for (raw, drawn) in pose.matrices()[0]
+            .iter()
+            .flatten()
+            .zip(pose.render_matrices()[0].iter().flatten())
+        {
+            assert!((raw - drawn).abs() < 1e-5);
+        }
+    }
 }

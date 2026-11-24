@@ -411,9 +411,22 @@ impl LegacyGhoul2Animator {
         time_millis: i64,
     ) -> Result<&'a mut [[[f32; 4]; 3]], ModelError> {
         self.evaluated_at = Some(time_millis);
-        if self.body {
-            return self.pose.evaluate(animation, time_millis);
+        if !self.body {
+            self.install_tracks(animation, config, state, time_millis)?;
         }
+        self.pose.evaluate(animation, time_millis)?;
+        self.pose.update_render_matrices(animation);
+        Ok(self.pose.matrices_mut())
+    }
+
+    /// Install the legs and torso tracks that changed since the last evaluation.
+    fn install_tracks(
+        &mut self,
+        animation: &Gla,
+        config: &AnimationConfig,
+        state: AnimationState,
+        time_millis: i64,
+    ) -> Result<(), ModelError> {
         if (self.applied_lower.is_none() || time_millis >= state.lower.started_at_millis)
             && self.applied_lower != Some(state.lower)
         {
@@ -437,7 +450,7 @@ impl LegacyGhoul2Animator {
             self.applied_upper = Some(state.upper);
             self.upper_command = Some(command);
         }
-        self.pose.evaluate(animation, time_millis)
+        Ok(())
     }
 
     /// Query the existing Motion override before the frame's new animation commands.
@@ -504,6 +517,13 @@ impl LegacyGhoul2Animator {
     /// Composed skinning matrices retained by the most recent successful evaluation.
     pub fn matrices(&self) -> &[[[f32; 4]; 3]] {
         self.pose.matrices()
+    }
+
+    /// The drawn pose of the most recent evaluation: [`Self::matrices`] after
+    /// Ghoul2's render unsquash ([`BoneOverridePose::update_render_matrices`]). Skin
+    /// vertices with these; bolts and traces read [`Self::matrices`].
+    pub fn render_matrices(&self) -> &[[[f32; 4]; 3]] {
+        self.pose.render_matrices()
     }
 
     /// Local matrices from the most recent pose evaluation.

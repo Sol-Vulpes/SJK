@@ -991,6 +991,21 @@ animates is not swapped for Kyle:
 - `animation.cfg` lines that name no animation, and sequences with no frames,
   are left out as `BG_ParseAnimationFile` leaves them; a table that then names
   nothing holds frame 0, as `G2_TransformBone` does.
+- Bones are lerped between frames and blended between animations component by
+  component, as `G2_TransformBone` does, and the vertices are skinned with the
+  renderer's unsquashed pose, as rd-vanilla's `EvalRender` gives them
+  (`CBoneCache::SmoothLow`, `tr_ghoul2.cpp:289-302`, active with the default
+  `r_ghoul2animsmooth 0.3`): each axis of a bone's model-space frame gets its base pose's
+  length back. A bone whose keys turn far apart, in flips and the dual-saber spins in
+  the air, shrinks under the plain lerp, and SJK drew the mesh it carries thinned
+  until 24/11/2026, the likely cause of the cardboard-cutout model of hub #246 (not
+  confirmed in game). The retail skeleton's trunk bones shrink to 0.7 of their size
+  midway between some keys of `BOTH_GRABBED`, `BOTH_A7_KICK_S` and `BOTH_JUMPATTACK6`
+  (its arms to 0.1 in `BOTH_ALORA_SPIN_SLASH`), and a blend between two animations can
+  turn a bone further. Bolts and traces keep
+  the raw pose, as Ghoul2's do; stock's frame-to-frame smoothing (0.3 of the previous
+  frame's pose) is not reproduced ([bone_override.rs](../crates/sjk-model/src/bone_override.rs)
+  `update_render_matrices`).
 
 Still drawn as Kyle: a model whose `model.glm` or skeleton is not installed or is
 not version 6, a mesh referencing a bone past its skeleton, an `animation.cfg`

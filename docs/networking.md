@@ -889,6 +889,32 @@ report 172). It stays behind the client's other commands, a `userinfo` after a m
 or saber change or a Force-profile `team` retry, so a `kill` bind respawns with the
 new model and a typed `/team s` is not undone by a retry sent after it.
 
+### Remote entity interpolation
+
+Other players, NPCs and every other entity are drawn between snapshots at the
+presentation time, as `CG_InterpolateEntityPosition` (`cg_ents.c`) draws them between
+`cg.snap` and `cg.nextSnap`. The presentation clock follows stock's drift (above): it
+moves back 2 ms whenever a frame came within 5 ms of the newest snapshot, so it settles
+a little more than one snapshot interval behind the newest, and when a snapshot arrives
+the drawn time is often still short of the one before it. cgame then interpolates the
+pair before, from its snapshot queue. The runtime kept only the newest two samples of
+an entity until 24/11/2026, so for those frames (about one in ten at JoF's 30
+snapshots a second, more with arrival jitter) a remote player stood still on the older
+sample and then caught up: position and view angles stepped at the snapshot rate,
+seen as players skipping and jittering when running and turning (hub #261). Each
+entity now keeps its four newest samples and their poses
+([sjk-runtime](../crates/sjk-runtime/src/lib.rs) `MOTION_HISTORY`) and draws the pair
+around the presentation time; past the newest it holds the newest, as stock holds an
+interpolated entity without a next snapshot. A teleport sample is never glided into,
+even once newer samples arrive. The discrete pose (velocity, ground, flags) is the later
+sample's of the pair drawn. A 20-second simulation through the presentation clock
+(`remote_motion_tests` in
+[presentation_clock.rs](../crates/sjk-viewer/src/presentation_clock.rs)) at 30, 20 and
+40 snapshots a second, with up to 15 ms of jitter, now draws a running player where
+stock would on every frame; the two-sample runtime was up to 4.5 units off. Not
+verified on a live server; `cg_smoothClients 1` extrapolation past the newest snapshot
+is still not done.
+
 ## Prediction regression review, 30/10/2026
 
 Audit #305 covers all 25 prediction PRs from 29/10, against release

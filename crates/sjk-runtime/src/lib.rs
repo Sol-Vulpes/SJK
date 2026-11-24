@@ -198,6 +198,18 @@ pub struct MotionSample {
     pub transform: Transform,
 }
 
+/// Motion samples each entity keeps, oldest first.
+///
+/// Presentation trails the newest sample by about one sample interval plus the
+/// arrival jitter: stock's clock drifts back 2 ms whenever a frame came within 5 ms of
+/// the newest snapshot (`CL_AdjustTimeDelta`, `cl_cgame.cpp`), so when a snapshot
+/// arrives the drawn time is usually still short of the one before it. cgame then
+/// still interpolates the two snapshots before it (`CG_ProcessSnapshots` keeps
+/// `cg.snap`/`cg.nextSnap` from its snapshot queue). With only the newest two kept, such
+/// frames held the older one and then caught up, so remote players stepped at the
+/// snapshot rate (hub #261). Four cover a drawn time three intervals behind.
+pub const MOTION_HISTORY: usize = 4;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SceneEntity {
     pub id: EntityId,
@@ -206,8 +218,6 @@ pub struct SceneEntity {
     motion_discontinuity_at_millis: Option<i64>,
     appearance: Option<Appearance>,
     animation: Option<AnimationState>,
-    previous_pose: Option<PoseState>,
-    current_pose: Option<PoseState>,
     equipment: Option<HeldEquipment>,
     item: Option<ItemState>,
     /// Per-entity RGBA modulation applied by materials that opt into entity
@@ -216,13 +226,64 @@ pub struct SceneEntity {
     /// Whether the entity drops a ground-contact shadow; adapters clear it
     /// for states the game hides (dead, cloaked, mounted).
     ground_shadow: bool,
-    previous: MotionSample,
-    current: MotionSample,
+    /// The newest [`MOTION_HISTORY`] samples, oldest first; the last is the current one.
+    samples: [MotionSample; MOTION_HISTORY],
+    /// The pose given with each sample ([`World::set_pose`]).
+    poses: [Option<PoseState>; MOTION_HISTORY],
+    /// Whether each sample must not be reached by interpolating from the one before.
+    breaks: [bool; MOTION_HISTORY],
 }
 
+/// The samples a time falls between: `(earlier, later, fraction)`.
+type Bracket = (usize, usize, f32);
+
+const NEWEST: usize = MOTION_HISTORY - 1;
+
 impl SceneEntity {
+    fn new(id: EntityId, kind: EntityKind, sample: MotionSample) -> Self {
+        Self {
+            id,
+            kind,
+            motion_revision: 0,
+            motion_discontinuity_at_millis: None,
+            appearance: None,
+            animation: None,
+            equipment: None,
+            item: None,
+            color: [u8::MAX; 4],
+            ground_shadow: true,
+            samples: [sample; MOTION_HISTORY],
+            poses: [None; MOTION_HISTORY],
+            breaks: [false; MOTION_HISTORY],
+        }
+    }
+
     pub fn current(&self) -> MotionSample {
-        self.current
+        self.samples[NEWEST]
+    }
+
+    /// The kept samples `time_millis` falls between, as cgame's `cg.snap` and
+    /// `cg.nextSnap`: past the newest it holds the newest, before the oldest the
+    /// oldest, and across a discontinuity the sample before it.
+    fn bracket(&self, time_millis: i64) -> Bracket {
+        if time_millis >= self.samples[NEWEST].time_millis {
+            return (NEWEST, NEWEST, 0.0);
+        }
+        for later in (1..MOTION_HISTORY).rev() {
+            let earlier = later - 1;
+            let (start, end) = (
+                self.samples[earlier].time_millis,
+                self.samples[later].time_millis,
+            );
+            if time_millis >= start && end > start {
+                if self.breaks[later] {
+                    return (earlier, earlier, 0.0);
+                }
+                let fraction = (time_millis - start) as f32 / (end - start) as f32;
+                return (earlier, later, fraction.clamp(0.0, 1.0));
+            }
+        }
+        (0, 0, 0.0)
     }
 
     /// Monotonic revision changed when motion must not interpolate from its
@@ -256,22 +317,21 @@ impl SceneEntity {
     }
 
     pub fn pose(&self) -> Option<PoseState> {
-        self.current_pose
+        self.poses[NEWEST]
     }
 
     /// Sample adapter-owned pose inputs on the same snapshot interval as the
     /// entity transform. Angles use Quake's shortest-arc `LerpAngle`; discrete
-    /// state remains the current snapshot state, matching cgame's use of
-    /// `currentState` beside `cent->lerpAngles`.
+    /// state is the later sample's of the interval drawn, as cgame keeps one
+    /// snapshot's `currentState` beside `cent->lerpAngles`.
     pub fn sample_pose(&self, time_millis: i64) -> Option<PoseState> {
-        let current = self.current_pose?;
-        let previous = self.previous_pose.unwrap_or(current);
-        let duration = self.current.time_millis - self.previous.time_millis;
-        if duration <= 0 {
+        let newest = self.poses[NEWEST]?;
+        let (earlier, later, fraction) = self.bracket(time_millis);
+        let current = self.poses[later].unwrap_or(newest);
+        if earlier == later {
             return Some(current);
         }
-        let fraction =
-            ((time_millis - self.previous.time_millis) as f32 / duration as f32).clamp(0.0, 1.0);
+        let previous = self.poses[earlier].unwrap_or(current);
         Some(PoseState {
             view_angles_degrees: std::array::from_fn(|axis| {
                 lerp_angle(
@@ -299,33 +359,34 @@ impl SceneEntity {
     }
 
     pub fn sample(&self, time_millis: i64) -> Transform {
-        if self
-            .motion_discontinuity_at_millis
-            .is_some_and(|boundary| time_millis < boundary)
-        {
-            return self.previous.transform;
+        let (earlier, later, fraction) = self.bracket(time_millis);
+        if earlier == later {
+            return self.samples[earlier].transform;
         }
-        let duration = self.current.time_millis - self.previous.time_millis;
-        if duration <= 0 {
-            return self.current.transform;
-        }
-        let fraction =
-            ((time_millis - self.previous.time_millis) as f32 / duration as f32).clamp(0.0, 1.0);
-        interpolate_transform(self.previous.transform, self.current.transform, fraction)
+        interpolate_transform(
+            self.samples[earlier].transform,
+            self.samples[later].transform,
+            fraction,
+        )
     }
 
-    fn push(&mut self, sample: MotionSample) -> bool {
-        if sample.time_millis < self.current.time_millis {
+    /// Append a sample (or replace the newest at the same time). A `discontinuous`
+    /// sample is never interpolated into. The newest pose carries over until
+    /// [`World::set_pose`] gives the new sample its own.
+    fn push(&mut self, sample: MotionSample, discontinuous: bool) -> bool {
+        let newest = self.samples[NEWEST].time_millis;
+        if sample.time_millis < newest {
             return false;
         }
-        if sample.time_millis == self.current.time_millis {
-            self.current = sample;
-        } else {
-            self.previous = self.current;
-            self.current = sample;
-            self.previous_pose = self.current_pose;
+        if sample.time_millis > newest {
+            self.samples.rotate_left(1);
+            self.poses.rotate_left(1);
+            self.breaks.rotate_left(1);
+            self.poses[NEWEST] = self.poses[NEWEST - 1];
+            self.breaks[NEWEST] = false;
         }
-        self.motion_discontinuity_at_millis = None;
+        self.samples[NEWEST] = sample;
+        self.breaks[NEWEST] |= discontinuous;
         true
     }
 }
@@ -359,27 +420,9 @@ impl World {
     pub fn upsert(&mut self, id: EntityId, kind: EntityKind, sample: MotionSample) -> bool {
         if let Some(entity) = self.entities.get_mut(&id) {
             entity.kind = kind;
-            return entity.push(sample);
+            return entity.push(sample, false);
         }
-        self.entities.insert(
-            id,
-            SceneEntity {
-                id,
-                kind,
-                motion_revision: 0,
-                motion_discontinuity_at_millis: None,
-                appearance: None,
-                animation: None,
-                previous_pose: None,
-                current_pose: None,
-                equipment: None,
-                item: None,
-                color: [u8::MAX; 4],
-                ground_shadow: true,
-                previous: sample,
-                current: sample,
-            },
-        );
+        self.entities.insert(id, SceneEntity::new(id, kind, sample));
         true
     }
 
@@ -394,18 +437,11 @@ impl World {
         sample: MotionSample,
     ) -> bool {
         if let Some(entity) = self.entities.get_mut(&id) {
-            if sample.time_millis < entity.current.time_millis {
+            if !entity.push(sample, true) {
                 return false;
             }
             entity.kind = kind;
             entity.motion_revision = entity.motion_revision.wrapping_add(1);
-            if sample.time_millis == entity.current.time_millis {
-                entity.current = sample;
-            } else {
-                entity.previous = entity.current;
-                entity.current = sample;
-                entity.previous_pose = entity.current_pose;
-            }
             entity.motion_discontinuity_at_millis = Some(sample.time_millis);
             return true;
         }
@@ -479,10 +515,11 @@ impl World {
         let Some(entity) = self.entities.get_mut(&id) else {
             return false;
         };
-        if entity.current_pose.is_none() {
-            entity.previous_pose = pose;
+        if entity.poses[NEWEST].is_none() {
+            // The first pose stands for the samples before it too.
+            entity.poses = [pose; MOTION_HISTORY];
         }
-        entity.current_pose = pose;
+        entity.poses[NEWEST] = pose;
         true
     }
 
@@ -596,5 +633,84 @@ fn normalized_lerp_quaternion(start: [f32; 4], mut end: [f32; 4], fraction: f32)
         Transform::IDENTITY.rotation
     } else {
         interpolated.map(|component| component / length)
+    }
+}
+
+#[cfg(test)]
+mod motion_history_tests {
+    use super::*;
+
+    fn at(time_millis: i64, x: f32) -> MotionSample {
+        MotionSample {
+            time_millis,
+            transform: Transform {
+                translation: [x, 0.0, 0.0],
+                ..Transform::IDENTITY
+            },
+        }
+    }
+
+    fn yawing(yaw: f32) -> Option<PoseState> {
+        Some(PoseState {
+            view_angles_degrees: [0.0, yaw, 0.0],
+            ..PoseState::default()
+        })
+    }
+
+    /// A player running 10 units and turning 10 degrees a snapshot, every 33 ms.
+    fn running(world: &mut World, id: EntityId, snapshots: i64) {
+        for snapshot in 0..snapshots {
+            world.upsert(
+                id,
+                EntityKind::Actor,
+                at(snapshot * 33, snapshot as f32 * 10.0),
+            );
+            world.set_pose(id, yawing(snapshot as f32 * 10.0));
+        }
+    }
+
+    #[test]
+    fn a_time_before_the_second_newest_sample_still_interpolates() {
+        let mut world = World::new(WorldId::new(1));
+        let id = EntityId::new(1);
+        running(&mut world, id, 4);
+        let entity = world.entity(id).expect("entity");
+        // Drawn 10 ms short of the second newest sample (66 ms), as the stock clock
+        // often is when the newest (99 ms) arrives: between the first two, not held.
+        let x = entity.sample(56).translation[0];
+        assert!((x - 560.0 / 33.0).abs() < 1e-3, "{x}");
+        let yaw = entity.sample_pose(56).expect("pose").view_angles_degrees[1];
+        assert!((yaw - 560.0 / 33.0).abs() < 1e-3, "{yaw}");
+        // Past the newest, the newest is held; before the oldest, the oldest.
+        assert_eq!(entity.sample(150).translation[0], 30.0);
+        assert_eq!(entity.sample(-5).translation[0], 0.0);
+    }
+
+    #[test]
+    fn a_teleport_is_never_glided_into_once_newer_samples_arrive() {
+        let mut world = World::new(WorldId::new(1));
+        let id = EntityId::new(1);
+        world.upsert(id, EntityKind::Actor, at(0, 0.0));
+        world.upsert_discontinuous(id, EntityKind::Actor, at(33, 1_000.0));
+        world.upsert(id, EntityKind::Actor, at(66, 1_010.0));
+        let entity = world.entity(id).expect("entity");
+        assert_eq!(entity.sample(20).translation[0], 0.0);
+        assert_eq!(entity.sample(33).translation[0], 1_000.0);
+        assert!((entity.sample(50).translation[0] - (1_000.0 + 170.0 / 33.0)).abs() < 1e-3);
+        assert_eq!(
+            entity.sampled_motion_revision(20),
+            entity.motion_revision().wrapping_sub(1)
+        );
+    }
+
+    #[test]
+    fn the_newest_pose_stands_until_its_sample_gets_its_own() {
+        let mut world = World::new(WorldId::new(1));
+        let id = EntityId::new(1);
+        running(&mut world, id, 2);
+        world.upsert(id, EntityKind::Actor, at(66, 20.0));
+        let entity = world.entity(id).expect("entity");
+        assert_eq!(entity.pose(), yawing(10.0));
+        assert_eq!(entity.sample_pose(66), yawing(10.0));
     }
 }
