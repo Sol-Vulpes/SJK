@@ -550,7 +550,7 @@ const HELP: &[(&str, &str)] = &[
     // VIDEO
     (
         crate::graphics_quality::ROW_NAME,
-        "Vanilla: the original look. Vanilla Plus: SJK's image on the maps' lighting. Solar Renderer: live lighting, Low to Ultra.",
+        "Vanilla: EJK's look. Vanilla Plus: SJK's image on the maps' lighting. Solar Renderer: live lighting, Low to Ultra.",
     ),
     (
         crate::graphics_quality::RECOMMEND_COMMAND,

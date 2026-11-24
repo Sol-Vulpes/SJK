@@ -430,7 +430,7 @@ mod tests {
     /// While `which` is on, every setting it sets is on its value.
     fn assert_held(console: &ViewerConsole, which: Which, what: &str) {
         let values = match which {
-            Which::Renderer => graphics_quality::preset_cvars(Level::Vanilla),
+            Which::Renderer => graphics_quality::applied_cvars(Level::Vanilla),
             Which::Tactical(level) => tactical::values(level),
             Which::Ejk => ejk_mode::values(),
         };
@@ -640,7 +640,7 @@ mod tests {
                 Which::Renderer => old_turn_on(
                     &mut console,
                     graphics_quality::RESTORE_CVAR,
-                    &graphics_quality::preset_cvars(Level::Vanilla),
+                    &graphics_quality::applied_cvars(Level::Vanilla),
                 ),
                 Which::Tactical(level) => {
                     console.set_cvar(tactical::CVAR, "3");

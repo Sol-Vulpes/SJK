@@ -1090,7 +1090,7 @@ own row in Settings and can be changed again there.
 | Over the players | `cg_nameplate 0`, `cg_nameplatePlaystyle 0`, `cg_worldPings 0`, `r_toonModels 0` |
 | Sabers | `cg_stockBlades 2` (every blade stock, the player's too), `s_saberSkinSounds 0`, `cg_finishers 0` |
 | The world | `cg_footprints 0`, `cg_jumpFootsteps 0`, the toys' sight switches (`cg_toyIlluminateShow`, `cg_toyRagdollShow`, `cg_toyDroneShow`, `cg_toyBoomboxShow`, `cg_toyMonitorShow`), `cg_toyTags` and `cg_toyGifTags` at 0 |
-| Image and weather | The Vanilla preset, then `r_autoExposure 0` (eye adaptation brightens dark rooms even without HDR), `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
+| Image and weather | The Vanilla preset (with its `r_autoExposure 0`: eye adaptation brightens dark rooms even without HDR), then `r_toneCurve 0`, `r_sharpen 0`, `r_weatherForce 0`, `r_clouds 0`, `r_weatherLightning 0`, `r_weatherSnowCover 0`, `s_weatherSounds 0`; the map's own weather stays (`r_weather`) |
 
 Turning it on puts the player's value of each of those settings aside, as `cvar=value`
 pairs in `ui_ejkModeRestore` (the format `renderer vanilla` and Tactical use,
@@ -2718,7 +2718,11 @@ and an SJK quality row of four levels):
 - **Vanilla**: the maps' own baked lighting.
   - *Vanilla*: the original game's look at the most frames per second, every SJK extra
     off, as EternalJK draws it with its defaults (Vanilla style until 10/11/2026, EJK and
-    Ultra low before). See [Vanilla and EternalJK](#vanilla-and-eternaljk).
+    Ultra low before). See [Vanilla and EternalJK](#vanilla-and-eternaljk). Since
+    24/11/2026 it also holds the exposure fixed (`r_autoExposure 0`): eye adaptation
+    brightened dark rooms by up to 1 EV even on its 8-bit scene, which the original game
+    never did (Creo, 23/11/2026: Vanilla did not look like the original game). It is the
+    graphics EJK mode sets, and `graphicsquality ejk` names it.
   - *Vanilla Plus*: Sol's own setup (as Sol had it on 16/10/2026): SJK's image (HDR,
     bloom, dynamic glow, FXAA, ambient occlusion, per-pixel model lighting, emission maps
     and their halo) over the maps' baked lighting (SJK (recommended) until 10/11/2026). A
@@ -2737,6 +2741,11 @@ and an SJK quality row of four levels):
     [default visual profile](rendering.md#default-visual-profile).
   - *Ultra*: High with 4096 shadow maps, 24 taps, a sharp cascade twice as deep, triple
     weather density and ultra weather.
+
+Eye adaptation (`r_autoExposure`) is set by every preset, off in Vanilla and on in the
+others, but does not tell which preset the settings are (`ALSO_SETS`), so a profile on
+Vanilla saved before 24/11/2026, with it on, still reads as Vanilla (and Tactical's
+Medium, which takes the Vanilla preset's table, leaves it alone).
 
 Profiles saved on the presets of 16/10/2026 read as their new names (a test pins it):
 the settings the Solar Renderer alone reads (bounced light, lamp shadows, the sharp
@@ -2785,6 +2794,7 @@ or without "Solar"; the old names `ejk`, `ultralow`, `Vanilla style`, `sjk` and
 | HDR scene, bloom, FXAA, per-pixel model lighting, dynamic glow, light flares, emission maps and halo | off | on | on | on | on | on |
 | Soft particles | off | off | off | on | on | on |
 | Ambient occlusion (`r_ssao`) | off | on | off | on | on | on |
+| Eye adaptation (`r_autoExposure`) | off | on | on | on | on | on |
 | Sunbeam dust (`r_dustMotes`) | off | off | off | off | full | full |
 | Reflection probes, floor mirrors, parallax maps | off | off | off | off | on | on |
 | Normal and specular maps | off | off | off | on | on | on |
