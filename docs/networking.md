@@ -678,7 +678,11 @@ a step makes a command for each slot it passed, back to 32 ms (four at 125, ten 
 timeline (a map load), commands are stamped 0 and still made every 8 ms of real
 time, so packets keep acknowledging the server. Every command is predicted when
 it is made; between commands the frame presents a preview through its own input
-([prediction_preview.rs](../crates/sjk-viewer/src/prediction_preview.rs)).
+([prediction_preview.rs](../crates/sjk-viewer/src/prediction_preview.rs)). The
+preview only moves what is drawn: its events (sounds, muzzle flashes, view dips) are
+not delivered, because the server never runs that command and the saber's random draws
+(`PM_irand_timesync`, seeded with the command's time) can come out otherwise; a swing it
+started was heard though none was made (hub #279). The next sent command raises them.
 
 The server time commands are stamped with comes from
 [server_clock.rs](../crates/sjk-client/src/server_clock.rs), stock's

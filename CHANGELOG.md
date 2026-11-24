@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- A saber swing is no longer heard when none is made: with the medium style a chain of 3 swings could sound like 4, as the client played a swing it guessed between two commands that the server then did not make (hub #279) _(Sol)_
 - Box hunt: the mark no longer loses the mark for standing still a few seconds as the alarm rings; marks came and went seconds apart. Away after 15 seconds still keeps a player from being picked _(Sol; reported by Kushina)_
 - Creyon's Beta blades now say "Found in Beta holocrons.", and the Collection's "Where it drops" says Beta holocrons only: an Alpha holocron never brings one. They can still be crafted, bought in the shop and traded like every kyber holocrons drop. The chances shown for the other kybers now count only what an Alpha holocron can bring _(Kushina's report)_
 - A duellist's hat, cape, saber hilts, gun and jetpack are drawn in its duel look, the blue figure or the dark grey, instead of staying solid on it (hub #323) _(Sol)_
