@@ -365,7 +365,7 @@ impl Movers {
             let owner = state.integer_field(18).unwrap_or(0).wrapping_sub(1024);
             if state.number() == local
                 || Some(state.number()) == piloting
-                || (state.number() > 32
+                || (usize::from(state.number()) > sjk_protocol::player_slots()
                     && (owner == i32::from(local)
                         || piloting.is_some_and(|v| owner == i32::from(v))))
             {
