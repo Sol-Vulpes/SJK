@@ -69,9 +69,7 @@ fn client_saber_color(game_state: &GameState, client_num: u16) -> [u8; 3] {
 
 /// Blade colour of the selected primary or secondary clientinfo slot.
 fn client_saber_color_at(game_state: &GameState, client_num: u16, saber: usize) -> [u8; 3] {
-    const CS_PLAYERS: usize = 1_131;
-    game_state
-        .config_string(CS_PLAYERS + usize::from(client_num))
+    crate::player_identity::player_config(game_state, usize::from(client_num))
         .map_or(legacy_blade_rgb(4), |config| {
             saber_color_from_config(config, saber)
         })

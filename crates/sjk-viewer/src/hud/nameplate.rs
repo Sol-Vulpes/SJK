@@ -186,7 +186,7 @@ const GT_DUEL: i32 = 3;
 const GT_POWERDUEL: i32 = 4;
 const TEAM_SPECTATOR: i32 = 3;
 /// Tags drawn at most: every client slot, plus a bounded number of NPCs.
-const MAX_PLAYER_TAGS: usize = 32;
+const MAX_PLAYER_TAGS: usize = sjk_protocol::PLAYER_CAPACITY;
 const MAX_NPC_TAGS: usize = 16;
 const MAX_TAGS: usize = MAX_PLAYER_TAGS + MAX_NPC_TAGS;
 /// Entity numbers are ten bits on the wire.
@@ -684,9 +684,9 @@ impl Default for State {
             streams: force_streams::Tracker::default(),
             vitals: vitals_estimate::Estimator::default(),
             colors: BarColors::default(),
-            marks: [None; 32],
+            marks: [None; MAX_PLAYER_TAGS],
             marks_read: None,
-            clients: [None; 32],
+            clients: [None; MAX_PLAYER_TAGS],
             shared: [None; MAX_PLAYER_TAGS],
             shared_read: None,
             sharing_live: false,
@@ -941,12 +941,12 @@ impl State {
         scratch: &mut TraceScratch,
     ) {
         use force_streams::Body;
-        let mut bodies = [Body::default(); 33];
+        let mut bodies = [Body::default(); MAX_PLAYER_TAGS + 1];
         let mut count = 0;
         for entity in &snapshot.entities {
             let number = entity.number();
             if entity.entity_type() != ET_PLAYER
-                || number >= 32
+                || !sjk_protocol::is_player_number(usize::from(number))
                 || entity.e_flags() & EF_DEAD != 0
                 || count == bodies.len()
             {
@@ -961,7 +961,10 @@ impl State {
                 maxs,
                 active: entity.force_powers_active(),
                 weapon: entity.weapon(),
-                team: info_number(game.config_string(1131 + usize::from(number)), "t"),
+                team: info_number(
+                    crate::player_info::player_info(game, usize::from(number)),
+                    "t",
+                ),
                 duelling: entity.bolt1(),
                 electrified: entity.emplaced_owner(),
                 drain_level: None,
@@ -1085,11 +1088,13 @@ impl State {
             mode,
             restrictions: info_number(game.config_string(0), "restricts"),
             local_team: snapshot.player.team() as i32,
-            local_duel: info_number(game.config_string(1131 + usize::from(local)), "dt"),
-            master: snapshot
-                .entities
-                .iter()
-                .any(|e| e.number() < 32 && e.is_jedi_master()),
+            local_duel: info_number(
+                crate::player_info::player_info(game, usize::from(local)),
+                "dt",
+            ),
+            master: snapshot.entities.iter().any(|e| {
+                sjk_protocol::is_player_number(usize::from(e.number())) && e.is_jedi_master()
+            }),
             local_master: snapshot.player.is_jedi_master(),
         };
         // `cg_nameplateBars 3`: the player aimed at lately.
@@ -1101,7 +1106,9 @@ impl State {
         let mut npcs = 0;
         for entity in &snapshot.entities {
             let number = entity.number();
-            let player = entity.entity_type() == ET_PLAYER && number < 32 && number != local;
+            let player = entity.entity_type() == ET_PLAYER
+                && sjk_protocol::is_player_number(usize::from(number))
+                && number != local;
             let npc = !player
                 && settings.npcs
                 && entity.entity_type() == ET_NPC
@@ -1318,8 +1325,7 @@ impl State {
                 *wanted = picture.wanted();
                 continue;
             }
-            let model = game
-                .config_string(1131 + slot)
+            let model = crate::player_info::player_info(game, slot)
                 .and_then(|info| sjk_client::LegacyClientInfo::new(info).bytes("model"))
                 .unwrap_or_default();
             let key = head_key(model);
@@ -1630,7 +1636,10 @@ impl State {
         let local = snapshot.player.client_num();
         for entity in &snapshot.entities {
             let number = entity.number();
-            if entity.entity_type() != ET_PLAYER || number >= 32 || number == local {
+            if entity.entity_type() != ET_PLAYER
+                || !sjk_protocol::is_player_number(usize::from(number))
+                || number == local
+            {
                 continue;
             }
             let team = team_info
@@ -2327,8 +2336,7 @@ fn log_drain(run: &force_streams::Run, game: &GameState) {
     let mut victims = String::new();
     for (slot, taken) in run.taken.iter().enumerate() {
         if *taken > 0.0 {
-            let name = game
-                .config_string(1131 + slot)
+            let name = crate::player_info::player_info(game, slot)
                 .and_then(|info| sjk_client::LegacyClientInfo::new(info).text("n"))
                 .unwrap_or("?");
             let _ = write!(
@@ -2420,7 +2428,7 @@ impl Duel {
         match mode {
             GT_DUEL => Self::Arena,
             GT_POWERDUEL => Self::Sides(info_number(
-                game.config_string(1131 + usize::from(player.client_num())),
+                crate::player_info::player_info(game, usize::from(player.client_num())),
                 "dt",
             )),
             _ => Self::None,
@@ -2438,7 +2446,10 @@ impl Duel {
             Self::Private(opponent) => opponent == number,
             Self::Arena => true,
             Self::Sides(side) => {
-                info_number(game.config_string(1131 + usize::from(number)), "dt") != side
+                info_number(
+                    crate::player_info::player_info(game, usize::from(number)),
+                    "dt",
+                ) != side
             }
         }
     }
@@ -2453,7 +2464,7 @@ fn identify(
     number: u16,
     jedi_master: bool,
 ) -> Option<Identity> {
-    let info = game.config_string(1131 + usize::from(number));
+    let info = crate::player_info::player_info(game, usize::from(number));
     let team = info_number(info, "t");
     if info.is_none() || team == 3 {
         return None;

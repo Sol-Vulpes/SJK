@@ -19,8 +19,8 @@ pub(crate) fn is_siege(game: Option<&GameState>) -> bool {
 }
 
 fn local_info(game: &GameState) -> Option<InfoString> {
-    let client = usize::try_from(game.client_num).ok().filter(|n| *n < 32)?;
-    let text = std::str::from_utf8(game.config_string(1_131 + client)?).ok()?;
+    let client = usize::try_from(game.client_num).ok()?;
+    let text = std::str::from_utf8(crate::player_info::player_info(game, client)?).ok()?;
     InfoString::parse(text).ok()
 }
 

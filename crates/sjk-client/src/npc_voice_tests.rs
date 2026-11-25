@@ -1,7 +1,7 @@
 use super::*;
 use sjk_protocol::{LEGACY_ENTITY_FIELDS, PlayerState};
 
-const CS_PLAYERS: usize = 1_131;
+use sjk_protocol::CS_PLAYERS;
 const EV_JUMP: u16 = 16;
 const EV_PAIN: u16 = 89;
 const EV_ENTITY_SOUND: u16 = 79;

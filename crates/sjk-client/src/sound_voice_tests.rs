@@ -79,12 +79,12 @@ fn a_missing_model_speaks_with_the_players_own_gender() {
     // stand-in with cg_defaultModelRandom) spoke with the generic male voice.
     let mut game = GameState::empty_local(0);
     game.replace_config_string(
-        crate::player_identity::CS_PLAYERS,
+        sjk_protocol::CS_PLAYERS,
         br"n\Her\t\0\model\not_here/default\ds\f".to_vec(),
     )
     .unwrap();
     game.replace_config_string(
-        crate::player_identity::CS_PLAYERS + 1,
+        sjk_protocol::CS_PLAYERS + 1,
         br"n\Him\t\0\model\not_here/default".to_vec(),
     )
     .unwrap();

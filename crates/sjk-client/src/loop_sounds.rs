@@ -23,13 +23,14 @@ use crate::saber_definitions::legacy_saber_definitions;
 use crate::sound_events::{RegisteredLegacySound, intern_sound, normal_attenuation, sound_present};
 use crate::{AmbientSetKind, AmbientSets};
 use sjk_audio::{ChannelId, DopplerConfig, PlayRequest, SoundHandle, SourceId};
-use sjk_protocol::{EntityState, GameState, Snapshot};
+use sjk_protocol::{
+    EntityState, GameState, PLAYER_CAPACITY, Snapshot, is_player_number, player_slots,
+};
 use sjk_vfs::VirtualFileSystem;
 
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:135 after expanded limits
 const CS_AMBIENT_SET: usize = 37; // codemp/game/bg_public.h:125
 const MAX_SOUNDS: usize = 256;
-const MAX_CLIENTS: usize = 32; // codemp/qcommon/q_shared.h:890
 const MAX_ENTITIES: usize = 1_024;
 const MAX_CG_LOOPSOUNDS: u8 = 8; // codemp/cgame/cg_local.h:319
 /// `playerState_t::loopSound` (protocol 26 netfield 75).
@@ -156,7 +157,7 @@ pub(crate) struct LegacyLoopAdapter {
     weapon_ready: [Option<u16>; 19],
     jetpack: [u16; 3],
     pub(crate) jetpack_sounds: crate::LegacyJetpackSounds,
-    sabers: [SaberLoops; MAX_CLIENTS],
+    sabers: [SaberLoops; PLAYER_CAPACITY],
     /// Registered hums of the replacement saber sound sets, by set.
     /// Each set's hum; `None` where its file did not load, so the sabers' own hum plays.
     saber_hums: Vec<Option<u16>>,
@@ -164,12 +165,12 @@ pub(crate) struct LegacyLoopAdapter {
     /// (`SaberSoundSet::replace`), by set.
     saber_hums_alone: Vec<bool>,
     /// The hum each client's blade skin plays over its sabers' own.
-    hum_overrides: [Option<u16>; MAX_CLIENTS],
+    hum_overrides: [Option<u16>; PLAYER_CAPACITY],
     /// Whether that hum plays in their place ([`Self::saber_hums_alone`]).
-    hum_alone: [bool; MAX_CLIENTS],
+    hum_alone: [bool; PLAYER_CAPACITY],
     /// `s_saberSkinSounds 2`: a skin's hum replaces the sabers' own.
     pub(crate) skin_hum_only: bool,
-    client_config_hash: [u64; MAX_CLIENTS],
+    client_config_hash: [u64; PLAYER_CAPACITY],
     decisions: Vec<LegacyLoopDecision>,
     loops_per_entity: Box<[u8]>,
     unresolved_soundsets: usize,
@@ -206,8 +207,13 @@ impl LegacyLoopAdapter {
         let weapon_ready = WEAPON_READY_LOOPS.map(|path| path.map(&mut intern));
         let jetpack = JETPACK_LOOPS.map(&mut intern);
         let definitions = legacy_saber_definitions(vfs).unwrap_or_default();
+        // Only the server's slots resolve their sabers: past them there is no player.
         let sabers = std::array::from_fn(|client| {
-            saber_loops_for_client(game_state, client as u16, &definitions, &mut intern)
+            if is_player_number(client) {
+                saber_loops_for_client(game_state, client as u16, &definitions, &mut intern)
+            } else {
+                SaberLoops::default()
+            }
         });
         let ambient = vfs
             .read("sound/sound.txt")
@@ -249,8 +255,8 @@ impl LegacyLoopAdapter {
             sabers,
             saber_hums: Vec::new(),
             saber_hums_alone: Vec::new(),
-            hum_alone: [false; MAX_CLIENTS],
-            hum_overrides: [None; MAX_CLIENTS],
+            hum_alone: [false; PLAYER_CAPACITY],
+            hum_overrides: [None; PLAYER_CAPACITY],
             skin_hum_only: false,
             client_config_hash: std::array::from_fn(|client| {
                 player_config_hash(game_state, client)
@@ -281,7 +287,7 @@ impl LegacyLoopAdapter {
             return;
         }
         let definitions = crate::shared_saber_definitions(vfs).unwrap_or_default();
-        for client in 0..MAX_CLIENTS {
+        for client in 0..player_slots() {
             let hash = hashes[client];
             if hash == self.client_config_hash[client] {
                 continue;
@@ -314,7 +320,7 @@ impl LegacyLoopAdapter {
             let local_set = state.sound_set_index() != 0 && state.entity_type() != ET_MOVER;
             let configured_loop = state.loop_sound() != 0
                 || (state.loop_is_soundset()
-                    && usize::from(state.number()) >= MAX_CLIENTS
+                    && !is_player_number(usize::from(state.number()))
                     && usize::from(state.loop_sound()) < MAX_SOUNDS);
             let weapon = usize::from(state.weapon());
             let weapon_loop = matches!(state.entity_type(), ET_PLAYER | ET_NPC)
@@ -474,7 +480,7 @@ impl LegacyLoopAdapter {
     fn add_entity_loop(&mut self, state: &EntityState, at_time: i32, origin: [f32; 3]) {
         let configured = state.loop_sound();
         let deferred_soundset = state.loop_is_soundset()
-            && usize::from(state.number()) >= MAX_CLIENTS
+            && !is_player_number(usize::from(state.number()))
             && usize::from(configured) < MAX_SOUNDS;
         if configured == 0 && !deferred_soundset {
             return;
@@ -592,7 +598,7 @@ impl LegacyLoopAdapter {
             return;
         }
         let client = usize::from(state.client_num());
-        if client >= MAX_CLIENTS {
+        if !is_player_number(client) {
             return;
         }
         let loops = self.saber_loops(client);
@@ -636,7 +642,7 @@ impl LegacyLoopAdapter {
             return;
         }
         let client = usize::from(player.client_num());
-        if client >= MAX_CLIENTS {
+        if !is_player_number(client) {
             return;
         }
         let loops = self.saber_loops(client);
@@ -692,7 +698,7 @@ impl LegacyLoopAdapter {
     }
 
     /// Which set's hum each client plays (`None`: its sabers' own).
-    pub(crate) fn set_saber_hum_overrides(&mut self, sets: &[Option<u16>; MAX_CLIENTS]) {
+    pub(crate) fn set_saber_hum_overrides(&mut self, sets: &[Option<u16>; PLAYER_CAPACITY]) {
         self.hum_overrides = sets.map(|set| {
             set.and_then(|set| self.saber_hums.get(usize::from(set)).copied().flatten())
         });
@@ -875,8 +881,7 @@ fn saber_loops_for_client(
 }
 
 fn player_config_hash(game_state: &GameState, client: usize) -> u64 {
-    game_state
-        .config_string(1_131 + client)
+    crate::player_identity::player_config(game_state, client)
         .unwrap_or_default()
         .iter()
         .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {

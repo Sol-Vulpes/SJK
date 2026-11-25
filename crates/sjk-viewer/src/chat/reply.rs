@@ -53,7 +53,7 @@ impl ChatOverlay {
     pub(super) fn whisper_sender(&self, display: &str) -> Option<ChatTarget> {
         let rest = display.strip_prefix('[')?;
         let name = sjk_client::chat_name_key(&rest[..rest.find("]: ")?]);
-        (0..32_u16)
+        (0..sjk_protocol::player_slots() as u16)
             .filter_map(|slot| self.roster.target(Some(slot)))
             .find(|target| self.roster.name(*target) == Some(name.as_str()))
     }
@@ -114,7 +114,7 @@ mod tests {
     use sjk_protocol::GameState;
     use winit::keyboard::{Key, KeyCode, NamedKey};
 
-    const CS_PLAYERS: usize = 1131;
+    use sjk_protocol::CS_PLAYERS;
 
     fn roster(own: i32, names: &[(usize, &str)]) -> GameState {
         let mut game = GameState::empty_local(own);

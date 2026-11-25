@@ -17,7 +17,7 @@ use sjk_identity::{MapBlock, names_match};
 pub(crate) const CVAR: &str = "cl_staffBlocks";
 
 /// The map blocks of the server being played.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct MapBlocks {
     /// The map load (`sv_serverid`) the blocks are for; `None` off a server.
     serverid: Option<i32>,
@@ -29,12 +29,30 @@ pub(crate) struct MapBlocks {
     /// wear now, so a rename keeps the block.
     shared: [Option<String>; SLOTS],
     /// Slots whose staff block this player lifted for themselves.
-    excepted: u32,
+    excepted: u64,
     /// The blocked slots, as last worked out: this player's and staff's.
-    own_slots: u32,
-    shared_slots: u32,
+    own_slots: u64,
+    shared_slots: u64,
     /// Counts changes to what the slots are worked out from, but the roster.
     revision: u64,
+}
+
+/// No player named in any slot.
+const NO_NAMES: [Option<String>; SLOTS] = [const { None }; SLOTS];
+
+impl Default for MapBlocks {
+    fn default() -> Self {
+        Self {
+            serverid: None,
+            follow: false,
+            own: NO_NAMES,
+            shared: NO_NAMES,
+            excepted: 0,
+            own_slots: 0,
+            shared_slots: 0,
+            revision: 0,
+        }
+    }
 }
 
 impl MapBlocks {
@@ -43,8 +61,8 @@ impl MapBlocks {
     pub(crate) fn enter(&mut self, serverid: Option<i32>, follow: bool) {
         if self.serverid != serverid {
             self.serverid = serverid;
-            self.own = Default::default();
-            self.shared = Default::default();
+            self.own = NO_NAMES;
+            self.shared = NO_NAMES;
             self.excepted = 0;
             self.revision += 1;
         }
@@ -92,9 +110,9 @@ impl MapBlocks {
     pub(crate) fn clear(&mut self) -> usize {
         let own = (0..SLOTS)
             .filter(|slot| self.own[*slot].is_some())
-            .fold(0u32, |slots, slot| slots | 1 << slot);
+            .fold(0u64, |slots, slot| slots | 1 << slot);
         let count = (own | self.shared_slots).count_ones() as usize;
-        self.own = Default::default();
+        self.own = NO_NAMES;
         self.excepted |= self.shared_slots;
         self.revision += 1;
         count
@@ -106,12 +124,12 @@ impl MapBlocks {
     }
 
     /// The slots this player blocked for the map, as last worked out.
-    pub(crate) fn own_slots(&self) -> u32 {
+    pub(crate) fn own_slots(&self) -> u64 {
         self.own_slots
     }
 
     /// The slots blocked by staff for everyone, as last worked out.
-    pub(crate) fn shared_slots(&self) -> u32 {
+    pub(crate) fn shared_slots(&self) -> u64 {
         self.shared_slots
     }
 
@@ -123,7 +141,7 @@ impl MapBlocks {
         roster: &[&str; SLOTS],
         own_slot: Option<usize>,
         staff: &[MapBlock],
-    ) -> u32 {
+    ) -> u64 {
         let mut own_slots = 0;
         for (slot, entry) in self.own.iter_mut().enumerate() {
             let shown = roster[slot];
@@ -139,7 +157,7 @@ impl MapBlocks {
                 None => {}
             }
         }
-        let mut listed = 0u32;
+        let mut listed = 0u64;
         let mut shared_slots = 0;
         if self.follow {
             for block in staff {
@@ -233,6 +251,24 @@ mod tests {
         // Never the player's own slot.
         blocks.block(1, "Me");
         assert_eq!(blocks.resolve(&here, Some(1), &[]), 0);
+    }
+
+    /// A server with more than 32 player slots: its players past slot 31 are blocked too.
+    #[test]
+    fn a_player_past_slot_31_is_blocked() {
+        let mut blocks = MapBlocks::default();
+        blocks.enter(Some(7), true);
+        assert!(blocks.block(45, "Troll") && !blocks.block(SLOTS, "Nobody"));
+        let here = roster(&[(1, "Me"), (45, "Troll"), (63, "Padawan")]);
+        let listed = [staff(63, "Padawan", 7)];
+        assert_eq!(blocks.resolve(&here, Some(1), &listed), 1 << 45 | 1 << 63);
+        assert_eq!(
+            (blocks.own_slots(), blocks.shared_slots()),
+            (1 << 45, 1 << 63)
+        );
+        assert!(blocks.unblock(63));
+        assert_eq!(blocks.resolve(&here, Some(1), &listed), 1 << 45);
+        assert_eq!(blocks.clear(), 1);
     }
 
     #[test]

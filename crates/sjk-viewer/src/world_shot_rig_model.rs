@@ -25,7 +25,7 @@ fn rig_model_on_a_demo() {
             .entities
             .iter()
             .map(|entity| entity.number())
-            .filter(|number| *number < 32 && *number != own)
+            .filter(|number| sjk_protocol::is_player_number(usize::from(*number)) && *number != own)
             .collect();
         let Some(&target) = players.first() else {
             println!("no other player in the demo's first snapshot: skipped");
@@ -141,7 +141,7 @@ fn rig_reload_reads_a_replaced_pack_without_a_map_load() {
             .entities
             .iter()
             .map(|entity| entity.number())
-            .find(|number| *number < 32 && *number != own)
+            .find(|number| sjk_protocol::is_player_number(usize::from(*number)) && *number != own)
         else {
             println!("no other player in the demo's first snapshot: skipped");
             return;

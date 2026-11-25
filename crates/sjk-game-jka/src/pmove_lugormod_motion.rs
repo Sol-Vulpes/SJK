@@ -5,7 +5,7 @@ use super::*;
 impl Predictor {
     pub(super) fn lugormod_player(&self) -> bool {
         self.config.lugormod.enabled
-            && self.state.client_num < MAX_CLIENTS
+            && self.state.client_num < max_clients()
             && self.npc.is_none()
             && !self.riding_move()
             && matches!(self.state.movement_type, 0 | 1 | 2 | 5)

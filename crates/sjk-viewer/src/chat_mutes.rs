@@ -22,8 +22,8 @@ const MAX_MUTES: usize = 1024;
 const MAX_NAME_BYTES: usize = 256;
 /// The file's largest size: every line full.
 const MAX_FILE_BYTES: u64 = (MAX_MUTES * (MAX_NAME_BYTES + 20)) as u64;
-/// Game slots of the legacy protocol.
-pub(crate) const SLOTS: usize = 32;
+/// Game slots a server can have: one bit each in a slot mask.
+pub(crate) const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// One muted player.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -220,9 +220,9 @@ pub(crate) struct Claim<'a> {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Slots {
     /// Every muted slot.
-    pub(crate) muted: u32,
+    pub(crate) muted: u64,
     /// Those matched by name alone: no claim at the hub says who is there.
-    pub(crate) by_name: u32,
+    pub(crate) by_name: u64,
 }
 
 impl Slots {
@@ -234,7 +234,7 @@ impl Slots {
 
 /// The slots whose claim names what the game shows there, as bits: those the hub says
 /// whose they are.
-fn claimed(claims: &[Claim<'_>], shown: &[&str; SLOTS]) -> u32 {
+fn claimed(claims: &[Claim<'_>], shown: &[&str; SLOTS]) -> u64 {
     claims
         .iter()
         .filter(|claim| trusted(claim, shown))
@@ -414,6 +414,25 @@ mod tests {
         assert_eq!(found.muted, 1 << 1 | 1 << 2);
         assert_eq!(found.by_name, 1 << 1 | 1 << 2);
         assert!(found.contains(1) && found.contains(2) && !found.contains(5));
+    }
+
+    /// A server with more than 32 player slots: its players past slot 31 are muted too.
+    #[test]
+    fn a_player_past_slot_31_is_muted() {
+        let mut list = MuteList::default();
+        list.set(Some(SOL), "Sol", true);
+        list.set(None, "Troll", true);
+        let claims = [Claim {
+            slot: 40,
+            claimed_name: "Sol",
+            key_id: SOL,
+        }];
+        let names = shown(&[(40, "Sol"), (63, "Troll")]);
+        let found = slots(&list, &claims, &names, Some(33));
+        assert_eq!(found.muted, 1 << 40 | 1 << 63);
+        assert_eq!(found.by_name, 1 << 63);
+        assert!(found.contains(40) && found.contains(63) && !found.contains(8));
+        assert_eq!(slots(&list, &claims, &names, Some(63)).muted, 1 << 40);
     }
 
     #[test]

@@ -108,7 +108,7 @@ impl Predictor {
         }
         if self.state.water_level != 0 {
             drop += speed * f32::from(self.state.water_level) * seconds;
-        } else if self.state.ground_entity_number < 32
+        } else if self.state.ground_entity_number < max_clients()
             && if self.config.ja_pro.enabled {
                 self.config.ja_pro.head_slide
             } else {
@@ -188,7 +188,7 @@ impl Predictor {
         let speed = wish.length().min(self.state.speed * 0.5);
         if self.config.roll_rules.gametype == 7
             && self.state.movement_type == 0
-            && self.state.client_num < 32
+            && self.state.client_num < max_clients()
             && self.state.vehicle_entity_num == 0
         {
             // PM_Accelerate :1139-1154: Siege pushes toward the whole wish velocity.

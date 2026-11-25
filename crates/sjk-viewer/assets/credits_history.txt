@@ -9,6 +9,8 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 24/11/2026 | - | Release 2026.1124.2 (Beta): Low FPS Night, whole models through model sync, Varykino Blossom extras, Kushina's fixes
+- 4984391 |  | Release 2026.1124.2 (Beta): Low FPS Night, whole models through model sync, Varykino Blossom extras, Kushina's fixes
 + 24/11/2026 | - | Low FPS Night: rustfmt the entity light grid loop
 - ddd78ad |  | Low FPS Night: rustfmt the entity light grid loop
 + 24/11/2026 | - | Credits, debug panel and history for the PR batch of 24/11 (Kushina #438 #440 #441 #443 #444 #448 #449 #450 #452)

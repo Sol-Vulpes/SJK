@@ -93,9 +93,8 @@ pub fn legacy_client_stand_in(
     if !random {
         return kyle();
     }
-    let config = game_state
-        .config_string(crate::player_identity::CS_PLAYERS + usize::from(client_num))
-        .unwrap_or(&[]);
+    let config =
+        crate::player_identity::player_config(game_state, usize::from(client_num)).unwrap_or(&[]);
     let info = crate::LegacyClientInfo::new(config);
     let female = info.bytes("ds").is_some_and(|ds| ds.first() == Some(&b'f'));
     let team = crate::TeamColorPolicy::from_game_state(game_state)

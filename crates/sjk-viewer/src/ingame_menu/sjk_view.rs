@@ -1479,9 +1479,8 @@ pub(crate) struct Local {
 
 /// `RANK_TIED_FLAG` in `persistant[PERS_RANK]`.
 const RANK_TIED: u32 = 0x4000;
-/// `CS_LEVEL_START_TIME` and the first `CS_PLAYERS` config string.
+/// `CS_LEVEL_START_TIME`.
 const CS_LEVEL_START_TIME: usize = 21;
-const CS_PLAYERS: usize = 1_131;
 
 /// What the match card shows: the server, the map and mode with its limits,
 /// the clock, the player's score and place (or the teams'), and who plays.
@@ -1637,9 +1636,8 @@ impl Card {
         self.slots = number("sv_maxclients");
         self.playing = 0;
         self.watching = 0;
-        for client in 0..32 {
-            let Some(text) = game
-                .config_string(CS_PLAYERS + client)
+        for client in 0..sjk_protocol::player_slots() {
+            let Some(text) = crate::player_info::player_info(game, client)
                 .filter(|bytes| !bytes.is_empty())
                 .and_then(|bytes| std::str::from_utf8(bytes).ok())
             else {
@@ -2646,9 +2644,9 @@ mod tests {
         );
         set(CS_LEVEL_START_TIME, "1000");
         for client in 0..5 {
-            set(CS_PLAYERS + client, "\\n\\Player\\t\\0");
+            set(sjk_protocol::CS_PLAYERS + client, "\\n\\Player\\t\\0");
         }
-        set(CS_PLAYERS + 7, "\\n\\Watcher\\t\\3");
+        set(sjk_protocol::CS_PLAYERS + 7, "\\n\\Watcher\\t\\3");
         let mut card = Card::default();
         let local = Local {
             team: 0,

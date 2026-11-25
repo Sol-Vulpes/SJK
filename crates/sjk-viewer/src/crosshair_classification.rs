@@ -7,7 +7,7 @@ const ENEMY: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 const NEUTRAL: [f32; 4] = [1.0, 1.0, 0.0, 1.0];
 
 fn info(game: &GameState, client: u16, key: &str) -> i32 {
-    game.config_string(1131 + usize::from(client))
+    crate::player_info::player_info(game, usize::from(client))
         .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).integer(key))
         .unwrap_or(0)
 }
@@ -24,7 +24,8 @@ pub(crate) fn classify(e: &EntityState, snap: &Snapshot, game: &GameState) -> Op
     let owner_team = e.raw_field(21).unwrap_or(0) as i32;
     let mover = e.entity_type() == 6;
     let npc = e.entity_type() == 13;
-    if !(e.number() < 32
+    let player = sjk_protocol::is_player_number(usize::from(e.number()));
+    if !(player
         || npc
         || e.should_target()
         || e.health() != 0
@@ -36,7 +37,7 @@ pub(crate) fn classify(e: &EntityState, snap: &Snapshot, game: &GameState) -> Op
         return Some(WHITE);
     }
     let allied = |their| if their { FRIEND } else { ENEMY };
-    let color = if e.number() < 32 {
+    let color = if player {
         if (snap.player.duel_in_progress() && e.number() != snap.player.duel_index())
             || (!snap.player.duel_in_progress() && e.bolt1())
         {
@@ -49,7 +50,7 @@ pub(crate) fn classify(e: &EntityState, snap: &Snapshot, game: &GameState) -> Op
         }
     } else if npc {
         if owner_team == 0 {
-            if e.owner() < 32 {
+            if sjk_protocol::is_player_number(usize::from(e.owner())) {
                 allied(gametype >= 6 && info(game, e.owner(), "t") == team)
             } else {
                 NEUTRAL

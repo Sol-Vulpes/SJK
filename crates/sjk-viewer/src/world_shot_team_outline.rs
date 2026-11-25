@@ -28,7 +28,7 @@ fn team_outlines_on_a_demo() {
             .entities
             .iter()
             .map(|entity| entity.number())
-            .filter(|number| *number < 32 && *number != own)
+            .filter(|number| sjk_protocol::is_player_number(usize::from(*number)) && *number != own)
             .collect();
         let shot = staged_ctf(probe.game_state(), &players);
         let (friends, enemies): (Vec<u16>, Vec<u16>) = players

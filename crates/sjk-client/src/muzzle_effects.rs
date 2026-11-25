@@ -5,9 +5,8 @@
 //! time (`cg_weapons.c:1831-1848`), while `CG_AddPlayerWeapon` replays the
 //! selected EFX graph every rendered frame (`cg_weapons.c:688-762`).
 
-use sjk_protocol::{MAX_LEGACY_ENTITIES, Snapshot};
+use sjk_protocol::{MAX_LEGACY_ENTITIES, PLAYER_CAPACITY, Snapshot, is_player_number};
 
-const MAX_CLIENTS: usize = 32; // codemp/qcommon/q_shared.h:890
 const WP_DEMP2: u8 = 9; // codemp/game/bg_weapons.h:41
 const WP_NUM_WEAPONS: usize = 19; // codemp/game/bg_weapons.h:30-60
 const EF_FIRING: u32 = 1 << 9; // codemp/game/bg_public.h:648
@@ -126,7 +125,7 @@ struct ClientState {
 /// derives frame requests from current weapon/eFlags, so an alternate fire
 /// event never overrides the authoritative `EF_ALT_FIRING` selection.
 pub struct LegacyMuzzleEffects {
-    events: [EventState; MAX_CLIENTS],
+    events: [EventState; PLAYER_CAPACITY],
     previous_entity_event: [u16; MAX_LEGACY_ENTITIES],
     seen_entity_epoch: [u32; MAX_LEGACY_ENTITIES],
     entity_epoch: u32,
@@ -134,7 +133,7 @@ pub struct LegacyMuzzleEffects {
     /// The last local fire event prediction flashed (its playerstate event sequence):
     /// the snapshot that confirms it does not flash again.
     predicted_through: Option<(u16, u16)>,
-    requests: [Option<LegacyMuzzleEffectRequest>; MAX_CLIENTS],
+    requests: [Option<LegacyMuzzleEffectRequest>; PLAYER_CAPACITY],
     request_count: usize,
 }
 
@@ -148,13 +147,13 @@ impl LegacyMuzzleEffects {
     /// Create empty fixed storage; no update grows heap memory.
     pub const fn new() -> Self {
         Self {
-            events: [EventState::EMPTY; MAX_CLIENTS],
+            events: [EventState::EMPTY; PLAYER_CAPACITY],
             previous_entity_event: [0; MAX_LEGACY_ENTITIES],
             seen_entity_epoch: [0; MAX_LEGACY_ENTITIES],
             entity_epoch: 0,
             player_event_sequence: 0,
             predicted_through: None,
-            requests: [None; MAX_CLIENTS],
+            requests: [None; PLAYER_CAPACITY],
             request_count: 0,
         }
     }
@@ -171,10 +170,10 @@ impl LegacyMuzzleEffects {
         if self.predicted_covers(client, sequence) {
             return;
         }
-        let Some(state) = self.events.get_mut(usize::from(client)) else {
+        if !is_player_number(usize::from(client)) {
             return;
-        };
-        state.fired_at = Some(time);
+        }
+        self.events[usize::from(client)].fired_at = Some(time);
         self.predicted_through = Some((client, sequence));
     }
 
@@ -218,7 +217,7 @@ impl LegacyMuzzleEffects {
                 } else {
                     usize::from(entity.client_num())
                 };
-                if client >= MAX_CLIENTS {
+                if !is_player_number(client) {
                     continue;
                 }
                 self.events[client].fired_at = Some(snapshot.server_time);
@@ -240,7 +239,7 @@ impl LegacyMuzzleEffects {
                 && !self.predicted_covers(snapshot.player.client_num(), event_sequence as u16)
             {
                 let client = usize::from(snapshot.player.client_num());
-                if client < MAX_CLIENTS {
+                if is_player_number(client) {
                     self.events[client].fired_at = Some(snapshot.server_time);
                     observed += 1;
                 }
@@ -254,11 +253,11 @@ impl LegacyMuzzleEffects {
     pub fn update(&mut self, snapshot: &Snapshot, presentation_time: i32) {
         self.requests.fill(None);
         self.request_count = 0;
-        let mut clients = [None; MAX_CLIENTS];
+        let mut clients = [None; PLAYER_CAPACITY];
         for entity in &snapshot.entities {
             if matches!(entity.entity_type(), 1 | 13) {
                 let client = usize::from(entity.client_num());
-                if client < MAX_CLIENTS {
+                if is_player_number(client) {
                     clients[client] = Some(ClientState {
                         weapon: entity.weapon(),
                         flags: entity.e_flags(),
@@ -267,7 +266,7 @@ impl LegacyMuzzleEffects {
             }
         }
         let local = usize::from(snapshot.player.client_num());
-        if local < MAX_CLIENTS {
+        if is_player_number(local) {
             clients[local] = Some(ClientState {
                 weapon: snapshot.player.weapon(),
                 flags: snapshot.player.entity_flags(),

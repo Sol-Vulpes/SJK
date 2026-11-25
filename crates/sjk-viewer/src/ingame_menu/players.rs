@@ -20,10 +20,6 @@ use std::time::{Duration, Instant};
 
 /// Players a page lists; More players... pages on.
 pub(crate) const PAGE_ITEMS: usize = 16;
-/// Clients the legacy protocol numbers.
-const MAX_CLIENTS: u8 = 32;
-/// `CS_PLAYERS`: the first client's config string.
-const CS_PLAYERS: usize = 1_131;
 /// How often the roster is read again while the page shows, and the scores asked for.
 const READ_EVERY: Duration = Duration::from_secs(1);
 const SCORES_EVERY: Duration = Duration::from_secs(2);
@@ -211,13 +207,14 @@ impl State {
         let listed = scores
             .iter()
             .map(|score| (score.client_num, Some(score)))
-            .chain((0..MAX_CLIENTS).map(|slot| (slot, None)));
+            .chain((0..sjk_protocol::player_slots() as u8).map(|slot| (slot, None)));
         for (slot, score) in listed {
-            if slot >= MAX_CLIENTS || self.players.iter().any(|p| p.slot == slot) {
+            if !sjk_protocol::is_player_number(usize::from(slot))
+                || self.players.iter().any(|p| p.slot == slot)
+            {
                 continue;
             }
-            let Some(bytes) = game
-                .config_string(CS_PLAYERS + usize::from(slot))
+            let Some(bytes) = crate::player_info::player_info(game, usize::from(slot))
                 .filter(|bytes| !bytes.is_empty())
             else {
                 continue;
@@ -680,10 +677,10 @@ mod tests {
                 .expect("a config string");
         };
         set(0, "\\g_gametype\\8");
-        set(CS_PLAYERS, "\\n\\^1Troll\\t\\1");
-        set(CS_PLAYERS + 2, "\\n\\^2Sol\\t\\2");
-        set(CS_PLAYERS + 4, "\\n\\Bot\\t\\2\\skill\\3");
-        set(CS_PLAYERS + 9, "\\n\\Late\\t\\3");
+        set(sjk_protocol::CS_PLAYERS, "\\n\\^1Troll\\t\\1");
+        set(sjk_protocol::CS_PLAYERS + 2, "\\n\\^2Sol\\t\\2");
+        set(sjk_protocol::CS_PLAYERS + 4, "\\n\\Bot\\t\\2\\skill\\3");
+        set(sjk_protocol::CS_PLAYERS + 9, "\\n\\Late\\t\\3");
         let score = |client_num, score, ping| ScoreEntry {
             client_num,
             score,

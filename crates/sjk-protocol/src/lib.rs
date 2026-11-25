@@ -22,6 +22,7 @@ mod legacy_client_numbers;
 mod legacy_entity_numbers;
 mod legacy_text;
 mod message;
+mod player_slots;
 mod snapshot;
 mod usercmd;
 
@@ -57,6 +58,11 @@ pub use legacy_text::{
     windows_1251_char, windows_1252_byte, windows_1252_char,
 };
 pub use message::{MessageError, MessageReader, MessageWriter, ServiceCommand};
+pub use player_slots::{
+    CLASSIC_PLAYER_SLOTS, CS_PLAYERS, CS_PLAYERS_HIGH, EXTENDED_SLOTS_KEY, PLAYER_CAPACITY,
+    PlayerSlotsForTest, configstring_player, is_player_number, player_configstring, player_slots,
+    reset_player_slots, server_info_slots, set_player_slots, set_player_slots_for,
+};
 pub use snapshot::write::{
     SnapshotHeader, SnapshotPlayer, SnapshotWriteError, SnapshotWriter, player_state_as_received,
 };

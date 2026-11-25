@@ -133,7 +133,7 @@ impl ClanThemes {
         let visibility_changed = self.emblems_shown != Some(emblems_shown);
         self.emblems_shown = Some(emblems_shown);
         for slot in 0..SLOTS {
-            let info = game_state.config_string(crate::player_identity::CS_PLAYERS + slot);
+            let info = crate::player_info::player_info(game_state, slot);
             if !visibility_changed && self.player_info[slot].as_deref() == info {
                 continue;
             }

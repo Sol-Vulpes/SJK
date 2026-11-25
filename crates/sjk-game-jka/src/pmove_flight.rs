@@ -22,7 +22,7 @@ impl Predictor {
             }
             // An NPC (`clientNum >= MAX_CLIENTS`) under `PM_NOCLIP` moves as it would
             // walk (`bg_pmove.c:10688-10695`).
-            3 if self.state.client_num < MAX_CLIENTS => self.noclip_move(command, seconds),
+            3 if self.state.client_num < max_clients() => self.noclip_move(command, seconds),
             _ => return false,
         }
         self.drop_timers(millis);
@@ -94,7 +94,7 @@ impl Predictor {
             }
             if water != 0 {
                 drop += speed * f32::from(water) * seconds;
-            } else if self.state.ground_entity_number < 32 {
+            } else if self.state.ground_entity_number < max_clients() {
                 drop = 0.0;
             }
             // Only a spectator or a floater has the flight's own drag (`bg_pmove.c:1072-1082`).

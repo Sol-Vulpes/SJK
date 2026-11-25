@@ -138,7 +138,7 @@ impl GpuState {
 /// Ordinary player and corpse refresh keep their own lifetime rules. A static,
 /// unarmed display copy needs independent pose storage and live model changes.
 fn refreshable(number: u16, kind: u8, weapon: u8) -> bool {
-    kind == 13 || (kind == 1 && number >= 32 && weapon == 0)
+    kind == 13 || (kind == 1 && !sjk_protocol::is_player_number(usize::from(number)) && weapon == 0)
 }
 
 /// `true` while an NPC (or unarmed display copy) waits for its own model to load:

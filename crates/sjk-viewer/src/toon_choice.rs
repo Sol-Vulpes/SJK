@@ -12,7 +12,7 @@
 //! player (`menu_stage`). Other models (NPCs, items, the view weapon) keep stock shading.
 
 use crate::looks::Looks;
-use crate::saber_skins::MAX_CLIENTS;
+use sjk_protocol::PLAYER_CAPACITY;
 
 /// The own choice: the local player's model in toon shading, for everyone who shows it.
 pub(crate) const CVAR: &str = "cg_toonModel";
@@ -21,22 +21,22 @@ pub(crate) const TOY: &str = "toon_model";
 /// The instance `view_flags` bit of a toon model (`stage_runtime.wgsl`, `entity_vertex`).
 pub(crate) const FLAG: u32 = 1 << 28;
 
-const _: () = assert!(MAX_CLIENTS <= u32::BITS as usize);
+const _: () = assert!(PLAYER_CAPACITY <= u64::BITS as usize);
 
 /// The client slots, a bit each, whose players chose toon shading for their model.
-pub(crate) fn slots(looks: &Looks) -> u32 {
+pub(crate) fn slots(looks: &Looks) -> u64 {
     #[cfg(test)]
     if looks.shot_toon {
-        return u32::MAX;
+        return u64::MAX;
     }
-    (0..MAX_CLIENTS)
+    (0..PLAYER_CAPACITY)
         .filter(|slot| looks.toy(*slot, TOY))
         .fold(0, |bits, slot| bits | 1 << slot)
 }
 
 /// [`FLAG`] for entity `number` when it is a player (its number is its slot) in `slots`.
-pub(crate) fn flag(slots: u32, number: u16) -> u32 {
-    if usize::from(number) < MAX_CLIENTS && slots & (1 << number) != 0 {
+pub(crate) fn flag(slots: u64, number: u16) -> u32 {
+    if sjk_protocol::is_player_number(usize::from(number)) && slots & (1 << number) != 0 {
         FLAG
     } else {
         0
@@ -54,7 +54,7 @@ mod tests {
         assert_eq!(flag(slots, 31), FLAG);
         assert_eq!(flag(slots, 4), 0);
         // Entity 35 is no player, whatever the bits say.
-        assert_eq!(flag(u32::MAX, 35), 0);
+        assert_eq!(flag(u64::MAX, 35), 0);
     }
 
     #[test]

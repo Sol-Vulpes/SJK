@@ -320,7 +320,7 @@ fn air_control(state: &mut MovementState, direction: Vec3, wish_speed: f32, seco
 
 impl Predictor {
     pub(super) fn japro_style(&self) -> Option<Rules> {
-        if !self.config.ja_pro.enabled || self.state.client_num >= MAX_CLIENTS {
+        if !self.config.ja_pro.enabled || self.state.client_num >= max_clients() {
             return None;
         }
         let ordinal = if self.state.vehicle_entity_num != 0 {

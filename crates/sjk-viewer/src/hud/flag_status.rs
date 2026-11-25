@@ -59,8 +59,6 @@ const TEAM_RED: u8 = 1;
 const TEAM_BLUE: u8 = 2;
 /// `PW_REDFLAG`, `PW_BLUEFLAG`, `PW_NEUTRALFLAG`.
 const FLAG_POWERUPS: [usize; 3] = [4, 5, 6];
-/// `CS_PLAYERS`: one client-info config string per client from here.
-const CS_PLAYERS: usize = 1_131;
 /// `entityType_t::ET_PLAYER` and `ET_EVENTS`.
 const ET_PLAYER: u8 = 1;
 const ET_EVENTS: u8 = 18;
@@ -71,8 +69,6 @@ const EV_CTFMESSAGE: u16 = 99;
 const CTFMESSAGE_PLAYER_GOT_FLAG: u32 = 4;
 /// `PMF_FOLLOW`: the player state is the followed player's, not the local player's.
 const PMF_FOLLOW: u16 = sjk_game_jka::follow::PMF_FOLLOW;
-/// `MAX_CLIENTS`.
-const MAX_CLIENTS: usize = 32;
 /// How long a CTF message naming who took a flag stays good for, in server time:
 /// the config string saying the flag is taken may come a little before or after it.
 const TAKER_MS: i64 = 3_000;
@@ -236,9 +232,7 @@ impl Carrier {
             self.name.clear();
             return;
         };
-        let info = game
-            .config_string(CS_PLAYERS + usize::from(number))
-            .unwrap_or_default();
+        let info = crate::player_info::player_info(game, usize::from(number)).unwrap_or_default();
         if self.client == client && self.colors == colors && self.source == info {
             return;
         }
@@ -285,7 +279,7 @@ fn ctf_takers(snapshot: &sjk_protocol::Snapshot) -> [Option<u16>; 2] {
             2 => 1,
             _ => continue,
         };
-        if usize::from(player) < MAX_CLIENTS {
+        if sjk_protocol::is_player_number(usize::from(player)) {
             takers[side] = Some(player);
         }
     }
@@ -965,7 +959,7 @@ mod tests {
     #[test]
     fn a_taken_flag_names_its_carrier_and_keeps_the_name_cached() {
         let mut game = GameState::empty_local(0);
-        game.replace_config_string(CS_PLAYERS + 3, b"\\n\\^1Slash\\t\\1".to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 3, b"\\n\\^1Slash\\t\\1".to_vec())
             .unwrap();
         let mut state = State {
             team: TEAM_RED,
@@ -991,7 +985,7 @@ mod tests {
         let mut game = GameState::empty_local(0);
         for (client, name) in [(3, "Slash"), (5, "Sol")] {
             let info = format!("\\n\\{name}\\t\\1").into_bytes();
-            game.replace_config_string(CS_PLAYERS + client, info)
+            game.replace_config_string(sjk_protocol::CS_PLAYERS + client, info)
                 .unwrap();
         }
         let snapshot = sjk_protocol::Snapshot {
@@ -1051,7 +1045,7 @@ mod tests {
     #[test]
     fn a_ctf_message_names_who_took_a_flag_out_of_sight() {
         let mut game = GameState::empty_local(0);
-        game.replace_config_string(CS_PLAYERS + 7, b"\\n\\Torren\\t\\1".to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 7, b"\\n\\Torren\\t\\1".to_vec())
             .unwrap();
         let mut event = sjk_protocol::EntityState::zero(40, &sjk_protocol::LEGACY_ENTITY_FIELDS);
         event.set_raw_field(8, u32::from(ET_EVENTS) + u32::from(EV_CTFMESSAGE));

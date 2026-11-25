@@ -18,13 +18,15 @@ enum Consumer {
 }
 
 fn consumer(index: usize) -> Option<Consumer> {
+    if let Some(client) = sjk_protocol::configstring_player(index) {
+        return Some(Consumer::Player(client as u16));
+    }
     Some(match index {
         0 => Consumer::ServerInfo,
         1 => Consumer::SystemInfo,
         2 => Consumer::Music,
         32 | 37..=292 | 811..=1066 => Consumer::Sound,
         298..=809 => Consumer::Model((index - 298) as i16),
-        1131..=1162 => Consumer::Player((index - 1131) as u16),
         1355..=1418 => Consumer::Effect,
         _ => return None,
     })

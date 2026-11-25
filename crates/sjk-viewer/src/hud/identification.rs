@@ -82,7 +82,7 @@ pub(crate) struct State {
     scale: f32,
     /// Each slot's team logo top this frame ([`super::team_logo`]): the name stands
     /// above it.
-    logo_tops: [Option<f32>; 32],
+    logo_tops: [Option<f32>; sjk_protocol::PLAYER_CAPACITY],
 }
 
 impl Default for State {
@@ -91,7 +91,7 @@ impl Default for State {
             list: DrawList::new(256),
             names: 0,
             scale: 0.5,
-            logo_tops: [None; 32],
+            logo_tops: [None; sjk_protocol::PLAYER_CAPACITY],
         }
     }
 }
@@ -107,7 +107,7 @@ impl State {
     }
 
     /// This frame's team logo tops, by client slot, before [`Self::update`].
-    pub(crate) fn set_logo_tops(&mut self, tops: [Option<f32>; 32]) {
+    pub(crate) fn set_logo_tops(&mut self, tops: [Option<f32>; sjk_protocol::PLAYER_CAPACITY]) {
         self.logo_tops = tops;
     }
 
@@ -131,7 +131,7 @@ impl State {
         let local = snapshot.player.client_num();
         for entity in &snapshot.entities {
             let slot = entity.number();
-            if slot >= 32
+            if !sjk_protocol::is_player_number(usize::from(slot))
                 || slot == local
                 || entity.entity_type() != 1
                 || entity.e_flags() & 2 != 0
@@ -140,7 +140,7 @@ impl State {
             {
                 continue;
             }
-            let info = game.config_string(1131 + usize::from(slot));
+            let info = crate::player_info::player_info(game, usize::from(slot));
             if info.is_none() || info_number(info, "t") == 3 {
                 continue;
             }

@@ -28,9 +28,6 @@ const APPLICATION_ID: &str = "1561491096062922803";
 const LOGO: &str = "https://sol-vulpes.github.io/SJK/assets/sjk-logo-512.png";
 const SITE: &str = "https://sol-vulpes.github.io/SJK/";
 
-/// `CS_PLAYERS`, the first player config string.
-const CS_PLAYERS: usize = 1_131;
-
 struct State {
     ipc: Option<DiscordIpc>,
     /// What the elapsed timer counts for, and since when (unix seconds).
@@ -295,10 +292,9 @@ fn short_map(map: &str) -> &str {
 
 /// Players on the server, spectators included.
 fn count_players(game: &GameState) -> u32 {
-    (0..32)
-        .filter(|client| {
-            game.config_string(CS_PLAYERS + client)
-                .is_some_and(|bytes| !bytes.is_empty())
+    (0..sjk_protocol::player_slots())
+        .filter(|&client| {
+            crate::player_info::player_info(game, client).is_some_and(|bytes| !bytes.is_empty())
         })
         .count() as u32
 }

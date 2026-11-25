@@ -708,7 +708,7 @@ mod tests {
     use sjk_client::ObituaryTracker;
     use sjk_protocol::{EntityState, GameState, LEGACY_ENTITY_FIELDS, PlayerState, Snapshot};
 
-    const CS_PLAYERS: usize = 1_131;
+    use sjk_protocol::CS_PLAYERS;
 
     #[test]
     fn weapons_keep_their_word_and_world_causes_the_skull() {

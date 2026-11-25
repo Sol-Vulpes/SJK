@@ -32,6 +32,7 @@
 github: Sol-Vulpes
 role: Creator and developer of Sun JK
 did: Sun JK itself: its name, emblem, website, releases and self-updates
+did: Servers with more than 32 player slots: up to 64 players shown
 did: The steel-and-sun emblem, drawn from its geometry, its sun alive in the menus
 did: Your SJK page: sign-in from the game, joining keys, video bounties
 did: The assets folder: PK3s tidied into subfolders of your own, outside base

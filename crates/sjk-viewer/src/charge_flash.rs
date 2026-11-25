@@ -20,7 +20,7 @@ const WEAPON_CHARGING: u8 = 4;
 const WEAPON_CHARGING_ALT: u8 = 5;
 /// `ET_PLAYER`.
 const ET_PLAYER: u8 = 1;
-const CLIENTS: usize = 64;
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// The shaders the sprites use, for loading with the other code shaders.
 pub(crate) const SHADERS: [&str; 3] = [

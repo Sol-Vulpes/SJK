@@ -52,6 +52,9 @@ impl<R: Read> DemoPlayback<R> {
         let mut reader = DemoReader::new(input);
         let first = reader.next_record()?.ok_or(DemoPlaybackError::Empty)?;
         let initial = decode_initial_gamestate(&first.payload)?;
+        // A demo holds what its recorder was sent: one made by a client shown more
+        // than 32 players says so in its serverinfo.
+        sjk_protocol::set_player_slots_for(&initial.game_state);
         let sequence = initial.game_state.server_command_sequence;
         Ok(Self {
             reader,
@@ -93,6 +96,7 @@ impl<R: Read> DemoPlayback<R> {
                 Ok(snapshot) => snapshot,
                 Err(SnapshotError::UnexpectedCommand(ServiceCommand::GameState)) => {
                     let initial = decode_initial_gamestate(&record.payload)?;
+                    sjk_protocol::set_player_slots_for(&initial.game_state);
                     let sequence = initial.game_state.server_command_sequence;
                     self.shader_remaps.reset(&initial.game_state);
                     self.game_state = initial.game_state;

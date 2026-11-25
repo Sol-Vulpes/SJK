@@ -138,10 +138,10 @@ struct Sinks<'a> {
     charges: crate::charge_flash::Charges,
     /// Client slots muted on this PC (bits): drawn with the default saber colour
     /// and without hat or cape (`muted_players.rs`).
-    muted: u32,
+    muted: u64,
     /// Client slots whose players chose toon shading for their model, while this PC shows
     /// it (`toon_choice.rs`, `r_toonModels`).
-    toon_slots: u32,
+    toon_slots: u64,
     /// Each client slot's team blade colours in team games: `cg_saberTeamColors`, and
     /// `cg_ctfTeamSabers` (no skin over them) in CTF or CTY (`team_sabers.rs`); in
     /// Siege the class-forced colours (`siege_sabers.rs`).

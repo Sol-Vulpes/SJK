@@ -62,8 +62,6 @@ const MAX_SOUNDBUFFER: usize = 20;
 const ANNOUNCER_COOLDOWN_MILLIS: i32 = 3_000;
 const BUFFERED_SPACING_MILLIS: i32 = 750;
 const MAX_LOCAL_SOUNDS_PER_SNAPSHOT: usize = 8;
-/// Protocol 26's player slots.
-const MAX_CLIENTS: usize = 32;
 /// `cg_chatBeep` and `cg_teamChatsOnly` at their BaseJKA defaults.
 const CG_CHAT_BEEP: bool = true;
 const CG_TEAM_CHATS_ONLY: bool = false;
@@ -566,7 +564,7 @@ fn chat_sender(command: &[u8], roster: &crate::chat::ChatRoster) -> Option<u16> 
     }
     let display = crate::chat::chat_display_text(&crate::chat::chat_unescape(&event.text));
     let mut found = None;
-    for slot in 0..MAX_CLIENTS as u16 {
+    for slot in 0..sjk_protocol::player_slots() as u16 {
         let Some(name) = roster
             .target(Some(slot))
             .and_then(|target| roster.display_name(target))

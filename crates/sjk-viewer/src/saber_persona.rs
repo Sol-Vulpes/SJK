@@ -13,8 +13,6 @@
 use crate::saber::Instance;
 use crate::saber_skins::LoadedSkins;
 
-/// `CS_PLAYERS` (`bg_public.h`).
-const CS_PLAYERS: usize = 1_131;
 /// Letters a name keeps (three lanes of six).
 pub(crate) const NAME_LETTERS: usize = 18;
 /// What a blade with no name known spells.
@@ -77,8 +75,7 @@ impl Persona {
         game_state: &sjk_protocol::GameState,
     ) -> [Self; crate::saber_skins::MAX_CLIENTS] {
         std::array::from_fn(|slot| {
-            game_state
-                .config_string(CS_PLAYERS + slot)
+            crate::player_info::player_info(game_state, slot)
                 .map_or_else(Self::default, Self::from_info)
         })
     }

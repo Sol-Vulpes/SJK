@@ -26,10 +26,10 @@ pub(crate) const LABEL: &str = "BLOCKED";
 
 /// The muted slots, for the places that draw names and have no frame state at hand
 /// ([`label`]); set by the game frame with the muted slots.
-static SHOWN: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+static SHOWN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// Remember the muted slots for [`label`].
-pub(crate) fn set_shown(slots: u32) {
+pub(crate) fn set_shown(slots: u64) {
     SHOWN.store(slots, std::sync::atomic::Ordering::Relaxed);
 }
 
@@ -65,7 +65,7 @@ pub(crate) struct MutedPlayers {
     slots: Slots,
     inputs: Option<Inputs>,
     /// Slots whose actor and sabers were last rebuilt plain ([`Self::plain`]).
-    pub(crate) applied: u32,
+    pub(crate) applied: u64,
     /// The Tactical model they were rebuilt in, at Tactical Max.
     pub(crate) applied_model: Option<String>,
 }
@@ -85,12 +85,12 @@ impl MutedPlayers {
     /// default colour, no hat, cape or blade skin): the muted ones, and at Tactical Max
     /// every player but this one (`tactical.rs`). Their chat and sounds follow the mute
     /// alone.
-    pub(crate) fn plain(&self) -> u32 {
+    pub(crate) fn plain(&self) -> u64 {
         plain_slots(
             self.slots.muted,
             self.inputs.as_ref().map(|inputs| inputs.own),
             crate::tactical::plain_players(),
-        )
+        ) & server_slots()
     }
 
     /// Whether `client` is drawn plain ([`Self::plain`]).
@@ -151,9 +151,15 @@ impl MutedPlayers {
     }
 }
 
+/// The connected server's slots, as bits: a mask never names a slot past them, whose
+/// number is another entity's.
+pub(crate) fn server_slots() -> u64 {
+    u64::MAX >> (SLOTS - sjk_protocol::player_slots().clamp(1, SLOTS))
+}
+
 /// The slots drawn plain from the `muted` ones, this player's slot `own` (none off a
 /// server: then only the muted) and whether Tactical draws the others plain.
-fn plain_slots(muted: u32, own: Option<i32>, tactical: bool) -> u32 {
+fn plain_slots(muted: u64, own: Option<i32>, tactical: bool) -> u64 {
     match own {
         Some(own) if tactical => {
             let own = u32::try_from(own)
@@ -222,10 +228,10 @@ pub(crate) fn equipment(mut held: HeldEquipment) -> HeldEquipment {
 
 /// Whether the scene entity `entity_id` (a client's is its slot plus one) is a player
 /// in the muted `slots` (bits).
-pub(crate) fn entity_muted(slots: u32, entity_id: u64) -> bool {
+pub(crate) fn entity_muted(slots: u64, entity_id: u64) -> bool {
     entity_id
         .checked_sub(1)
-        .filter(|client| *client < SLOTS as u64)
+        .filter(|client| *client < sjk_protocol::player_slots() as u64)
         .is_some_and(|client| slots & (1 << client) != 0)
 }
 
@@ -233,7 +239,7 @@ pub(crate) fn entity_muted(slots: u32, entity_id: u64) -> bool {
 mod tests {
     use super::*;
 
-    fn slots(muted: u32) -> Slots {
+    fn slots(muted: u64) -> Slots {
         Slots { muted, by_name: 0 }
     }
 
@@ -251,7 +257,7 @@ mod tests {
         // Off a server only the muted, whatever Tactical says.
         assert_eq!(plain_slots(0b100, None, true), 0b100);
         // A spectator's own slot out of range: everyone.
-        assert_eq!(plain_slots(0, Some(-1), true), u32::MAX);
+        assert_eq!(plain_slots(0, Some(-1), true), u64::MAX);
         assert_eq!(
             tactical_appearance(&worn("reborn", "default"), "jedi_hm/blue"),
             worn("jedi_hm", "blue")
@@ -305,13 +311,19 @@ mod tests {
     }
 
     #[test]
+    fn a_slot_past_31_is_drawn_plain() {
+        assert_eq!(plain_slots(1 << 40, Some(0), false), 1 << 40);
+        assert_eq!(plain_slots(0, Some(40), true), !(1 << 40));
+    }
+
+    #[test]
     fn only_the_muted_slots_entities_are_muted() {
         assert!(
             entity_muted(1 << 4, 5),
             "a client's entity is its slot plus one"
         );
         assert!(!entity_muted(1 << 4, 4) && !entity_muted(1 << 4, 0));
-        assert!(!entity_muted(u32::MAX, 40), "not a client");
+        assert!(!entity_muted(u64::MAX, 40), "not a client");
         let players = MutedPlayers {
             slots: slots(1 << 4),
             ..MutedPlayers::default()

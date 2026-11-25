@@ -81,10 +81,11 @@ pub(crate) fn choose(game: &GameState, snapshot: &Snapshot) -> Option<Choice> {
             health: None,
         });
     }
-    if !(0..32).contains(&client) || game.config_string(1131 + client as usize).is_none() {
-        return None;
-    }
-    let ci = sjk_client::LegacyClientInfo::new(game.config_string(1131 + client as usize)?);
+    let ci = sjk_client::LegacyClientInfo::new(
+        usize::try_from(client)
+            .ok()
+            .and_then(|client| crate::player_info::player_info(game, client))?,
+    );
     let duel = (mode == 3 && player.team() != 3).then(|| {
         [
             info.integer("fraglimit").unwrap_or(0),

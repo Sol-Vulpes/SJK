@@ -6,9 +6,6 @@ use crate::GpuState;
 use sjk_mod::{Drawn, Host, Me, Player, Server};
 use sjk_runtime::EntityId;
 
-/// `CS_PLAYERS`, the first client's configstring.
-const CS_PLAYERS: usize = 1131;
-const MAX_CLIENTS: u16 = 32;
 /// `ET_PLAYER`.
 const ENTITY_PLAYER: u8 = 1;
 /// `PM_INTERMISSION`.
@@ -98,9 +95,9 @@ impl Host for ViewerHost<'_> {
         let game = session.game_state();
         let snapshot = session.latest_snapshot();
         let time = snapshot.server_time;
-        (0..MAX_CLIENTS)
+        (0..sjk_protocol::player_slots() as u16)
             .filter_map(|client| {
-                let info = game.config_string(CS_PLAYERS + usize::from(client))?;
+                let info = crate::player_info::player_info(game, usize::from(client))?;
                 let name = sjk_client::LegacyClientInfo::new(info).bytes("n")?;
                 let drawn = snapshot
                     .entities

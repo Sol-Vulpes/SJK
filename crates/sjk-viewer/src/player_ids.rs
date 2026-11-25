@@ -17,14 +17,12 @@ pub(crate) const SHOW_PLAYER_ID_HELP: &str =
 pub(crate) const CLIENT_LIST_INFO_HELP: &str =
     "List human clients with model, gender, sabers, colours and team details";
 
-const PLAYERS: usize = 1_131;
 const SERVER_INFO: usize = 0;
-const MAX_CLIENTS: usize = 32;
 const GT_TEAM: i32 = 6;
 
 pub(crate) fn client_list_lines(game_state: &GameState) -> Vec<String> {
     let mut lines = Vec::new();
-    for client in 0..MAX_CLIENTS {
+    for client in 0..sjk_protocol::player_slots() {
         let Some(info) = player_info(game_state, client) else {
             continue;
         };
@@ -49,7 +47,7 @@ pub(crate) fn client_list_info_lines(game_state: &GameState, snapshot: &Snapshot
         .config_string(SERVER_INFO)
         .map(LegacyClientInfo::new)
         .is_some_and(|info| legacy_integer(info.bytes("g_gametype")) >= GT_TEAM);
-    (0..MAX_CLIENTS)
+    (0..sjk_protocol::player_slots())
         .filter_map(|client| {
             let info = player_info(game_state, client)?;
             if info.bytes("skill").is_some_and(|skill| !skill.is_empty()) {
@@ -61,7 +59,7 @@ pub(crate) fn client_list_info_lines(game_state: &GameState, snapshot: &Snapshot
 }
 
 fn player_info(game_state: &GameState, client: usize) -> Option<LegacyClientInfo<'_>> {
-    let info = LegacyClientInfo::new(game_state.config_string(PLAYERS + client)?);
+    let info = LegacyClientInfo::new(crate::player_info::player_info(game_state, client)?);
     info.name().is_some().then_some(info)
 }
 
@@ -228,7 +226,7 @@ mod tests {
     fn game(players: &[(usize, &str)]) -> GameState {
         let mut game = GameState::empty_local(0);
         for (client, info) in players {
-            game.replace_config_string(PLAYERS + client, info.as_bytes().to_vec())
+            game.replace_config_string(sjk_protocol::CS_PLAYERS + client, info.as_bytes().to_vec())
                 .unwrap();
         }
         game

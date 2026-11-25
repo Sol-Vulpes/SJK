@@ -1,3 +1,30 @@
+## Servers with more than 32 player slots (25/11/2026)
+
+Branch `personal/slots64`, based on `main` `66af5d61f`. Protocol 26 was built for 32
+players (`MAX_CLIENTS`); SJK can now be shown up to 64 on a server that has them. Full
+description: [networking.md](networking.md#servers-with-more-than-32-player-slots).
+
+- One home for the number: `sjk-protocol/src/player_slots.rs`. `PLAYER_CAPACITY` (64)
+  sizes every per-player table, `player_slots()` (32 unless the server says otherwise)
+  bounds every "is this a player" test, and `player_configstring` /
+  `configstring_player` replace every `CS_PLAYERS + n`. The private `MAX_CLIENTS` and
+  `CS_PLAYERS` copies in `sjk-client`, `sjk-viewer` and the movement prediction are gone.
+- The switch: on a JA+ server the connect userinfo carries `jof64=1`; the slot count is
+  taken from the gamestate's serverinfo only when it holds `jof64=1` too, before anything
+  reads the players, and goes back to 32 on disconnect. A demo takes it from its own
+  serverinfo.
+- Past 32 players: mutes and blocks, box hunt marks, scoreboard head icons (the icon
+  atlas is one column wider, 17 x 64 cells), models, whisper replies, the team overlay.
+  The classic scoreboard stands in two columns above 32 rows; the SJK one thins its rows
+  to 20 px so 64 FFA players or 32 a side fit. At 32 rows or fewer both are unchanged.
+- Still limited: READY marks (the server's stat holds 32 bits), a single SJK team above
+  32, and scores, which a server still sends for 20 players at most. SJK's own server and
+  its bots stay at 32.
+
+Verified: fmt, the workspace build, tests and clippy. On a classic server nothing
+changes (existing tests unmodified). Not yet run in game against a server with more
+than 32 slots; the viewer has no test that draws players 32 to 63.
+
 ## Rig model chains keep off each other (23/11/2026, reworked 24/11/2026)
 
 `feat/rig-chain-mutual-collision`, rebased on `main` `34fd0ec9` (#438, #440, #441, #443
