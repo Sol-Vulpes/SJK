@@ -883,6 +883,7 @@ mod tests {
             ping: 50,
             time: 1,
             has_score: true,
+            in_game: true,
             bot: false,
             record: None,
             powerups: 0,
