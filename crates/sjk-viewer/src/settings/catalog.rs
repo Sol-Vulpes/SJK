@@ -595,33 +595,8 @@ pub(super) const HUD_OPTIONS: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Bar: shards",
-        cvar: crate::status_bar::Part::Shards.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Bar: to attune",
-        cvar: crate::status_bar::Part::Crystals.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
         label: "Bar: DOOM coins",
         cvar: crate::status_bar::Part::Coins.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Bar: new things",
-        cvar: crate::status_bar::Part::New.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Bar: kyber",
-        cvar: crate::status_bar::Part::Saber.cvar(),
-        kind: ValueKind::Bool,
-    },
-    Setting {
-        label: "Bar: effects",
-        cvar: crate::status_bar::Part::Effects.cvar(),
         kind: ValueKind::Bool,
     },
     Setting {

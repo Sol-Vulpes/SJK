@@ -7,7 +7,7 @@
 
 use super::feed;
 use super::times::{Clock, Date, Left};
-use crate::menu::sjk::{color, kit, text};
+use crate::menu::sjk::{color, text};
 use crate::menu_widgets::{MenuCanvas, TextFamily};
 use crate::sjk_chat_look::Measure;
 use crate::text::TextFace;
@@ -28,10 +28,8 @@ const POWER: f32 = 19.0;
 /// A pill's room round its words, and its height over its words' size.
 const PILL_PAD: f32 = 8.0;
 const PILL_RISE: f32 = 7.0;
-/// The New part's dot, a feed entry's dot.
+/// A feed entry's dot.
 const DOT: f32 = 7.0;
-/// The kyber's tier diamonds' height ([`kit::tier_mark`]).
-const DIAMOND: f32 = 8.0;
 /// The room between a number and its unit.
 const UNIT_GAP: f32 = 3.0;
 /// Room past a measured word's end: a box exactly as wide as its text can round below
@@ -50,19 +48,8 @@ const PING_FAIR: u16 = 150;
 pub(crate) enum Money {
     /// The credits' sign (`crate::cards::mark`), in gold.
     Credits,
-    /// The kyber shard (`crate::cards::shard`), in kyber cyan.
-    Shards,
-    /// The dormant kyber of `crate::kyber::TIERS`' tier at this index: its picture.
-    Dormant(usize),
     /// A DOOM coin: a red coin with the wheel's spokes struck on it ([`coin`]).
     Doom,
-}
-
-/// Something on about the player, as its pill says it.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Effect {
-    pub(crate) words: &'static str,
-    pub(crate) colour: Color,
 }
 
 /// A toy the bottom bar shows: its name and its quick wheel picture's name (`None`: its
@@ -114,16 +101,6 @@ pub(crate) mod toys {
 pub(crate) enum Piece {
     /// A number after the icon of what it counts.
     Amount { value: u64, money: Money },
-    /// New things in the Collection: "3 new in your Collection" (`words`), else a gold dot.
-    New { count: u32, words: bool },
-    /// A kyber's name in its tier's colour after its diamonds (`tier`), or the stock blade.
-    Saber {
-        name: &'static str,
-        colour: Color,
-        tier: Option<crate::unlockables::Rarity>,
-    },
-    /// A pill of something on.
-    Effect(Effect),
     /// A toy's picture, lit while on.
     Toy { index: usize, on: bool },
     /// A weapon held, by its selection icon; the one in hand lit and underlined.
@@ -164,22 +141,6 @@ pub(crate) enum Piece {
     Fps(u32),
 }
 
-/// A blade skin's piece: its name, tier and tier colour, or the stock blade's.
-pub(crate) fn saber_piece(skin: Option<&'static str>) -> Piece {
-    match skin.and_then(crate::unlockables::blade_skin) {
-        Some(unlockable) => Piece::Saber {
-            name: unlockable.name,
-            colour: unlockable.tier.colour(),
-            tier: Some(unlockable.tier),
-        },
-        None => Piece::Saber {
-            name: "Stock blade",
-            colour: color::muted(),
-            tier: None,
-        },
-    }
-}
-
 /// The words the pieces that name things read from.
 #[derive(Clone, Copy)]
 pub(crate) struct Texts<'a> {
@@ -217,8 +178,6 @@ fn icon_width(money: Money, k: f32) -> f32 {
     let height = ICON * k;
     match money {
         Money::Credits => crate::cards::mark::width(height),
-        Money::Shards => crate::cards::shard::width(height),
-        Money::Dormant(_) => height * 1.15,
         Money::Doom => height,
     }
 }
@@ -238,20 +197,7 @@ pub(crate) fn width(
                 + ICON_GAP * k
                 + measures.number(scratch, format_args!("{}", Grouped(value)), s)
         }
-        Piece::Saber { name, tier, .. } => {
-            let mark = tier.map_or(0.0, |tier| kit::tier_mark_width(tier, DIAMOND * k));
-            let lead = if mark > 0.0 { mark + ICON_GAP * k } else { 0.0 };
-            lead + measures.words(name, WORD_SIZE, TextFace::Semibold, s)
-        }
-        Piece::New { count, words } => {
-            if !words {
-                return DOT * k;
-            }
-            scratch.clear();
-            let _ = write!(scratch, "{} new in your Collection", Grouped(count.into()));
-            (DOT + ICON_GAP) * k + measures.words(scratch, WORD_SIZE, TextFace::Semibold, s)
-        }
-        Piece::Effect(Effect { words, .. }) | Piece::Mode(words) => {
+        Piece::Mode(words) => {
             measures.words(words, WORD_SIZE, TextFace::Semibold, s) + PILL_PAD * 2.0 * k
         }
         Piece::Toy { .. } => TOY * k,
@@ -657,29 +603,6 @@ pub(crate) fn draw(
                 Money::Credits => {
                     let _ = crate::cards::mark::draw(list, at, icon, color::gold_bright());
                 }
-                Money::Shards => {
-                    let _ = crate::cards::shard::draw(list, at, icon, crate::cards::shard::KYBER);
-                }
-                Money::Dormant(index) => {
-                    let tier = &crate::kyber::TIERS[index];
-                    let side = icon * 1.15;
-                    if crate::holocrons::icons::is_loaded(tier.slot) {
-                        let _ = list.push(DrawCommand::TexturedQuad {
-                            rect: Rect::new(x, middle - side * 0.5, side, side),
-                            texture: crate::holocrons::icons::texture(tier.slot),
-                            color: Color::new(1.0, 1.0, 1.0, 1.0),
-                        });
-                    } else {
-                        crate::holocrons::gem::draw(
-                            list,
-                            [x + side * 0.5, middle],
-                            side * 0.45,
-                            tier.colour,
-                            1.0,
-                            crate::holocrons::gem::ROWS,
-                        );
-                    }
-                }
                 Money::Doom => coin(list, at, icon),
             }
             let lead = (icon_width(money, k) + ICON_GAP * k) * s;
@@ -690,58 +613,6 @@ pub(crate) fn draw(
                 color::text(),
             );
         }
-        Piece::Saber { name, colour, tier } => {
-            let mark = tier.map_or(0.0, |tier| {
-                kit::tier_mark(
-                    pen.canvas,
-                    &crate::menu::sjk::Frame {
-                        s: 1.0,
-                        origin: [0.0; 2],
-                    },
-                    [x, middle],
-                    tier,
-                    DIAMOND * k * s,
-                    false,
-                )
-            });
-            let room = if mark > 0.0 {
-                mark + ICON_GAP * k * s
-            } else {
-                0.0
-            };
-            pen.run(
-                TextFamily::Body,
-                format_args!("{name}"),
-                x + room,
-                width - room + SLACK * s,
-                WORD_SIZE,
-                colour,
-                FontWeight::Semibold,
-                0.0,
-            );
-        }
-        Piece::New { count, words } => {
-            let dot = DOT * k * s;
-            let _ = pen.canvas.draw_list_mut().push(DrawCommand::RoundedRect {
-                rect: Rect::new(x, middle - dot * 0.5, dot, dot),
-                radius: dot * 0.5,
-                color: color::gold_bright(),
-            });
-            if words {
-                let room = (DOT + ICON_GAP) * k * s;
-                pen.run(
-                    TextFamily::Body,
-                    format_args!("{} new in your Collection", Grouped(count.into())),
-                    x + room,
-                    width - room + SLACK * s,
-                    WORD_SIZE,
-                    color::gold_bright(),
-                    FontWeight::Semibold,
-                    0.0,
-                );
-            }
-        }
-        Piece::Effect(effect) => pen.pill(effect.words, effect.colour, x, width),
         Piece::Mode(words) => pen.pill(words, color::holo(), x, width),
         Piece::Toy { index, on } => {
             let side = TOY * k * s;
@@ -1009,12 +880,7 @@ mod tests {
         let mut list = sjk_ui::DrawList::new(16);
         coin(&mut list, [10.0, 10.0], 20.0);
         assert_eq!(list.len(), 8);
-        for money in [
-            Money::Credits,
-            Money::Shards,
-            Money::Dormant(3),
-            Money::Doom,
-        ] {
+        for money in [Money::Credits, Money::Doom] {
             let width = icon_width(money, 1.0);
             assert!(width > 4.0 && width <= ICON * 1.15, "{money:?}: {width}");
         }
