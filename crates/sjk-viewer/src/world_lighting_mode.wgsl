@@ -2,10 +2,21 @@ override visible_emission: bool = false;
 
 // Low FPS Night (`r_lowFpsNight`, `dynamic_light_settings::night_bits`): set only on baked
 // lighting. Bit 5 of the model word turns it on, bits 8..15 hold the level (as seen),
-// 16..23 the lamps.
+// 16..23 the lamps, 24..31 the saber glow.
 fn night_on() -> bool {
     return (point_lights.metadata.y & 32u) != 0u;
 }
+
+// The saber glow's strength (`r_lowFpsNightSaber`): how brightly sabers, shots and
+// explosions light the night's ground and walls, never under 0.01.
+fn night_glow() -> f32 {
+    return max(f32(point_lights.metadata.y >> 24u) / 255.0, 0.01);
+}
+
+// The night bake of the fragment's lit stage (linear; `apply_lighting_mode` sets it),
+// so `dynamic_light_modulation` lights the texture with the light's own colour rather
+// than relative to the bake; zero where the stage holds no bake.
+var<private> night_bake_light: vec3<f32>;
 
 // The night's level as seen (`r_lowFpsNightLevel`), never under 0.05.
 fn night_seen() -> f32 {
@@ -94,15 +105,20 @@ fn apply_lighting_mode(input: VertexOutput, primary: vec4<f32>, secondary: vec4<
     // Low FPS Night: the bake (lightmap texels, the world's vertex-baked colour) darkened;
     // textures, emission and additive stages keep their light.
     if night_on() && !fullbright && !realtime_active() {
-        if base_lightmap { base = vec4(night_bake(base.rgb), base.a); }
+        if base_lightmap {
+            base = vec4(night_bake(base.rgb), base.a);
+            night_bake_light = base.rgb;
+        }
         if extra_lightmap && stage.secondary_control.z > 0.5 {
             extra = vec4(night_bake(extra.rgb), extra.a);
+            night_bake_light = extra.rgb;
         }
         let rgb = i32(stage.generators.x);
         if (flags & 1u) != 0u && (rgb == 2 || rgb == 3) && input.entity_control.x <= 0.5 &&
             input.light_ambient.a == 0.0 {
-            let baked = pow(max(color.rgb, vec3(0.0)), vec3(2.2));
-            color = vec4(pow(night_bake(baked), vec3(1.0 / 2.2)), color.a);
+            let baked = night_bake(pow(max(color.rgb, vec3(0.0)), vec3(2.2)));
+            color = vec4(pow(baked, vec3(1.0 / 2.2)), color.a);
+            night_bake_light = baked;
         }
     }
     let emitted = select(vec3(0.0), emitted_light(input), !fullbright);

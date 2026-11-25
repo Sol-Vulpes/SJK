@@ -50,6 +50,7 @@ Fixes for servers with more than 32 player slots, and a lighter status bar.
 - Servers with more than 32 player slots: the scoreboard lists every player, not only 20, on the JoF server, and a full server's player list no longer ends the join with an error _(Sol)_
 - A server that refuses you after the first answer (a wrong password, for one) shows its reason instead of a timeout _(Sol)_
 - Players whose model the server names wrongly (an empty model or skin) wear Kyle and move again, as in the base game, instead of sliding in one pose; on a full server the players left out of the 20 score rows, yourself included, show without numbers rather than as "Joining" forever _(Sol)_
+- Low FPS Night: sabers, shots and explosions no longer throw a bright white disc on the ground. They light it with a soft glow in their own colour that fades out without an edge, the same on sunlit and shaded ground; Saber glow (`r_lowFpsNightSaber`, 0.01 to 1) sets how bright. Models are lit as before _(Kushina, PR #453)_
 
 ## 2026.1125.1 (Beta) | 25/11/2026
 

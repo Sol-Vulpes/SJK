@@ -128,7 +128,9 @@ impl Settings {
         world.update_scene_lighting_mode(
             queue,
             lights,
-            self.1.bits() | crate::flat_world::bits() | night_bits(self.night(baked)),
+            self.1.bits()
+                | crate::flat_world::bits()
+                | night_bits(self.night(baked), self.3.night_saber()),
             self.2.bits(),
             self.shadows(),
         );
@@ -136,12 +138,13 @@ impl Settings {
 }
 
 /// Low FPS Night in the model word (`point_lights.metadata.y`, read by `night_on`,
-/// `night_level` and `night_factor` in `world_lighting_mode.wgsl`): bit 5 on (bit 4 is
-/// `r_flatWorld`), bits 8..15 the level as seen and 16..23 the lamps, in 255ths.
-fn night_bits(night: Option<[f32; 2]>) -> u32 {
+/// `night_level`, `night_factor` and `night_glow` in `world_lighting_mode.wgsl`): bit 5 on
+/// (bit 4 is `r_flatWorld`), bits 8..15 the level as seen, 16..23 the lamps and 24..31
+/// the saber glow (`r_lowFpsNightSaber`), in 255ths.
+fn night_bits(night: Option<[f32; 2]>, saber: f32) -> u32 {
     night.map_or(0, |[level, lamps]| {
         let byte = |v: f32| (v.clamp(0., 1.) * 255.).round() as u32;
-        1 << 5 | byte(level) << 8 | byte(lamps) << 16
+        1 << 5 | byte(level) << 8 | byte(lamps) << 16 | byte(saber) << 24
     })
 }
 
@@ -151,10 +154,18 @@ mod tests {
 
     #[test]
     fn low_fps_night_takes_its_own_bits_of_the_model_word() {
-        assert_eq!(night_bits(None), 0);
-        assert_eq!(night_bits(Some([0.2, 0.1])), 32 | 51 << 8 | 26 << 16);
+        assert_eq!(night_bits(None, 0.5), 0);
         assert_eq!(
-            night_bits(Some([1., 1.])) & (0x1f | crate::flat_world::BIT),
+            night_bits(Some([0.2, 0.1]), 0.5),
+            32 | 51 << 8 | 26 << 16 | 128 << 24
+        );
+        assert_eq!(
+            night_bits(Some([0.2, 0.1]), 0.01) >> 24,
+            3,
+            "1% still glows"
+        );
+        assert_eq!(
+            night_bits(Some([1., 1.]), 1.) & (0x1f | crate::flat_world::BIT),
             0,
             "pixel light, toon and flat world bits untouched"
         );
