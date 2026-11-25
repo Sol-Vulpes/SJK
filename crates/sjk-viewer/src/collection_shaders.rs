@@ -21,7 +21,7 @@
 //! shows one edition alone ([`crate::editions`]: Alpha, the blades before Creyon's round,
 //! and Beta, from it on), and the tiers' counts follow it.
 
-use super::view::{LEAD_Y, LEFT_X, RIGHT_X, SABER_AREA, label_width};
+use super::view::{LEAD_Y, LEFT_X, RIGHT_X, SABER_AREA, after_headline, label_width};
 use super::*;
 use crate::menu::sjk::{Frame, color, kit, text};
 use crate::menu_widgets::TextFamily;
