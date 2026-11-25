@@ -143,7 +143,7 @@ fn emitted_light(input: VertexOutput) -> vec3<f32> {
 // We retain its additive modulation in the existing opaque pass: radial
 // attenuation and facing replace the legacy 2-D projection texture.
 fn dynamic_light_modulation(input: VertexOutput) -> vec3<f32> {
-    // `material_map_program.rs` rewrites the two lines after `var result` as they stand.
+    // The material-map program rewrites the two lines after `var result` as they stand.
     let night = night_on() && !realtime_active();
     var result = vec3(0.0);
     let normal = normalize(input.world_normal);
