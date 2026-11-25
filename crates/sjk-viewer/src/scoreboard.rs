@@ -8,6 +8,7 @@ mod classic;
 mod deaths;
 mod icons;
 pub(crate) mod identity_mark;
+mod in_game;
 pub(crate) mod layout;
 mod live_flags;
 mod motion;
@@ -54,6 +55,9 @@ pub(super) struct ScoreRow {
     /// The client has a `scores` row; clients still without one are listed
     /// as `N/A`, as `CG_TeamScoreboard` lists them.
     pub(super) has_score: bool,
+    /// Without a `scores` row, the client is known to be in the game (the viewer, a
+    /// bot, or seen playing: [`in_game`]) rather than still joining. Always true with one.
+    pub(super) in_game: bool,
     /// A bot (`skill` in its clientinfo).
     pub(super) bot: bool,
     /// Duel wins and losses (`w`, `l` in its clientinfo).
@@ -75,6 +79,9 @@ pub(super) struct ScoreRow {
 /// Cached scoreboard data and fixed retained presentation storage.
 pub(crate) struct Scoreboard {
     cached_scores: Vec<ScoreEntry>,
+    /// The clients seen in the game ([`in_game::InGame`]) when the rows were built.
+    cached_seen: u64,
+    in_game: in_game::InGame,
     config_signature: u64,
     server_signature: u64,
     team_game: bool,
@@ -121,6 +128,8 @@ impl Scoreboard {
     pub(crate) fn new() -> Self {
         Self {
             cached_scores: Vec::new(),
+            cached_seen: 0,
+            in_game: in_game::InGame::default(),
             config_signature: 0,
             server_signature: 0,
             team_game: false,
@@ -378,12 +387,15 @@ impl Scoreboard {
             .game_state()
             .config_string(0)
             .map_or(0, byte_signature);
+        let seen = self.in_game.seen();
         if self.cached_scores == session.scores()
             && self.config_signature == signature
             && self.server_signature == server_signature
+            && self.cached_seen == seen
         {
             return;
         }
+        self.cached_seen = seen;
         self.cached_scores.clear();
         self.cached_scores.extend_from_slice(session.scores());
         self.config_signature = signature;
@@ -405,6 +417,7 @@ impl Scoreboard {
                 ping: score.ping,
                 time: score.time_minutes,
                 has_score: true,
+                in_game: true,
                 bot: extra.bot,
                 record: extra.record,
                 powerups: score.powerups,
@@ -417,8 +430,9 @@ impl Scoreboard {
                 away: None,
             });
         }
-        // Connected clients the scores do not list yet (`CG_TeamScoreboard`'s
-        // "fake" rows); only the classic style shows them.
+        // Connected clients the scores do not list (`CG_TeamScoreboard`'s "fake"
+        // rows): joining, or in the game past the 20 rows a server sends ([`in_game`]).
+        let local = u8::try_from(game.client_num).ok();
         for client in 0..sjk_protocol::player_slots() as u8 {
             let listed = session
                 .scores()
@@ -441,6 +455,7 @@ impl Scoreboard {
                 ping: 0,
                 time: 0,
                 has_score: false,
+                in_game: in_game::in_game(client, local, extra.bot, seen),
                 bot: extra.bot,
                 record: extra.record,
                 powerups: 0,
@@ -603,8 +618,9 @@ const STAT_CLIENTS_READY: usize = 7;
 const PM_INTERMISSION: u8 = 6;
 
 impl Scoreboard {
-    /// Watch the players for the away marks ([`afk`]); every frame, scores and
-    /// chat counters included, whether the board shows or not.
+    /// Watch the players for the away marks ([`afk`]) and for who is in the game
+    /// ([`in_game`]); every frame, scores and chat counters included, whether the board
+    /// shows or not.
     pub(crate) fn observe_afk(
         &mut self,
         snapshot: &sjk_protocol::Snapshot,
@@ -613,6 +629,7 @@ impl Scoreboard {
         spoken: &[u32; sjk_protocol::PLAYER_CAPACITY],
     ) {
         self.afk.observe(snapshot, game, scores, spoken);
+        self.in_game.observe(snapshot, game, scores);
     }
 
     /// Whether `client`, shown as `name`, is away as the scoreboard marks it: seen still
@@ -980,6 +997,7 @@ mod tests {
             ping: 50,
             time: 5,
             has_score: true,
+            in_game: true,
             bot: false,
             record: None,
             powerups: 0,
@@ -1022,6 +1040,7 @@ mod tests {
         // Still joining: no score row, though the local counter has its deaths.
         let mut joining = ranked_row(5, 0, Some(5));
         joining.has_score = false;
+        joining.in_game = false;
         board.rows.insert(2, joining);
         board.mark_away(false, true);
         assert_eq!(clients(&board), [1, 2, 4, 0, 3, 5], "the joining row last");
