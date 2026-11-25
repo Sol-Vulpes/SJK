@@ -37,6 +37,19 @@ test: Mute and block a player in slot 32+ (Players page): chat and sounds stop.
 test: Any normal server: scoreboard, names and mutes exactly as before.
 note: Scores, ping and time show for 20 players at most until the server sends more.
 
+[player-slots-64-fixes]
+area: Gameplay
+title: Many players: no frozen poses, nobody joining forever
+change: A player whose model is empty or has no skin wears Kyle and animates (base game rule).
+change: Past the 20 score rows: you, bots and players seen playing show with no numbers.
+change: Only a player never seen in the game since connecting still says Joining.
+test: 64-slot server with 60 bots: every bot runs and swings; none slides in one pose.
+test: SJK scoreboard: no bot says Joining; your own row never says Joining once in.
+test: The left-out rows sit in their team, name shown, no score, ping or time.
+test: A friend connecting: Joining until they spawn, then a normal row.
+test: Any normal server with under 20 players: scoreboard exactly as before.
+note: If a bot still slides, run `configstrings` and send the bot's CS_PLAYERS line.
+
 [v1-leftovers]
 area: Menus & settings
 title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved

@@ -358,7 +358,12 @@ are 10 bits).
 - **Limits that are the protocol's.** `stats[STAT_CLIENTS_READY]` has one bit per client
   in 32 bits, so players above 31 show no READY. `heldByClient` is six bits holding the
   holder plus one, so slot 63 cannot be named as a holder. `scores` carries what the
-  server chooses to send.
+  server chooses to send: at most 20 rows (`MAX_CLIENT_SCORE_SEND`), the best first.
+  A connected player without a row is shown as joining only while nothing says it is
+  in the game; the viewer, a bot, or a player seen in a snapshot or with a pinged row
+  since it connected is listed without numbers instead
+  (`sjk-viewer/src/scoreboard/in_game.rs`). This is the same on a 32-slot server with
+  more than 20 players.
 
 SJK's own server (`sjk-dedicated`, the server half of `sjk-game-jka`) stays at 32 slots.
 

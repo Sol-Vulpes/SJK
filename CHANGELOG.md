@@ -33,6 +33,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Servers with more than 32 player slots: SJK asks for all of them and shows up to 64 players, with their names, models, head icons, mutes and both scoreboards; on a 32-slot server nothing changes _(Sol; server side by Lumaya)_
+- Players whose model the server names wrongly (an empty model or skin) wear Kyle and move again, as in the base game, instead of sliding in one pose; on a full server the players left out of the 20 score rows, yourself included, show without numbers rather than as "Joining" forever _(Sol)_
 
 ## 2026.1124.2 (Beta) | 24/11/2026
 
