@@ -115,6 +115,11 @@ const CENTRE: f32 = 960.0;
 /// A compact board stays this far right of the chat column, as [`BOARD_LEFT`]
 /// is of the column at 1080 lines.
 const CHAT_CLEARANCE: f32 = 40.0;
+/// The least left edge of a compact free-for-all list split in two halves: it is
+/// centred on the screen even where that reaches into the chat column, which then
+/// narrows to end [`CHAT_CLEARANCE`] left of it ([`build`]'s chat end). As wide as
+/// the full board at most, so the chat keeps the frame's first 348 pixels.
+const SPLIT_CLEAR: f32 = CENTRE - BOARD_WIDTH * 0.5;
 /// From the last number column to the ping's right edge, in all but the
 /// widest full list.
 const PING_COLUMN: f32 = 100.0;
@@ -716,7 +721,9 @@ struct Painter<'a> {
     crowded: bool,
 }
 
-/// Build the SJK UI's scoreboard into `ui`.
+/// Build the SJK UI's scoreboard into `ui`. Returns where the chat column beside
+/// it must end (window pixels) when the board reaches into it, as a compact free
+/// for all split in two halves does to stand centred ([`SPLIT_CLEAR`]).
 pub(super) fn build(
     ui: &mut MenuCanvas,
     rows: &[ScoreRow],
@@ -725,7 +732,7 @@ pub(super) fn build(
     measure: Measure<'_>,
     motion: &mut Motion,
     viewport: [f32; 2],
-) {
+) -> Option<f32> {
     ui.begin_transparent(viewport);
     let opacity = motion.opacity();
     ui.push_opacity(opacity);
@@ -771,6 +778,10 @@ pub(super) fn build(
         painter.spectators(rows, &board);
     }
     painter.ui.pop_opacity();
+    let [left, _] = board.span?;
+    let [end, _] = frame.point(left - CHAT_CLEARANCE, 0.0);
+    let chat = super::layout::Layout::new(viewport);
+    (end < chat.chat_left + chat.chat_width).then_some(end)
 }
 
 /// The game a little darker everywhere, deeper behind the header and the
@@ -990,7 +1001,13 @@ impl Painter<'_> {
                     .flatten()
                     .any(|(index, _)| rows[*index].client_num == row.client_num)
             };
-            let (x, width) = self.compact_list(rows, &List::waiting(), |row| !chosen(row), centre);
+            let (x, width) = self.compact_list(
+                rows,
+                &List::waiting(),
+                |row| !chosen(row),
+                centre,
+                self.clear,
+            );
             return Board {
                 x,
                 width,
@@ -1010,11 +1027,11 @@ impl Painter<'_> {
                     self.names_need(rows, member, fit.height)
                 })
                 .fold(0.0, f32::max);
-            let room = self.compact_room(need, &list, stat, 2);
+            let room = self.compact_room(need, &list, stat, 2, self.clear);
             let width =
                 Columns::compact_span(list.kind, list.numbered, self.header.ids, room, stat);
             let whole = width * 2.0 + GUTTER;
-            let x = self.place(CENTRE, whole);
+            let x = self.place(CENTRE, whole, self.clear);
             return Board {
                 x,
                 width,
@@ -1023,7 +1040,18 @@ impl Painter<'_> {
             };
         }
         let list = List::players();
-        let (x, width) = self.compact_list(rows, &list, |row| !watching(row), CENTRE);
+        // Split in two, the list is too wide to centre clear of the chat column:
+        // it stands centred all the same, and the chat narrows beside it.
+        let split = self
+            .fit(&list, rows.iter().filter(|row| !watching(row)).count())
+            .halves
+            > 1;
+        let clear = if split {
+            self.clear.min(SPLIT_CLEAR)
+        } else {
+            self.clear
+        };
+        let (x, width) = self.compact_list(rows, &list, |row| !watching(row), CENTRE, clear);
         Board {
             x,
             width,
@@ -1033,40 +1061,42 @@ impl Painter<'_> {
     }
 
     /// A compact `list` of the rows `member` takes: its left edge and width
-    /// (both halves, when it splits), centred on `centre` as far as the chat
-    /// column and [`RIGHT`] allow.
+    /// (both halves, when it splits), centred on `centre` as far as `clear` (the
+    /// least left edge, [`Self::place`]) and [`RIGHT`] allow.
     fn compact_list(
         &self,
         rows: &[ScoreRow],
         list: &List,
         member: impl Fn(&ScoreRow) -> bool,
         centre: f32,
+        clear: f32,
     ) -> (f32, f32) {
         let fit = self.fit(list, rows.iter().filter(|row| member(row)).count());
         let stat = self.stat_width(list.kind);
         let need = self.names_need(rows, &member, fit.height);
-        let room = self.compact_room(need, list, stat, fit.halves);
+        let room = self.compact_room(need, list, stat, fit.halves, clear);
         let half = Columns::compact_span(list.kind, list.numbered, self.header.ids, room, stat);
         let width = half * fit.halves as f32 + GUTTER * (fit.halves - 1) as f32;
-        (self.place(centre, width), width)
+        (self.place(centre, width, clear), width)
     }
 
     /// The left edge of a compact board `width` wide centred on `centre`:
-    /// moved right to clear the chat column, and back to end by [`RIGHT`].
-    fn place(&self, centre: f32, width: f32) -> f32 {
-        (centre - width * 0.5).max(self.clear).min(RIGHT - width)
+    /// moved right to `clear` (the chat column's, [`chat_clear`]), and back to
+    /// end by [`RIGHT`].
+    fn place(&self, centre: f32, width: f32, clear: f32) -> f32 {
+        (centre - width * 0.5).max(clear).min(RIGHT - width)
     }
 
     /// A compact name column for names that need `need`: within
     /// [`COMPACT_NAME_LEAST`] and [`COMPACT_NAME_MOST`], and narrower when
-    /// `across` such lists side by side would not stand between the chat
-    /// column and [`RIGHT`], or be wider than the full board (down to
-    /// [`COMPACT_NAME_SQUEEZED`]).
-    fn compact_room(&self, need: f32, list: &List, stat: f32, across: usize) -> f32 {
+    /// `across` such lists side by side would not stand between `clear` (the
+    /// least left edge, [`Self::place`]) and [`RIGHT`], or be wider than the full
+    /// board (down to [`COMPACT_NAME_SQUEEZED`]).
+    fn compact_room(&self, need: f32, list: &List, stat: f32, across: usize, clear: f32) -> f32 {
         let across = across.max(1) as f32;
         let fixed = Columns::compact_span(list.kind, list.numbered, self.header.ids, 0.0, stat);
         // Never wider than the full board, however far the chat column lies.
-        let room = (RIGHT - self.clear).min(BOARD_WIDTH);
+        let room = (RIGHT - clear).min(BOARD_WIDTH);
         let fits = (room - GUTTER * (across - 1.0)) / across - fixed;
         need.clamp(COMPACT_NAME_LEAST, COMPACT_NAME_MOST)
             .min(fits)
@@ -3032,6 +3062,89 @@ mod tests {
                 assert!(right - left < 560.0, "{left} {right}");
             }
         }
+    }
+
+    /// A compact free for all split in two halves (55 players) stands centred on the
+    /// screen even where that reaches into the chat column, at most as wide as the
+    /// full board, and tells the chat to end clear of it; one that does not split
+    /// leaves the chat alone.
+    #[test]
+    fn a_split_free_for_all_is_centred_and_narrows_the_chat() {
+        let mut header = header(0, 3);
+        header.compact = true;
+        let split = crowd(|client| (client < 55).then_some(0));
+        let single = crowd(|client| (client < 20).then_some(0));
+        for viewport in VIEWPORTS {
+            let frame = Frame::new(viewport);
+            let chat = super::super::layout::Layout::new(viewport);
+            let chat_end = chat.chat_left + chat.chat_width;
+            let built = |rows: &[ScoreRow]| {
+                let mut ui = canvas();
+                let mut motion = Motion::default();
+                motion.present(true, true, std::time::Instant::now());
+                let end = build(
+                    &mut ui,
+                    rows,
+                    &header,
+                    FlagIcons::default(),
+                    Measure::default(),
+                    &mut motion,
+                    viewport,
+                );
+                ui.finish(u16::MAX);
+                (ui, end)
+            };
+            let (ui, end) = built(&split);
+            assert!(!ui.overflowed(), "{viewport:?}");
+            assert_eq!(list_rules(&ui).len(), 2, "{viewport:?}: two halves");
+            let [left, right] = edges(&ui);
+            let middle = frame.point(CENTRE, 0.0)[0];
+            assert!(
+                ((left + right) * 0.5 - middle).abs() < 0.5,
+                "{viewport:?}: {left} {right}"
+            );
+            assert!(
+                (right - left) / frame.s <= BOARD_WIDTH + 0.5,
+                "{viewport:?}"
+            );
+            let clear = chat_end + CHAT_CLEARANCE * frame.s;
+            match end {
+                Some(end) => {
+                    assert!(left < clear, "{viewport:?}: told to narrow");
+                    assert!(
+                        (left - end - CHAT_CLEARANCE * frame.s).abs() < 0.5,
+                        "{viewport:?}: {end} {left}"
+                    );
+                    assert!(
+                        end > chat.chat_left + 150.0 * frame.s,
+                        "{viewport:?}: {end}"
+                    );
+                }
+                None => assert!(left >= clear - 0.5, "{viewport:?}: {left} < {clear}"),
+            }
+            let (_, end) = built(&single);
+            assert_eq!(end, None, "{viewport:?}: one list");
+        }
+        // At 1080 lines' 16:9 the halves reach into the chat column.
+        let (ui, end) = {
+            let mut ui = canvas();
+            let mut motion = Motion::default();
+            motion.present(true, true, std::time::Instant::now());
+            let end = build(
+                &mut ui,
+                &split,
+                &header,
+                FlagIcons::default(),
+                Measure::default(),
+                &mut motion,
+                [1920.0, 1080.0],
+            );
+            ui.finish(u16::MAX);
+            (ui, end)
+        };
+        let [left, _] = edges(&ui);
+        assert!(left < BOARD_LEFT - 100.0, "{left}");
+        assert!(end.is_some_and(|end| end < 600.0), "{end:?}");
     }
 
     /// Without compact rows the board keeps its place and width: from the
