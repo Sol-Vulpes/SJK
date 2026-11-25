@@ -32,8 +32,8 @@ use sjk_audio::SoundHandle;
 use sjk_protocol::Snapshot;
 use sjk_vfs::VirtualFileSystem;
 
-/// Client slots a set can be worn in (`MAX_CLIENTS`).
-pub const SABER_SOUND_CLIENTS: usize = 32;
+/// Client slots a set can be worn in: the size of the per-client tables.
+pub const SABER_SOUND_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// How far from a player a saber on/off sound may start and still be that player's:
 /// the game sounds it from where the player stood when the command ran, which the
 /// rest of the server frame can move by a few units.
@@ -77,7 +77,7 @@ enum Toggle {
 }
 
 /// Which client wears which set, and each set's event sounds.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub(crate) struct SaberSoundOverrides {
     sets: Vec<EventSet>,
     clients: [Option<u16>; SABER_SOUND_CLIENTS],
@@ -92,6 +92,19 @@ pub(crate) struct SaberSoundOverrides {
     /// way. The toggle sounds every hilt (a single saber's removed second slot too), and
     /// the set's sound plays once over them all.
     voiced: [Option<(i32, Toggle)>; SABER_SOUND_CLIENTS],
+}
+
+impl Default for SaberSoundOverrides {
+    fn default() -> Self {
+        Self {
+            sets: Vec::new(),
+            clients: [None; SABER_SOUND_CLIENTS],
+            active: false,
+            only: false,
+            toggles: Vec::new(),
+            voiced: [None; SABER_SOUND_CLIENTS],
+        }
+    }
 }
 
 /// What a worn set does with a general sound ([`SaberSoundOverrides::general`]).
@@ -160,7 +173,7 @@ impl SaberSoundOverrides {
         self.active = self.clients.iter().any(Option::is_some);
     }
 
-    /// The set entity `source` wears: a client's body (`source` < 32) with one.
+    /// The set entity `source` wears: a client's body (a player slot) with one.
     fn for_source(&self, source: u16) -> Option<EventSet> {
         if !self.active {
             return None;
@@ -293,7 +306,8 @@ fn nearest_player_and_whether_alone(snapshot: &Snapshot, origin: [f32; 3]) -> Op
         .entities
         .iter()
         .filter(|state| {
-            state.entity_type() == ET_PLAYER && usize::from(state.number()) < SABER_SOUND_CLIENTS
+            state.entity_type() == ET_PLAYER
+                && sjk_protocol::is_player_number(usize::from(state.number()))
         })
         .map(|state| (state.number(), distance(state.trajectory_base())))
         .chain(std::iter::once(local))
@@ -347,7 +361,7 @@ impl LegacySoundAdapter {
     }
 
     /// Which registered set each client slot wears (`None`: the stock sounds). Cheap
-    /// (two 32-entry copies); the viewer calls it every frame.
+    /// (two small table copies); the viewer calls it every frame.
     pub fn set_saber_sound_overrides(&mut self, clients: &[Option<u16>; SABER_SOUND_CLIENTS]) {
         if *clients == self.saber_overrides.clients {
             return;

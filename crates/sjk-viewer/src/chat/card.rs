@@ -384,7 +384,7 @@ impl ChatOverlay {
     /// The card's blocks for this map of the player in `slot`, as the frame last said
     /// ([`ChatOverlay::set_map_blocks`]).
     fn map_block_row(&self, slot: u8) -> sender_card::MapBlockRow {
-        let bit = 1u32.checked_shl(u32::from(slot)).unwrap_or(0);
+        let bit = 1u64.checked_shl(u32::from(slot)).unwrap_or(0);
         sender_card::MapBlockRow {
             own: self.map_blocks.0 & bit != 0,
             staff: self.map_blocks.2.then_some(self.map_blocks.1 & bit != 0),
@@ -422,7 +422,7 @@ impl ChatOverlay {
 
     /// The frame's map blocks: the slots the player blocked for the map, the ones staff
     /// blocked for everyone, and whether the player is staff.
-    pub(crate) fn set_map_blocks(&mut self, own: u32, staff: u32, is_staff: bool) {
+    pub(crate) fn set_map_blocks(&mut self, own: u64, staff: u64, is_staff: bool) {
         self.map_blocks = (own, staff, is_staff);
     }
 

@@ -2,7 +2,7 @@ use super::*;
 use sjk_protocol::{LEGACY_ENTITY_FIELDS, PlayerState};
 
 const CS_MODELS: usize = 298;
-const CS_PLAYERS: usize = 1_131;
+use sjk_protocol::CS_PLAYERS;
 
 fn snapshot(entities: Vec<EntityState>) -> Snapshot {
     let mut player = PlayerState::zero();

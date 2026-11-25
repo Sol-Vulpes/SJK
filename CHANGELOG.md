@@ -34,6 +34,17 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 - Low FPS Night: sabers, shots and explosions no longer throw a bright white disc on the ground. They light it with a soft glow in their own colour that fades out without an edge, the same on sunlit and shaded ground; Saber glow (`r_lowFpsNightSaber`, 0.01 to 1) sets how bright. Models are lit as before _(Kushina, PR #453)_
 
+## 2026.1125.1 (Beta) | 25/11/2026
+
+Servers with more than 32 player slots: SJK joins them and shows up to 64 players. It has not been played with 64 real players yet: tell us what you see.
+
+> Bigger servers: SJK joins servers with more than 32 player slots and shows up to 64 players.
+> Every player shown: Players past the 32nd have their names, models, head icons and mutes like everyone else.
+> Scoreboards: Both scoreboards fit up to 64 players, in two columns past 32 rows; scores show for 20 players at most for now.
+> Same as before: On a 32-slot server nothing changes.
+
+- Servers with more than 32 player slots: SJK asks for all of them and shows up to 64 players, with their names, models, head icons, mutes and both scoreboards; on a 32-slot server nothing changes _(Sol; server side by Lumaya)_
+
 ## 2026.1124.2 (Beta) | 24/11/2026
 
 Low FPS Night, whole models through model sync, the Varykino Blossom's extras and a round of fixes from Kushina.

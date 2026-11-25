@@ -1257,7 +1257,7 @@ fn nameplates(shots: &mut Snapshot, vfs: &sjk_vfs::VirtualFileSystem) {
                     .iter()
                     .fold(Picks::default(), |picks, style| picks.with(*style, true))
             };
-            let mut slots = [Picks::default(); crate::saber_skins::MAX_CLIENTS];
+            let mut slots = [Picks::default(); sjk_protocol::PLAYER_CAPACITY];
             slots[1] = picks(&[
                 Playstyle::SaberDuels,
                 Playstyle::ForceDuels,

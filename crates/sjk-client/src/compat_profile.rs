@@ -41,10 +41,19 @@ const TAYSTJK_USERINFO: [(&str, &str); 5] = [
 /// `cp_pluginDisable` is the player's setting and is added per profile by
 /// [`CompatProfile::userinfo_for`], defaulting to [`PLUGIN_DISABLE_DEFAULT`].
 ///
+/// [`sjk_protocol::EXTENDED_SLOTS_KEY`] tells a server with more than 32 player
+/// slots that this client can be shown all of them; a server without them ignores
+/// the key, and one with them answers with the same key in the serverinfo it sends
+/// this client ([`sjk_protocol::server_info_slots`]).
+///
 /// `cp_sbRGB1`/`cp_sbRGB2` are added by the userinfo codec whenever a blade
 /// selects RGB, for every profile. The plugin's other USERINFO cvars
 /// (`cp_login`, `cp_holster`) are left out, as EternalJK leaves them out.
-const JAPLUS_USERINFO: [(&str, &str); 2] = [("cjp_client", SJK_CLIENT), ("cp_clanPwd", "none")];
+const JAPLUS_USERINFO: [(&str, &str); 3] = [
+    ("cjp_client", SJK_CLIENT),
+    ("cp_clanPwd", "none"),
+    (sjk_protocol::EXTENDED_SLOTS_KEY, "1"),
+];
 
 /// The userinfo key a client plugin names itself with (both plugin profiles send
 /// it); the player's cvar of the same name, when set, replaces the profile's value
@@ -270,7 +279,14 @@ mod tests {
     #[test]
     fn ja_plus_identifies_as_the_client_plugin() {
         let keys = CompatProfile::JaPlus { version: None }.userinfo_extensions();
-        assert_eq!(keys, &[("cjp_client", "1.4 SJK"), ("cp_clanPwd", "none")]);
+        assert_eq!(
+            keys,
+            &[
+                ("cjp_client", "1.4 SJK"),
+                ("cp_clanPwd", "none"),
+                ("jof64", "1")
+            ]
+        );
         // 1536 opts out of exactly holstered sabers (bit 9) and ledge grab (bit 10).
         assert_eq!(PLUGIN_DISABLE_DEFAULT, (1 << 9) | (1 << 10));
         assert!(CompatProfile::BaseJka.userinfo_extensions().is_empty());

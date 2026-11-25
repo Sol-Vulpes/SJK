@@ -12,7 +12,7 @@ use std::sync::Mutex;
 /// How long a reason must hold before it is written.
 const STUCK_MS: i64 = 2_000;
 /// Client slots (`MAX_CLIENTS`); NPCs are not followed.
-const CLIENTS: usize = 32;
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// The check that left a held saber undrawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -115,7 +115,10 @@ pub(crate) fn observe(client: usize, reason: Option<Reason>, now: i64, model: &s
     let Ok(mut tracks) = TRACKS.lock() else {
         return;
     };
-    let Some(track) = tracks.get_mut(client) else {
+    let Some(track) = tracks
+        .get_mut(client)
+        .filter(|_| sjk_protocol::is_player_number(client))
+    else {
         return;
     };
     match track.observe(reason, now) {

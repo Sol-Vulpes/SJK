@@ -5,7 +5,7 @@
 
 use super::BladeColor;
 use sjk_client::{CompatProfile, LegacyClientInfo};
-use sjk_protocol::{GameState, LEGACY_MAX_CLIENTS};
+use sjk_protocol::{GameState, PLAYER_CAPACITY};
 
 // Lowercase for allocation-free registry reads in the frame path.
 pub(crate) const CVAR: &str = "cg_blacksabers";
@@ -51,7 +51,7 @@ fn supports_black(game: &GameState) -> bool {
 pub(crate) struct Cache {
     valid: bool,
     supported: bool,
-    black: [u32; 2],
+    black: [u64; 2],
 }
 
 impl Cache {
@@ -67,7 +67,7 @@ impl Cache {
         game: Option<&GameState>,
         enabled: bool,
         disabled: i64,
-        muted: u32,
+        muted: u64,
     ) -> Policy {
         let Some(game) = game else {
             return Policy::default();
@@ -89,8 +89,8 @@ impl Cache {
             supported: supports_black(game),
             black: [0; 2],
         };
-        for client in 0..LEGACY_MAX_CLIENTS {
-            let Some(raw) = game.config_string(1131 + client) else {
+        for client in 0..sjk_protocol::player_slots() {
+            let Some(raw) = crate::player_info::player_info(game, client) else {
                 continue;
             };
             let info = LegacyClientInfo::new(raw);
@@ -100,7 +100,7 @@ impl Cache {
                     .map(sjk_client::split_color_value)
                     .map(|value| value.0);
                 if color.is_some_and(|color| color >= 0 && color % 12 == 11) {
-                    cache.black[hand] |= 1 << client;
+                    cache.black[hand] |= 1_u64 << client;
                 }
             }
         }
@@ -111,16 +111,17 @@ impl Cache {
 /// One frame's black-blade decisions, reused by held and flying blades.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Policy {
-    black: [u32; 2],
+    /// One bit per player slot ([`PLAYER_CAPACITY`]), for each hand.
+    black: [u64; 2],
     supported: bool,
     allowed: bool,
-    muted: u32,
+    muted: u64,
 }
 
 impl Policy {
     /// Uncached, for tests and one-off callers.
     #[cfg(test)]
-    pub(crate) fn new(game: Option<&GameState>, enabled: bool, disabled: i64, muted: u32) -> Self {
+    pub(crate) fn new(game: Option<&GameState>, enabled: bool, disabled: i64, muted: u64) -> Self {
         Cache::default().policy(game, enabled, disabled, muted)
     }
 
@@ -129,7 +130,7 @@ impl Policy {
     pub(crate) fn without(mut self, entity: u64, replaced: [bool; 2]) -> Self {
         if let Some(client) = entity
             .checked_sub(1)
-            .filter(|client| *client < LEGACY_MAX_CLIENTS as u64)
+            .filter(|client| *client < PLAYER_CAPACITY as u64)
         {
             for (bits, replaced) in self.black.iter_mut().zip(replaced) {
                 if replaced {
@@ -143,11 +144,12 @@ impl Policy {
     pub(crate) fn color(self, entity: u64, hand: usize, fallback: BladeColor) -> BladeColor {
         let Some(client) = entity
             .checked_sub(1)
-            .filter(|client| *client < LEGACY_MAX_CLIENTS as u64)
+            .filter(|client| *client < PLAYER_CAPACITY as u64)
         else {
             return fallback;
         };
-        if self.muted & (1 << client) != 0 || !self.supported {
+        let muted = self.muted & (1 << client) != 0;
+        if muted || !self.supported {
             return fallback;
         }
         if self

@@ -87,8 +87,6 @@ pub(crate) fn anchor(own: Option<Body>, vehicle: Option<Body>) -> Option<Anchor>
 const CLASS_VEHICLE: u8 = 53;
 /// `ET_NPC` (`entityType_t`).
 const ET_NPC: u8 = 13;
-/// `MAX_CLIENTS`.
-const MAX_CLIENTS: u16 = 32;
 
 /// The client sealed in a vehicle whose snapshot state is given, if his own entity
 /// is not in the snapshot: stock cgame names the pilot of an `ET_NPC` /
@@ -104,7 +102,7 @@ pub(crate) fn hidden_pilot(
 ) -> Option<u16> {
     (entity_type == ET_NPC
         && npc_class == CLASS_VEHICLE
-        && owner < MAX_CLIENTS
+        && sjk_protocol::is_player_number(usize::from(owner))
         && owner != local
         && !present(owner))
     .then_some(owner)

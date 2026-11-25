@@ -98,7 +98,7 @@ pub(super) fn entity_pose(state: &EntityState, view_angles: [f32; 3]) -> PoseSta
     // Existing decoded netfields; no changes to the frozen wire adapter.
     // entity.rs field table: heldByClient=99, hasLookTarget=66, lookTarget=52.
     pose.angle.hold_view_yaw = state.raw_field(99).unwrap_or(0) != 0;
-    pose.angle.preserve_overrides = state.number() >= 32;
+    pose.angle.preserve_overrides = !sjk_protocol::is_player_number(usize::from(state.number()));
     pose.angle.look_target = (state.raw_field(66).unwrap_or(0) != 0)
         .then(|| EntityId::new(u64::from(state.raw_field(52).unwrap_or(0)) + 1));
     pose

@@ -34,7 +34,6 @@ const HAND_EXTEND_TAUNT: u8 = 10;
 const BOTH_MEDITATE_END: u16 = 1_190;
 /// `BUTTON_HOOK` (JA+'s `+button12`, VisionJK `codemp/qcommon/q_shared.h:1373`).
 const BUTTON_HOOK: u16 = 4_096;
-const MAX_CLIENTS: u16 = 32;
 
 #[cfg(test)]
 mod held_tests {
@@ -331,7 +330,7 @@ fn filter_japlus_taunt(
     }
     if (state.legs_timer > 0 || state.torso_timer > 0) && (torso == "BOTH_MEDITATE" || holding) {
         *stiffened = true;
-        if state.client_num < MAX_CLIENTS && freezes(torso, freeze) {
+        if state.client_num < crate::pmove::max_clients() && freezes(torso, freeze) {
             state.movement_type = PM_FREEZE;
         }
     }

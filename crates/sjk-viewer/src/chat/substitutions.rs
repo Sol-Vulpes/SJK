@@ -150,7 +150,7 @@ pub(super) fn command(command: &str, values: Option<&Values>, time: LocalTime) -
         let Ok(slot) = tokens[1].parse::<u16>() else {
             return command.to_owned();
         };
-        if slot >= 32 {
+        if !sjk_protocol::is_player_number(usize::from(slot)) {
             return command.to_owned();
         }
         (ChatDestination::Player(slot), 2)

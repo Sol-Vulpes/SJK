@@ -147,7 +147,7 @@ impl State {
             let point = start + direction * nearest;
             if bsp.point_contents(point.to_array(), CONTENTS_FOG) == 0
                 && !entity.client_bitflag(local)
-                && entity.number() < 32
+                && sjk_protocol::is_player_number(usize::from(entity.number()))
             {
                 self.client = Some(entity.number());
                 self.aimed_client = Some(entity.number());
@@ -177,7 +177,7 @@ impl State {
 }
 
 fn client_team(game: &GameState, client: u16) -> u8 {
-    let Some(info) = game.config_string(1_131 + usize::from(client)) else {
+    let Some(info) = crate::player_info::player_info(game, usize::from(client)) else {
         return 3;
     };
     sjk_client::LegacyClientInfo::new(info)

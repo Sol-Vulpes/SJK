@@ -5,39 +5,46 @@
 use super::ShapeVertex;
 use sjk_ui::{Color, Rect, TextureId};
 
-const ATLAS_SIZE: u32 = 2_048;
 /// Edge of one atlas cell; icons are uploaded at exactly this size.
 pub(crate) const ICON_SIZE: u32 = 128;
-const COLUMNS: u32 = ATLAS_SIZE / ICON_SIZE;
+/// Cells across the atlas: 17 since the heads of players 32 to 63 took cells (servers
+/// with more than 32 player slots), as at 16 the atlas was full at the tallest texture
+/// the client asks for (the test `the_atlas_fits_the_texture_size_the_client_asks_for`).
+const COLUMNS: u32 = 17;
+const ATLAS_WIDTH: u32 = COLUMNS * ICON_SIZE;
+/// What the reservations below count in: 16 cells, a row of the atlas when it was 16
+/// cells wide.
+const ROW: u32 = 16;
 /// Original menu-cell reservation (13 rows); HUD cells follow without reducing
 /// menu capacity.
-pub(crate) const ICON_CELLS: u32 = COLUMNS * 13;
+pub(crate) const ICON_CELLS: u32 = ROW * 13;
 /// HUD icon cells, right after the menu cells (`hud::icons::assets::COUNT`).
 const HUD_CELLS: u32 = 123;
 /// First of the player screen's Force page cells, after the HUD cells, so the
 /// Force art never takes cells from the character grid.
 pub(crate) const FORCE_ICON_FIRST: u32 = ICON_CELLS + HUD_CELLS;
 /// Force page cells: two atlas rows.
-pub(crate) const FORCE_ICON_CELLS: u32 = 2 * COLUMNS;
-/// First of the 32 classic-scoreboard head-icon cells (one per client slot),
-/// after the Force page cells.
+pub(crate) const FORCE_ICON_CELLS: u32 = 2 * ROW;
+/// First of the classic-scoreboard head-icon cells (one per client slot a server can
+/// have), after the Force page cells.
 pub(crate) const SCOREBOARD_ICON_CELLS: u32 = FORCE_ICON_FIRST + FORCE_ICON_CELLS;
 /// First of the character creation cells (one species' part icons and tint
 /// base), after the scoreboard's.
-pub(crate) const PART_ICON_FIRST: u32 = SCOREBOARD_ICON_CELLS + 32;
+pub(crate) const PART_ICON_FIRST: u32 =
+    SCOREBOARD_ICON_CELLS + sjk_protocol::PLAYER_CAPACITY as u32;
 /// Character creation cells: four atlas rows.
-pub(crate) const PART_ICON_CELLS: u32 = 4 * COLUMNS;
+pub(crate) const PART_ICON_CELLS: u32 = 4 * ROW;
 /// First of the key-binding panel's cells (weapon, item and Force icons),
 /// after character creation's.
 pub(crate) const BIND_ICON_FIRST: u32 = PART_ICON_FIRST + PART_ICON_CELLS;
 /// Key-binding panel cells: three atlas rows and four cells (the toys' pictures filled
 /// the three rows; the four fit in the atlas's last row, so it keeps its height).
-pub(crate) const BIND_ICON_CELLS: u32 = 3 * COLUMNS + 4;
+pub(crate) const BIND_ICON_CELLS: u32 = 3 * ROW + 4;
 /// First of the HUD Force wheel's cells (the selection bar's power icons and
 /// JoF's), after the key-binding panel's.
 pub(crate) const FORCE_WHEEL_ICON_FIRST: u32 = BIND_ICON_FIRST + BIND_ICON_CELLS;
 /// Force wheel cells: two atlas rows.
-pub(crate) const FORCE_WHEEL_ICON_CELLS: u32 = 2 * COLUMNS;
+pub(crate) const FORCE_WHEEL_ICON_CELLS: u32 = 2 * ROW;
 /// The cell holding SJK's emblem (`ui_renderer::LOGO_TEXTURE`), after the Force
 /// wheel's: the scoreboard and the player card mark SJK players with it.
 pub(crate) const LOGO_ICON: u32 = FORCE_WHEEL_ICON_FIRST + FORCE_WHEEL_ICON_CELLS;
@@ -55,12 +62,12 @@ pub(crate) const WHEEL_ICON_FIRST: u32 = VERIFIED_ICON + 1;
 /// Quick wheel cells: four rows less the nine the settings icons took (eight on
 /// 21/11/2026, the atlas may grow no taller; one for Low FPS Night's moon), for the 44
 /// icons of two boards and the toys', with room for two more.
-pub(crate) const WHEEL_ICON_CELLS: u32 = 4 * COLUMNS - 9;
+pub(crate) const WHEEL_ICON_CELLS: u32 = 4 * ROW - 9;
 /// First of the settings menu's icon cells (`settings_icons::ICONS`), after the
 /// quick wheels'.
 pub(crate) const SETTINGS_ICON_FIRST: u32 = WHEEL_ICON_FIRST + WHEEL_ICON_CELLS;
 /// Settings icon cells: two rows and nine (33 whole icons and the small ones' eight).
-pub(crate) const SETTINGS_ICON_CELLS: u32 = 2 * COLUMNS + 9;
+pub(crate) const SETTINGS_ICON_CELLS: u32 = 2 * ROW + 9;
 /// First of the medals' small medallion cells (`medals::Medal::icon`), after the
 /// settings menu's.
 pub(crate) const MEDAL_ICON_FIRST: u32 = SETTINGS_ICON_FIRST + SETTINGS_ICON_CELLS;
@@ -70,13 +77,13 @@ pub(crate) const MEDAL_ICON_CELLS: u32 = 8;
 /// Four emojis share a cell, one in each quarter.
 pub(crate) const EMOJI_ICON_FIRST: u32 = MEDAL_ICON_FIRST + MEDAL_ICON_CELLS;
 /// Emoji cells: four rows, room for EternalJK's 256 (`MAX_LOADABLE_EMOJIS`).
-pub(crate) const EMOJI_ICON_CELLS: u32 = 4 * COLUMNS;
+pub(crate) const EMOJI_ICON_CELLS: u32 = 4 * ROW;
 /// First of the players' pictures' cells (`avatars`), after the emojis'.
 pub(crate) const AVATAR_ICON_FIRST: u32 = EMOJI_ICON_FIRST + EMOJI_ICON_CELLS;
 /// Picture cells: three rows, the cache's pictures and the upload's preview. Three
 /// since the nameplates show pictures (28/10/2026): a full server's 31 other players
 /// and the player's own plate, with room left for the chat, the cards and the boards.
-pub(crate) const AVATAR_ICON_CELLS: u32 = 3 * COLUMNS;
+pub(crate) const AVATAR_ICON_CELLS: u32 = 3 * ROW;
 /// The cell holding the riding vehicle's crosshair picture (`crosshairShader` of its
 /// `.veh`), after the pictures'. One cell: it is replaced when the pilot changes vehicle.
 pub(crate) const VEHICLE_CROSSHAIR_ICON: u32 = AVATAR_ICON_FIRST + AVATAR_ICON_CELLS;
@@ -97,7 +104,7 @@ pub(crate) const ROCKET_LOCK_ICON_CELLS: u32 = 2;
 /// First of the emotes' picture cells (`emote_icons`), after the rocket lock-on's.
 pub(crate) const EMOTE_ICON_FIRST: u32 = ROCKET_LOCK_ICON_FIRST + ROCKET_LOCK_ICON_CELLS;
 /// Emote picture cells: eight rows, so the emote picker shows a large pack whole.
-pub(crate) const EMOTE_ICON_CELLS: u32 = 8 * COLUMNS;
+pub(crate) const EMOTE_ICON_CELLS: u32 = 8 * ROW;
 /// First of the duel badges' cells (`ui_renderer::duel_texture`), one per duel colour,
 /// after the emotes'.
 pub(crate) const DUEL_ICON_FIRST: u32 = EMOTE_ICON_FIRST + EMOTE_ICON_CELLS;
@@ -122,7 +129,7 @@ pub(crate) const TICK_ICON_CELLS: u32 = 5 + super::tick_badge::CREATOR_FRAMES;
 /// the ticks'.
 pub(crate) const TAG_ICON_FIRST: u32 = TICK_ICON_FIRST + TICK_ICON_CELLS;
 /// Tag cells: two rows, room for twice the first tags.
-pub(crate) const TAG_ICON_CELLS: u32 = 2 * COLUMNS;
+pub(crate) const TAG_ICON_CELLS: u32 = 2 * ROW;
 /// The cell holding the SJK Launcher's icon (`ui_renderer::LAUNCHER_TEXTURE`), after the
 /// tags'.
 pub(crate) const LAUNCHER_ICON: u32 = TAG_ICON_FIRST + TAG_ICON_CELLS;
@@ -152,7 +159,7 @@ impl IconAtlas {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("SJK retained UI icon atlas"),
             size: wgpu::Extent3d {
-                width: ATLAS_SIZE,
+                width: ATLAS_WIDTH,
                 height: ATLAS_HEIGHT,
                 depth_or_array_layers: 1,
             },
@@ -245,7 +252,7 @@ pub(super) fn uv_range(texture: TextureId) -> ([f32; 2], [f32; 2]) {
     let index = texture.0.min(TOTAL_CELLS - 1);
     let x = ((index % COLUMNS) * ICON_SIZE) as f32;
     let y = ((index / COLUMNS) * ICON_SIZE) as f32;
-    let uv = |x: f32, y: f32| [x / ATLAS_SIZE as f32, y / ATLAS_HEIGHT as f32];
+    let uv = |x: f32, y: f32| [x / ATLAS_WIDTH as f32, y / ATLAS_HEIGHT as f32];
     let size = ICON_SIZE as f32;
     (
         uv(x + CELL_INSET, y + CELL_INSET),
@@ -369,7 +376,7 @@ mod tests {
     /// picture above, below or beside it in the atlas (hub report #311).
     #[test]
     fn a_cell_never_samples_its_neighbours() {
-        let texel = [1.0 / ATLAS_SIZE as f32, 1.0 / ATLAS_HEIGHT as f32];
+        let texel = [1.0 / ATLAS_WIDTH as f32, 1.0 / ATLAS_HEIGHT as f32];
         for index in [0, 1, COLUMNS, COLUMNS + 1, ICON_CELLS + 5, TOTAL_CELLS - 1] {
             let (low, high) = uv_range(TextureId(index));
             let x = ((index % COLUMNS) * ICON_SIZE) as f32 * texel[0];

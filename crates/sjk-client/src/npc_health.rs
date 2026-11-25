@@ -2,7 +2,6 @@
 
 use sjk_protocol::{EntityState, PlayerState};
 
-const MAX_CLIENTS: u16 = 32;
 const ET_NPC: u8 = 13;
 const FP_SEE: u32 = 1 << 14;
 /// Already-decoded protocol-26 `fd.forcePowerLevel[FP_SEE]` player field.
@@ -30,7 +29,7 @@ impl LegacyNpcHealthView {
     /// `shouldtarget` and bypasses that gate; players and non-NPC map entities
     /// retain their existing rules. This does not create or estimate health data.
     pub fn permits(self, entity: &EntityState) -> bool {
-        entity.number() < MAX_CLIENTS
+        sjk_protocol::is_player_number(usize::from(entity.number()))
             || entity.entity_type() != ET_NPC
             || entity.should_target()
             || self.sense_three_active

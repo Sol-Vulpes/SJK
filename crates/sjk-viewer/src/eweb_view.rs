@@ -23,8 +23,6 @@ use std::sync::Arc;
 pub(crate) const MODEL: &str = "models/map_objects/hoth/eweb_model.glm";
 /// `CS_G2BONES` (`bg_public.h:141`).
 const CS_G2BONES: usize = 1_163;
-/// `MAX_CLIENTS`: player slots are never guns.
-const MAX_CLIENTS: u16 = 32;
 /// `entityState_t::eType` on the wire, and `ET_GENERAL`.
 const ES_ETYPE: usize = 8;
 const ET_GENERAL: u32 = 0;
@@ -87,7 +85,8 @@ pub(crate) struct PartPose {
 
 /// Whether `state` is a gun set down whose model is `appearance`'s.
 fn is_eweb(state: &EntityState, appearance: &Appearance) -> bool {
-    state.number() >= MAX_CLIENTS
+    // `MAX_CLIENTS`: player slots are never guns.
+    !sjk_protocol::is_player_number(usize::from(state.number()))
         && state.raw_field(ES_ETYPE) == Some(ET_GENERAL)
         && appearance.model.eq_ignore_ascii_case(MODEL)
         && appearance.variant.is_empty()

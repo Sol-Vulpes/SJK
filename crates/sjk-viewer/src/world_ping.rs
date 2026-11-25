@@ -63,8 +63,8 @@ pub(crate) const REACH: f32 = 16_384.0;
 /// Game units in a metre for the distance shown (a unit is an inch, as Quake-family
 /// tools take it).
 const UNITS_PER_METRE: f32 = 39.37;
-/// Legacy client slots.
-const SLOTS: usize = 32;
+/// The size of a table by client slot.
+const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// `g_gametype` of Power Duel and of the first team game (`gametype_t`).
 const GT_POWERDUEL: i32 = 4;
 const GT_TEAM: i32 = 6;
@@ -162,7 +162,7 @@ pub(crate) fn scope_in(game: &sjk_protocol::GameState, slot: usize) -> Option<Sc
             .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).integer(key))
             .unwrap_or(0)
     };
-    let player = game.config_string(crate::player_identity::CS_PLAYERS + slot)?;
+    let player = crate::player_info::player_info(game, slot)?;
     let gametype = number(game.config_string(0), "g_gametype");
     Scope::of(
         gametype,
@@ -260,7 +260,11 @@ impl WorldPings {
 
     /// Whether a ping from `slot` received at `now` may show; when so, it counts.
     pub(crate) fn admit(&mut self, slot: u8, now: Instant) -> bool {
-        let Some(times) = self.received.get_mut(usize::from(slot)) else {
+        let Some(times) = self
+            .received
+            .get_mut(usize::from(slot))
+            .filter(|_| sjk_protocol::is_player_number(usize::from(slot)))
+        else {
             return false;
         };
         while times
@@ -545,7 +549,7 @@ mod tests {
         let mut game = sjk_protocol::GameState::empty_local(0);
         game.replace_config_string(0, br"\g_gametype\4".to_vec())
             .unwrap();
-        let player = crate::player_identity::CS_PLAYERS + 2;
+        let player = sjk_protocol::CS_PLAYERS + 2;
         game.replace_config_string(player, br"\n\Lone\t\0\ds\f\dt\1".to_vec())
             .unwrap();
         assert_eq!(scope_in(&game, 2), Some(Scope::Lone));

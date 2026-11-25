@@ -11,7 +11,7 @@ const CTF: i32 = 8;
 pub(super) struct Deaths {
     counts: [i32; 64],
     /// Each slot's team (`t`) when last seen, `None` while the slot is empty.
-    teams: [Option<u8>; 32],
+    teams: [Option<u8>; sjk_protocol::PLAYER_CAPACITY],
     level_start: Option<i32>,
     consumed: u64,
     time: i32,
@@ -23,7 +23,7 @@ impl Default for Deaths {
     fn default() -> Self {
         Self {
             counts: [0; 64],
-            teams: [None; 32],
+            teams: [None; sjk_protocol::PLAYER_CAPACITY],
             level_start: None,
             consumed: 0,
             time: 0,
@@ -72,7 +72,10 @@ impl Scoreboard {
                 *count = count.saturating_add(1);
             }
             // `cg.killerName`: set when another player kills you.
-            if event.local_was_killed && event.attacker < 32 && event.attacker != event.target {
+            if event.local_was_killed
+                && sjk_protocol::is_player_number(usize::from(event.attacker))
+                && event.attacker != event.target
+            {
                 killer = Some(event.attacker);
             }
         }
@@ -108,8 +111,7 @@ impl Deaths {
             self.counts.fill(0);
         }
         for (client, seen) in self.teams.iter_mut().enumerate() {
-            let team = game
-                .config_string(CS_PLAYERS + client)
+            let team = crate::player_info::player_info(game, client)
                 .filter(|bytes| !bytes.is_empty())
                 .map(|bytes| {
                     sjk_client::LegacyClientInfo::new(bytes)
@@ -140,7 +142,8 @@ impl Deaths {
 
 #[cfg(test)]
 mod tests {
-    use super::{CS_LEVEL_START_TIME, CS_PLAYERS, Deaths, GameState};
+    use super::{CS_LEVEL_START_TIME, Deaths, GameState};
+    use sjk_protocol::CS_PLAYERS;
 
     #[test]
     fn ejk_modes_choose_reported_or_local_deaths() {

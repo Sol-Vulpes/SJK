@@ -213,7 +213,7 @@ impl GpuState {
         let published = self.live_session.as_ref().and_then(|session| {
             let game = session.game_state();
             let slot = usize::try_from(game.client_num).ok()?;
-            let info = game.config_string(player_identity::CS_PLAYERS + slot)?;
+            let info = crate::player_info::player_info(game, slot)?;
             sjk_client::LegacyClientInfo::new(info)
                 .text("model")
                 .map(str::to_owned)

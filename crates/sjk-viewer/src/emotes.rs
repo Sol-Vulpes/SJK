@@ -113,7 +113,7 @@ const MOVE_LIMIT: f32 = 24.0;
 /// How long a player may be missing from the snapshots before their emote ends.
 const ABSENT_LIMIT: Duration = Duration::from_secs(2);
 /// Slots the game numbers.
-const SLOTS: usize = 64;
+const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// `BUTTON_ATTACK | BUTTON_ALT_ATTACK` (`codemp/qcommon/q_shared.h`): a command with
 /// either ends the player's own emote ([`ActiveEmotes::end_on_attack`]).
 const ATTACK_BUTTONS: u16 = 1 | 128;

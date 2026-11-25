@@ -31,8 +31,7 @@ pub(super) const NAME_TAGS: &[&str] = &["[afk]", "(afk)", "<afk>", "{afk}", "|af
 const EF_DEAD: u32 = 1 << 1;
 /// `ET_PLAYER` (`bg_public.h`).
 const ET_PLAYER: u8 = 1;
-const CS_PLAYERS: usize = 1_131;
-const CLIENTS: usize = 32;
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// The smallest view change that counts, in degrees: far below a mouse count.
 const TURN: f32 = 0.01;
 
@@ -141,8 +140,7 @@ impl Afk {
         let fresh = now != self.time;
         self.time = now;
         for (client, watch) in self.watches.iter_mut().enumerate() {
-            let name = game
-                .config_string(CS_PLAYERS + client)
+            let name = crate::player_info::player_info(game, client)
                 .filter(|bytes| !bytes.is_empty())
                 .map(|bytes| {
                     let info = sjk_client::LegacyClientInfo::new(bytes);
@@ -231,7 +229,7 @@ mod tests {
         let mut game = GameState::empty_local(0);
         for (client, name) in names {
             game.replace_config_string(
-                CS_PLAYERS + client,
+                sjk_protocol::CS_PLAYERS + client,
                 format!("n\\{name}\\t\\0").into_bytes(),
             )
             .unwrap();
@@ -403,7 +401,7 @@ mod tests {
 
         let mut afk = Afk::default();
         watch(&mut afk, &game, 1_000, 200_000, |_| vec![player(3, 0.0, 0)]);
-        game.replace_config_string(CS_PLAYERS + 3, b"n\\Back\\t\\0".to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 3, b"n\\Back\\t\\0".to_vec())
             .unwrap();
         afk.observe(
             &snapshot(201_000, vec![player(3, 0.0, 0)]),

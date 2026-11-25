@@ -150,10 +150,9 @@ pub(super) fn context(gpu: &crate::GpuState, intermission: bool) -> Context {
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(0)
             != 0,
-        connected: (0..32)
-            .filter(|client| {
-                game.config_string(super::CS_PLAYERS + client)
-                    .is_some_and(|bytes| !bytes.is_empty())
+        connected: (0..sjk_protocol::player_slots())
+            .filter(|&client| {
+                crate::player_info::player_info(game, client).is_some_and(|bytes| !bytes.is_empty())
             })
             .count(),
     }

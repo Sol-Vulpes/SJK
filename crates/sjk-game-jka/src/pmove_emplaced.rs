@@ -40,7 +40,6 @@ const WEAPON_CHARGING_ALT: u8 = 5;
 const MAX_WEAPON_CHARGE_TIME: i32 = 5_000;
 /// `TEAM_SPECTATOR`; `MAX_CLIENTS`.
 const TEAM_SPECTATOR: u8 = 3;
-const MAX_CLIENTS: u16 = 32;
 /// `BOTH_GUNSIT1`, `TORSO_WEAPONREADY4`, `BOTH_ATTACK4`.
 const BOTH_GUNSIT1: u16 = 1_014;
 const TORSO_WEAPONREADY4: u16 = 1_419;
@@ -109,7 +108,7 @@ pub(crate) fn weapon(
         state.weapon_time = state.weapon_time.max(state.legs_timer);
     }
     if state.movement_flags & PMF_RESPAWNED != 0
-        || (state.client_num < MAX_CLIENTS && state.team == TEAM_SPECTATOR)
+        || (state.client_num < crate::pmove::max_clients() && state.team == TEAM_SPECTATOR)
     {
         return;
     }

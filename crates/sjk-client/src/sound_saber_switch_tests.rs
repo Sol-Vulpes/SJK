@@ -2,7 +2,7 @@
 //! source and channel, and that nothing doubles a server sound.
 
 use super::*;
-use sjk_protocol::LEGACY_ENTITY_FIELDS;
+use sjk_protocol::{CS_PLAYERS, LEGACY_ENTITY_FIELDS};
 
 const LOCAL: u16 = 0;
 const DUAL: u16 = 1;

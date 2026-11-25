@@ -14,7 +14,7 @@
 //! command's turn. Held against `tools/game-oracle/saberangles.c`, which turns the view
 //! through every one of these moves.
 
-use super::{MAX_CLIENTS, Predictor};
+use super::{Predictor, max_clients};
 use crate::saber_move_data::movement::{
     LS_A_BACK, LS_A_BACK_CR, LS_A_BACKFLIP_ATK, LS_A_BACKSTAB, LS_A_JUMP_T__B_, LS_A_LUNGE,
     LS_BUTTERFLY_LEFT, LS_BUTTERFLY_RIGHT, LS_JUMPATTACK_DUAL, LS_JUMPATTACK_STAFF_LEFT,
@@ -136,7 +136,7 @@ impl Predictor {
         let jumps =
             timer >= 900 && length - timer >= 950 || timer >= 1_600 && length - timer >= 400;
         let ground = self.state.ground_entity_number;
-        if jumps && ground != ENTITY_NUMBER_NONE && ground >= MAX_CLIENTS {
+        if jumps && ground != ENTITY_NUMBER_NONE && ground >= max_clients() {
             self.state.velocity[2] = 250.0;
             self.state.force_jump_start_height = self.state.origin[2];
             self.add_event(EV_JUMP, 0);

@@ -117,16 +117,17 @@ impl Rules {
 }
 
 /// Each client slot's team blade this frame; all default outside team games.
-pub(crate) type Blades = [TeamBlade; 32];
+pub(crate) type Blades = [TeamBlade; sjk_protocol::PLAYER_CAPACITY];
 
 /// The team blades of every client slot, read once a frame.
 pub(crate) fn blades(console: Option<&ViewerConsole>, game: Option<&GameState>) -> Blades {
-    let mut blades = [TeamBlade::default(); 32];
+    let mut blades = [TeamBlade::default(); sjk_protocol::PLAYER_CAPACITY];
     let Some(game) = game else {
         return blades;
     };
     let rules = Rules::new(Settings::of(console), game);
-    for (client, blade) in (0u16..).zip(blades.iter_mut()) {
+    let slots = sjk_protocol::player_slots();
+    for (client, blade) in (0u16..).zip(blades.iter_mut().take(slots)) {
         *blade = rules.of_client(game, client);
     }
     blades
@@ -183,14 +184,14 @@ mod tests {
         // Free for all keeps every choice.
         assert_eq!(
             blades(Some(&console), Some(&game(br"\g_gametype\0"))),
-            [TeamBlade::default(); 32]
+            [TeamBlade::default(); sjk_protocol::PLAYER_CAPACITY]
         );
     }
 
     #[test]
     fn class_colours_fill_in_where_the_team_gives_none() {
         const PURPLE: [u8; 3] = [230, 51, 255];
-        let mut class = [[None; 2]; 32];
+        let mut class = [[None; 2]; sjk_protocol::PLAYER_CAPACITY];
         class[3] = [Some(PURPLE), None];
         // Siege: no team rule, the class colour stands.
         let siege = with_classes(blades(None, Some(&game(br"\g_gametype\7"))), &class);

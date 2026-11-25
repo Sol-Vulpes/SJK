@@ -22,10 +22,8 @@
 
 use sjk_protocol::{GameState, Snapshot};
 
-/// `CS_PLAYERS`.
-const CS_PLAYERS: usize = 1_131;
-/// Client slots.
-const CLIENTS: usize = 32;
+/// The size of a table by client slot.
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// `ET_PLAYER`.
 const ET_PLAYER: u8 = 1;
 /// The token the duel-start broadcast carries between the two names.
@@ -107,11 +105,11 @@ impl DuelPairs {
         let mut state = [None::<bool>; CLIENTS];
         for entity in &snapshot.entities {
             let slot = usize::from(entity.number());
-            if entity.entity_type() == ET_PLAYER && slot < CLIENTS {
+            if entity.entity_type() == ET_PLAYER && sjk_protocol::is_player_number(slot) {
                 state[slot] = Some(entity.bolt1());
             }
         }
-        if usize::from(local) < CLIENTS {
+        if sjk_protocol::is_player_number(usize::from(local)) {
             state[usize::from(local)] = Some(player.duel_in_progress());
         }
         let duelling = |slot: u8| state.get(usize::from(slot)).copied().flatten();
@@ -135,7 +133,7 @@ impl DuelPairs {
         if player.duel_in_progress()
             && player.duel_index() != local
             && let (Ok(a), Ok(b)) = (u8::try_from(local), u8::try_from(player.duel_index()))
-            && usize::from(b) < CLIENTS
+            && sjk_protocol::is_player_number(usize::from(b))
         {
             self.add(a, b);
         }
@@ -181,9 +179,9 @@ impl DuelPairs {
 fn slot_named(game: &GameState, name: &str) -> Option<u8> {
     // Decoded as the print was ([`sjk_client::decode_legacy`]): a name with bytes past
     // ASCII reaches the print as text, not as the configstring's raw bytes.
-    let names: Vec<(u8, String)> = (0..CLIENTS)
+    let names: Vec<(u8, String)> = (0..sjk_protocol::player_slots())
         .filter_map(|slot| {
-            let config = game.config_string(CS_PLAYERS + slot)?;
+            let config = crate::player_info::player_info(game, slot)?;
             let name = info_value(config, b"n")?;
             Some((slot as u8, sjk_client::decode_legacy(name).into_owned()))
         })
@@ -255,8 +253,11 @@ mod tests {
     fn game(names: &[&str]) -> GameState {
         let mut game = GameState::empty_local(0);
         for (slot, name) in names.iter().enumerate() {
-            game.replace_config_string(CS_PLAYERS + slot, format!("n\\{name}\\t\\0").into_bytes())
-                .unwrap();
+            game.replace_config_string(
+                sjk_protocol::CS_PLAYERS + slot,
+                format!("n\\{name}\\t\\0").into_bytes(),
+            )
+            .unwrap();
         }
         game
     }
@@ -429,7 +430,8 @@ mod tests {
             let mut info = b"n\\".to_vec();
             info.extend_from_slice(name);
             info.extend_from_slice(b"\\t\\0");
-            game.replace_config_string(CS_PLAYERS + slot, info).unwrap();
+            game.replace_config_string(sjk_protocol::CS_PLAYERS + slot, info)
+                .unwrap();
         }
         let mut pairs = DuelPairs::default();
         // The print as the client hands it on: decoded text.

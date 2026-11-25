@@ -324,6 +324,44 @@ SJK's own server in [JA+ mode](server.md#ja-mode) runs the same rule
 so it mispredicts with `jp_DuelAlpha -1`, and the plugin isolates in Holocron and Jedi
 Master too. Stock and unknown servers keep duellers solid.
 
+## Servers with more than 32 player slots
+
+Protocol 26 knows 32 players: a player's client number is its entity number (0 to 31),
+its configstring is `CS_PLAYERS + client` (1131 to 1162), and `CS_G2BONES` follows at
+1163. A server with more player slots keeps all of that for its first 32 players and adds
+the rest above, so that a stock client still works:
+
+| Players | Entity numbers | Configstrings |
+|---|---|---|
+| 0 to 31 | 0 to 31 | `1131 + id` |
+| 32 to 63 | 32 to 63 | `1644 + (id - 32)`, the range after `CS_MAX` that protocol 26 leaves unused (`MAX_CONFIGSTRINGS` is 1700) |
+
+Nothing else moves, and the wire's field widths are unchanged (entity and client numbers
+are 10 bits).
+
+- **Asking.** A client that can be shown every slot sends `jof64=1` in its connect
+  userinfo. SJK sends it with its JA+ plugin keys (`JAPLUS_USERINFO`,
+  `sjk-client/src/compat_profile.rs`); other servers get no new key.
+- **The answer.** Such a server sends that client a serverinfo (configstring 0) with
+  `jof64=1` and its real `sv_maxclients`, and sends any other client a 32-slot serverinfo
+  without the key, with players above 31 drawn some other way. So
+  `sjk_protocol::server_info_slots` takes `sv_maxclients` (held between 32 and 64) only
+  when the key is there; otherwise the count is 32, whatever else is written.
+- **When.** `set_player_slots_for` runs as soon as a gamestate is decoded
+  (`join_session.rs`, a replacement gamestate in `ClientSession`, demo playback), before
+  the sound, chat and model tables read the players. `disconnect` resets it to 32.
+- **In the code.** `sjk-protocol/src/player_slots.rs` holds `PLAYER_CAPACITY` (table
+  sizes), `player_slots()` (the bound of "is this a player"), `player_configstring` and
+  `configstring_player`. New code uses these, never a bare 32 or `CS_PLAYERS + n`. The
+  count is one process-wide value: a test that needs 64 holds `PlayerSlotsForTest` and
+  lives in its own test binary, as other tests in the same binary would see 64 too.
+- **Limits that are the protocol's.** `stats[STAT_CLIENTS_READY]` has one bit per client
+  in 32 bits, so players above 31 show no READY. `heldByClient` is six bits holding the
+  holder plus one, so slot 63 cannot be named as a holder. `scores` carries what the
+  server chooses to send.
+
+SJK's own server (`sjk-dedicated`, the server half of `sjk-game-jka`) stays at 32 slots.
+
 ## JA+ grapple hook
 
 On JA+ servers the client predicts the grapple hook (`+button12`) with the rules

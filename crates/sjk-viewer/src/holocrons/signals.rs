@@ -35,8 +35,6 @@ const ATTACK_BUTTONS: u16 = 1 | 128;
 const PERS_HITS: usize = 1;
 const PERS_SPAWN_COUNT: usize = 4;
 const PERS_ATTACKER: usize = 6;
-/// Client numbers below this are players; above are the world's.
-const PLAYERS: u16 = 32;
 /// `PMF_FOLLOW`.
 const PMF_FOLLOW: u16 = 0x1000;
 
@@ -147,7 +145,10 @@ impl Watch {
         let mut seen = PlaySignals::default();
         if let Ok(me16) = u16::try_from(me) {
             for event in obituaries {
-                let other = |client: u16| client != me16 && client < PLAYERS;
+                // Client numbers past the player slots are the world's.
+                let other = |client: u16| {
+                    client != me16 && sjk_protocol::is_player_number(usize::from(client))
+                };
                 if event.attacker == me16 && other(event.target) {
                     seen.kills += 1;
                 }
@@ -185,7 +186,8 @@ impl Watch {
                 seen.hits = u64::from(hits - self.hits);
             }
             let attacker = player.persistent[PERS_ATTACKER];
-            let by_other = attacker < u32::from(PLAYERS) && i64::from(attacker) != i64::from(me);
+            let by_other = sjk_protocol::is_player_number(attacker as usize)
+                && i64::from(attacker) != i64::from(me);
             let max = player.max_health().max(1);
             let hurt = (health < self.health && self.health <= max) || armor < self.armor;
             if by_other && hurt && self.health > 0 {

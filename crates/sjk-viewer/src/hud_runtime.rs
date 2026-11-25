@@ -74,8 +74,7 @@ fn cut_nameplate_head(
     let Some(vfs) = vfs else {
         return;
     };
-    let model = game
-        .config_string(1131 + usize::from(slot))
+    let model = crate::player_info::player_info(game, usize::from(slot))
         .and_then(|info| sjk_client::LegacyClientInfo::new(info).bytes("model"))
         .unwrap_or_default();
     match hud::portrait::icon_path(model)

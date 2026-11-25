@@ -3,6 +3,106 @@
 //! empty sections; a viewport clip is not a substitute for those decisions.
 use super::*;
 
+/// The most rows the reference lists (`MAX_CLIENTS`).
+const REFERENCE_ROWS: usize = 32;
+/// Where a wide board's columns end (virtual units): a band's border under the last
+/// row still on the 480-unit screen.
+const COLUMN_BOTTOM: f32 = 476.0;
+
+const EMPTY: Plan = Plan {
+    size: RowSize::Large,
+    crowded: false,
+    placed: [(0, 0.0); sjk_protocol::PLAYER_CAPACITY + 1],
+    len: 0,
+    bands: [(0, 0.0, 0.0); 4],
+    band_len: 0,
+    wide: false,
+    second: 0,
+    band_second: 0,
+    local_appended: false,
+    hint_y: None,
+};
+
+/// A full board with more rows than the reference lists (a server with more than 32
+/// player slots): two columns of the crowded board's rows, every row listed. The
+/// `sections` (teams, in the reference's order) follow one another down the first
+/// column, a gap between them, and go on in the second from half the rows; a section
+/// that would be cut there starts the second column instead when the rest fits in it.
+/// With at most 64 rows neither column passes [`COLUMN_BOTTOM`].
+fn two_columns(
+    rows: &[ScoreRow],
+    header: &ClassicHeader<'_>,
+    sections: &[u8],
+    has_scores: bool,
+    listed: usize,
+) -> Plan {
+    let size = RowSize::Many;
+    let line = size.height();
+    let (top_border, bottom_border) = size.borders();
+    let gap = GROUP_GAP - 8.0;
+    let team_game = header.gametype >= TEAM;
+    let top = TOP_Y - 62.0 + if team_game { line / 2.0 } else { 0.0 };
+    let half = listed.div_ceil(2);
+    let mut out = Plan {
+        size,
+        crowded: true,
+        wide: true,
+        ..EMPTY
+    };
+    let count = |team: u8| members(rows, team, usize::MAX, has_scores).count();
+    let band = |out: &mut Plan, team: u8, from: f32, n: usize| {
+        if team_game && (team == RED || team == BLUE) && n > 0 {
+            out.bands[out.band_len] = (team, from - top_border, n as f32 * line + bottom_border);
+            out.band_len += 1;
+        }
+    };
+    let (mut y, mut in_column, mut left, mut second) = (top, 0, listed, false);
+    for (at, &team) in sections.iter().enumerate() {
+        let n = count(team);
+        if n == 0 {
+            continue;
+        }
+        if in_column > 0 {
+            let later = sections[at + 1..]
+                .iter()
+                .filter(|team| count(**team) > 0)
+                .count();
+            let rest = top + left as f32 * line + later as f32 * gap;
+            if !second && in_column + n > half && rest <= COLUMN_BOTTOM {
+                second = true;
+                (out.second, out.band_second) = (out.len, out.band_len);
+                (y, in_column) = (top, 0);
+            } else {
+                y += gap;
+            }
+        }
+        let (mut from, mut run) = (y, 0);
+        for index in members(rows, team, usize::MAX, has_scores) {
+            if out.len == out.placed.len() || (second && y + line > COLUMN_BOTTOM) {
+                break;
+            }
+            if !second && (in_column == half || y + line > COLUMN_BOTTOM) {
+                band(&mut out, team, from, run);
+                second = true;
+                (out.second, out.band_second) = (out.len, out.band_len);
+                (y, in_column) = (top, 0);
+                (from, run) = (y, 0);
+            }
+            out.placed[out.len] = (index as u8, y);
+            out.len += 1;
+            y += line;
+            in_column += 1;
+            left -= 1;
+            run += 1;
+        }
+        band(&mut out, team, from, run);
+    }
+    if !second {
+        (out.second, out.band_second) = (out.len, out.band_len);
+    }
+    out
+}
+
 pub(super) fn plan(rows: &[ScoreRow], header: &ClassicHeader<'_>, small: bool) -> Plan {
     let scored = rows.iter().filter(|row| row.has_score).count();
     let crowded = header.context.connected >= MANY_CLIENTS;
@@ -19,15 +119,27 @@ pub(super) fn plan(rows: &[ScoreRow], header: &ClassicHeader<'_>, small: bool) -
             RowSize::Many => 32,
         }
     };
+    let has_scores = scored > 0;
+    let sections: &[u8] = if header.gametype >= TEAM {
+        if header.team_scores[0] >= header.team_scores[1] {
+            &[RED, BLUE, FREE, SPECTATOR]
+        } else {
+            &[BLUE, RED, FREE, SPECTATOR]
+        }
+    } else {
+        &[FREE, SPECTATOR]
+    };
+    let listed: usize = sections
+        .iter()
+        .map(|team| members(rows, *team, usize::MAX, has_scores).count())
+        .sum();
+    if !compact && listed > REFERENCE_ROWS {
+        return two_columns(rows, header, sections, has_scores, listed);
+    }
     let mut out = Plan {
         size,
         crowded,
-        placed: [(0, 0.0); 33],
-        len: 0,
-        bands: [(0, 0.0, 0.0); 2],
-        band_len: 0,
-        local_appended: false,
-        hint_y: None,
+        ..EMPTY
     };
     let local = rows
         .iter()

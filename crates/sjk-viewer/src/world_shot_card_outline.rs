@@ -22,7 +22,7 @@ fn card_outline_on_a_demo() {
             .entities
             .iter()
             .map(|entity| entity.number())
-            .filter(|number| *number < 32 && *number != own)
+            .filter(|number| sjk_protocol::is_player_number(usize::from(*number)) && *number != own)
             .collect();
         println!("recorder {own}, other players {players:?}");
         let Some(&target) = players.first() else {

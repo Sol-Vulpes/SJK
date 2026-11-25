@@ -8,7 +8,7 @@
 //! `toon_choice.rs` does), so the hub needs no change and older SJK clients ignore them.
 
 use crate::looks::Looks;
-use crate::saber_skins::MAX_CLIENTS;
+use sjk_protocol::PLAYER_CAPACITY;
 
 /// Shows the badges on nameplates (`hud::nameplate`).
 pub(crate) const SHOW_CVAR: &str = "cg_nameplatePlaystyle";
@@ -144,8 +144,8 @@ impl Picks {
 }
 
 /// Each client slot's picks as the looks carry them (the local player's own included).
-pub(crate) fn slots(looks: &Looks) -> [Picks; MAX_CLIENTS] {
-    let mut picks = [Picks::default(); MAX_CLIENTS];
+pub(crate) fn slots(looks: &Looks) -> [Picks; PLAYER_CAPACITY] {
+    let mut picks = [Picks::default(); PLAYER_CAPACITY];
     for (slot, pick) in picks.iter_mut().enumerate() {
         *pick = Playstyle::ALL
             .into_iter()

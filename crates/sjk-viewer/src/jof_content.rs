@@ -189,8 +189,7 @@ impl crate::GpuState {
         // An inspected player wearing a model this game lacks: say how to get it.
         let inspected = self.hud.card.pinned_client().and_then(|client| {
             let game = session?.game_state();
-            let info =
-                game.config_string(crate::player_identity::CS_PLAYERS + usize::from(client))?;
+            let info = crate::player_info::player_info(game, usize::from(client))?;
             let info = sjk_client::LegacyClientInfo::new(info);
             let model = info
                 .text("model")
@@ -207,9 +206,9 @@ impl crate::GpuState {
                 return Vec::new();
             };
             let game = session.game_state();
-            (0..64)
+            (0..sjk_protocol::player_slots())
                 .filter(|&slot| i32::try_from(slot).ok() != Some(game.client_num))
-                .filter_map(|slot| game.config_string(crate::player_identity::CS_PLAYERS + slot))
+                .filter_map(|slot| crate::player_info::player_info(game, slot))
                 .filter_map(|info| {
                     sjk_client::LegacyClientInfo::new(info)
                         .text("model")

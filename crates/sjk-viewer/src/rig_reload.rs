@@ -144,9 +144,9 @@ impl crate::GpuState {
             .as_ref()
             .map(sjk_client::ClientSession::game_state)
             .map(|game| {
-                (0..32u16)
+                (0..sjk_protocol::player_slots() as u16)
                     .filter(|&client| {
-                        game.config_string(crate::player_identity::CS_PLAYERS + usize::from(client))
+                        crate::player_info::player_info(game, usize::from(client))
                             .and_then(|info| {
                                 sjk_client::LegacyClientInfo::new(info)
                                     .text("model")

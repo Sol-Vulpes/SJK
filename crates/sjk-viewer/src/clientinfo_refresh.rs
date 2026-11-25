@@ -201,7 +201,7 @@ impl GpuState {
                 .collect();
             self.clientinfo_watch.reload = folders;
         }
-        for client in 0..32 {
+        for client in 0..sjk_protocol::player_slots() as u16 {
             if let Err(error) = self.apply_clientinfo(client) {
                 log::progress(format_args!("force-model client {client}: {error}"));
             }

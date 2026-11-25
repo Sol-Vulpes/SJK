@@ -271,8 +271,7 @@ pub(crate) fn client_name_and_team(
     game_state: &GameState,
     client_num: u16,
 ) -> (std::borrow::Cow<'_, str>, u8) {
-    let (name, team) = game_state
-        .config_string(1_131 + usize::from(client_num))
+    let (name, team) = crate::player_info::player_info(game_state, usize::from(client_num))
         .and_then(parse_client_info)
         .unwrap_or((std::borrow::Cow::Borrowed("unknown"), 3));
     // A blocked player's name reads BLOCKED here (`muted_players.rs`).

@@ -6,7 +6,6 @@ const ET_EVENTS: u8 = 18;
 const EVENT_MASK: u16 = 0xff;
 const MAX_ENTITIES: usize = 1_024;
 const MAX_CLIENTS: u16 = 64;
-const CS_PLAYERS: usize = 1_131;
 
 /// `EV_OBITUARY` in `codemp/game/bg_public.h:927`.
 pub const EV_OBITUARY: u16 = 93;
@@ -276,7 +275,7 @@ impl Default for ObituaryTracker {
 /// ([`crate::LegacyClientInfo::name`]), or `noname` for a slot with no name at all,
 /// where `CG_Obituary` would print an empty one.
 pub fn obituary_name(game: &GameState, client: u16) -> std::borrow::Cow<'_, str> {
-    game.config_string(CS_PLAYERS + usize::from(client))
+    crate::player_identity::player_config(game, usize::from(client))
         .and_then(|info| crate::LegacyClientInfo::new(info).name())
         .unwrap_or(std::borrow::Cow::Borrowed("noname"))
 }
@@ -413,7 +412,7 @@ fn kill_message(means: u8) -> &'static str {
 }
 
 fn client_gender(game: &GameState, client: u16) -> Gender {
-    let Some(info) = game.config_string(CS_PLAYERS + usize::from(client)) else {
+    let Some(info) = crate::player_identity::player_config(game, usize::from(client)) else {
         return Gender::Male;
     };
     // Read from the bytes, not a UTF-8 view of the whole string: a name with a
@@ -552,7 +551,7 @@ mod tests {
     fn a_latin1_name_keeps_the_players_gender() {
         let mut game = GameState::empty_local(1);
         game.replace_config_string(
-            CS_PLAYERS + 4,
+            sjk_protocol::CS_PLAYERS + 4,
             b"n\\Zo\xe9\\t\\0\\model\\jan\\ds\\f".to_vec(),
         )
         .unwrap();

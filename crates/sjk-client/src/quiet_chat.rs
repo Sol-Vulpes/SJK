@@ -7,7 +7,10 @@
 use crate::chat::{ChatRoster, ChatTarget, chat_body};
 use sjk_protocol::PlayerState;
 
-const MAX_CLIENTS: u16 = 32;
+/// `MAX_CLIENTS` of the connected server: one past its last player slot.
+fn max_clients() -> u16 {
+    sjk_protocol::player_slots() as u16
+}
 
 /// How long a private duel partner's chat still passes after the duel ended
 /// (`duelInProgress` clears at the kill, before the "gg").
@@ -46,7 +49,7 @@ pub fn line_sender(display: &str, sender: Option<u16>, roster: &ChatRoster) -> L
             .map_or(LineSender::Ambiguous, LineSender::One);
     }
     let mut found = LineSender::Nobody;
-    for target in (0..MAX_CLIENTS).filter_map(|slot| roster.target(Some(slot))) {
+    for target in (0..max_clients()).filter_map(|slot| roster.target(Some(slot))) {
         let Some(name) = roster.display_name(target).filter(|name| !name.is_empty()) else {
             continue;
         };
@@ -71,7 +74,7 @@ pub fn forged_tell(text: &str, sender: Option<u16>, roster: &ChatRoster) -> bool
     }
     let slots = match sender {
         Some(slot) => slot..slot.saturating_add(1),
-        None => 0..MAX_CLIENTS,
+        None => 0..max_clients(),
     };
     let mut public = false;
     for slot in slots {

@@ -9,8 +9,10 @@ use sjk_protocol::GameState;
 use std::error::Error;
 use std::fmt;
 
-/// Protocol-26 maximum used by `TEAM_MAXOVERLAY` and `MAX_CLIENTS`.
-pub const MAX_TEAM_CLIENTS: usize = 32;
+/// The most rows a `tinfo` can hold: `TEAM_MAXOVERLAY`, which is `MAX_CLIENTS`. The
+/// table has room for every slot a server can have; a command is held to the
+/// connected server's slot count.
+pub const MAX_TEAM_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 const TEAMINFO_OFFSET: usize = 6;
 const CS_LOCATIONS: usize = 1_227;
 const MAX_LOCATIONS: usize = 64;
@@ -55,7 +57,7 @@ impl TeamInfoTable {
     pub fn apply_command(&mut self, arguments: &[Vec<u8>]) -> Result<(), TeamInfoError> {
         let count = legacy_atoi(argument(arguments, 1));
         let count = usize::try_from(count).map_err(|_| TeamInfoError::Count(count))?;
-        if count > MAX_TEAM_CLIENTS {
+        if count > sjk_protocol::player_slots() {
             return Err(TeamInfoError::Count(count as i32));
         }
 
@@ -65,7 +67,7 @@ impl TeamInfoTable {
             let client = legacy_atoi(argument(arguments, base));
             let client_num = u8::try_from(client)
                 .ok()
-                .filter(|client| usize::from(*client) < MAX_TEAM_CLIENTS)
+                .filter(|client| sjk_protocol::is_player_number(usize::from(*client)))
                 .ok_or(TeamInfoError::Client(client))?;
             *entry = TeamInfo {
                 client_num,

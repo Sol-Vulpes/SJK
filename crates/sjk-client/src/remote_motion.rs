@@ -8,7 +8,6 @@
 use super::legacy_evaluate_trajectory;
 use sjk_protocol::EntityState;
 
-const MAX_CLIENTS: u16 = 32;
 const ET_NPC: u8 = 13;
 const ET_EVENTS: u8 = 18;
 
@@ -29,7 +28,8 @@ pub(super) fn translation(
     if state.entity_type() >= ET_EVENTS {
         return state.event_origin();
     }
-    let remote_client = state.number() < MAX_CLIENTS && state.number() != local_client_num;
+    let remote_client = sjk_protocol::is_player_number(usize::from(state.number()))
+        && state.number() != local_client_num;
     if !smooth_clients && (remote_client || state.entity_type() == ET_NPC) {
         return state.trajectory_base();
     }

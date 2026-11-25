@@ -127,7 +127,7 @@ pub fn parse_restore_client_ghoul(name: &[u8], arguments: &[Vec<u8>]) -> Option<
     let client = legacy_atoi(argument(arguments, 1));
     let client_num = u8::try_from(client)
         .ok()
-        .filter(|client| usize::from(*client) < 32)?;
+        .filter(|client| sjk_protocol::is_player_number(usize::from(*client)))?;
     Some(Ghoul2Restore {
         client_num,
         immediate_body: (name == b"ircg").then(|| ImmediateBodyCopy {

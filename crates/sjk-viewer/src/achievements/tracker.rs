@@ -29,8 +29,6 @@ const PERS_CAPTURES: usize = 14;
 const PMF_FOLLOW: u16 = 0x1000;
 /// `PM_INTERMISSION`.
 const PM_INTERMISSION: u8 = 7;
-/// `CS_PLAYERS`.
-const CS_PLAYERS: usize = 1131;
 /// `GT_DUEL` and `GT_POWERDUEL`; from `GT_TEAM` on, players have teams.
 const GT_DUEL: i32 = 3;
 const GT_POWERDUEL: i32 = 4;
@@ -40,7 +38,7 @@ const PLAY_STEP_MAX_MS: u64 = 1_000;
 /// Most captures one snapshot may add (a jump past it is a reset, not play).
 const CAPTURE_STEP_MAX: u32 = 3;
 /// Client numbers below this are players (the obituaries' bound).
-const PLAYERS: u16 = 64;
+const PLAYERS: u16 = sjk_protocol::PLAYER_CAPACITY as u16;
 /// `ET_PLAYER`, `ET_MISSILE`, `WP_THERMAL`, `EF_DEAD`, `EF_NODRAW`.
 const ET_PLAYER: u8 = 1;
 const ET_MISSILE: u8 = 3;
@@ -655,7 +653,7 @@ fn remember_partner(record: &mut Record, game: &GameState, client: u16) -> bool 
 /// Whether players `a` and `b` are on the same team, as the server publishes it.
 fn same_team(game: &GameState, a: u16, b: u16) -> bool {
     let team = |client: u16| {
-        game.config_string(CS_PLAYERS + usize::from(client))
+        crate::player_info::player_info(game, usize::from(client))
             .and_then(|bytes| LegacyClientInfo::new(bytes).integer("t"))
     };
     matches!((team(a), team(b)), (Some(x), Some(y)) if x == y)
@@ -697,7 +695,7 @@ mod tests {
         .unwrap();
         for (client, team) in teams {
             game.replace_config_string(
-                CS_PLAYERS + client,
+                sjk_protocol::CS_PLAYERS + client,
                 format!("n\\P{client}\\t\\{team}").into_bytes(),
             )
             .unwrap();
@@ -1006,7 +1004,7 @@ mod tests {
         let mut bench = Bench::new(game("mp/ffa3", 0, 2, &[(5, 0), (6, 0), (7, 0)]));
         bench
             .game
-            .replace_config_string(CS_PLAYERS + 7, b"n\\^1P^75\\t\\0".to_vec())
+            .replace_config_string(sjk_protocol::CS_PLAYERS + 7, b"n\\^1P^75\\t\\0".to_vec())
             .unwrap();
         set_duel(&mut bench.snapshot.player, true, 5);
         bench.step(&[]);

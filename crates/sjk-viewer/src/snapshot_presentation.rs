@@ -612,8 +612,7 @@ fn update_demo_camera(gpu: &mut GpuState, session: &demo_playback::Session) {
 mod tests {
     use super::*;
 
-    /// `CS_PLAYERS`: the first client's configstring.
-    const CS_PLAYERS: usize = 1_131;
+    use sjk_protocol::CS_PLAYERS;
 
     fn kill(target: u16, attacker: u16, key: &'static str) -> sjk_client::ObituaryEvent {
         sjk_client::ObituaryEvent {
