@@ -339,10 +339,11 @@ impl Feats {
             let size = TEXT * k;
             let icon = ICON * k;
             let picture = self.pictures[medal.feat.index()];
+            let text_scale = size / font.height.max(1.0);
             let label = crate::text::visible_text_width_style(
                 font,
                 medal.feat.label(),
-                size / font.height.max(1.0),
+                text_scale,
                 crate::text::TextFace::Semibold,
                 0.0,
             );
@@ -370,8 +371,15 @@ impl Feats {
                 });
                 x += icon + SPACE * k;
             }
+            // The capitals centred on the row, in a line box tall enough that the
+            // letters' feet are not clipped.
             let _ = list.push(DrawCommand::Text {
-                rect: Rect::new(x, y + (row - size) * 0.5, label + 1.0, size),
+                rect: Rect::new(
+                    x,
+                    y + row * 0.5 - font.capital_middle(text_scale),
+                    label + 1.0,
+                    size * 1.3,
+                ),
                 text: TextId(TEXT_FIRST + slot as u32),
                 size,
                 color: Color::new(

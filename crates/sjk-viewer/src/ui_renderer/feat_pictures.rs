@@ -11,7 +11,10 @@ const COLUMNS: u32 = 4;
 /// Pictures the grid holds.
 pub(crate) const CELLS: u32 = COLUMNS * COLUMNS;
 const SIZE: u32 = COLUMNS * CELL;
-const TEXTURE_BASE: u32 = 0x6300_0000;
+/// Its own range: `0x6300_0000` is the blade stills' (`blade_stills.rs`), which the
+/// renderer tells apart first, so the medals there were taken for blade stills and
+/// never drawn.
+const TEXTURE_BASE: u32 = 0x6500_0000;
 
 const _: () = assert!(crate::feats::Feat::ALL.len() as u32 <= CELLS);
 
@@ -133,6 +136,12 @@ mod tests {
         assert_eq!(cell_of(cell_texture(5)), Some(5));
         assert_eq!(cell_of(cell_texture(CELLS + 3)), Some(CELLS - 1));
         assert_eq!(cell_of(TextureId(TEXTURE_BASE - 1)), None);
+        for cell in 0..CELLS {
+            // The blade stills are told apart before the medals: their ranges must
+            // not meet, or a medal is taken for a still and never drawn.
+            assert_eq!(crate::blade_stills::cell_of(cell_texture(cell)), None);
+            assert!(crate::setup_pictures::Picture::of_texture(cell_texture(cell)).is_none());
+        }
         assert!(super::super::map_edit_pictures::cell_of(cell_texture(0)).is_none());
         assert!(crate::cards::faces::index_of(cell_texture(0)).is_none());
         assert!(crate::chat_gifs::slot_of(cell_texture(0)).is_none());
