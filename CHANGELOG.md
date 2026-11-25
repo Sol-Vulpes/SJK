@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- The status bar's left side keeps only your credits and DOOM coins (then your Force powers and score): the kyber shards, dormant kybers, "new in your Collection", your saber's kyber and the effect pills are gone, with their Settings rows _(Sol)_
 - Players whose model the server names wrongly (an empty model or skin) wear Kyle and move again, as in the base game, instead of sliding in one pose; on a full server the players left out of the 20 score rows, yourself included, show without numbers rather than as "Joining" forever _(Sol)_
 
 ## 2026.1125.1 (Beta) | 25/11/2026

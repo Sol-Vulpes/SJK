@@ -441,8 +441,6 @@ test: Get a card / tag / finisher: its hall tile shows a gold "1 new" pill at th
 test: Its page: "1 new" + Mark all seen (N) after the headline, a New sticker on the thing.
 test: Choose it 1 s: sticker gone; sweep across tiles: nothing seen. N or the chip: all seen.
 test: Finishers page: open 1 s sees the new finisher. Inventory: a New sticker on the row.
-test: Bottom bar: "1 new in your Collection" for that map; next map a gold dot; then gone.
-note: Settings > HUD "Bottom bar: new things" (cg_statusBarNew) hides that part.
 
 [empty-states]
 area: Menus & settings
@@ -4274,6 +4272,15 @@ test: ui_menuStyle classic: the main menu title reads SUN JK; credits heading SU
 test: Discord open: hovering the large image says Sun JK (the game name is the portal's).
 test: Hold Use at a box with no coin: No DOOM coin: the teddy bear in a Force box brings one.
 note: Rename the Discord application in its developer portal for the game name to follow.
+
+[status-bar-trim]
+area: HUD
+title: Status bar left side: credits and DOOM coins only, then Force and score
+change: Kyber shards, dormant kybers, the New nudge, the saber's kyber and effects pills: gone.
+change: Their five Bar: rows in Settings > HUD and their saved switches are gone too.
+test: A match: left of the bar reads credits, DOOM coins, then the Force icons and 2nd + score.
+test: Get a card: no "1 new in your Collection" on the bar; the hall's New pills still show.
+test: Settings > HUD > Status bar: no Bar: shards / to attune / new things / kyber / effects.
 
 [one-status-bar]
 area: HUD

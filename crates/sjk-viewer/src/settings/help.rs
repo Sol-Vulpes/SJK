@@ -1751,35 +1751,15 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::status_bar::CVAR,
-        "A thin bar on the screen's bottom edge: your money, kyber, weapons, toys, match and time. The HUD moves above it.",
+        "A thin bar on the screen's bottom edge: your credits and DOOM coins, weapons, toys, match and time. The HUD moves above it.",
     ),
     (
         crate::status_bar::Part::Credits.cvar(),
         "Shows your credits on the status bar.",
     ),
     (
-        crate::status_bar::Part::Shards.cvar(),
-        "Shows your kyber shards on the status bar.",
-    ),
-    (
-        crate::status_bar::Part::Crystals.cvar(),
-        "Shows how many dormant kybers you have left to attune on the status bar.",
-    ),
-    (
         crate::status_bar::Part::Coins.cvar(),
         "Shows your DOOM coins on the status bar, once the hub has said how many.",
-    ),
-    (
-        crate::status_bar::Part::New.cvar(),
-        "Says on the status bar when your Collection holds new things: in words for that map, then a gold dot.",
-    ),
-    (
-        crate::status_bar::Part::Saber.cvar(),
-        "Shows the kyber on your saber, in its tier's colour, on the status bar.",
-    ),
-    (
-        crate::status_bar::Part::Effects.cvar(),
-        "Shows what is on about you on the status bar: blade extras, finisher, Tactical, Do not disturb, away.",
     ),
     (
         crate::status_bar::Part::Weapons.cvar(),

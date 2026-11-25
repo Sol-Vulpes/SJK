@@ -4157,15 +4157,24 @@ PC's clock is read at most once a second into retained text
 
 ## Status bars
 
+**Since 25/11/2026 the left side holds only the credits and the DOOM coins** before the
+Force powers and the score (Sol: "we don't need to display most of what's on the left side
+of it, we can keep credits and doom coins"). The kyber shards, the dormant kybers to attune,
+the Collection's New nudge, the saber's kyber and the effects' pills are gone with their
+switches (`cg_statusBarShards`, `cg_statusBarCrystals`, `cg_statusBarNew`,
+`cg_statusBarSaber`, `cg_statusBarEffects`, dropped from saved settings at load); the
+Collection still marks its New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)). The tables
+below list the 16 parts left.
+
 **Since 21/11/2026 one bar, at the bottom** (Sol: "merge the new top bar we did with the
 bottom bar, so we only have a bottom bar"; one row, trimmed). The top bar's parts moved
-into it: on the left after the effects the Force powers and the place and score, in the
+into it: on the left after the money the Force powers and the place and score, in the
 centre after the weapons the time left, on the right after the toys the feed, the server's
 name, the map, the game type, the players, the ping and the frame rate, then the time and
 the date (`Part::ALL` is the bar's order). The server's name, the game type and the date
 start off (`Part::on_by_default`; a value saved earlier stays). When room runs out, one
-ranking (`Part::keep`) decides for all 21 parts: the server's name, the game type, the
-date, the toys, the effects and the feed go first, the time left and the clock last.
+ranking (`Part::keep`) decides for all 16 parts: the server's name, the game type, the
+date, the toys and the feed go first, the time left and the clock last.
 `cg_statusBarTop` is retired (dropped from saved settings at load); the top parts keep
 their `cg_statusBarTop*` switch names, so saved choices hold, under "Bar: ..." rows.
 Nothing is kept at the top edge any more (`Reserved::top` is 0), and the notification
@@ -4192,12 +4201,7 @@ The bottom bar carries what the player has and wears:
 | Part | Switch | Where | Shows |
 | --- | --- | --- | --- |
 | Credits | `cg_statusBarCredits` | left | The credits' sign in gold and the hub's credits, digits grouped by three ("12 340") |
-| Kyber shards | `cg_statusBarShards` | left | The kyber shard in cyan and the hub's kyber shards |
-| To attune (dormant kybers) | `cg_statusBarCrystals` | left | The best held tier's dormant kyber picture and how many are still to attune, as the profile lists them (among its last 100 holocrons) |
 | DOOM coins | `cg_statusBarCoins` | left | A red coin with the wheel's spokes and the DOOM coins, once the hub has said them (read with the Force boxes) |
-| New things | `cg_statusBarNew` | left | While the Collection holds New things ([sjk-ui.md](sjk-ui.md#new-on-every-kind)): "3 new in your Collection" in gold for the rest of the map they arrived on (or the next map, when they came between maps), then a gold dot alone until they are seen; more arriving says it again (15/11/2026) |
-| Kyber | `cg_statusBarSaber` | left | The first saber's kyber: its tier's diamonds (as the Collection marks tiers) and its name in the tier's colour ("Stock blade" when none), and the second saber's when it wears another |
-| Effects | `cg_statusBarEffects` | left | A pill for each thing on: the blade's extras switched on, the finisher worn, Tactical mode's level, Do not disturb, away, toon shading |
 | Weapons | `cg_statusBarWeapons` | centre | The weapons held by their selection icons, in the selection wheel's order (empty ones by their `_na` icon, the saber by its style's), the one in hand lit on a holo ground and underlined in gold, then its ammunition (ember at five or fewer; the room stays while a weapon held takes ammunition, so the row does not shift); the followed player's while following, none while spectating freely |
 | Toys | `cg_statusBarToys` | right | Every toy with a switch, its quick wheel picture lit with a gold dot while on, faint while off |
 | Time | `cg_statusBarTime` | right | The PC's local time on the 24-hour clock (`21:07`), read once a second |

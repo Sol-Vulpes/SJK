@@ -1,14 +1,13 @@
 //! What the bars show, read from the game four times a second (the clock once a second)
-//! into fixed storage: the hub's numbers, the own look and toys, the weapons held, the
+//! into fixed storage: the hub's numbers, the toys, the weapons held, the
 //! Force known, the match's facts from the server's info and the players' slots, the
 //! ping and the frame rate.
 
 use super::times::{self, info_number, info_value};
 use super::{
-    CLOCK_EVERY, EVERY, Effect, Inputs, Line, MAX_POWERS, MAX_WEAPONS, Score, TOY_COUNT, TopInputs,
-    Weapons, feed, map_key, tactical_words, toys,
+    CLOCK_EVERY, EVERY, Inputs, Line, MAX_POWERS, MAX_WEAPONS, Score, TOY_COUNT, TopInputs,
+    Weapons, feed, toys,
 };
-use crate::menu::sjk::color;
 use std::time::Instant;
 
 /// `persistant[PERS_SCORE]` and `persistant[PERS_RANK]`, and `RANK_TIED_FLAG`.
@@ -26,10 +25,6 @@ impl crate::GpuState {
     /// Read what both bars show now into the bars' storage.
     pub(super) fn read_status_bars(&mut self, now: Instant) {
         let mut inputs = self.status_bar_inputs();
-        inputs.new = self.status_bar.nudge.follow(
-            crate::collection_seen::total(),
-            map_key(&self.world_load_map),
-        );
         inputs.weapons = self.status_bar_weapons();
         let (clock, date) = match self.status_bar.clock_read {
             Some(at) if now.saturating_duration_since(at) < CLOCK_EVERY => {
@@ -77,93 +72,18 @@ impl crate::GpuState {
         });
     }
 
-    /// What the bottom bar shows now: the hub's numbers, the own look and the toys'
+    /// What the bottom bar shows now: the hub's credits and DOOM coins, and the toys'
     /// switches.
     fn status_bar_inputs(&self) -> Inputs {
         let mut inputs = Inputs::default();
-        if let Some((credits, shards, crystals, coins)) =
-            crate::player_identity::with_snapshot(|snapshot| {
-                let me = snapshot.me.as_ref();
-                // How many dormant kybers wait, and the best tier among them.
-                let crystals = me.map(|me| {
-                    me.holocrons
-                        .iter()
-                        .filter(|holocron| holocron.opened.is_none())
-                        .filter_map(|holocron| crate::kyber::from_id(&holocron.tier))
-                        .fold((0_u32, 0_usize), |(count, best), tier| {
-                            (count + 1, best.max(tier.index))
-                        })
-                });
-                (
-                    me.map(|me| me.credits),
-                    me.map(|me| me.shards),
-                    crystals,
-                    snapshot.wheel_of_doom.as_ref().map(|wheel| wheel.coins),
-                )
-            })
-        {
+        if let Some((credits, coins)) = crate::player_identity::with_snapshot(|snapshot| {
+            (
+                snapshot.me.as_ref().map(|me| me.credits),
+                snapshot.wheel_of_doom.as_ref().map(|wheel| wheel.coins),
+            )
+        }) {
             inputs.credits = credits;
-            inputs.shards = shards;
-            if let Some((count, best)) = crystals {
-                inputs.crystals = Some(count);
-                inputs.crystal_tier = best;
-            }
             inputs.coins = coins;
-        }
-        let own = self.looks.own();
-        inputs.saber = own.saber_skin;
-        if let crate::looks::SecondSkin::Own(second) = own.second
-            && second != own.saber_skin
-        {
-            inputs.second = Some(second);
-        }
-        // The blade's extras switched on (`blade_extras.rs`): a word of the options names
-        // an extra on.
-        if let Some(extras) = own.saber_skin.and_then(crate::blade_extras::of) {
-            for extra in &extras.list {
-                if own.options_off & crate::blade_skin_file::extras::option_bit(&extra.id) != 0 {
-                    inputs.push_effect(Effect {
-                        words: extra.name.as_str(),
-                        colour: color::gold_bright(),
-                    });
-                }
-            }
-        }
-        if let Some(finisher) = own.finisher.and_then(crate::finishers::get) {
-            inputs.push_effect(Effect {
-                words: finisher.name,
-                colour: finisher.tier.colour(),
-            });
-        }
-        let console = self.console.as_ref();
-        let on = |cvar: &str| {
-            console
-                .and_then(|console| console.bool_cvar(cvar))
-                .unwrap_or(false)
-        };
-        if let Some(words) = tactical_words(crate::tactical::level()) {
-            inputs.push_effect(Effect {
-                words,
-                colour: color::holo(),
-            });
-        }
-        if on(crate::chat::quiet::CVAR) {
-            inputs.push_effect(Effect {
-                words: "Do not disturb",
-                colour: color::ember(),
-            });
-        }
-        if crate::away_emote::own_away() {
-            inputs.push_effect(Effect {
-                words: "Away",
-                colour: color::muted(),
-            });
-        }
-        if on(crate::toon_choice::CVAR) {
-            inputs.push_effect(Effect {
-                words: "Toon",
-                colour: color::holo(),
-            });
         }
         let mut switches = [false; TOY_COUNT];
         switches[toys::ILLUMINATE] = self.illuminate.lit();

@@ -3,8 +3,8 @@
 //! the same over a recorded match's HUD in the game, classic and radial looks, with a
 //! vote and the devmap bar, each checking that every HUD element stands inside the bars;
 //! what they cost the CPU a frame; and the News panel's settings to review. What the
-//! bars show is made up ([`State::preview`], [`State::preview_top`]): a wallet, a
-//! Legendary blade, weapons, Force powers, a match with a busy join and leave feed.
+//! bars show is made up ([`State::preview`], [`State::preview_top`]): a wallet,
+//! weapons, Force powers, a match with a busy join and leave feed.
 //! Off-screen renders (no game window), ignored like the other world shots: they need a
 //! GPU adapter and the installed game data named by `JKA_GAME_DATA`.
 //!
@@ -16,21 +16,14 @@
 //! [`State::preview_top`]: crate::status_bar::State::preview_top
 
 use super::*;
-use crate::status_bar::{Effect, Inputs, Line, Score, TOY_COUNT, TopInputs, toys};
+use crate::status_bar::{Inputs, Line, Score, TOY_COUNT, TopInputs, toys};
 
-/// A player with a Legendary blade and a stock second, two things on, four toys out, a
-/// blaster in hand among five weapons, at 21:07 on 16/11/2026.
+/// A player with credits and DOOM coins, four toys out, a blaster in hand among five
+/// weapons, at 21:07 on 16/11/2026.
 fn made_up(gpu: &GpuState) -> Inputs {
-    let legendary = crate::unlockables::blade_skins()
-        .find(|skin| skin.tier == crate::unlockables::Rarity::Legendary)
-        .map(|skin| skin.id);
     let mut inputs = Inputs {
         credits: Some(12_340),
-        shards: Some(875),
-        crystals: Some(3),
         coins: Some(2),
-        saber: legendary,
-        second: Some(None),
         clock: Some(crate::status_bar::Clock {
             hour: 21,
             minute: 7,
@@ -42,12 +35,6 @@ fn made_up(gpu: &GpuState) -> Inputs {
         }),
         ..Inputs::default()
     };
-    for (words, colour) in [
-        ("Flare trail", crate::menu::sjk::color::gold_bright()),
-        ("Do not disturb", crate::menu::sjk::color::ember()),
-    ] {
-        inputs.push_effect(Effect { words, colour });
-    }
     let mut on = [false; TOY_COUNT];
     for toy in [toys::ILLUMINATE, toys::DRONE, toys::BOX_HUNT, toys::QUESTS] {
         on[toy] = true;
