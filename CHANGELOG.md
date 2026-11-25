@@ -32,7 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
-- Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina)_
+- Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
 - The status bar's left side keeps only your credits and DOOM coins (then your Force powers and score): the kyber shards, dormant kybers, "new in your Collection", your saber's kyber and the effect pills are gone, with their Settings rows _(Sol)_
 - Servers with more than 32 player slots: the scoreboard lists every player, not only 20, on the JoF server, and a full server's player list no longer ends the join with an error _(Sol)_
 - A server that refuses you after the first answer (a wrong password, for one) shows its reason instead of a timeout _(Sol)_
