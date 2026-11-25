@@ -37,6 +37,17 @@ test: Mute and block a player in slot 32+ (Players page): chat and sounds stop.
 test: Any normal server: scoreboard, names and mutes exactly as before.
 note: Scores, ping and time show for 20 players at most until the server sends more.
 
+[event-64-fixes]
+area: Gameplay
+title: 64 slots: every score row, big gamestates, refusals said
+change: JoF 64-slot server: rows past the 20th come in scores64 and are shown.
+change: A gamestate can hold 49152 characters of configstrings (was 16000).
+change: A refusal sent after connectResponse shows its text, not a timeout.
+test: jka.dfox.app with 60 bots: open the scoreboard, every bot has a score row.
+test: Scores change: the rows past 20 update too, none twice.
+test: Wrong password on jka.dfox.app: the server's reason shows, quickly.
+test: Any normal server: scoreboard and join exactly as before.
+
 [player-slots-64-fixes]
 area: Gameplay
 title: Many players: no frozen poses, nobody joining forever

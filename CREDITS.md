@@ -16,8 +16,10 @@ includes:
 - the Sun JK name (Sol JK until 21/11/2026), README, credits and website;
 - servers with more than 32 player slots (25/11/2026): the client asks for every slot
   and shows up to 64 players, the shared player-slot count replacing the 32 written
-  into the client, mutes, head icons and both scoreboards past 32 rows; the server
-  side is Lumaya's and Milamber's;
+  into the client, mutes, head icons and both scoreboards past 32 rows; on 25/11 every
+  score row (the JA+ server's scores64 parts, written with the client's), a 49152-character
+  gamestate and the server's refusal text after connectResponse; the server side is
+  Lumaya's and Milamber's;
 - the players' SJK page: sign-in from the game with the SJK key, joining keys,
   video bounties and the Videographer medal (provisional art from Supporter's);
 - the SJK emblem, provided by Sol: in the classic menu's ring (in place of the
