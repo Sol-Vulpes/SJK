@@ -3591,15 +3591,15 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
-+ 25/11/2026 | SJK #447 | Let rig chains that ask keep off each other
-- 179e76f |  | Let rig chains that ask keep off each other
-- 82bc076 |  | Strand thickness at a fraction of the cost; locks on one root keep apart
 + 25/11/2026 | SJK #453 | Low FPS Night: a soft saber glow instead of a white disc, Saber glow slider
 - 0784702 |  | Low FPS Night: a soft saber glow in the light's colour instead of a white disc
 - d5e8efb |  | Changelog: PR number for the Low FPS Night saber glow
 - d3d26ed |  | Low FPS Night: keep the lines material maps rewrite in dynamic_light_modulation together
 - 19dca3e |  | Low FPS Night: keep the word material_map out of the plain stage shader
 - a965f05 |  | Re-run CI (macOS flake in sjk-identity's finisher look test, unrelated)
++ 25/11/2026 | SJK #447 | Let rig chains that ask keep off each other
+- 179e76f |  | Let rig chains that ask keep off each other
+- 82bc076 |  | Strand thickness at a fraction of the cost; locks on one root keep apart
 + 25/11/2026 | SJK #454 | Ground HUD: keep the classic HUD hidden in the drone and on death
 - 33a73b2 |  | Ground HUD: keep the classic status hidden in the drone and on death
 - 4ea677a |  | CHANGELOG: PR number for the ground HUD line
