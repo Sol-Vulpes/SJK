@@ -33,9 +33,10 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
-- Settings > Chat: **Hide chat bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_
+- Settings > Chat: **Hide bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_
 - Feats (`cg_feats`): each medal shows its picture again, left of its name, instead of an empty space that pushed the name right; the name's capitals sit in the middle of the plate, no longer low with their feet clipped _(Kushina, PR #455)_
 - Ground HUD (`cg_groundHud`): the normal HUD's health, shield, Force and saber style no longer come back in its place while your free camera (the drone) has the view or while you lie dead in third person _(Kushina, PR #454)_
+- Low FPS Night: sabers, shots and explosions no longer throw a bright white disc on the ground. They light it with a soft glow in their own colour that fades out without an edge, the same on sunlit and shaded ground; Saber glow (`r_lowFpsNightSaber`, 0.01 to 1) sets how bright. Models are lit as before _(Kushina, PR #453)_
 
 ## 2026.1125.2 (Beta) | 25/11/2026
 
@@ -50,7 +51,6 @@ Fixes for servers with more than 32 player slots, and a lighter status bar.
 - Servers with more than 32 player slots: the scoreboard lists every player, not only 20, on the JoF server, and a full server's player list no longer ends the join with an error _(Sol)_
 - A server that refuses you after the first answer (a wrong password, for one) shows its reason instead of a timeout _(Sol)_
 - Players whose model the server names wrongly (an empty model or skin) wear Kyle and move again, as in the base game, instead of sliding in one pose; on a full server the players left out of the 20 score rows, yourself included, show without numbers rather than as "Joining" forever _(Sol)_
-- Low FPS Night: sabers, shots and explosions no longer throw a bright white disc on the ground. They light it with a soft glow in their own colour that fades out without an edge, the same on sunlit and shaded ground; Saber glow (`r_lowFpsNightSaber`, 0.01 to 1) sets how bright. Models are lit as before _(Kushina, PR #453)_
 
 ## 2026.1125.1 (Beta) | 25/11/2026
 

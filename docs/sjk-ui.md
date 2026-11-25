@@ -3696,7 +3696,7 @@ bubble. See [talk balloons](client.md#talk-balloons).
 
 Under it, **Status balloon mode** (`cg_statusBalloons`, defaults to the original SJK mode) selects
 stock balloons, original SJK animations, static clan pictures, or animated clan pictures.
-**Hide chat bubbles in freecam** (`cg_freecamHideBalloons`, off) follows it: on, no chat
+**Hide bubbles in freecam** (`cg_freecamHideBalloons`, off) follows it: on, no chat
 bubble shows over anyone while the free camera flies. See
 [status balloons](client.md#status-balloons).
 ## Game chat logs

@@ -858,7 +858,8 @@ fn a_manifest_names_its_dynamic_joints() {
     let parsed = manifest(
         "dynamic tail_root\ndynamic hair 0\n\
          dynamic cape_l wag 0 stiffness 120 damping 9 nocollide\ndynamic cape_r 800 wag 0\n\
-         dynamic strand limit 4 clearance 1.5 drag 0.8 arms head breeze 2.5 shape\nlayer strand over cape_l",
+         dynamic strand limit 4 clearance 1.5 drag 0.8 arms head breeze 2.5 shape thickness 0.75\n\
+         layer strand over cape_l",
     );
     assert_eq!(parsed.layers, [("strand".to_owned(), "cape_l".to_owned())]);
     let default = dynamics::Settings::default();
@@ -901,6 +902,7 @@ fn a_manifest_names_its_dynamic_joints() {
                     head: true,
                     breeze: 2.5,
                     shape: true,
+                    thickness: 0.75,
                     ..default
                 }
             ),
@@ -915,6 +917,8 @@ fn a_manifest_names_its_dynamic_joints() {
         "dynamic tail damping -1",
         "dynamic tail breeze -1",
         "dynamic tail breeze",
+        "dynamic tail thickness -1",
+        "dynamic tail thickness",
         "dynamic tail 0 1",
     ] {
         assert!(Manifest::parse(bad).is_err(), "{bad}");
@@ -1293,6 +1297,79 @@ fn dynamic_chain_motion_of_an_installed_rig() {
         levers_in_a_cycle(&rig, &gla, name, sequence(name));
     }
     chains_on_a_change(&rig, &gla, sequence("BOTH_RUN1"), sequence("BOTH_STAND1"));
+}
+
+/// What the chains keeping off one another cost on an installed rig model, its every
+/// chain given a thickness as the worst case: microseconds a frame for the whole rig as
+/// the body sways, as installed, with the thickness, and with it trying every pair (no
+/// sphere or quick test). Run in release (`JKA_GAME_DATA`, `SJK_TEST_RIG`, `SJK_TEST_PACK`):
+/// `cargo test --release -p sjk-viewer strand_cost_of_an_installed_rig -- --ignored
+/// --nocapture`.
+#[test]
+#[ignore = "a timing on an installed rig model and the game's files, for a release build"]
+fn strand_cost_of_an_installed_rig() {
+    let (Some(data), Ok(name)) = (
+        std::env::var_os("JKA_GAME_DATA").map(std::path::PathBuf::from),
+        std::env::var("SJK_TEST_RIG"),
+    ) else {
+        println!("JKA_GAME_DATA or SJK_TEST_RIG is not set: skipped");
+        return;
+    };
+    let pack = std::env::var("SJK_TEST_PACK").unwrap_or_else(|_| format!("rig_{name}.pk3"));
+    let mut vfs = VirtualFileSystem::new();
+    for entry in std::fs::read_dir(data.join("base")).unwrap().flatten() {
+        let path = entry.path();
+        let file = path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_ascii_lowercase();
+        if file.starts_with("assets") && file.ends_with(".pk3") || file == pack.to_ascii_lowercase()
+        {
+            vfs.mount_pk3(&path).unwrap();
+        }
+    }
+    let read = |path: &str| vfs.read(path).unwrap().unwrap().bytes;
+    let gla = Gla::parse(&read("models/players/_humanoid/_humanoid.gla")).unwrap();
+    let glm = sjk_model::Glm::parse(&read("models/players/kyle/model.glm")).unwrap();
+    let directory = format!("models/players/{name}");
+    let manifest = super::manifest(&vfs, &directory, "default")
+        .unwrap()
+        .expect("a rig model");
+    let mut thick = manifest.clone();
+    for line in &mut thick.dynamic {
+        line.1.thickness = 0.5;
+    }
+    let frames = 142 * 20;
+    let step = 1.0 / 142.0;
+    let time = |manifest: &super::Manifest, every: bool| {
+        let mut rig = RigModel::load(&vfs, &directory, manifest, &gla, &glm).unwrap();
+        rig.chains.every_pair = every;
+        let mut bones = vec![identity_rows(); gla.bones.len()];
+        let mut scratch = Scratch::default();
+        rig.pose_after(&bones, None, &mut scratch, None);
+        let mut run = |frames: usize| {
+            for frame in 0..frames {
+                let (rows, _) = violent_sway(frame as f32 * step);
+                bones.fill(rows);
+                rig.pose_after(&bones, None, &mut scratch, Some(step));
+            }
+        };
+        run(142);
+        let start = std::time::Instant::now();
+        run(frames);
+        let micros = start.elapsed().as_secs_f64() * 1e6 / frames as f64;
+        (micros, rig.chains.joints.len(), rig.chains.strands().len())
+    };
+    let (installed, joints, _) = time(&manifest, false);
+    let (culled, _, strands) = time(&thick, false);
+    let (every, ..) = time(&thick, true);
+    println!(
+        "{name}: {joints} chain joints, {strands} strands; a frame: as installed {installed:.1} us, \
+         every chain thick {culled:.1} us (+{:.1}), trying every pair {every:.1} us (+{:.1})",
+        culled - installed,
+        every - installed,
+    );
 }
 
 /// `a` and `b`'s bones `share` of the way across.

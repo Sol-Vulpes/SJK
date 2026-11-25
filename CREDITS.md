@@ -1260,7 +1260,7 @@ Blackwolf's VisionJK rebuild of the JA+ 2.4 B7 server module from its Linux bina
 `g_mod japlus`): JA+'s settings and their defaults and the `jp_cinfo` bits come from it,
 and its behaviour is ported into SJK's own code, not its source.
 
-Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 19 pull
+Kushina ([kushinaSJK](https://github.com/kushinaSJK)), contributor and player, has 26 pull
 requests merged into SJK
 ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AkushinaSJK)); her
 ideas are under [Ideas](#ideas):
@@ -1311,6 +1311,20 @@ ideas are under [Ideas](#ideas):
 - #446 the Varykino Blossom's Lavender mist thinned, its own breeze sounds, and five
   extras for a Solar SJK Alpha 014 (Kushina): Blossom mist, Ink stroke, Silk threads,
   Butterfly and Lilac light, each off by default under Extra features.
+- #458 main builds again: `News::total` is kept for the tests only, since the status bar
+  no longer shows the New count.
+- #457 `cg_lagometer 4` (Bare graph): mode 1's graph alone, without its backdrop, numbers
+  or speed graph.
+- #456 Settings > Chat > Hide chat bubbles in freecam (`cg_freecamHideBalloons`, off by
+  default): no talk balloon while the player's own free camera flies.
+- #455 feat medals draw their pictures (their textures had the blade stills' ids), and the
+  name's capitals sit in the middle of the plate.
+- #454 with the ground HUD on, the classic HUD's status stays hidden in the drone and when
+  a third-person player lies dead.
+- #453 Low FPS Night: sabers, shots and explosions light the ground with a soft glow in
+  their own colour instead of a white disc, set by Saber glow (`r_lowFpsNightSaber`).
+- #447 `thickness <units>` on a rig `dynamic` line: strands with one keep off each other's
+  bones, no closer than at rest, culled by four-bone pieces.
 
 Hormorn ([Hormorn](https://github.com/Hormorn)), contributor, has 2 pull requests merged
 into SJK ([all of them](https://github.com/Sol-Vulpes/SJK/pulls?q=is%3Apr+author%3AHormorn)):

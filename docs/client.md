@@ -3463,7 +3463,7 @@ chat status bubbles) has four choices:
 - `3` **SJK Clan Animated**: show clan-specific typing, busy and away animations, with a
   static clan picture when no SJK reason is known.
 
-**Hide chat bubbles in freecam** (`cg_freecamHideBalloons`, Settings > Chat, off by
+**Hide bubbles in freecam** (`cg_freecamHideBalloons`, Settings > Chat, off by
 default; Kushina, 25/11/2026) hides every talk balloon, the own one included, in any mode
 while the player's own free camera (`cg_freecamera`, the drone) has the view. The
 connection-interrupted icon still shows (`player_sprites.rs`, `Shown::hidden`).

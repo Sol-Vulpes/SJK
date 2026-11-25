@@ -9,6 +9,50 @@
 #                               made it when that is not the piece's owner.
 
 = Sol
++ 25/11/2026 | - | Release 2026.1125.2 (Beta): full scoreboards on big servers, refusals said, players move again, lighter status bar
+- 75ca619 |  | Release 2026.1125.2 (Beta): full scoreboards on big servers, refusals said, players move again, lighter status bar
++ 25/11/2026 | - | Staff page: staff give to themselves too
+- e2a549a |  | Staff page: staff give to themselves too
++ 25/11/2026 | - | 64 slots: every score row, a bigger gamestate, refusals said
+- e4601e7 |  | 64 slots: every score row, a bigger gamestate, refusals said
++ 25/11/2026 | - | Status bar: the left side keeps only the credits and DOOM coins
+- 63e8ed8 |  | Status bar: the left side keeps only the credits and DOOM coins
++ 25/11/2026 | - | Player slots: a player without a usable model wears Kyle and animates; the last bare 32s
+- d04f3b2 |  | Player slots: a player without a usable model wears Kyle and animates; the last bare 32s
++ 25/11/2026 | - | Scoreboard: players the 20 score rows leave out are not "Joining"
+- 6085da6 |  | Scoreboard: players the 20 score rows leave out are not "Joining"
++ 25/11/2026 | - | Player slots fixes: documentation, changelog and the test list
+- 474f013 |  | Player slots fixes: documentation, changelog and the test list
++ 25/11/2026 | - | Userinfo updates: pin every update to the connect userinfo's keys
+- a182c54 |  | Userinfo updates: pin every update to the connect userinfo's keys
++ 25/11/2026 | - | Release 2026.1125.1 (Beta): servers with more than 32 player slots
+- 6c9e946 |  | Release 2026.1125.1 (Beta): servers with more than 32 player slots
++ 25/11/2026 | - | Player slots: one home for the player count and the players' configstrings
+- 3de76b8 |  | Player slots: one home for the player count and the players' configstrings
++ 25/11/2026 | - | Player slots: movement prediction asks the server's slot count
+- b09cda8 |  | Player slots: movement prediction asks the server's slot count
++ 25/11/2026 | - | Player slots: the client's tables, player tests and configstrings use the shared ones
+- b5638e8 |  | Player slots: the client's tables, player tests and configstrings use the shared ones
++ 25/11/2026 | - | Player slots: tests for players 32 to 63
+- c0cc306 |  | Player slots: tests for players 32 to 63
++ 25/11/2026 | - | Player slots: the viewer's tables, player tests and configstrings use the shared ones
+- b0d6cc1 |  | Player slots: the viewer's tables, player tests and configstrings use the shared ones
++ 25/11/2026 | - | Player slots: ask for more than 32 players and take the server's count
+- 7b50713 |  | Player slots: ask for more than 32 players and take the server's count
++ 25/11/2026 | - | Player slots: the box hunt's marks reach players 32 to 63
+- fb9f5ff |  | Player slots: the box hunt's marks reach players 32 to 63
++ 25/11/2026 | - | Player slots: muted and blocked players 32 to 63
+- e5869b7 |  | Player slots: muted and blocked players 32 to 63
++ 25/11/2026 | - | Player slots: head icons for players 32 to 63
+- 36d3eaf |  | Player slots: head icons for players 32 to 63
++ 25/11/2026 | - | Player slots: the server's own key says the client is shown every slot
+- b49716e |  | Player slots: the server's own key says the client is shown every slot
++ 25/11/2026 | - | Player slots: scoreboards list up to 64 players
+- cf1a6dc |  | Player slots: scoreboards list up to 64 players
++ 25/11/2026 | - | Player slots: models and whisper replies for players 32 to 63
+- f45a86b |  | Player slots: models and whisper replies for players 32 to 63
++ 25/11/2026 | - | Player slots: documentation, changelog, credits and the test list
+- c3d0a8d |  | Player slots: documentation, changelog, credits and the test list
 + 24/11/2026 | - | Release 2026.1124.2 (Beta): Low FPS Night, whole models through model sync, Varykino Blossom extras, Kushina's fixes
 - 4984391 |  | Release 2026.1124.2 (Beta): Low FPS Night, whole models through model sync, Varykino Blossom extras, Kushina's fixes
 + 24/11/2026 | - | Low FPS Night: rustfmt the entity light grid loop
@@ -3547,6 +3591,33 @@
 - bc795cb |  | Fixes to changelog, nameplate.rs, client.md
 
 = Kushina
++ 25/11/2026 | SJK #447 | Let rig chains that ask keep off each other
+- 179e76f |  | Let rig chains that ask keep off each other
+- 82bc076 |  | Strand thickness at a fraction of the cost; locks on one root keep apart
++ 25/11/2026 | SJK #453 | Low FPS Night: a soft saber glow instead of a white disc, Saber glow slider
+- 0784702 |  | Low FPS Night: a soft saber glow in the light's colour instead of a white disc
+- d5e8efb |  | Changelog: PR number for the Low FPS Night saber glow
+- d3d26ed |  | Low FPS Night: keep the lines material maps rewrite in dynamic_light_modulation together
+- 19dca3e |  | Low FPS Night: keep the word material_map out of the plain stage shader
+- a965f05 |  | Re-run CI (macOS flake in sjk-identity's finisher look test, unrelated)
++ 25/11/2026 | SJK #454 | Ground HUD: keep the classic HUD hidden in the drone and on death
+- 33a73b2 |  | Ground HUD: keep the classic status hidden in the drone and on death
+- 4ea677a |  | CHANGELOG: PR number for the ground HUD line
+- 5ecf802 |  | CHANGELOG: our line under Unreleased after the 2026.1125.2 release
++ 25/11/2026 | SJK #455 | Feats: draw the medal pictures, centre the name on the plate
+- 51c6194 |  | Feats: draw the medal pictures, centre the name on the plate
+- 598a716 |  | CHANGELOG: PR number for the feats line
+- 34be24a |  | CHANGELOG: our line under Unreleased after the 2026.1125.2 release
++ 25/11/2026 | SJK #456 | Settings > Chat: Hide chat bubbles in freecam
+- 9ec697e |  | Settings > Chat: Hide chat bubbles in freecam
+- 260f07d |  | CHANGELOG: PR number for the freecam bubbles line
+- 9351ea5 |  | CHANGELOG: our line under Unreleased after the 2026.1125.2 release
++ 25/11/2026 | SJK #457 | Lagometer: mode 4, the bare graph
+- 27db9b1 |  | Lagometer: mode 4, the bare graph
+- e7d5572 |  | CHANGELOG: PR number for the lagometer line
+- a8cc1bf |  | CHANGELOG: our line under Unreleased after the 2026.1125.2 release
++ 25/11/2026 | SJK #458 | Fix main's build: News::total is test-only after the status bar trim
+- 4ec1cc1 |  | Collection: keep News::total for the tests only
 + 24/11/2026 | SJK #446 | Varykino Blossom: locked extras (Blossom mist, Ink stroke, Silk threads, Butterfly, Lilac light), thinner Lavender mist, breeze sounds
 - 4bc724f |  | Add Varykino Blossom extras and thin its Lavender mist
 - b1cddbd |  | Note the Varykino Blossom extras in the changelog

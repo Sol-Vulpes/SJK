@@ -250,7 +250,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), CvarError> {
         (
             "r_lowFpsNightSaber",
             f64::from(live::LOW_FPS_NIGHT_SABER),
-            "Low FPS Night: how brightly sabers and shots light the ground, a soft glow in              their own colour, 0.01..1; live",
+            "Low FPS Night: how brightly sabers and shots light the ground, a soft glow in their own colour, 0.01..1; live",
         ),
         (
             "r_volumetricClarity",

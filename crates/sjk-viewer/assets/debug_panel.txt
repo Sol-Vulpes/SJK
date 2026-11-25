@@ -4265,6 +4265,35 @@ test: 301 characters: the box stops at 300; sjksay with more sends the first 300
 
 # ---- HUD ----
 
+[ground-hud-drone-death]
+area: HUD
+title: Ground HUD: classic HUD stays hidden in the drone and on death (Kushina, PR #454)
+change: With cg_groundHud 1 the classic health, shield, Force and style no longer come back.
+test: cg_groundHud 1, third person: fly the drone (cg_freecamera): no classic HUD, no ground HUD.
+test: Die in third person: the classic HUD stays away. Die in first person: it shows as before.
+test: Spectate or follow someone: the normal HUD as before.
+
+[lagometer-mode-4]
+area: HUD
+title: Lagometer mode 4, the bare graph (Kushina, PR #457)
+change: cg_lagometer 4 (Settings > HUD > Lagometer, Bare graph) draws mode 1's graph alone.
+test: cg_lagometer 4: the graph with no dark backdrop, no numbers and no speed graph.
+test: Modes 1, 2 and 3 look as before.
+
+[feat-medal-pictures]
+area: HUD
+title: Feat medals show their pictures, names centred (Kushina, PR #455)
+change: The medal pictures had the blade stills' texture ids and were never drawn.
+test: cg_feats 1, get a Double Kill or a spree: the medal's picture left of its name.
+test: The name sits in the middle of the plate, its letters' feet not cut.
+
+[freecam-hide-balloons]
+area: HUD
+title: Hide bubbles in freecam (Kushina, PR #456)
+change: Settings > Chat > Hide bubbles in freecam (cg_freecamHideBalloons, off by default).
+test: On, fly the drone while someone types (or you do): no chat bubble over anyone.
+test: Off, or back in your body: the bubbles show as before. The lag icon still shows.
+
 [ground-hud-saber-style]
 area: HUD
 title: Ground HUD stands in for the saber's style line (Kushina, PR #450)
@@ -4603,6 +4632,23 @@ test: Menu and Force icons look as before, edges not cut.
 
 
 # ---- Rendering & effects ----
+
+[low-fps-night-saber-glow]
+area: Rendering & effects
+title: Low FPS Night: a soft saber glow, Saber glow slider (Kushina, PR #453)
+change: Sabers, shots and explosions light the night's ground with a soft glow in their colour.
+change: Settings > Graphics > LOW FPS NIGHT > Saber glow (r_lowFpsNightSaber, 0.01 to 1, 0.5).
+test: r_lowFpsNight 1, saber on: a soft pool of the blade's colour, no white disc or hard rim.
+test: Move the slider: brighter or fainter, live. Player models are lit as before.
+test: r_lowFpsNight 0: the day's saber light as before.
+
+[rig-strand-thickness]
+area: Rendering & effects
+title: Rig chains with a thickness keep off each other (Kushina, PR #447)
+change: A rig dynamic line may say thickness <units>; strands with one keep off each other.
+test: Rig models without the word (Solfox, Creyon) move exactly as before.
+test: A rig whose hair says thickness: run and turn, the locks slide past, not through each other.
+note: No installed rig uses the word yet; FPS should not move with it.
 
 [varykino-extras]
 area: Rendering & effects

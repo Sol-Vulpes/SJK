@@ -428,6 +428,7 @@ const CHAT: &[Section] = &[
             "cg_drawChat",
             "cl_unfocusedChatbox",
             "cg_statusBalloons",
+            "cg_freecamHideBalloons",
             "cg_chatBoxEmojis",
             "cg_chatRememberChannel",
             "cg_chatColor",

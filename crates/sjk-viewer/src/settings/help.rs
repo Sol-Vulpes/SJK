@@ -1013,7 +1013,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::hud::lagometer::CVAR,
-        "Network delay graph. Graph + speed adds the average ping and interpolation and a speed graph (JoF EJK); No backdrop, bare. Bare graph: the plain graph without its backdrop or numbers.",
+        "Network delay graph. Graph + speed adds ping, interpolation and a speed graph (JoF EJK); No backdrop, bare; Bare graph, alone.",
     ),
     (
         "cg_lagometerScale",

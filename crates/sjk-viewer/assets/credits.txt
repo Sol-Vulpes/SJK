@@ -622,7 +622,7 @@ link: Blackwolf1337's pull requests | https://github.com/Sol-Vulpes/SJK/pulls?q=
 
 [Kushina]
 github: kushinaSJK
-role: Contributor: 19 merged pull requests; ideas for SJK
+role: Contributor: 26 merged pull requests; ideas for SJK
 did: #373 Rig model hair and other forked chains no longer jump about
 did: #374 Rig chains: limit, clearance, layer lines and levers; a bone's middle collides
 did: #377 Rig hair and capes trail behind a running player and keep out of the arms
@@ -642,6 +642,13 @@ did: #450 The ground HUD stands in for the saber's style line
 did: #452 Scoreboard spectators' names break into lines inside the board
 did: #451 Whole part pictures and the Hoth gear in the SJK character creator
 did: #446 Varykino Blossom: five locked extras, a thinner Lavender mist and a soft breeze
+did: #458 Main builds again once the status bar no longer counts New things
+did: #457 Lagometer mode 4: the bare graph
+did: #456 Hide bubbles in freecam
+did: #455 Feat medals show their pictures, their names centred
+did: #454 The ground HUD keeps the classic HUD away in the drone and on death
+did: #453 Low FPS Night: a soft saber glow and a Saber glow slider
+did: #447 Rig chains with a thickness keep off each other
 did: The Varykino Blossom blade: a blossom-pink blade, lavender mist, a flowering branch and blossoms shed as it swings
 did: Favourite and locked saber shaders: stars listed first, locks kept from break down and trades
 did: Plugin options as Settings switches, in place of typing a cp_pluginDisable number

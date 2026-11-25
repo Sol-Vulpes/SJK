@@ -247,6 +247,35 @@ one way: the cape pushes the hair and not the other way. The log names a `layer`
 does nothing or something odd when the model loads: a joint with no `dynamic` line, a chain
 over itself, or lines that go round in a circle.
 
+Chains whose lines give a `thickness <units>` keep off one another, as strands of hair
+that do not pass through each other: a ponytail swinging into the back hair, a ribbon
+into a lock. They do it by strands: a strand is the joints under one joint right below
+the line's anchor, so a `dynamic` line on a common hair root whose locks hang from it
+gives a strand per lock, and the locks keep off each other too. Each joint of a strand,
+and the middle of its bone, stays the two thicknesses away from every bone of another
+strand, or as far as it lies at rest if that is less, so standing still moves nothing
+and locks that start side by side (or at one root) are not shoved apart. Its speed
+towards the other bone stops, as at the body. A strand's own joints never push each
+other (a fork's branches are one strand), and a chain without the word neither pushes
+nor is pushed. Both strands move: each joint keeps off the bones already moved this frame
+where they now stand, and the others where they were drawn the frame before. It is the
+bones that collide, as with the body, so the cloth between two bones far apart can still
+meet another strand. It works with or without `nocollide`, which is about the body.
+
+The cost stays low. Each strand is cut into pieces of four bones, and each frame every
+piece gets a sphere round its bones (from where they were drawn), grown as they move; a
+joint farther from a piece's sphere than the two thicknesses passes the whole piece: a
+ponytail swinging behind the back hair, a ribbon by a far lock, the far end of a lock
+from the joints at the root. (A sphere round a whole lock would not do on a head: the
+locks all start at one root, so each lock's sphere would hold every other's.) The bones of
+a near piece are kept side by side with their middles and how far they reach, so a joint
+passes a far bone with one squared distance; a bone within that gets the full test, its
+start, direction and inverse squared length prepared once a frame so it takes no division,
+and how far the joint lay from it at rest is measured only for a bone the joint actually
+touches, so nothing per pair is kept in memory. Neither skips a bone that would push. The `strand_cost` tests time it in a release
+build: on a made-up head of 30 locks of 10 joints, and on an installed rig with
+every chain given a thickness (`strand_cost_of_an_installed_rig`).
+
 A chain kept out of the body (no `nocollide`) is kept off the ground too, so a long tail,
 cape or plait lies on the floor when the player kneels or crouches rather than going
 through it. Each frame a line traced straight down from the player's origin (`MASK_SOLID`,
@@ -330,7 +359,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 | `lift <units>` | raise (negative: lower) the planted rig by hand | `0` |
 | `eyes <joint> [<joint> ...]` | these joints look at the player's look target (see [Eyes](#eyes)) | none |
 | `layer <joint> over <joint>` | the first's chain stays on its side of the second's, one line per column of a sheet (see [Dynamic joints](#dynamic-joints-tails-capes)) | none |
-| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [shape] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, keeping their modelled curve as they hang with `shape`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0, no shape |
+| `dynamic <joint> [gravity] [gravity <n>] [wag <units>] [stiffness <n>] [damping <n>] [limit <degrees>] [clearance <units>] [drag <n>] [arms] [head] [breeze <units>] [shape] [thickness <units>] [nocollide]` | the joints under it move on their own (spring, wag, gravity in units per second squared), kept out of the body unless `nocollide`, the arms too with `arms` and the head with `head`, trailing behind the player's movement with `drag`, blown by a gusting breeze with `breeze`, keeping their modelled curve as they hang with `shape`, one line per chain (see [Dynamic joints](#dynamic-joints-tails-capes)) | none; gravity 1600, wag 2.5, stiffness 70, damping 7, no limit, clearance 0, drag 0, no arms, no head, breeze 0, no shape |
 | `map <joint> <bone>` | the joint follows the JKA bone, bind orientation kept | |
 | `map <joint> <bone> <joint end> <bone end>` | ... aimed along the bone | |
 | `map <joint> <bone> as <other joint>` | ... with another joint's alignment (finger chains) | |
@@ -338,7 +367,7 @@ A model folder (`models/players/<name>/`) with `sjk_rig.cfg` is a rig model; `/m
 `map` lines replace the preset's entry for that joint or add one.
 
 A client rejects the whole manifest over a line or option it does not know, so on an older
-client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`, `shape`) does not load at all,
+client a rig model using a newer one (`limit`, `clearance`, `layer`, `drag`, `arms`, `head`, `breeze`, `eyes`, `shape`, `thickness`) does not load at all,
 rather than dropping that line.
 
 ### Variants
