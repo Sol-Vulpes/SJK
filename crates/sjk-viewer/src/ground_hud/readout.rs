@@ -174,9 +174,10 @@ pub(crate) enum Presentation {
     Normal,
     /// Ground HUD drawn; the normal HUD's health, shield, Force and stance hide.
     Ground,
-    /// A zoom (the disruptor's scope, the binoculars) puts the ground HUD's player in
-    /// first person for a moment: its feet are out of sight, so nothing is drawn, and
-    /// the normal status stays hidden rather than flashing up for the zoom.
+    /// The ground HUD's player is out of its usual view for a moment: a zoom (the
+    /// disruptor's scope, the binoculars) puts them in first person, the player's own
+    /// free camera has left them, or they are dead. Nothing is drawn, and the normal
+    /// status stays hidden rather than flashing up in the ground HUD's place.
     Covered,
 }
 
@@ -189,6 +190,11 @@ pub(crate) struct Conditions {
     pub(crate) third_person: bool,
     /// The player chose third person but a zoom shows the view in first person.
     pub(crate) zoomed: bool,
+    /// The player's own camera choice is third person (`third_person` also holds
+    /// for the death camera, which every player gets).
+    pub(crate) chose_third_person: bool,
+    /// The player's own free camera (the drone) has the view.
+    pub(crate) free_camera: bool,
     /// Normal HUD status would be drawn (`cg_draw2D`, `cg_drawHud`, `cg_drawStatus`, no menu).
     pub(crate) status_visible: bool,
     /// A live or demo session is presenting a world.
@@ -207,8 +213,10 @@ pub(crate) struct Conditions {
 
 /// Ground HUD only for an alive, in-game local player seen in third person.
 /// Following someone hides it: the view then belongs to the followed player,
-/// and the normal HUD already shows their values. A zoom from third person covers
-/// it ([`Presentation::Covered`]).
+/// and the normal HUD already shows their values. A zoom from third person, the
+/// player's own free camera and a third-person player's death cover it
+/// ([`Presentation::Covered`]): a ground HUD player never gets the normal status
+/// back for those moments. A first-person player's death keeps the normal HUD.
 pub(crate) fn select(conditions: Conditions) -> Presentation {
     let alive = conditions.health > 0 && conditions.movement_type != PM_DEAD;
     let playing = conditions.in_game
@@ -216,11 +224,13 @@ pub(crate) fn select(conditions: Conditions) -> Presentation {
         && !PM_INTERMISSION.contains(&conditions.movement_type)
         && !conditions.spectator
         && !conditions.following;
-    if !(conditions.enabled && conditions.status_visible && playing && alive) {
+    let covered =
+        conditions.zoomed || conditions.free_camera || (!alive && conditions.chose_third_person);
+    if !(conditions.enabled && conditions.status_visible && playing) {
         Presentation::Normal
-    } else if conditions.third_person {
+    } else if alive && conditions.third_person {
         Presentation::Ground
-    } else if conditions.zoomed {
+    } else if covered {
         Presentation::Covered
     } else {
         Presentation::Normal
@@ -235,6 +245,7 @@ mod select_tests {
         Conditions {
             enabled: true,
             third_person: true,
+            chose_third_person: true,
             status_visible: true,
             in_game: true,
             health: 100,
@@ -254,13 +265,15 @@ mod select_tests {
         // A first-person player gets the normal HUD, and so does a dead one.
         let first_person = Conditions {
             third_person: false,
+            chose_third_person: false,
             ..playing()
         };
         assert_eq!(select(first_person), Presentation::Normal);
         assert_eq!(
             select(Conditions {
                 health: 0,
-                ..scoped
+                third_person: true,
+                ..first_person
             }),
             Presentation::Normal
         );
@@ -268,6 +281,61 @@ mod select_tests {
             select(Conditions {
                 enabled: false,
                 ..scoped
+            }),
+            Presentation::Normal
+        );
+    }
+
+    #[test]
+    fn the_free_camera_and_a_death_keep_the_normal_status_hidden() {
+        // The drone leaves the player's feet: the ground HUD goes, the normal status
+        // stays hidden (a first-person player's too, since the ground HUD is on).
+        let drone = Conditions {
+            third_person: true,
+            free_camera: true,
+            ..playing()
+        };
+        assert_eq!(
+            select(Conditions {
+                third_person: false,
+                ..drone
+            }),
+            Presentation::Covered
+        );
+        assert_eq!(
+            select(Conditions {
+                third_person: false,
+                chose_third_person: false,
+                ..drone
+            }),
+            Presentation::Covered
+        );
+        // A third-person player's death, from the death camera or the drone.
+        let dead = Conditions {
+            health: 0,
+            movement_type: PM_DEAD,
+            ..playing()
+        };
+        assert_eq!(select(dead), Presentation::Covered);
+        assert_eq!(
+            select(Conditions {
+                free_camera: true,
+                ..dead
+            }),
+            Presentation::Covered
+        );
+        // Spectating and following still show the normal HUD.
+        assert_eq!(
+            select(Conditions {
+                spectator: true,
+                ..drone
+            }),
+            Presentation::Normal
+        );
+        assert_eq!(
+            select(Conditions {
+                following: true,
+                ..dead
             }),
             Presentation::Normal
         );

@@ -95,6 +95,8 @@ pub(crate) fn frame(
             zoomed: gpu.third_person_choice
                 && !camera_detached
                 && (gpu.zoom_first_person || gpu.scope.mode != 0),
+            chose_third_person: gpu.third_person_choice,
+            free_camera: camera_detached,
             status_visible: visibility.status,
             intermission,
             ..*conditions

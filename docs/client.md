@@ -2705,7 +2705,10 @@ SJK's own cvars have engine names: rendering ones are `r_*` (`r_sceneHdr`,
 The ground HUD (health, shield and Force at the player's feet in third person)
 stands in for the status HUD; a zoom that shows the view in first person (the
 disruptor's scope, the binoculars) keeps the status hidden rather than bringing it
-back for the zoom (`Presentation::Covered` in `ground_hud/readout.rs`).
+back for the zoom (`Presentation::Covered` in `ground_hud/readout.rs`). The player's
+own free camera (the drone) and a third-person player's death cover it the same way,
+so the classic status does not come back in its place; a first-person player's death
+keeps the classic HUD (25/11/2026).
 With a saber the classic layout's centre weapon panel (the weapon's name and the
 style, "Lightsaber" and "Strong") gives way to it as well, since the ground HUD's
 stance dot shows the style; a weapon's ammunition panel stays (24/11/2026).
