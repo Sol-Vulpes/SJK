@@ -271,6 +271,7 @@ const CHOICE_NAMES: &[(&str, &str, &str)] = &[
     (crate::hud::lagometer::CVAR, "1", "Graph"),
     (crate::hud::lagometer::CVAR, "2", "Graph + speed"),
     (crate::hud::lagometer::CVAR, "3", "No backdrop"),
+    (crate::hud::lagometer::CVAR, "4", "Bare graph"),
     ("cg_predictLegacy", "0", "Current"),
     ("cg_predictLegacy", "255", "As in 2026.1028.1"),
     ("cg_hitsounds", "0", "Off"),
@@ -1012,7 +1013,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::hud::lagometer::CVAR,
-        "Network delay graph. Graph + speed adds the average ping and interpolation and a speed graph (JoF EJK); No backdrop, bare.",
+        "Network delay graph. Graph + speed adds the average ping and interpolation and a speed graph (JoF EJK); No backdrop, bare. Bare graph: the plain graph without its backdrop or numbers.",
     ),
     (
         "cg_lagometerScale",

@@ -1,4 +1,5 @@
-//! The lagometer (`cg_lagometer`) and JoF EJK's modes 2 and 3 of it.
+//! The lagometer (`cg_lagometer`), JoF EJK's modes 2 and 3 of it, and mode 4: mode 1's
+//! graph alone without its backdrop.
 //!
 //! Mode 1 is the graph SJK has always drawn: frame interpolation (yellow above the
 //! middle line, blue below) and snapshot latency (green, yellow when the server held
@@ -28,10 +29,20 @@ use sjk_ui::{Color, DrawCommand, DrawList, FontWeight, HudWidget, Rect, TextAlig
 use std::fmt::Write as _;
 
 /// The setting: 0 off, 1 the graph, 2 with numbers and the speed graph, 3 the same
-/// without backdrops.
+/// without backdrops, 4 the graph alone without its backdrop.
 pub(crate) const CVAR: &str = "cg_lagometer";
 /// The highest mode; a larger value draws it.
-pub(crate) const MAX_MODE: u8 = 3;
+pub(crate) const MAX_MODE: u8 = 4;
+
+/// Modes 2 and 3 write the numbers and draw the speed graph.
+fn with_readout(mode: u8) -> bool {
+    matches!(mode, 2 | 3)
+}
+
+/// Modes 1 and 2 draw their graphs on backdrops.
+fn with_backdrop(mode: u8) -> bool {
+    matches!(mode, 1 | 2)
+}
 /// The text of the average ping, the average interpolation and the speed.
 pub(super) const PING_TEXT: TextId = TextId(325);
 pub(super) const INTERPOLATION_TEXT: TextId = TextId(326);
@@ -126,7 +137,7 @@ impl Readout {
         self.speed.clear();
         let speed = self.speed_newest(0);
         self.moving = speed != 0.0;
-        if mode < 2 {
+        if !with_readout(mode) {
             return;
         }
         let (ping, interpolation) = averages(samples);
@@ -250,12 +261,12 @@ pub(super) fn emit(
     graph: &Graph<'_>,
     panel: &mut dyn FnMut(&mut DrawList, Rect),
 ) {
-    let backdrop = graph.mode < 3;
+    let backdrop = with_backdrop(graph.mode);
     if backdrop {
         panel(draw_list, rect);
     }
     emit_lag(draw_list, rect, graph);
-    if graph.mode < 2 {
+    if !with_readout(graph.mode) {
         return;
     }
     let places = places(rect, graph.mode, graph.text_scale, graph.screen);
@@ -482,7 +493,15 @@ mod tests {
         assert_eq!(mode(None), 0);
         assert_eq!(mode(Some(&console)), 0, "off by default");
         // `seta cg_lagometer "1"`, as old SJK and EJK configs save it.
-        for (value, expected) in [("1", 1), ("2", 2), ("3", 3), ("9", 3), ("-1", 0), ("0", 0)] {
+        for (value, expected) in [
+            ("1", 1),
+            ("2", 2),
+            ("3", 3),
+            ("4", 4),
+            ("9", 4),
+            ("-1", 0),
+            ("0", 0),
+        ] {
             assert!(console.set_cvar(CVAR, value), "{value}");
             assert_eq!(mode(Some(&console)), expected, "{value}");
         }
@@ -509,6 +528,25 @@ mod tests {
             };
             assert!(rect.y >= 300.0 && rect.bottom() <= 396.0, "{rect:?}");
         }
+    }
+
+    /// Mode 4 is mode 1's graph without its backdrop: the same bars, no text, nothing
+    /// above the graph.
+    #[test]
+    fn mode_4_is_the_bare_graph() {
+        let readout = moving(300.0, 4);
+        let commands = drawn(4, &readout);
+        assert!(panels(&commands).is_empty());
+        assert!(texts(&commands).is_empty());
+        assert!(readout.ping.is_empty() && readout.speed.is_empty());
+        let bars = |commands: &[DrawCommand]| {
+            commands
+                .iter()
+                .filter(|command| matches!(command, DrawCommand::SolidRect { .. }))
+                .copied()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(bars(&commands), bars(&drawn(1, &moving(300.0, 1))));
     }
 
     #[test]

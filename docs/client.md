@@ -4381,7 +4381,9 @@ JoF EJK's values (`cg_draw.c`, `CG_DrawLagometer` and `CG_DrawSpeedGraph`):
   green column per frame for the horizontal speed, the height worth 3000 units a
   second, the current speed at its top left;
 - `3` (**No backdrop**): the same without either backdrop, the speed graph three times
-  as tall (its bottom where mode 2's is), its number only while moving.
+  as tall (its bottom where mode 2's is), its number only while moving;
+- `4` (**Bare graph**): mode 1's graph alone, without its backdrop: no numbers and no
+  speed graph (Kushina, 25/11/2026).
 
 EJK draws the speed graph only with its `cg_speedometer` speed graph bit; SJK has no
 such bit and draws it with modes 2 and 3 (Sol's decision, 29/10/2026).
