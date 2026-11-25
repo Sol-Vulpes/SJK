@@ -57,6 +57,17 @@ and SJK draws its own blade in the colour EternalJK's `ClampSaberColor` gives) a
 appends a deaths field to each `scores` row (15 fields instead of 14). The signed
 field is retained on the parsed score entry and used by both scoreboard styles;
 it is not merely used to detect the wider row.
+
+A later `userinfo` update carries every key of the connect userinfo, in the same order,
+except the connection-only `protocol`, `qport` and `challenge`: the `password`, the
+connection's `ja_guid`, the profile's extension keys (`jof64` included) and the player's
+overrides, then the loaded mods' fields and `teamoverlay`
+(`userinfo_update::update_payload`, built by the same
+`legacy_userinfo_payload_with_extensions` as the connect packet). This matters because a
+server stores the last userinfo it took and, at every map change, connects each player
+again with it (`ClientConnect` with `firstTime` false): a key missing from an update would
+be missing from then on, the password first (a JA+ module drops the player with
+`@@@INVALID_ESCAPE_TO_MAIN`). A unit test pins the two payloads equal.
 The server sends at most 20 rows (`MAX_CLIENT_SCORE_SEND`) but announces every
 connected player, so the row width comes from the fields actually sent rather than
 the announced count: the width that divides them, and when both do, the one whose

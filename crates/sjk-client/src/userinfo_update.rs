@@ -113,6 +113,28 @@ impl UserinfoUpdateTracker {
     }
 }
 
+/// The payload of a `userinfo` update: the connect userinfo's keys (the player's
+/// `password`, the connection's `ja_guid`, the profile's extension keys and the
+/// player's overrides of them), plus the loaded mods' fields and `teamoverlay`,
+/// without the connection-only `protocol`, `qport` and `challenge`. A server stores
+/// it in place of the connect userinfo and connects the player again with it at
+/// every map change, so a key missing here is missing from then on (OpenJK
+/// `CL_CheckUserinfo` sends the whole `CVAR_USERINFO` string the same way).
+fn update_payload(
+    profile: &crate::CompatProfile,
+    tracker: &UserinfoUpdateTracker,
+    userinfo: &LegacyUserInfo,
+    team_overlay: Option<bool>,
+    mod_fields: &[(&str, &str)],
+) -> Result<String, NetworkError> {
+    let mut extensions = profile.userinfo_extensions().to_vec();
+    extensions.extend_from_slice(mod_fields);
+    if let Some(enabled) = team_overlay {
+        extensions.push(("teamoverlay", if enabled { "1" } else { "0" }));
+    }
+    tracker.payload(&profile.userinfo_for(userinfo), &extensions)
+}
+
 /// Console transport diagnostics are read without changing the wire codec.
 impl crate::ClientSession {
     /// Send the optional stock team-status subscription using the existing userinfo codec.
@@ -134,13 +156,13 @@ impl crate::ClientSession {
         mod_fields: &[(&str, &str)],
         now: Instant,
     ) -> Result<UserinfoUpdateStatus, crate::ClientError> {
-        let mut extensions = self.compat_profile.userinfo_extensions().to_vec();
-        extensions.extend_from_slice(mod_fields);
-        if let Some(enabled) = team_overlay {
-            extensions.push(("teamoverlay", if enabled { "1" } else { "0" }));
-        }
-        let userinfo = self.compat_profile.userinfo_for(userinfo);
-        let payload = self.userinfo_updates.payload(&userinfo, &extensions)?;
+        let payload = update_payload(
+            &self.compat_profile,
+            &self.userinfo_updates,
+            userinfo,
+            team_overlay,
+            mod_fields,
+        )?;
         let status = self.userinfo_updates.status(&payload, now);
         if status != UserinfoUpdateStatus::Sent {
             return Ok(status);
@@ -225,6 +247,77 @@ mod tests {
             "the server ignored a change: {sent:?}"
         );
         assert_eq!(taken.last().map(String::as_str), Some("color 80"));
+    }
+
+    /// A server connects every player again at a map change with the userinfo it
+    /// stored last; an update without `password` got a player dropped there with
+    /// `@@@INVALID_ESCAPE_TO_MAIN` on a locked server. An update carries every key of
+    /// the connect userinfo but the connection-only ones, in the same order.
+    #[test]
+    fn an_update_carries_every_connect_key_but_the_connection_ones() {
+        use crate::CompatProfile;
+        for profile in [
+            CompatProfile::JaPlus { version: None },
+            CompatProfile::TaystJk,
+            CompatProfile::BaseJka,
+        ] {
+            let mut user = LegacyUserInfo::with_name("Sol");
+            user.password = Some("temple".to_owned());
+            user.saber1 = "single_4".to_owned();
+            user.saber2 = "none".to_owned();
+            user.extension_overrides
+                .push(("cjp_client".to_owned(), "1.6.5 JoF".to_owned()));
+            // The connection stamps its guid; the player's later userinfo has none.
+            let mut connected = user.clone();
+            connected.guid = Some("0123456789ABCDEF0123456789ABCDEF".to_owned());
+            let connect = sjk_network::legacy_userinfo_with_extensions(
+                7,
+                1234,
+                &profile.userinfo_for(&connected),
+                profile.userinfo_extensions(),
+            )
+            .unwrap();
+            let tracker =
+                UserinfoUpdateTracker::new(String::new(), connected.guid.clone(), Instant::now());
+            let update = update_payload(&profile, &tracker, &user, None, &[]).unwrap();
+            assert_eq!(
+                format!("{update}\\protocol\\26\\qport\\1234\\challenge\\7"),
+                connect,
+                "{profile}"
+            );
+            let keys = sjk_protocol::InfoString::parse(&update).unwrap();
+            assert_eq!(keys.get("password"), Some("temple"), "{profile}");
+            assert_eq!(
+                keys.get("ja_guid"),
+                Some("0123456789ABCDEF0123456789ABCDEF")
+            );
+            assert_eq!(keys.get("saber2"), Some("none"));
+            for (key, _) in profile.userinfo_extensions() {
+                assert!(keys.get(key).is_some(), "{profile} update lacks {key}");
+            }
+            // The mods' fields and the team overlay come on top, not instead.
+            let more =
+                update_payload(&profile, &tracker, &user, Some(true), &[("x_mod", "1")]).unwrap();
+            assert!(more.starts_with(&update[..update.find("\\ja_guid").unwrap()]));
+            let more = sjk_protocol::InfoString::parse(&more).unwrap();
+            assert_eq!(more.get("password"), Some("temple"));
+            assert_eq!(more.get("teamoverlay"), Some("1"));
+            assert_eq!(more.get("x_mod"), Some("1"));
+        }
+        let ja_plus = CompatProfile::JaPlus { version: None };
+        let tracker = UserinfoUpdateTracker::new(String::new(), None, Instant::now());
+        let update = update_payload(
+            &ja_plus,
+            &tracker,
+            &LegacyUserInfo::with_name("Sol"),
+            None,
+            &[],
+        )
+        .unwrap();
+        let keys = sjk_protocol::InfoString::parse(&update).unwrap();
+        for key in ["cjp_client", "cp_clanPwd", "cp_pluginDisable", "jof64"] {
+            assert!(keys.get(key).is_some(), "a JA+ update lacks {key}");
+        }
     }
 
     #[test]

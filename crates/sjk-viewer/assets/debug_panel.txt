@@ -37,6 +37,17 @@ test: Mute and block a player in slot 32+ (Players page): chat and sounds stop.
 test: Any normal server: scoreboard, names and mutes exactly as before.
 note: Scores, ping and time show for 20 players at most until the server sends more.
 
+[userinfo-updates-keys]
+area: Gameplay
+title: Userinfo updates keep the password and plugin keys (map change on a locked server)
+change: A test pins every userinfo update to the connect one: password, guid, jof64, cjp_client.
+change: The client already sent them; the drop at ammap on a slot 32+ seat is not explained yet.
+test: Locked 64-slot JA+ server, seat 32+: ammap at once, before any change: kept or dropped?
+test: Same, after a saber or model change, then ammap: kept or dropped?
+test: Same two on a seat under 32 (a build before jof64, 66af5d6): compare.
+test: Each join: does the server print "Your plugin version is undefined" at seat 32+ only?
+note: Dropped even with no change, or the plugin message at seat 32+ only: the server's side.
+
 [v1-leftovers]
 area: Menus & settings
 title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved
