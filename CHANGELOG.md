@@ -30,7 +30,14 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1125.2 (Beta) | 25/11/2026
+
+Fixes for servers with more than 32 player slots, and a lighter status bar.
+
+> Full scoreboards: On servers with more than 32 slots the scoreboard lists every player, not only 20.
+> Joining: A full server no longer ends the join with an error, and a server that refuses you says why.
+> Players move again: Players with a broken model wear Kyle and animate instead of sliding in one pose.
+> Status bar: Its left side keeps only your credits and DOOM coins.
 
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
 - The status bar's left side keeps only your credits and DOOM coins (then your Force powers and score): the kyber shards, dormant kybers, "new in your Collection", your saber's kyber and the effect pills are gone, with their Settings rows _(Sol)_
