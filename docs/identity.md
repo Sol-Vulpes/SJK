@@ -1352,12 +1352,10 @@ every staff member (still never a staff player merged away, nor the creator).
 
 Since 08/11/2026 (Sol's call) every staff member gives, from the Staff page: medals (and
 their rank), kybers, holocrons and dormant kybers (`gift` in `staff_panel.rs`; the
-hub's `PROTOCOL.md`, "Staff"). Three limits keep it from becoming a source of loot, and the
-creator has none of them:
+hub's `PROTOCOL.md`, "Staff"). Since 25/11/2026 (Sol's call) they give to themselves too
+(the hub's `own_gift` refusal and the page's "Staff cannot give to themselves" are gone).
+Two limits keep it from becoming a source of loot, and the creator has none of them:
 
-- never to themselves (their own person, by any of their keys): the hub refuses it
-  (`own_gift`), and on their own player the page dims every Give, Rank and Unlock with
-  "Staff cannot give to themselves";
 - only the kybers holocrons can bring (`droppable`): a Secret one, a medal's blade
   or a blade not opened to drops yet stays the creator's to give (`creator_only`); its row
   says "owner only" and its Unlock is dimmed;
