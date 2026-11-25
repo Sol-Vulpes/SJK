@@ -7,7 +7,7 @@
 //!
 //! Drawing stays in the pages; this file holds what they share.
 
-use super::view::{LEAD_Y, LEFT_X, label_width};
+use super::view::{LEAD_Y, label_width};
 use super::*;
 use crate::collection_seen::{Kind, News, Watch};
 use crate::menu::sjk::{Frame, color, text};
@@ -124,7 +124,8 @@ impl Panel {
         PanelAction::None
     }
 
-    /// After a kind's headline (`headline`'s words, at the lead's line): "N new" on a gold
+    /// After a kind's headline (`headline`'s words, at the lead's line; its start when there
+    /// is none): "N new" on a gold
     /// pill and Mark all seen (N), while something of `kind` is New.
     pub(super) fn kind_new_count(&mut self, frame: &Frame, headline: &str, kind: Kind) {
         let count = self.kind_new(kind);
@@ -132,7 +133,7 @@ impl Panel {
             return;
         }
         let s = frame.s;
-        let x = LEFT_X + label_width(headline, 30.0, self.widen) + 14.0;
+        let x = super::view::after_headline(headline, self.widen);
         let y = LEAD_Y + 5.0;
         let pill = count_pill(&mut self.ui, frame, [x, y], 26.0, count);
         let seen_x = x + pill + 8.0;

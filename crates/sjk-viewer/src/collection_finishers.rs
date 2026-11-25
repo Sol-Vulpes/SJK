@@ -20,6 +20,24 @@ pub(super) const FINISHERS_KIND_TOKEN: u16 = 8_501;
 pub(super) const FINISHER_WEAR_BASE: u16 = 8_510;
 const _: () = assert!(CATALOGUE.len() <= 40);
 
+/// From the first view switch to the first kind pill (two switches of 36 and their gaps).
+const PILLS_AFTER_SWITCHES: f32 = 94.0;
+/// A kind pill's width: the saber's wide enough for its count of hundreds ("146/299").
+fn pill_width(name: &str) -> f32 {
+    match name {
+        "Saber" => 152.0,
+        "Finishers" => 168.0,
+        _ => 132.0,
+    }
+}
+/// The three pills and the gaps between them.
+const PILLS_WIDTH: f32 = 152.0 + 168.0 + 132.0 + 2.0 * 12.0;
+// The pills end well before the stage's saber switch.
+const _: () = assert!(
+    super::shaders::SWITCH_X + PILLS_AFTER_SWITCHES + PILLS_WIDTH
+        <= super::view::SABER_AREA[0] - 40.0
+);
+
 /// The cards' column and size (frame pixels).
 const CARD_X: f32 = LEFT_X - 12.0;
 const CARD_TOP: f32 = 400.0;
@@ -41,7 +59,9 @@ fn worn(inputs: &Inputs<'_>) -> Option<&'static str> {
 impl Panel {
     /// The kinds' pills over the Shaders tab: the saber's shaders (held of total), the
     /// finishers (held of total), both clickable to switch the page, and the body's,
-    /// still to come.
+    /// still to come. They follow the view switches and end well before the stage's
+    /// saber switch ([`super::view::SABER_AREA`]), which two sabers or a staff show at
+    /// the same height.
     pub(super) fn kind_pills(
         &mut self,
         frame: &Frame,
@@ -49,7 +69,7 @@ impl Panel {
         finishers: (usize, usize),
     ) {
         let s = frame.s;
-        let x = LEFT_X + 560.0;
+        let x = super::shaders::SWITCH_X + PILLS_AFTER_SWITCHES;
         let y = LEAD_Y - 2.0;
         let pills: [(&str, String, Option<u16>, bool); 3] = [
             (
@@ -68,7 +88,7 @@ impl Panel {
         ];
         let mut left = x;
         for (name, count, token, lit) in pills {
-            let width = if name == "Finishers" { 168.0 } else { 132.0 };
+            let width = pill_width(name);
             let rect = frame.rect(left, y, width, 36.0);
             let hovered = token.is_some_and(|token| self.ui.token_hovered(token));
             let _ = self.ui.draw_list_mut().push(DrawCommand::Border {
@@ -125,14 +145,14 @@ impl Panel {
         saber: (usize, usize),
     ) {
         let owned = CATALOGUE.iter().filter(|f| held(inputs, f.id)).count();
-        let headline = format!("{owned} of {} owned", CATALOGUE.len());
+        // No headline, as the shaders' page: the count is the Finishers pill's.
         self.lead(
             frame,
-            &headline,
+            "",
             "What your saber kills do to the body, for every SJK player on your server. One at a time, with any blade.",
         );
         self.kind_pills(frame, saber, (owned, CATALOGUE.len()));
-        self.kind_new_count(frame, &headline, crate::collection_seen::Kind::Finisher);
+        self.kind_new_count(frame, "", crate::collection_seen::Kind::Finisher);
         // All shown at once: the New ones are seen once the page has stayed a second.
         self.watch_finishers();
         let worn = worn(inputs);
