@@ -30,7 +30,14 @@ The site (site/assets/site.js, parseChangelog) reads the release headings,
 introductions and recap lines too.
 Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
-## Unreleased
+## 2026.1125.1 (Beta) | 25/11/2026
+
+Servers with more than 32 player slots: SJK joins them and shows up to 64 players. It has not been played with 64 real players yet: tell us what you see.
+
+> Bigger servers: SJK joins servers with more than 32 player slots and shows up to 64 players.
+> Every player shown: Players past the 32nd have their names, models, head icons and mutes like everyone else.
+> Scoreboards: Both scoreboards fit up to 64 players, in two columns past 32 rows; scores show for 20 players at most for now.
+> Same as before: On a 32-slot server nothing changes.
 
 - Servers with more than 32 player slots: SJK asks for all of them and shows up to 64 players, with their names, models, head icons, mutes and both scoreboards; on a 32-slot server nothing changes _(Sol; server side by Lumaya)_
 
