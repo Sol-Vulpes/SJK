@@ -1034,7 +1034,7 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             crate::hud::lagometer::CVAR,
             0_i64,
             archive,
-            "Lagometer: 0 off, 1 graph, 2 graph with average ping, interpolation and a speed graph, 3 the same without the backdrop",
+            "Lagometer: 0 off, 1 graph, 2 graph with average ping, interpolation and a speed graph, 3 the same without the backdrop, 4 the graph alone without its backdrop",
         ),
         CvarDefinition::new(
             "cg_saberTrail",

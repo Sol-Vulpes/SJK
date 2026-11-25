@@ -1069,7 +1069,7 @@ pub(super) const HUD: &[Setting] = &[
     Setting {
         label: "Lagometer",
         cvar: crate::hud::lagometer::CVAR,
-        kind: ValueKind::Choice(&["0", "1", "2", "3"]),
+        kind: ValueKind::Choice(&["0", "1", "2", "3", "4"]),
     },
     Setting {
         label: "Lagometer scale",

@@ -92,7 +92,7 @@ pub(crate) struct Policy {
     showpos: bool,
     lagometer: [f32; 2],
     lagometer_scale: f32,
-    /// `cg_lagometer`, 0 to 3 ([`super::lagometer::mode`]).
+    /// `cg_lagometer`, 0 to 4 ([`super::lagometer::mode`]).
     lagometer_mode: u8,
     color: [f32; 4],
     /// `cg_crosshairColor` is a colour of its own, ahead of the target colours.
