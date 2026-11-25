@@ -1121,6 +1121,11 @@ pub(super) const HUD: &[Setting] = &[
         kind: ValueKind::Choice(crate::status_balloons::Mode::CHOICES),
     },
     Setting {
+        label: "Hide chat bubbles in freecam",
+        cvar: crate::status_balloons::FREECAM_HIDE_CVAR,
+        kind: ValueKind::Bool,
+    },
+    Setting {
         label: "Save game chat logs",
         cvar: crate::console::chat_log::CVAR,
         kind: ValueKind::Bool,

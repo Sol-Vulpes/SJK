@@ -150,6 +150,9 @@ impl ClanThemes {
 pub(crate) const TOY: &str = "status_balloon";
 /// The setting for stock, original SJK, static clan, or animated clan balloons.
 pub(crate) const CVAR: &str = "cg_statusBalloons";
+/// The setting that hides every talk balloon, the own one too, while the player's own
+/// free camera (`cg_freecamera`) has the view.
+pub(crate) const FREECAM_HIDE_CVAR: &str = "cg_freecamHideBalloons";
 /// Client slots.
 pub(crate) const SLOTS: usize = crate::looks::SLOTS;
 /// One relay event at most this often, as the other toys',
@@ -382,6 +385,9 @@ pub(crate) struct Shown {
     mode: Mode,
     reasons: [Option<Reason>; SLOTS],
     themes: [ClanTheme; SLOTS],
+    /// No talk balloon this frame: the free camera is flying with
+    /// [`FREECAM_HIDE_CVAR`] on. The connection icon still shows.
+    pub(crate) hidden: bool,
     /// World shots: the balloon drawn over these players whatever their `EF_TALK`.
     #[cfg(test)]
     pub(crate) force: bool,
@@ -393,6 +399,7 @@ impl Default for Shown {
             mode: Mode::Default,
             reasons: [None; SLOTS],
             themes: [ClanTheme::Default; SLOTS],
+            hidden: false,
             #[cfg(test)]
             force: false,
         }
@@ -407,6 +414,7 @@ impl Shown {
             mode: Mode::Sjk,
             reasons: [Some(reason); SLOTS],
             themes: [ClanTheme::Default; SLOTS],
+            hidden: false,
             force: true,
         }
     }
