@@ -368,13 +368,19 @@ are 10 bits).
   lives in its own test binary, as other tests in the same binary would see 64 too.
 - **Limits that are the protocol's.** `stats[STAT_CLIENTS_READY]` has one bit per client
   in 32 bits, so players above 31 show no READY. `heldByClient` is six bits holding the
-  holder plus one, so slot 63 cannot be named as a holder. `scores` carries what the
-  server chooses to send: at most 20 rows (`MAX_CLIENT_SCORE_SEND`), the best first.
-  A connected player without a row is shown as joining only while nothing says it is
-  in the game; the viewer, a bot, or a player seen in a snapshot or with a pinged row
-  since it connected is listed without numbers instead
-  (`sjk-viewer/src/scoreboard/in_game.rs`). This is the same on a 32-slot server with
-  more than 20 players.
+  holder plus one, so slot 63 cannot be named as a holder.
+- **Scores.** One server command holds about 22 rows, so `scores` alone stops at 20
+  (`MAX_CLIENT_SCORE_SEND`). A 64-slot JoF JA+ server sends a `jof64` client the rows
+  that do not fit in `scores64 <first row> <rows> <row>...` commands after `scores`;
+  `append_score_rows` (`sjk-client/src/lib.rs`) adds them when they start where the
+  rows read so far end, and drops a part of an older board. A connected player without
+  a row is shown as joining only while nothing says it is in the game; the viewer, a
+  bot, or a player seen in a snapshot or with a pinged row since it connected is listed
+  without numbers instead (`sjk-viewer/src/scoreboard/in_game.rs`). That still happens
+  on a stock server with more than 20 players.
+- **Gamestate size.** 64 real players' configstrings can pass stock's 16000 characters
+  of gamestate text, so `MAX_GAMESTATE_CHARS` is 49152, the most one server message
+  (`MAX_MSGLEN`) can carry anyway.
 
 SJK's own server (`sjk-dedicated`, the server half of `sjk-game-jka`) stays at 32 slots.
 

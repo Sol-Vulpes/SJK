@@ -44,6 +44,12 @@ impl ClientSession {
         // and are not counted.
         let gamestate_deadline = Instant::now() + timeout.saturating_mul(GAMESTATE_REQUESTS);
         let initial = loop {
+            // A server that refuses the player after `connectResponse` (Heimdall's
+            // two-stage connect checks the password then) says why in an OOB print
+            // and sends no gamestate: show its text, not a gamestate timeout.
+            if let Some(reason) = connection.pop_server_print() {
+                return Err(NetworkError::ConnectionRejected(reason).into());
+            }
             if Instant::now() >= gamestate_deadline {
                 return Err(NetworkError::TimedOut("gamestate").into());
             }
@@ -187,5 +193,63 @@ impl ClientSession {
                 .record_server_command(command.sequence, &command.command);
         }
         Ok(session)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::UdpSocket;
+
+    /// Heimdall answers `connect` with `connectResponse`, then refuses the player at
+    /// the first sequenced packet with an OOB print (a wrong password, for one).
+    #[test]
+    fn a_refusal_after_connect_response_shows_the_server_text() {
+        const OOB: &[u8] = b"\xff\xff\xff\xff";
+        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        let server = socket.local_addr().unwrap();
+        let fake = std::thread::spawn(move || {
+            let mut packet = [0_u8; 2048];
+            while let Ok((length, client)) = socket.recv_from(&mut packet) {
+                let payload = &packet[..length];
+                let text =
+                    if let Some(rest) = payload.strip_prefix(b"\xff\xff\xff\xffgetchallenge ") {
+                        let echo = String::from_utf8_lossy(rest)
+                            .trim_end_matches('\0')
+                            .to_owned();
+                        format!("challengeResponse 1234 {echo}")
+                    } else if payload.starts_with(OOB) {
+                        "connectResponse".to_owned()
+                    } else {
+                        "print\nInvalid password\n".to_owned()
+                    };
+                let done = text.starts_with("print");
+                socket
+                    .send_to(&[OOB, text.as_bytes()].concat(), client)
+                    .unwrap();
+                if done {
+                    return;
+                }
+            }
+        });
+        let error = ClientSession::join_with_downloads(
+            server,
+            &LegacyUserInfo::with_name("Sol"),
+            CompatProfile::BaseJka,
+            Duration::from_secs(5),
+            |_| None,
+            |_| {},
+            None,
+        )
+        .err()
+        .expect("the join is refused");
+        fake.join().unwrap();
+        assert!(
+            matches!(&error, ClientError::Network(NetworkError::ConnectionRejected(text)) if text == "Invalid password"),
+            "{error}"
+        );
     }
 }

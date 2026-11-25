@@ -1289,6 +1289,10 @@ impl ClientSession {
             self.apply_scores(&arguments);
             return Ok(());
         }
+        if name == b"scores64" {
+            self.append_scores(&arguments);
+            return Ok(());
+        }
         if name == b"tinfo" {
             self.team_info.apply_command(&arguments)?;
             return Ok(());
@@ -1426,6 +1430,46 @@ impl ClientSession {
         self.scores = scores;
         self.scores_revision = self.scores_revision.wrapping_add(1);
     }
+
+    fn append_scores(&mut self, arguments: &[Vec<u8>]) {
+        if append_score_rows(&mut self.scores, arguments) {
+            self.scores_revision = self.scores_revision.wrapping_add(1);
+        }
+    }
+}
+
+/// Apply `scores64 <first row> <rows> <row>...`: the rows of a 64-slot (`jof64`)
+/// server's scoreboard that did not fit its `scores` command (one server command
+/// holds about 22 rows). They continue the rows already read, so a part that does
+/// not start where those end belongs to an older board and is dropped.
+fn append_score_rows(scores: &mut Vec<ScoreEntry>, arguments: &[Vec<u8>]) -> bool {
+    let first = arguments
+        .get(1)
+        .and_then(|value| std::str::from_utf8(value).ok())
+        .and_then(|value| value.parse::<usize>().ok());
+    if first != Some(scores.len()) || arguments.len() < 3 {
+        return false;
+    }
+    // Read the rows as a `scores` command: count, two (unused) team scores, rows.
+    let mut as_scores = vec![
+        b"scores".to_vec(),
+        arguments[2].clone(),
+        b"0".to_vec(),
+        b"0".to_vec(),
+    ];
+    as_scores.extend_from_slice(&arguments[3..]);
+    let Some((_, rows)) = parse_scores(&as_scores) else {
+        return false;
+    };
+    let bit = |client: u8| 1_u64.checked_shl(u32::from(client)).unwrap_or(0);
+    let known = scores
+        .iter()
+        .fold(0, |mask, row| mask | bit(row.client_num));
+    scores.extend(
+        rows.into_iter()
+            .filter(|row| known & bit(row.client_num) == 0),
+    );
+    true
 }
 
 /// Parse a `scores` command: count, two team scores, then one row per client.
@@ -1697,7 +1741,7 @@ pub use thrown_sabers::{LegacyThrownSaber, LegacyThrownSabers, legacy_thrown_sab
 
 #[cfg(test)]
 mod score_tests {
-    use super::{parse_scores, tokenize_command};
+    use super::{append_score_rows, parse_scores, tokenize_command};
 
     fn rows(command: &str) -> Vec<(u8, i32, i32, Option<i32>)> {
         parse_scores(&tokenize_command(command.as_bytes()))
@@ -1755,6 +1799,32 @@ mod score_tests {
         let mut clients = read.iter().map(|row| row.0).collect::<Vec<_>>();
         clients.dedup();
         assert_eq!(clients.len(), 20, "every row is a different player");
+    }
+
+    /// A `jof64` client on a 64-slot server gets the rows past the first command's
+    /// in `scores64` parts, which continue the board in order.
+    #[test]
+    fn scores64_parts_continue_the_board() {
+        let row = |client: u32| format!(" {client} 5 40 3 0 0 0 0 0 0 0 0 0 0 1");
+        let mut first = String::from("scores 2 0 0");
+        (4..6).for_each(|client| first.push_str(&row(client)));
+        let (_, mut scores) = parse_scores(&tokenize_command(first.as_bytes())).unwrap();
+        let mut more = String::from("scores64 2 2");
+        (20..22).for_each(|client| more.push_str(&row(client)));
+        assert!(append_score_rows(
+            &mut scores,
+            &tokenize_command(more.as_bytes())
+        ));
+        let clients = scores.iter().map(|row| row.client_num).collect::<Vec<_>>();
+        assert_eq!(clients, [4, 5, 20, 21]);
+        assert_eq!(scores[3].deaths, Some(1));
+        // A part of an older board (it starts elsewhere) changes nothing.
+        let stale = format!("scores64 2 1{}", row(9));
+        assert!(!append_score_rows(
+            &mut scores,
+            &tokenize_command(stale.as_bytes())
+        ));
+        assert_eq!(scores.len(), 4);
     }
 
     #[test]
