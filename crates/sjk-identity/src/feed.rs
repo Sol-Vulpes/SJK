@@ -644,9 +644,19 @@ impl FeedWorker {
 
 /// Put `message` at the end of `held` (one channel's messages), keeping
 /// [`MESSAGES_KEPT`]; a message `held` has already only refreshes its reactions (an
-/// `after` 0 reading replays the backlog). Whether `held` changed.
+/// `after` 0 reading replays the backlog). A grand find that shares the last line's id
+/// but not its prize is the same opening's other prize (a Mythical kyber and a Legendary
+/// card): it joins beside it. Whether `held` changed.
 fn keep(held: &mut VecDeque<ChatMessage>, message: ChatMessage) -> bool {
-    if held.back().is_some_and(|last| message.id <= last.id) {
+    let other_prize = message
+        .holocron
+        .as_ref()
+        .is_some_and(|mark| mark.find.is_some())
+        && held.back().is_some_and(|last| last.id == message.id)
+        && !held
+            .iter()
+            .any(|known| known.id == message.id && known.holocron == message.holocron);
+    if !other_prize && held.back().is_some_and(|last| message.id <= last.id) {
         if let Some(known) = held.iter_mut().find(|known| {
             known.id == message.id
                 && known.official.is_none()
@@ -1236,6 +1246,46 @@ mod tests {
         rig.worker.step(t0 + POLL_GAP);
         assert_eq!(rig.texts().last().map(String::as_str), Some("c"));
         assert_eq!(lock(&rig.state).messages.len(), 5);
+    }
+
+    /// One opening that gives two grand prizes (a Mythical kyber and a Legendary Holo
+    /// card) is told in two lines, though the hub numbers both finds alike; a replay of
+    /// the backlog adds neither again.
+    #[test]
+    fn both_prizes_of_one_opening_join_the_chat() {
+        let parsed: Feed = serde_json::from_str(
+            r#"{"next":7,"finds":[
+                {"id":7,"at":9,"key_id":"ff","name":"Fox","tier":"mythical","prize":"card",
+                 "item":"leader_7","rarity":"legendary","finish":"holo"},
+                {"id":7,"at":9,"key_id":"ff","name":"Fox","tier":"mythical","prize":"shader",
+                 "item":"saber_void","item_name":"Void blade","rarity":"mythical"}]}"#,
+        )
+        .unwrap();
+        let t0 = Instant::now();
+        let mut rig = rig(t0);
+        rig.read("https://hub", None);
+        rig.script(Ok(Feed {
+            chat: vec![message(6, "gg")],
+            ..parsed.clone()
+        }));
+        rig.worker.step(t0);
+        let prizes = |rig: &Rig| -> Vec<(u64, bool)> {
+            lock(&rig.state)
+                .messages
+                .iter()
+                .filter_map(|m| Some((m.id, m.holocron.as_ref()?.find.as_ref()?.shader)))
+                .collect()
+        };
+        assert_eq!(prizes(&rig), [(7, false), (7, true)]);
+        assert_eq!(lock(&rig.state).messages.len(), 3);
+        // The same answer again (an `after` 0 replay) changes nothing.
+        rig.script(Ok(Feed {
+            chat: vec![message(6, "gg")],
+            ..parsed
+        }));
+        rig.worker.step(t0 + Duration::from_secs(2));
+        assert_eq!(prizes(&rig), [(7, false), (7, true)]);
+        assert_eq!(lock(&rig.state).messages.len(), 3);
     }
 
     /// A grand find joins the chat in the feed's order as a drop line marked with what

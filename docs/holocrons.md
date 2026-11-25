@@ -453,7 +453,10 @@ goes, in all three places the SJK chat shows ([hub-chat.md](hub-chat.md#how-a-li
   dormant kyber's grant has no line. The identity service relays a find as a drop line whose mark carries
   the prize (`DropMark::find`, [feed.rs](../crates/sjk-identity/src/feed.rs)); the
   words are [holocrons/line.rs](../crates/sjk-viewer/src/holocrons/line.rs)'s. Muted
-  players' finds and unknown tiers are left out as drops are.
+  players' finds and unknown tiers are left out as drops are. One opening with two grand
+  prizes (a Mythical kyber and a Legendary card) is two lines, also when the hub numbers
+  both finds alike: the chat keeps a find that shares the last line's id but not its
+  prize (`feed::keep`; before 26/11/2026 the second was taken for a repeat and lost).
 - **How a find looks** (01/11/2026, Sol's request): in all three views a drop's or
   find's mark is the holocron's or dormant kyber's own picture (`gfx/sjk/holocron_<tier>`,
   [holocrons/icons.rs](../crates/sjk-viewer/src/holocrons/icons.rs), drawn 1.3 times a
