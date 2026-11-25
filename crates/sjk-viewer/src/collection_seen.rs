@@ -295,7 +295,8 @@ impl News {
             .sum()
     }
 
-    /// How many things are New in all.
+    /// How many things are New in all (the tests' sum; the status bar no longer shows it).
+    #[cfg(test)]
     pub(crate) fn total(&self) -> usize {
         Kind::ALL.into_iter().map(|kind| self.count(kind)).sum()
     }
