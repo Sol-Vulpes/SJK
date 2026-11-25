@@ -813,6 +813,12 @@ pub(super) fn register_daily_cvars(cvars: &mut CvarRegistry) -> Result<(), sjk_s
             "Status balloons: 0 stock, 1 SJK animations, 2 clan static, 3 clan animations (SJK)",
         ),
         CvarDefinition::new(
+            crate::status_balloons::FREECAM_HIDE_CVAR,
+            false,
+            archive,
+            "Hide every chat bubble, your own too, while your free camera flies (SJK)",
+        ),
+        CvarDefinition::new(
             crate::emotes::TYPING_KEEP_CVAR,
             crate::emotes::DEFAULT_TYPING_KEEP,
             archive,

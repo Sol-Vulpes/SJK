@@ -279,11 +279,17 @@ pub(crate) fn submit(
         .and_then(|info| sjk_client::LegacyClientInfo::new(info).integer("g_gametype"))
         .unwrap_or(0);
     // A demo plays without the hub: stock's balloons.
-    let status_balloons = if gpu.demo_session.is_none() {
+    let mut status_balloons = if gpu.demo_session.is_none() {
         gpu.status_balloons.shown
     } else {
         crate::status_balloons::Shown::default()
     };
+    status_balloons.hidden = detached_flight
+        && gpu
+            .console
+            .as_ref()
+            .and_then(|console| console.bool_cvar(crate::status_balloons::FREECAM_HIDE_CVAR))
+            .unwrap_or(false);
     #[cfg(test)]
     let status_balloons = gpu.status_balloons.shot.unwrap_or(status_balloons);
     let mut sinks = Sinks {

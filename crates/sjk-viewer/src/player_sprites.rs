@@ -60,6 +60,8 @@ pub(super) fn submit(
         return;
     };
     let shader = match sprite {
+        // Hidden while the free camera flies ("Hide chat bubbles in freecam").
+        sjk_client::LegacyPlayerSprite::Talk if sinks.status_balloons.hidden => return,
         sjk_client::LegacyPlayerSprite::Talk => sinks
             .status_balloons
             .shader(slot)

@@ -33,6 +33,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 ## Unreleased
 
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
+- Settings > Chat: **Hide chat bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_
 
 ## 2026.1125.2 (Beta) | 25/11/2026
 

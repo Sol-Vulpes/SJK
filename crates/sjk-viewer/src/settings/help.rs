@@ -1049,6 +1049,10 @@ const HELP: &[(&str, &str)] = &[
         "Default: stock. SJK: original animations. Clan Default: static art. Clan Animated: clan art with animated reasons and a static fallback.",
     ),
     (
+        crate::status_balloons::FREECAM_HIDE_CVAR,
+        "While your free camera (cg_freecamera) flies, no chat bubble shows over anyone, yours included. Off by default.",
+    ),
+    (
         crate::console::chat_log::CVAR,
         "Log all game-server chat, including team/PMs before filters, in this profile's chatlogs/chat.log. Off by default.",
     ),
