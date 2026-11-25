@@ -276,7 +276,7 @@ impl Predictor {
     /// Whether this is a rider's move (`m_iVehicleNum` of a client). A passenger
     /// need not have the optional vehicle context used for piloting prediction.
     pub(super) fn riding_move(&self) -> bool {
-        self.state.vehicle_entity_num != 0 && self.state.client_num < MAX_CLIENTS
+        self.state.vehicle_entity_num != 0 && self.state.client_num < max_clients()
     }
 
     /// An NPC that is no vehicle (`CLASS_VEHICLE`, 53) with an `m_iVehicleNum` (`bg_pmove.c:11027-11030`): a
@@ -334,7 +334,7 @@ impl Predictor {
             return None;
         }
         self.state.movement_flags &= !(PMF_DUCKED | crate::PMF_ROLLING);
-        if self.state.client_num >= MAX_CLIENTS {
+        if self.state.client_num >= max_clients() {
             let npc = self.npc?;
             return Some(Bounds {
                 minimums: npc.mins,

@@ -139,7 +139,7 @@ impl Predictor {
     /// moves by `PM_FlyMove` (`bg_pmove.c:11034-11038`).
     pub(super) fn flying_normal(&self) -> bool {
         const EF2_FLYING: u32 = 1 << 4;
-        self.state.client_num >= MAX_CLIENTS
+        self.state.client_num >= max_clients()
             && self.npc.is_some_and(|npc| npc.flags2 & EF2_FLYING != 0)
     }
 
@@ -152,7 +152,7 @@ impl Predictor {
         if self.state.vehicle_entity_num != 0
             || class == CLASS_VEHICLE
             || class == CLASS_RANCOR
-            || !(32..ENTITY_NUMBER_WORLD).contains(&ground)
+            || !(max_clients()..ENTITY_NUMBER_WORLD).contains(&ground)
         {
             return;
         }

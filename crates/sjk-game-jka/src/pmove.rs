@@ -46,8 +46,11 @@ pub(crate) const FORCE_LEVITATION_BIT: u32 = 1 << 1;
 const PMOVE_ENTITY_FLAGS: u32 = (1 << 13) | (1 << 9) | (1 << 10) | (1 << 30);
 /// `PMF_STUCK_TO_WALL`: grabbing a wall.
 pub const PMF_STUCK_TO_WALL: u16 = 16_384;
-/// `MAX_CLIENTS`: entity numbers below it are players, to whom `g_stepSlideFix` applies.
-const MAX_CLIENTS: u16 = 32;
+/// `MAX_CLIENTS` of the connected server: entity numbers below it are players, to whom
+/// `g_stepSlideFix` applies. 32 unless the server has more than 32 player slots.
+pub(crate) fn max_clients() -> u16 {
+    sjk_protocol::player_slots() as u16
+}
 
 /// `pml.frametime = pml.msec * 0.001` (`bg_pmove.c:10566`): the product is a *double's*
 /// — `0.001` is a double literal — and only the result becomes a float. Multiplying in
@@ -177,7 +180,7 @@ pub trait MovementCollision {
     /// Facts about the traced entity. Minimal adapters retain player-only targeting;
     /// client snapshot collision supplies NPC identity and raw powerup bits too.
     fn rocket_lock_target(&self, entity: u16) -> Option<RocketLockTarget> {
-        (entity < MAX_CLIENTS).then_some(RocketLockTarget {
+        (entity < max_clients()).then_some(RocketLockTarget {
             actor: true,
             powerups: 0,
         })
@@ -858,7 +861,7 @@ impl Predictor {
     pub fn from_player_state(player: &PlayerState, config: MovementConfig) -> Self {
         let mut state = MovementState::from_player_state(player);
         state.ja_pro.predicts_jetpack_flag =
-            config.ja_pro.enabled && state.client_num < MAX_CLIENTS;
+            config.ja_pro.enabled && state.client_num < max_clients();
         state.saber_anim_speed_scales = HiltSpeedScales(config.saber_anim_speed_scales);
         // A fully acknowledged queue may render this seed without running Pmove.
         // OpenJK renders the seed's viewangles too (cg_predict.c:1043-1051,1401;
@@ -894,7 +897,7 @@ impl Predictor {
 
     pub fn from_state(mut state: MovementState, config: MovementConfig) -> Self {
         state.ja_pro.predicts_jetpack_flag =
-            config.ja_pro.enabled && state.client_num < MAX_CLIENTS;
+            config.ja_pro.enabled && state.client_num < max_clients();
         // Synthetic callers historically supplied only speed. Network seeds
         // use from_player_state and must preserve authoritative zero basespeed.
         if state.base_speed == 0.0 {
@@ -953,7 +956,7 @@ impl Predictor {
     pub fn set_config(&mut self, config: MovementConfig) {
         self.config = config;
         self.state.ja_pro.predicts_jetpack_flag =
-            config.ja_pro.enabled && self.state.client_num < MAX_CLIENTS;
+            config.ja_pro.enabled && self.state.client_num < max_clients();
         self.state.saber_anim_speed_scales = HiltSpeedScales(config.saber_anim_speed_scales);
     }
 
@@ -1335,8 +1338,9 @@ impl Predictor {
         };
         // `ClientThink_real` clears its `pmove_t` for every command (`g_active.c:2754`) and
         // gives only an NPC its entity's box (`:3007-3010`); a client's persists.
-        self.cleared_box =
-            self.config.authoritative && self.npc.is_none() && self.state.client_num < MAX_CLIENTS;
+        self.cleared_box = self.config.authoritative
+            && self.npc.is_none()
+            && self.state.client_num < max_clients();
         while self.state.command_time != final_time {
             let millis = self.config.ja_pro.slice_millis(
                 &self.state,
@@ -2047,7 +2051,7 @@ impl Predictor {
         }
         let mut velocity = Vec3::from_array(self.state.velocity);
         let add_speed = wish_speed - velocity.dot(wish_direction);
-        let npc = self.state.client_num >= MAX_CLIENTS;
+        let npc = self.state.client_num >= max_clients();
         let Some(acceleration_speed) =
             npc::acceleration_speed(npc, add_speed, acceleration, seconds, wish_speed)
         else {
@@ -2293,7 +2297,7 @@ impl Predictor {
                     japro_movement::Style::Tribes | japro_movement::Style::Slick
                 )
             })
-            && self.state.client_num < MAX_CLIENTS
+            && self.state.client_num < max_clients()
             && self.state.ground_entity_number != ENTITY_NUMBER_NONE
             && normal.z < MIN_WALK_NORMAL
         {
@@ -2507,7 +2511,7 @@ impl Predictor {
         );
         // Only a player is refused a step onto a slope too steep to walk.
         let reject_steep = self.config.step_slide_fix
-            && self.state.client_num < MAX_CLIENTS
+            && self.state.client_num < max_clients()
             && trace.plane_normal[2] < MIN_WALK_NORMAL
             && {
                 let direction = (Vec3::from_array(trace.end_position)
@@ -2519,7 +2523,7 @@ impl Predictor {
         // A rancor does not step onto a player (`bg_slidemove.c:988-1003`).
         let onto_player = accepted
             && giant
-            && trace.entity_number < MAX_CLIENTS
+            && trace.entity_number < max_clients()
             && self.npc.is_some_and(|npc| npc.class == npc::CLASS_RANCOR);
         let stepped = accepted && !onto_player;
         if stepped {

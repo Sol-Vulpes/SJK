@@ -64,7 +64,6 @@ const PM_INTERMISSION: u8 = 7;
 const EF_FIRING: u32 = 1 << 9;
 const EF_ALT_FIRING: u32 = 1 << 10;
 const FP_RAGE: u32 = 1 << 8;
-const MAX_CLIENTS: u16 = 32;
 /// `BOTH_ATTACK4`, `BOTH_MELEE1`, `BOTH_MELEE2`.
 const BOTH_ATTACK4: u16 = 116;
 const BOTH_MELEE1: u16 = 122;
@@ -166,7 +165,7 @@ pub(crate) fn clear_respawned(state: &mut MovementState, command: &UserCommand) 
 /// `PM_Weapon`'s spectator (`bg_pmove.c:7051`): a client on the spectators' team. An NPC's
 /// `PERS_TEAM` is its NPC team, whose neutral shares the number and is no spectator.
 fn spectator(state: &MovementState) -> bool {
-    state.client_num < MAX_CLIENTS && state.team == TEAM_SPECTATOR
+    state.client_num < crate::pmove::max_clients() && state.team == TEAM_SPECTATOR
 }
 
 /// Apply the pre-`PmoveSingle` firing-flag portion of `PM_AdjustAttackStates`.
@@ -386,7 +385,7 @@ fn advance_command(
     if state.weapon != WP_NONE
         && state.weapon == command.weapon
         && (state.weapon_time <= 0 || state.weapon_state != WEAPON_FIRING)
-        && state.client_num < MAX_CLIENTS
+        && state.client_num < crate::pmove::max_clients()
     {
         let ammo = state.ammo[data.ammo_index];
         if ammo != -1
@@ -517,7 +516,7 @@ fn advance_command(
         crate::pmove_anim::start_torso(state, weapon_attack_anim(state.weapon, legacy_fixes));
     }
     state.weapon_state = WEAPON_FIRING;
-    if state.client_num < MAX_CLIENTS && state.ammo[data.ammo_index] != -1 {
+    if state.client_num < crate::pmove::max_clients() && state.ammo[data.ammo_index] != -1 {
         if state.ammo[data.ammo_index] < amount {
             if matches!(state.weapon, WP_BRYAR_PISTOL | WP_DISRUPTOR | WP_DEMP2) {
                 // bg_pmove.c:7624-7627.

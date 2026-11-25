@@ -7,7 +7,7 @@
 //! the nearest player's like [`super::saber_overrides`] does), `EV_SABER_UNHOLSTER` and
 //! cgame's own switch sounds ([`super::saber_switch`]).
 
-use super::MAX_CLIENTS;
+use sjk_protocol::{PLAYER_CAPACITY, is_player_number};
 
 /// Toggles one player may sound back to back before the cap holds.
 const BURST: i32 = 4;
@@ -35,9 +35,17 @@ impl Default for Client {
 }
 
 /// Each client's toggle sound budget.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct SaberToggleLimit {
-    clients: [Client; MAX_CLIENTS],
+    clients: [Client; PLAYER_CAPACITY],
+}
+
+impl Default for SaberToggleLimit {
+    fn default() -> Self {
+        Self {
+            clients: [Client::default(); PLAYER_CAPACITY],
+        }
+    }
 }
 
 impl SaberToggleLimit {
@@ -45,9 +53,10 @@ impl SaberToggleLimit {
     /// toggle (both hands, a blade skin's over them) shares its snapshot's time and
     /// gets one answer. Entities past the client range (NPCs) are not capped.
     pub(super) fn allow(&mut self, client: u16, time: i32) -> bool {
-        let Some(state) = self.clients.get_mut(usize::from(client)) else {
+        if !is_player_number(usize::from(client)) {
             return true;
-        };
+        }
+        let state = &mut self.clients[usize::from(client)];
         match state.last {
             Some((last, allowed)) if last == time => return allowed,
             // Time went back: a map restart or a demo seek.
@@ -67,9 +76,10 @@ impl SaberToggleLimit {
     /// toggle already paid for (a holstered staff's weapon switch shutdown after the
     /// one at its reach) is not a toggle of its own.
     pub(super) fn refund(&mut self, client: u16, time: i32) {
-        let Some(state) = self.clients.get_mut(usize::from(client)) else {
+        if !is_player_number(usize::from(client)) {
             return;
-        };
+        }
+        let state = &mut self.clients[usize::from(client)];
         if state.refunded != Some(time) {
             state.refunded = Some(time);
             state.due = state.due.saturating_sub(INTERVAL);

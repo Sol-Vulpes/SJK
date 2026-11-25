@@ -1574,7 +1574,9 @@ const PERS_ATTACKER: usize = 6;
 /// (`hurt`, stock's `cg.attackerTime`), when that is another client; never the world
 /// (`ENTITYNUM_WORLD`) or the player's own slot `me` (a fall, a self-hit).
 fn attacker_slot(hurt: bool, attacker: u32, me: Option<u16>) -> Option<u16> {
-    let slot = u16::try_from(attacker).ok().filter(|&slot| slot < 32)?;
+    let slot = u16::try_from(attacker)
+        .ok()
+        .filter(|&slot| sjk_protocol::is_player_number(usize::from(slot)))?;
     (hurt && Some(slot) != me).then_some(slot)
 }
 

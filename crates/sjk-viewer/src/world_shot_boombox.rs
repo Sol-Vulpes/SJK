@@ -21,7 +21,7 @@ fn boombox_on_a_demo() {
             .entities
             .iter()
             .map(|entity| entity.number())
-            .filter(|number| *number < 32 && *number != own)
+            .filter(|number| sjk_protocol::is_player_number(usize::from(*number)) && *number != own)
             .take(3)
             .collect();
         if targets.is_empty() {

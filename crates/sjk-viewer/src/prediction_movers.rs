@@ -152,7 +152,8 @@ impl Collider {
             start: state.trajectory_time(),
             duration: state.trajectory_duration(),
         };
-        let actor = state.number() < 32 || state.entity_type() == 13;
+        let actor = sjk_protocol::is_player_number(usize::from(state.number()))
+            || state.entity_type() == 13;
         if bounds.is_some() && actor && !smooth_clients {
             position.kind = 1;
         }

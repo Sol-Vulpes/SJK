@@ -849,8 +849,8 @@ impl OwnSide {
 /// Count populated red/blue clientinfo records for the join modal.
 pub(crate) fn team_sizes(game_state: &GameState) -> [usize; 2] {
     let mut sizes = [0; 2];
-    for client in 0..32 {
-        let Some(bytes) = game_state.config_string(1_131 + client) else {
+    for client in 0..sjk_protocol::player_slots() {
+        let Some(bytes) = crate::player_info::player_info(game_state, client) else {
             continue;
         };
         let Ok(text) = std::str::from_utf8(bytes) else {

@@ -24,6 +24,19 @@
 
 # ---- Console & chat ----
 
+[player-slots-64]
+area: Gameplay
+title: Servers with more than 32 player slots: up to 64 players shown
+change: SJK asks a JA+ server for every slot (jof64) and reads players 32 to 63.
+change: Past 32 players: names, models, head icons, mutes, kill feed, both scoreboards.
+change: On a 32-slot server nothing changes.
+test: Join a 64-slot server while 32 others are on: you are seated at slot 32 or above.
+test: Tab: your own row is there; above 32 players the classic board stands in two columns.
+test: A player in slot 32+: name over the head, own model and saber, kill feed lines.
+test: Mute and block a player in slot 32+ (Players page): chat and sounds stop.
+test: Any normal server: scoreboard, names and mutes exactly as before.
+note: Scores, ping and time show for 20 players at most until the server sends more.
+
 [v1-leftovers]
 area: Menus & settings
 title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved

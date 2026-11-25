@@ -989,6 +989,7 @@ impl ClientSession {
                 {
                     self.demo_recorder.stop()?;
                     let initial = decode_initial_gamestate(&message.payload)?;
+                    sjk_protocol::set_player_slots_for(&initial.game_state);
                     if let Some(storage) = &self.download_storage
                         && !storage
                             .missing(&initial.game_state)
@@ -1186,6 +1187,7 @@ impl ClientSession {
     }
 
     pub fn disconnect(&mut self) -> Result<(), ClientError> {
+        sjk_protocol::reset_player_slots();
         if self.connection.is_none() {
             self.local = None;
             self.disconnected = true;
@@ -1453,18 +1455,20 @@ fn parse_scores(arguments: &[Vec<u8>]) -> Option<([i32; 2], Vec<ScoreEntry>)> {
     let count = integer(1).and_then(|value| usize::try_from(value).ok())?;
     let team_scores = [integer(2).unwrap_or(0), integer(3).unwrap_or(0)];
     let sent = arguments.len().saturating_sub(4);
-    // Rows as players: client numbers below 32 and unique, a ping of -1 (connecting)
-    // to 999, a non-negative connected time.
+    // Rows as players: client numbers below `MAX_CLIENTS` and unique, a ping of -1
+    // (connecting) to 999, a non-negative connected time.
+    let slots = sjk_protocol::player_slots();
     let plausible = |width: usize| {
-        let mut seen = 0_u32;
+        let mut seen = 0_u64;
         (0..sent / width).all(|row| {
             let base = 4 + row * width;
             let fields = (integer(base), integer(base + 2), integer(base + 3));
             let (Some(client), Some(ping), Some(time)) = fields else {
                 return false;
             };
-            let fresh = (0..32).contains(&client) && seen & (1 << client) == 0;
-            seen |= 1_u32.checked_shl(client as u32).unwrap_or(0);
+            let fresh = usize::try_from(client).is_ok_and(|client| client < slots)
+                && seen & (1 << client) == 0;
+            seen |= 1_u64.checked_shl(client as u32).unwrap_or(0);
             fresh && (-1..=999).contains(&ping) && time >= 0
         })
     };
@@ -1479,14 +1483,14 @@ fn parse_scores(arguments: &[Vec<u8>]) -> Option<([i32; 2], Vec<ScoreEntry>)> {
         }
         _ => STOCK_FIELDS,
     };
-    let rows = (sent / row_fields).min(count).min(32);
+    let rows = (sent / row_fields).min(count).min(slots);
     let mut scores = Vec::with_capacity(rows);
     for row in 0..rows {
         let base = 4 + row * row_fields;
         let Some(client_num) = integer(base).and_then(|value| u8::try_from(value).ok()) else {
             break;
         };
-        if client_num >= 32 {
+        if usize::from(client_num) >= slots {
             continue;
         }
         scores.push(ScoreEntry {

@@ -22,8 +22,6 @@ use sjk_protocol::{EntityState, GameState, InfoString, PlayerState};
 
 const ET_PLAYER: u8 = 1;
 const ET_NPC: u8 = 13;
-/// `MAX_CLIENTS`: only players are left out on a JA+ server.
-const MAX_CLIENTS: u16 = 32;
 
 /// Which server's duel isolation the movement prediction follows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,8 +83,9 @@ pub fn duel_passes_through(
             // whom it duels the client is not told, so its own opponent stands for it, as
             // the plugin has it (`ps->duelIndex != i`).
             DuelIsolation::JaPlus => {
+                // `MAX_CLIENTS`: only players are left out on a JA+ server.
                 kind == ET_PLAYER
-                    && entity.number() < MAX_CLIENTS
+                    && sjk_protocol::is_player_number(usize::from(entity.number()))
                     && sjk_game_jka::duel::isolated(
                         Some(local.duel_index()),
                         entity.number(),

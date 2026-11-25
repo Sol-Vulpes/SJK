@@ -25,7 +25,7 @@
 
 use super::{Bounds, MoveContext, MovementCollision, MovementState, Predictor, vector_normalize};
 use super::{
-    ENTITY_NUMBER_WORLD, FORCE_LEVITATION_BIT, JUMP_VELOCITY, MAX_CLIENTS, PLAYER_CONTENT_MASK,
+    ENTITY_NUMBER_WORLD, FORCE_LEVITATION_BIT, JUMP_VELOCITY, PLAYER_CONTENT_MASK, max_clients,
 };
 use super::{PMF_JUMP_HELD, PMF_STUCK_TO_WALL, PMF_TIME_KNOCKBACK};
 use crate::pmove_anim::{
@@ -750,7 +750,7 @@ impl Predictor {
             let ideal = vector_normalize(origin - target);
             // A wall there, or a client.
             if !(trace.fraction < 1.0
-                && (trace.entity_number < MAX_CLIENTS || f64::from(wall_normal.dot(ideal)) > 0.7))
+                && (trace.entity_number < max_clients() || f64::from(wall_normal.dot(ideal)) > 0.7))
             {
                 return;
             }
@@ -942,7 +942,7 @@ impl Predictor {
             PLAYER_CONTENT_MASK,
         );
         if !(trace.fraction < 1.0
-            && (trace.entity_number < MAX_CLIENTS || (context.npcs)(trace.entity_number)))
+            && (trace.entity_number < max_clients() || (context.npcs)(trace.entity_number)))
         {
             return false;
         }

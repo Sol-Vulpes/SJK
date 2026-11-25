@@ -53,7 +53,6 @@ const PMF_FOLLOW: u16 = 4_096; // :478
 const TEAM_SPECTATOR: u8 = 3; // bg_public.h:1073
 const GT_TEAM: i32 = 6; // bg_public.h gametype_t
 const CS_SERVERINFO: usize = 0;
-const CS_PLAYERS: usize = 1_131;
 const DEFAULT_SABER: &str = "Kyle"; // bg_public.h:42
 /// `WP_SaberSetDefaults` ignition sound, kept by a definition without `soundOn`
 /// and by a removed second saber (`bg_saberLoad.c:416`, `WP_RemoveSaber`).
@@ -305,15 +304,15 @@ impl Centity {
 
 /// Fixed per-client state behind cgame's saber switch sounds.
 pub(super) struct SaberSwitchSounds {
-    hands: [Hands; MAX_CLIENTS],
-    saber_keys: [u64; MAX_CLIENTS],
-    body_keys: [u64; MAX_CLIENTS],
-    centities: [Centity; MAX_CLIENTS],
+    hands: [Hands; PLAYER_CAPACITY],
+    saber_keys: [u64; PLAYER_CAPACITY],
+    body_keys: [u64; PLAYER_CAPACITY],
+    centities: [Centity; PLAYER_CAPACITY],
     epoch: u32,
     snapshot_time: Option<i32>,
     /// `cg.predictedPlayerState.clientNum` at the latest frame.
     view_client: u16,
-    switches: [(u16, Switch, [f32; 3]); MAX_CLIENTS],
+    switches: [(u16, Switch, [f32; 3]); PLAYER_CAPACITY],
     switch_count: usize,
 }
 
@@ -327,19 +326,17 @@ impl SaberSwitchSounds {
     ) -> Self {
         let team_game = team_game(game_state);
         let config = |client: usize| {
-            game_state
-                .config_string(CS_PLAYERS + client)
-                .unwrap_or_default()
+            crate::player_identity::player_config(game_state, client).unwrap_or_default()
         };
         Self {
             hands: std::array::from_fn(|client| hands(config(client), definitions, intern)),
             saber_keys: std::array::from_fn(|client| saber_key(config(client))),
             body_keys: std::array::from_fn(|client| body_key(config(client), team_game)),
-            centities: [Centity::default(); MAX_CLIENTS],
+            centities: [Centity::default(); PLAYER_CAPACITY],
             epoch: 1,
             snapshot_time: None,
             view_client: u16::try_from(game_state.client_num).unwrap_or(0),
-            switches: [(0, Switch::On, [0.0; 3]); MAX_CLIENTS],
+            switches: [(0, Switch::On, [0.0; 3]); PLAYER_CAPACITY],
             switch_count: 0,
         }
     }
@@ -352,9 +349,7 @@ impl SaberSwitchSounds {
         definitions: &BTreeMap<String, LegacySaberDefinition>,
         intern: &mut impl FnMut(&str) -> u16,
     ) {
-        let config = game_state
-            .config_string(CS_PLAYERS + client)
-            .unwrap_or_default();
+        let config = crate::player_identity::player_config(game_state, client).unwrap_or_default();
         let (saber, body) = (saber_key(config), body_key(config, team_game(game_state)));
         self.hands[client] = hands(config, definitions, intern);
         let (old_saber, old_body) = (self.saber_keys[client], self.body_keys[client]);
@@ -390,7 +385,7 @@ impl SaberSwitchSounds {
         &mut self,
         snapshot: &Snapshot,
         view: LegacySaberView,
-        teams: &[u8; MAX_CLIENTS],
+        teams: &[u8; PLAYER_CAPACITY],
     ) {
         self.switch_count = 0;
         self.view_client = view.client_num;
@@ -398,7 +393,7 @@ impl SaberSwitchSounds {
             self.transition(snapshot);
         }
         let local = usize::from(view.client_num);
-        if local < MAX_CLIENTS {
+        if is_player_number(local) {
             let now = Subject::view(view);
             let follow = view.movement_flags & PMF_FOLLOW != 0;
             let spectator = teams[local] == TEAM_SPECTATOR;
@@ -577,7 +572,7 @@ impl LegacySoundAdapter {
 /// A player entity's client slot.
 fn player_slot(state: &EntityState) -> Option<usize> {
     let number = usize::from(state.number());
-    (state.entity_type() == ET_PLAYER && number < MAX_CLIENTS).then_some(number)
+    (state.entity_type() == ET_PLAYER && is_player_number(number)).then_some(number)
 }
 
 fn team_game(game_state: &GameState) -> bool {

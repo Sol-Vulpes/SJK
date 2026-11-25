@@ -28,8 +28,6 @@ const BONE: &str = "Bone02";
 const WORKED: u32 = 19;
 /// `entityState_t::activeForcePass`, protocol-26 netfield 68 of an entity.
 const ES_ACTIVE_FORCE_PASS: usize = 68;
-/// `MAX_CLIENTS`: player slots never take the rule.
-const MAX_CLIENTS: u16 = 32;
 /// `CLASS_VEHICLE`: vehicles never take the rule.
 const CLASS_VEHICLE: u8 = 53;
 /// The lowest the top is pitched, in degrees down.
@@ -79,7 +77,8 @@ pub(crate) struct Turned {
 
 /// Whether `state` is a gun being worked, the case `CG_General` turns the bone in.
 fn worked(state: &EntityState) -> bool {
-    state.number() >= MAX_CLIENTS
+    // `MAX_CLIENTS`: player slots never take the rule.
+    !sjk_protocol::is_player_number(usize::from(state.number()))
         && state.raw_field(ES_ACTIVE_FORCE_PASS) == Some(WORKED)
         && state.npc_class() != CLASS_VEHICLE
 }

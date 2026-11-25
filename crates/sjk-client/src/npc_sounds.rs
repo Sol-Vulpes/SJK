@@ -91,8 +91,8 @@ const BANK_FIELDS: [usize; 4] = [80, 103, 104, 105];
 /// An `ET_NPC`'s `csSounds_*` indices ([`EntityState::npc_sound_sets`]).
 pub(super) fn entity_banks(state: &EntityState) -> Option<[u8; 4]> {
     (state.entity_type() == crate::npc_identity::ET_NPC
-        && usize::from(state.number()) >= MAX_CLIENTS)
-        .then(|| state.npc_sound_sets())
+        && !is_player_number(usize::from(state.number())))
+    .then(|| state.npc_sound_sets())
 }
 
 /// Whose custom sounds an event speaks with: `CG_CustomSound`'s `ci`.
@@ -110,7 +110,7 @@ impl LegacySoundAdapter {
     /// NPC banks, from the event's own subject or the per-snapshot source table
     /// (an `EV_ENTITY_SOUND` naming an NPC, a forwarded event).
     pub(super) fn voice_of(&self, entity: &EventSubject, speaker: u16) -> Voice {
-        if usize::from(speaker) < MAX_CLIENTS {
+        if is_player_number(usize::from(speaker)) {
             return Voice::Player(usize::from(speaker));
         }
         let own = if speaker == entity.number {

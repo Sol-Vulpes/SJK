@@ -188,8 +188,9 @@ impl GpuState {
         let mut blocked = self.muted_players.slots().muted;
         if crate::tactical::hides_fun() {
             blocked |= own
-                .filter(|own| *own < 32)
-                .map_or(u32::MAX, |own| !(1u32 << own));
+                .filter(|own| usize::from(*own) < crate::muted_players::SLOTS)
+                .map_or(u64::MAX, |own| !(1u64 << own))
+                & crate::muted_players::server_slots();
         }
         while blocked != 0 {
             let slot = blocked.trailing_zeros() as u8;

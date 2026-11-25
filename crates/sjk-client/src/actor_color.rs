@@ -22,7 +22,6 @@
 use sjk_protocol::GameState;
 
 const CS_SERVERINFO: usize = 0;
-const CS_PLAYERS: usize = 1_131;
 /// `GT_TEAM` / `GT_SIEGE` from `codemp/game/bg_public.h` `gametype_t`.
 const GT_TEAM: i32 = 6;
 const GT_SIEGE: i32 = 7;
@@ -66,7 +65,8 @@ pub fn legacy_player_color(
     if !policy.team_override_active {
         return custom_rgba;
     }
-    let Some(config) = game_state.config_string(CS_PLAYERS + usize::from(client_num)) else {
+    let Some(config) = crate::player_identity::player_config(game_state, usize::from(client_num))
+    else {
         return custom_rgba;
     };
     player_color_from_config(config, custom_rgba)
@@ -106,7 +106,7 @@ pub fn legacy_team_blade(game_state: &GameState, client_num: u16) -> Option<[u8;
     if !legacy_team_sabers(game_state) {
         return None;
     }
-    let config = game_state.config_string(CS_PLAYERS + usize::from(client_num))?;
+    let config = crate::player_identity::player_config(game_state, usize::from(client_num))?;
     team_blade_from_config(config)
 }
 
@@ -138,8 +138,7 @@ pub fn legacy_siege_class_blades(
     if info_int(serverinfo, "g_gametype") != GT_SIEGE {
         return [None; 2];
     }
-    let class = game_state
-        .config_string(CS_PLAYERS + usize::from(client_num))
+    let class = crate::player_identity::player_config(game_state, usize::from(client_num))
         .and_then(|config| info_value(config, "siegeclass"))
         .and_then(|name| std::str::from_utf8(name).ok())
         .filter(|name| !name.is_empty())
@@ -182,8 +181,7 @@ pub fn legacy_saber_team_colors(
     if !policy.team_override_active {
         return [None; 2];
     }
-    game_state
-        .config_string(CS_PLAYERS + usize::from(client_num))
+    crate::player_identity::player_config(game_state, usize::from(client_num))
         .map_or([None; 2], |config| {
             saber_team_colors_from_config(config, always)
         })
@@ -312,7 +310,7 @@ mod tests {
         let mut game = GameState::empty_local(0);
         game.replace_config_string(CS_SERVERINFO, serverinfo.to_vec())
             .unwrap();
-        game.replace_config_string(CS_PLAYERS + 2, player.to_vec())
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 2, player.to_vec())
             .unwrap();
         game
     }

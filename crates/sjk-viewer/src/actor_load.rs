@@ -316,7 +316,9 @@ pub(crate) fn load_actor_meshes(
     let random = random_stand_ins(console);
     let mut actors = BTreeMap::new();
     if let Some(game_state) = game_state {
-        for client_num in (0..32_u16).filter(|&client| built_now(u64::from(client))) {
+        for client_num in
+            (0..sjk_protocol::player_slots() as u16).filter(|&client| built_now(u64::from(client)))
+        {
             if let Some(appearance) =
                 legacy_client_appearance_with_policy(game_state, client_num, None, |appearance| {
                     eligible_appearance(appearance, true, eligibility, options)
@@ -348,7 +350,7 @@ pub(crate) fn load_actor_meshes(
         // `npc_refresh` once the first snapshot names them.
         let client_num = u16::try_from(entity_id.get().saturating_sub(1))
             .ok()
-            .filter(|client_num| *client_num < 32);
+            .filter(|client_num| sjk_protocol::is_player_number(usize::from(*client_num)));
         let saber_names = client_num
             .map(|client_num| client_saber_names(game_state, client_num))
             .unwrap_or_else(|| [Some("single_1".to_owned()), None]);

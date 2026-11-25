@@ -36,7 +36,8 @@
 use glam::Vec3;
 use sjk_game_jka::force_powers::{FP_ABSORB, FP_DRAIN, FP_GRIP, FP_LIGHTNING};
 
-const CLIENTS: usize = 32;
+/// The size of a table by client slot; the masks by client are 64 bits.
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 /// A caster unseen this long starts its shots afresh.
 const GAP_MILLIS: i32 = 1_500;
 /// The arc's cone: the cosine of 60 degrees.
@@ -373,10 +374,10 @@ impl Tracker {
         measured: Measured,
         bodies: &[Body],
         rules: Rules,
-        named: u32,
+        named: u64,
         time: i32,
         sight: &mut impl FnMut([f32; 3], [f32; 3]) -> f32,
-    ) -> u32 {
+    ) -> u64 {
         if measured.shots <= 0.0 {
             return 0;
         }
@@ -392,7 +393,7 @@ impl Tracker {
                     && reachable(caster, victim, rules)
             })
         };
-        let mut victims = 0_u32;
+        let mut victims = 0_u64;
         for victim in candidates() {
             let reached = if level == 3 {
                 in_arc(victim, centre, forward, DRAIN.arc, sight)
@@ -471,7 +472,7 @@ impl Tracker {
         time: i32,
         bodies: &[Body],
         rules: Rules,
-        named: u32,
+        named: u64,
         own: Option<Own>,
         mut sight: impl FnMut([f32; 3], [f32; 3]) -> f32,
     ) {
@@ -489,7 +490,7 @@ impl Tracker {
         let present = bodies
             .iter()
             .filter(|body| usize::from(body.number) < CLIENTS)
-            .fold(0_u32, |bits, body| bits | 1 << body.number);
+            .fold(0_u64, |bits, body| bits | 1 << body.number);
         for (slot, casting) in self.casting.iter_mut().enumerate() {
             if present & (1 << slot) == 0 || fresh {
                 *casting = Casting::default();
@@ -508,7 +509,7 @@ impl Tracker {
         let mut floor: Option<[f32; 3]> = None;
         let mut lightning = false;
         // Victims the local player's measured drain has already accounted for.
-        let mut measured_victims = 0_u32;
+        let mut measured_victims = 0_u64;
         for caster in bodies {
             let slot = usize::from(caster.number);
             if slot >= CLIENTS {

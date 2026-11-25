@@ -45,7 +45,7 @@ pub struct CrosshairName {
 /// NPCs are traced like players but never named: `CG_DrawCrosshairNames`
 /// returns once `crosshairClientNum >= MAX_CLIENTS` (`cg_draw.c:6331`).
 pub fn crosshair_name(candidate: CrosshairCandidate) -> Option<CrosshairName> {
-    if candidate.client_num >= 32
+    if !sjk_protocol::is_player_number(usize::from(candidate.client_num))
         || candidate.client_num == candidate.local_client
         || candidate.intermission
         || candidate.scoreboard

@@ -222,8 +222,7 @@ pub fn legacy_saber_hands(
     game_state: &GameState,
     client_num: u16,
 ) -> SaberHands {
-    if game_state
-        .config_string(crate::player_identity::CS_PLAYERS + usize::from(client_num))
+    if crate::player_identity::player_config(game_state, usize::from(client_num))
         .is_none_or(<[u8]>::is_empty)
     {
         return SaberHands::default();

@@ -5,10 +5,8 @@
 //! accepts `tell <slot> <message>`. No transport or wire encoding lives here.
 
 use crate::{GameState, ServerEvent, ServerEventKind};
+use sjk_protocol::{PLAYER_CAPACITY, is_player_number};
 
-const CS_PLAYERS: usize = 1_131;
-// codemp/qcommon/q_shared.h:890, protocol-26's absolute player-slot limit.
-const MAX_CLIENTS: usize = 32;
 /// Conservative compose budget, in UTF-8 bytes, below codemp's MAX_SAY_TEXT.
 pub const CHAT_INPUT_BYTES: usize = 149;
 /// Bounded in-memory draft; submission divides it into server-safe messages.
@@ -59,7 +57,7 @@ struct Player {
 /// Bounded, presentation-only roster for chat actions. Refreshing an unchanged
 /// gamestate borrows configstrings and does not allocate.
 pub struct ChatRoster {
-    players: [Player; MAX_CLIENTS],
+    players: [Player; PLAYER_CAPACITY],
 }
 
 impl Default for ChatRoster {
@@ -74,8 +72,7 @@ impl ChatRoster {
     /// Observe compact `CS_PLAYERS` name keys, including TaystJK's trailing `\`.
     pub fn update(&mut self, game: &GameState) {
         for (slot, player) in self.players.iter_mut().enumerate() {
-            let name = game
-                .config_string(CS_PLAYERS + slot)
+            let name = crate::player_identity::player_config(game, slot)
                 .and_then(player_name)
                 .unwrap_or(b"");
             if player.source_name != name {
@@ -256,7 +253,8 @@ const QUOTE_ESCAPE: &str = "''";
 /// ([`sjk_protocol::encode_legacy_text`]: one per Latin-1 or Russian letter, UTF-8
 /// otherwise), always ends at a character boundary and never splits an escape.
 pub fn chat_command(destination: ChatDestination, text: &str) -> Option<String> {
-    if matches!(destination, ChatDestination::Player(slot) if usize::from(slot) >= MAX_CLIENTS) {
+    if matches!(destination, ChatDestination::Player(slot) if !is_player_number(usize::from(slot)))
+    {
         return None;
     }
     let mut payload = String::with_capacity(CHAT_INPUT_BYTES);
@@ -276,7 +274,8 @@ pub fn chat_command(destination: ChatDestination, text: &str) -> Option<String> 
 /// The viewer uses this while editing and applies [`chat_commands`] immediately
 /// before a command enters the reliable channel.
 pub fn chat_command_full(destination: ChatDestination, text: &str) -> Option<String> {
-    if matches!(destination, ChatDestination::Player(slot) if usize::from(slot) >= MAX_CLIENTS) {
+    if matches!(destination, ChatDestination::Player(slot) if !is_player_number(usize::from(slot)))
+    {
         return None;
     }
     command_from_payload(destination, &escaped_payload(text)?)
@@ -289,7 +288,8 @@ pub fn chat_commands(
     destination: ChatDestination,
     text: &str,
 ) -> Result<Vec<String>, ChatDraftTooLong> {
-    if matches!(destination, ChatDestination::Player(slot) if usize::from(slot) >= MAX_CLIENTS) {
+    if matches!(destination, ChatDestination::Player(slot) if !is_player_number(usize::from(slot)))
+    {
         return Ok(Vec::new());
     }
     let mut commands = Vec::new();
@@ -508,7 +508,7 @@ pub(crate) fn server_chat_event(arguments: &[Vec<u8>]) -> Option<ServerEvent> {
         .get(sender_index)
         .and_then(|arg| std::str::from_utf8(arg).ok())
         .and_then(|arg| arg.parse::<u16>().ok())
-        .filter(|slot| usize::from(*slot) < MAX_CLIENTS);
+        .filter(|slot| is_player_number(usize::from(*slot)));
     let text = if localized {
         // CG_Chat_f: location-bearing chat uses separate name/location/colour/body args.
         let [name, location, color, body] = [1, 2, 3, 4].map(|i| {

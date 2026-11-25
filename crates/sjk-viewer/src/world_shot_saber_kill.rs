@@ -231,7 +231,7 @@ fn bot(gpu: &GpuState) -> Option<(u16, [f32; 3], bool)> {
         .entities
         .iter()
         .find(|state| {
-            usize::from(state.number()) < crate::saber_skins::MAX_CLIENTS
+            sjk_protocol::is_player_number(usize::from(state.number()))
                 && state.number() != me
                 && state.entity_type() == 1
         })

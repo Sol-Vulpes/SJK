@@ -581,7 +581,7 @@ impl GameAudio {
 
     /// The client slots muted on this PC (bits), whose sounds are no longer played;
     /// called every frame, it costs a comparison while they stay the same.
-    pub(crate) fn set_muted_clients(&mut self, clients: u32) {
+    pub(crate) fn set_muted_clients(&mut self, clients: u64) {
         self.mute.set_clients(clients);
     }
 

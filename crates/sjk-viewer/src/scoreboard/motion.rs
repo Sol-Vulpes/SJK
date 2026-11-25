@@ -5,6 +5,7 @@
 //! once; SJK opens gradually and glides between row positions. Everything is
 //! fixed storage stepped by frame time.
 
+use sjk_protocol::PLAYER_CAPACITY;
 use std::time::Instant;
 
 /// Opening time in seconds.
@@ -21,8 +22,8 @@ pub(super) struct Motion {
     last: Option<Instant>,
     /// Step of the latest frame, in seconds.
     step: f32,
-    rows: [f32; 32],
-    placed: [bool; 32],
+    rows: [f32; PLAYER_CAPACITY],
+    placed: [bool; PLAYER_CAPACITY],
     classic: bool,
     released: Option<Instant>,
 }
@@ -33,8 +34,8 @@ impl Default for Motion {
             shown: 0.0,
             last: None,
             step: 0.0,
-            rows: [0.0; 32],
-            placed: [false; 32],
+            rows: [0.0; PLAYER_CAPACITY],
+            placed: [false; PLAYER_CAPACITY],
             classic: false,
             released: None,
         }
@@ -90,7 +91,7 @@ impl Motion {
         };
         if was_hidden && self.shown > 0.0 {
             // Rows take their places at once when the board opens.
-            self.placed = [false; 32];
+            self.placed = [false; PLAYER_CAPACITY];
         }
         self.shown > 0.0
     }
@@ -115,7 +116,7 @@ impl Motion {
         if self.classic {
             return target;
         }
-        let slot = usize::from(client).min(31);
+        let slot = usize::from(client).min(PLAYER_CAPACITY - 1);
         if !self.placed[slot] {
             self.placed[slot] = true;
             self.rows[slot] = target;

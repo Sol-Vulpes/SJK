@@ -11,8 +11,6 @@ use crate::actor_world_submission::monster_hold;
 use crate::bolt::BoltMatrix;
 use sjk_client::CosmeticSlot;
 
-/// `CS_PLAYERS` (`bg_public.h`).
-const CS_PLAYERS: usize = 1_131;
 /// Bolt each slot is worn on.
 const BOLTS: [&str; 2] = ["*head_top", "*back"];
 
@@ -77,7 +75,7 @@ impl crate::GpuState {
             .entity_id
             .filter(|_| !mesh.corpse_pool)
             .and_then(|id| usize::try_from(id.get().checked_sub(1)?).ok())
-            .filter(|client| *client < 32)
+            .filter(|client| sjk_protocol::is_player_number(*client))
         else {
             return;
         };
@@ -90,7 +88,8 @@ impl crate::GpuState {
                     .as_ref()
                     .map(crate::demo_playback::Session::game_state)
             });
-        let Some(info) = game_state.and_then(|game| game.config_string(CS_PLAYERS + client)) else {
+        let Some(info) = game_state.and_then(|game| crate::player_info::player_info(game, client))
+        else {
             return;
         };
         let names =

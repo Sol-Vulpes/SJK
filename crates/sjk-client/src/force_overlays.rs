@@ -20,7 +20,6 @@ const TEAM_RED: u8 = 1;
 const TEAM_BLUE: u8 = 2;
 const TEAM_SPECTATOR: u8 = 3;
 const CS_SERVERINFO: usize = 0;
-const CS_PLAYERS: usize = 1_131;
 const MAX_OVERLAYS: usize = 9;
 
 /// How rd-vanilla should interpret an overlay's entity colour.
@@ -393,8 +392,7 @@ fn seeing_color(team: u8, context: LegacyForceOverlayContext) -> [u8; 3] {
 }
 
 fn client_team(game_state: &GameState, client: u16) -> u8 {
-    game_state
-        .config_string(CS_PLAYERS + usize::from(client))
+    crate::player_identity::player_config(game_state, usize::from(client))
         .map_or(0, |info| info_int(info, "t") as u8)
 }
 

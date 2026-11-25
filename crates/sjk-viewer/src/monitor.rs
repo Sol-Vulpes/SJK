@@ -230,12 +230,10 @@ const STRONG_PUSH: f32 = 2_400.0;
 /// A hit on another player is foreseen only for a step this recent (ms): one older
 /// (a throw heard late, a flight run again) waits for their word.
 const FORESEE_LATE_MS: i64 = 300;
-/// `EF_DEAD`, `EF_TALK` (a key catcher open: typing, a menu), `ET_PLAYER`, and the
-/// clients' slots.
+/// `EF_DEAD`, `EF_TALK` (a key catcher open: typing, a menu) and `ET_PLAYER`.
 const EF_DEAD: u32 = 1 << 1;
 const EF_TALK: u32 = sjk_game_jka::pmove_talk::EF_TALK;
 const ET_PLAYER: u8 = 1;
-const MAX_CLIENTS: u16 = 32;
 /// The charge's sound, on its own source so its release stops it.
 const CHARGE_SOURCE: sjk_audio::SourceId = sjk_audio::SourceId(0x5100_0001);
 const CHARGE_CHANNEL: sjk_audio::ChannelId = sjk_audio::ChannelId(1);
@@ -1001,7 +999,7 @@ impl GpuState {
             .entities
             .iter()
             .filter(|entity| {
-                entity.number() < MAX_CLIENTS
+                sjk_protocol::is_player_number(usize::from(entity.number()))
                     && entity.entity_type() == ET_PLAYER
                     && entity.e_flags() & EF_DEAD != 0
             })
@@ -1191,7 +1189,9 @@ impl GpuState {
         let mut others = Vec::new();
         for entity in &session.latest_snapshot().entities {
             let number = entity.number();
-            if number >= MAX_CLIENTS || entity.entity_type() != ET_PLAYER {
+            if !sjk_protocol::is_player_number(usize::from(number))
+                || entity.entity_type() != ET_PLAYER
+            {
                 continue;
             }
             let slot = number as u8;

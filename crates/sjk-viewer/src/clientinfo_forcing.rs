@@ -4,7 +4,7 @@ use sjk_protocol::GameState;
 
 /// Read the advertised team without creating a second client-info store.
 pub(super) fn team(game: &GameState, client: u16) -> i32 {
-    game.config_string(1131 + usize::from(client))
+    crate::player_info::player_info(game, usize::from(client))
         .and_then(|config| sjk_client::LegacyClientInfo::new(config).integer("t"))
         .unwrap_or(0)
 }

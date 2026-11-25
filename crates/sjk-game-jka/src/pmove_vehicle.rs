@@ -126,7 +126,7 @@ impl Predictor {
 
     /// Whether this is a vehicle's move (`clientNum >= MAX_CLIENTS` with a vehicle).
     pub(super) fn vehicle_move(&self) -> bool {
-        self.vehicle.is_some() && self.state.client_num >= MAX_CLIENTS
+        self.vehicle.is_some() && self.state.client_num >= max_clients()
     }
 
     /// `pm_flying == FLY_HOVER` (`PM_SetSpecialMoveValues`, `bg_pmove.c:459-492`): a
@@ -145,7 +145,7 @@ impl Predictor {
     /// `maxSlope`, `MIN_WALK_NORMAL` for anyone else.
     pub(super) fn min_walk_normal(&self) -> f32 {
         match &self.vehicle {
-            Some(vehicle) if self.state.client_num >= MAX_CLIENTS => vehicle.info.max_slope,
+            Some(vehicle) if self.state.client_num >= max_clients() => vehicle.info.max_slope,
             _ => MIN_WALK_NORMAL,
         }
     }

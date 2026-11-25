@@ -2,7 +2,7 @@
 use super::*;
 use crate::holstered_sabers::staff::Phase;
 
-const CLIENTS: usize = 64;
+const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 const WAIT: i64 = 150;
 const HOLD: i64 = 2000;
 

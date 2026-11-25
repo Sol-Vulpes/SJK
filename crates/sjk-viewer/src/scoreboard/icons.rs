@@ -10,8 +10,11 @@ use crate::ui_renderer::SCOREBOARD_ICON_CELLS;
 use sjk_protocol::GameState;
 use sjk_ui::TextureId;
 
-const CS_PLAYERS: usize = 1_131;
-const SLOTS: usize = 32;
+/// The icon cells the UI renderer keeps for heads, one a slot a server can have
+/// (`PART_ICON_FIRST` follows them).
+const SLOTS: usize = sjk_protocol::PLAYER_CAPACITY;
+const _: () =
+    assert!(SCOREBOARD_ICON_CELLS as usize + SLOTS == crate::ui_renderer::PART_ICON_FIRST as usize);
 const DECODES_PER_FRAME: usize = 2;
 
 /// Resolved head icons by client slot.
@@ -55,8 +58,7 @@ impl HeadIcons {
         if slot >= SLOTS {
             return;
         }
-        let model = game
-            .config_string(CS_PLAYERS + slot)
+        let model = crate::player_info::player_info(game, slot)
             .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).bytes("model"))
             .unwrap_or_default();
         if self.models[slot] != model {
@@ -82,8 +84,7 @@ impl HeadIcons {
         mut resolve: impl FnMut(&str, TextureId) -> bool,
     ) {
         for slot in 0..SLOTS {
-            let model = game
-                .config_string(CS_PLAYERS + slot)
+            let model = crate::player_info::player_info(game, slot)
                 .and_then(|bytes| sjk_client::LegacyClientInfo::new(bytes).bytes("model"))
                 .unwrap_or_default();
             if self.models[slot] != model {
@@ -118,7 +119,7 @@ mod tests {
         let mut game = GameState::empty_local(0);
         for (slot, model) in models {
             game.replace_config_string(
-                CS_PLAYERS + slot,
+                sjk_protocol::CS_PLAYERS + slot,
                 format!("n\\P{slot}\\t\\0\\model\\{model}").into_bytes(),
             )
             .unwrap();

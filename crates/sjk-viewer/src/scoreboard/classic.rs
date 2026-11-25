@@ -20,6 +20,10 @@
 //! as EternalJK's widescreen correction does, while text keeps its proportions.
 //!
 //! Presence, chat and crowded-server rules follow the pinned JoF classic board.
+//!
+//! The reference lists 32 rows at most. A full board with more to list (a server with
+//! more than 32 player slots) stands in two columns side by side, each the crowded
+//! board in half the width with its 12-unit rows (`classic_plan.rs`, `two_columns`).
 
 use super::ScoreRow;
 use super::icons::HeadIcons;
@@ -95,7 +99,7 @@ pub(super) struct LocalStatus {
     pub(super) intermission: bool,
     /// Client slots (bits) in quiet mode (`chat/quiet.rs`): today the player's own
     /// alone, while it is on; others' would need the hub to share it.
-    pub(super) quiet: u32,
+    pub(super) quiet: u64,
 }
 
 /// Flag icons from the HUD's item icons.
@@ -159,12 +163,19 @@ pub(super) struct Plan {
     pub(super) size: RowSize,
     /// JoF uses the connected roster for header placement, independent of score count.
     pub(super) crowded: bool,
-    /// `(row index, y)` in drawing order.
-    pub(super) placed: [(u8, f32); 33],
+    /// `(row index, y)` in drawing order: a row for every slot a server can have, and
+    /// the local row appended.
+    pub(super) placed: [(u8, f32); sjk_protocol::PLAYER_CAPACITY + 1],
     pub(super) len: usize,
-    /// `(team, y, height)` of up to two team bands.
-    pub(super) bands: [(u8, f32, f32); 2],
+    /// `(team, y, height)` of the team bands: two, and one more when the two columns
+    /// cut a team.
+    pub(super) bands: [(u8, f32, f32); 4],
     pub(super) band_len: usize,
+    /// The board stands in two columns; `placed` from `second` on and `bands` from
+    /// `band_second` on are the second column's.
+    pub(super) wide: bool,
+    pub(super) second: usize,
+    pub(super) band_second: usize,
     /// The local row was appended below the list.
     pub(super) local_appended: bool,
     pub(super) hint_y: Option<f32>,
@@ -214,6 +225,20 @@ impl Frame {
 
     fn height(self, v: f32) -> f32 {
         v * self.unit
+    }
+
+    /// One of the two columns of a wide board ([`Plan::wide`]): the score line and
+    /// what stands beside it, from the ready mark to the header bar's end, over half
+    /// this frame's width.
+    fn column(self, index: usize) -> Self {
+        let (from, span) = (LINE_X - 64.0, LINE_WIDTH + 104.0);
+        let spread = self.spread * 320.0 / span;
+        Self {
+            left: self.left + index as f32 * 320.0 * self.unit * self.spread
+                - from * self.unit * spread,
+            spread,
+            ..self
+        }
     }
 
     fn rect(self, x: f32, y: f32, width: f32, height: f32) -> Rect {
@@ -310,8 +335,20 @@ pub(super) fn build(
     let many = layout.crowded;
     let columns = Columns::for_gametype(header.gametype);
     header_lines(ui, frame, rows, header, options, many);
-    header_bar(ui, frame, header, columns, options, many);
-    for &(team, y, height) in &layout.bands[..layout.band_len] {
+    // A wide board's rows and bands stand in the column they were planned in.
+    let column = |second: bool| {
+        if layout.wide {
+            frame.column(usize::from(second))
+        } else {
+            frame
+        }
+    };
+    header_bar(ui, column(false), header, columns, options, many);
+    if layout.wide {
+        header_bar(ui, column(true), header, columns, options, many);
+    }
+    for (index, &(team, y, height)) in layout.bands[..layout.band_len].iter().enumerate() {
+        let frame = column(index >= layout.band_second);
         let color = if team == RED {
             Color::new(1.0, 0.2, 0.2, 0.33)
         } else {
@@ -330,7 +367,7 @@ pub(super) fn build(
             motion.row(row.client_num, target)
         };
         let draw = RowDraw {
-            frame,
+            frame: column(order >= layout.second),
             columns,
             size: layout.size,
             options,
@@ -765,7 +802,11 @@ impl RowDraw<'_> {
             numbers(ui, format_args!("{}", row.client_num), self.columns.id, ink);
         }
         // Ready at intermission, else away, in the room left of the row.
-        let mark = if self.header.local.ready & (1 << row.client_num) != 0 {
+        // The server's ready bits are 32: a slot past them shows none.
+        let ready = 1_u32
+            .checked_shl(u32::from(row.client_num))
+            .is_some_and(|bit| self.header.local.ready & bit != 0);
+        let mark = if ready {
             Some("READY")
         } else {
             row.away.map(|_| "AFK")
@@ -1073,6 +1114,259 @@ mod tests {
         let p = plan(&rows, &header(TEAM, 0), false);
         assert_eq!(p.placed[0], (0, 146.5));
         assert_eq!(p.placed[1], (1, 187.5));
+    }
+
+    /// Rows for the players `teams` puts on a team (`None`: no such player), named by
+    /// their slot.
+    fn crowd(teams: impl Fn(u8) -> Option<u8>) -> Vec<ScoreRow> {
+        (0..sjk_protocol::PLAYER_CAPACITY as u8)
+            .filter_map(|client| {
+                let mut row = row(client, teams(client)?);
+                row.name = format!("Player {client:02}");
+                Some(row)
+            })
+            .collect()
+    }
+
+    /// Boards of a server with more than 32 player slots: name, game type, rows.
+    fn crowds() -> Vec<(&'static str, i32, Vec<ScoreRow>)> {
+        let sides = |client: u8| Some(RED + client % 2);
+        vec![
+            (
+                "33 playing",
+                0,
+                crowd(|client| (client < 33).then_some(FREE)),
+            ),
+            (
+                "48 playing",
+                0,
+                crowd(|client| (client < 48).then_some(FREE)),
+            ),
+            ("64 playing", 0, crowd(|_| Some(FREE))),
+            (
+                "40 playing, 24 watching",
+                0,
+                crowd(|client| Some(if client < 40 { FREE } else { SPECTATOR })),
+            ),
+            (
+                "5 playing, 59 watching",
+                0,
+                crowd(|client| Some(if client < 5 { FREE } else { SPECTATOR })),
+            ),
+            ("32 a side", TEAM, crowd(sides)),
+            ("32 a side, capture the flag", CTF, crowd(sides)),
+            (
+                "24 a side, 16 watching",
+                TEAM,
+                crowd(|client| {
+                    if client < 48 {
+                        sides(client)
+                    } else {
+                        Some(SPECTATOR)
+                    }
+                }),
+            ),
+            (
+                "30 a side, 4 watching",
+                TEAM,
+                crowd(|client| {
+                    if client < 60 {
+                        sides(client)
+                    } else {
+                        Some(SPECTATOR)
+                    }
+                }),
+            ),
+            (
+                "40 against 20, 4 watching",
+                TEAM,
+                crowd(|client| {
+                    Some(match client {
+                        0..40 => RED,
+                        40..60 => BLUE,
+                        _ => SPECTATOR,
+                    })
+                }),
+            ),
+            (
+                "17 a side",
+                TEAM,
+                crowd(|client| (client < 34).then(|| sides(client)).flatten()),
+            ),
+        ]
+    }
+
+    fn crowded(gametype: i32, rows: &[ScoreRow]) -> ClassicHeader<'static> {
+        let mut h = header(gametype, 40);
+        h.max_clients = 64;
+        h.context.connected = rows.len();
+        h.context.held = true;
+        h
+    }
+
+    /// A server with more than 32 player slots: past the reference's 32 rows the full
+    /// board stands in two columns, every row placed once, on the screen and clear of
+    /// the next, the team bands about their rows.
+    #[test]
+    fn more_than_32_rows_stand_in_two_columns() {
+        for (name, gametype, rows) in crowds() {
+            for red_leads in [true, false] {
+                let mut h = crowded(gametype, &rows);
+                h.team_scores = if red_leads { [3, 1] } else { [1, 3] };
+                let p = plan(&rows, &h, false);
+                assert!(p.wide && p.crowded && p.size == RowSize::Many, "{name}");
+                assert_eq!(p.len, rows.len(), "{name}: every row is listed");
+                let mut seen: Vec<_> = p.placed[..p.len].iter().map(|(row, _)| *row).collect();
+                seen.sort_unstable();
+                seen.dedup();
+                assert_eq!(seen.len(), rows.len(), "{name}: each once");
+                assert!(0 < p.second && p.second < p.len, "{name}: both columns");
+                let line = p.size.height();
+                for column in [&p.placed[..p.second], &p.placed[p.second..p.len]] {
+                    assert!(column.len() <= 32, "{name}");
+                    for pair in column.windows(2) {
+                        assert!(pair[1].1 >= pair[0].1 + line, "{name}: {pair:?}");
+                    }
+                    let (first, last) = (column[0].1, column[column.len() - 1].1);
+                    assert!(first >= TOP_Y - 62.0 && last + line <= 480.0, "{name}");
+                }
+                // The columns are even, but for a team kept whole in the second.
+                if gametype < TEAM {
+                    assert!(p.second.abs_diff(p.len - p.second) <= 1, "{name}");
+                }
+                for (index, &(team, top, height)) in p.bands[..p.band_len].iter().enumerate() {
+                    assert!(top >= 0.0 && top + height <= 480.0, "{name}: band {index}");
+                    let column = if index < p.band_second {
+                        &p.placed[..p.second]
+                    } else {
+                        &p.placed[p.second..p.len]
+                    };
+                    let inside = column
+                        .iter()
+                        .filter(|(_, y)| *y >= top && *y + line <= top + height)
+                        .collect::<Vec<_>>();
+                    assert!(!inside.is_empty(), "{name}: band {index}");
+                    for (row, _) in inside {
+                        assert_eq!(rows[usize::from(*row)].team, team, "{name}: band {index}");
+                    }
+                }
+                let banded = rows
+                    .iter()
+                    .filter(|row| row.team == RED || row.team == BLUE);
+                assert_eq!(p.band_len > 0, banded.count() > 0, "{name}");
+            }
+        }
+        // 32 a side: a team a column, the leading one first.
+        let (_, _, rows) = &crowds()[5];
+        let mut h = crowded(TEAM, rows);
+        h.team_scores = [1, 3];
+        let p = plan(rows, &h, false);
+        assert_eq!((p.second, p.band_len, p.band_second), (32, 2, 1));
+        assert!(
+            p.placed[..32]
+                .iter()
+                .all(|(row, _)| rows[usize::from(*row)].team == BLUE)
+        );
+        assert_eq!(p.placed[0].1, p.placed[32].1);
+        // The cut board shown on death keeps the reference's 24 rows and its hint.
+        h.context.held = false;
+        h.context.dead = true;
+        let cut = plan(rows, &h, false);
+        assert!(!cut.wide && cut.hint_y.is_some() && cut.len <= 25);
+        // At 32 rows nothing changes: one column.
+        let full = crowd(|client| (client < 32).then_some(FREE));
+        let p = plan(&full, &crowded(0, &full), false);
+        assert!(!p.wide && p.len == 32);
+    }
+
+    /// The two columns drawn: nothing is lost to the canvas's storage, and every
+    /// player's name stands on the screen, in its own column, clear of the rows about it.
+    #[test]
+    fn two_columns_draw_every_row_on_the_screen() {
+        const VIEWPORTS: [[f32; 2]; 6] = [
+            [1920.0, 1080.0],
+            [3840.0, 2160.0],
+            [1280.0, 1024.0],
+            [1024.0, 768.0],
+            [1280.0, 720.0],
+            [3440.0, 1440.0],
+        ];
+        for (name, gametype, rows) in crowds() {
+            for viewport in VIEWPORTS {
+                let mut h = crowded(gametype, &rows);
+                h.local.intermission = true;
+                h.local.ready = u32::MAX;
+                let mut ui =
+                    MenuCanvas::with_capacities(super::super::TEXT_SLOTS, 96, super::super::DRAWS);
+                let mut motion = Motion::default();
+                motion.present(true, true, std::time::Instant::now());
+                build(
+                    &mut ui,
+                    &rows,
+                    &h,
+                    ClassicOptions::default(),
+                    &HeadIcons::default(),
+                    FlagIcons::default(),
+                    &mut motion,
+                    viewport,
+                );
+                ui.finish(u16::MAX);
+                let case = format!("{name} at {viewport:?}");
+                assert!(!ui.overflowed(), "{case}");
+                let runs: Vec<(String, Rect)> = ui
+                    .draw_list()
+                    .commands()
+                    .iter()
+                    .filter_map(|command| match *command {
+                        DrawCommand::Text { rect, text, .. } => {
+                            Some((ui.stored_text(text).to_owned(), rect))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                let mut names = Vec::new();
+                for row in &rows {
+                    let mut found = runs.iter().filter(|(run, _)| *run == row.name);
+                    let (_, rect) = found
+                        .next()
+                        .unwrap_or_else(|| panic!("{case}: {}", row.name));
+                    assert!(found.next().is_none(), "{case}: {} twice", row.name);
+                    assert!(
+                        rect.x >= 0.0
+                            && rect.y >= 0.0
+                            && rect.right() <= viewport[0]
+                            && rect.bottom() <= viewport[1],
+                        "{case}: {} at {rect:?}",
+                        row.name
+                    );
+                    names.push(*rect);
+                }
+                // Every row's numbers stand on the screen too: its client number is
+                // its last column.
+                for (run, rect) in &runs {
+                    assert!(
+                        rect.x >= 0.0 && rect.x < viewport[0] && rect.bottom() <= viewport[1],
+                        "{case}: {run} at {rect:?}"
+                    );
+                }
+                // Two columns of names; in each, a row's name starts under the one
+                // before it.
+                let middle = viewport[0] * 0.5;
+                for left in [true, false] {
+                    let mut column: Vec<_> = names
+                        .iter()
+                        .filter(|rect| (rect.x < middle) == left)
+                        .collect();
+                    assert!(!column.is_empty(), "{case}");
+                    column.sort_by(|a, b| a.y.total_cmp(&b.y));
+                    let line = RowSize::Many.height() * viewport[1] / 480.0;
+                    for pair in column.windows(2) {
+                        assert!(pair[1].y >= pair[0].y + line - 0.01, "{case}: {pair:?}");
+                        assert!(pair[0].right() <= if left { middle } else { viewport[0] });
+                    }
+                }
+            }
+        }
     }
 
     #[test]

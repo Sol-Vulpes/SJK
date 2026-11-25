@@ -26,10 +26,8 @@ const KEY_FILE: &str = "identity.key";
 const SYNC_EVERY: Duration = Duration::from_millis(500);
 /// Longest the exit waits for the service to withdraw the player's claim.
 const SHUTDOWN_WAIT: Duration = Duration::from_secs(2);
-/// `CS_PLAYERS`: the first player's configstring.
-pub(crate) const CS_PLAYERS: usize = 1131;
-/// Clients the legacy protocol numbers (0 to 31).
-const MAX_CLIENTS: usize = 32;
+/// The size of a table by client slot.
+const MAX_CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
 
 /// How a player appears on the scoreboard.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -201,7 +199,7 @@ fn make_relay_read_hub(url: &str) -> Result<Box<dyn Hub>, sjk_identity::HubError
 
 /// The name the game shows for `slot`, as the server published it.
 pub(crate) fn shown_name(game_state: &GameState, slot: usize) -> Option<String> {
-    let bytes = game_state.config_string(CS_PLAYERS + slot)?;
+    let bytes = crate::player_info::player_info(game_state, slot)?;
     let info = LegacyClientInfo::new(bytes);
     let name = info.bytes("n").or_else(|| info.bytes("name"))?;
     (!name.is_empty()).then(|| decode_legacy(name).into_owned())
@@ -904,10 +902,9 @@ pub(crate) fn unclaimed_slots(game_state: &GameState) -> u64 {
 /// game shows and whether a claim (or the player's own) marks it; bots left out.
 fn shown_rows(game_state: &GameState) -> Vec<(u8, String, bool)> {
     let own = usize::try_from(game_state.client_num).ok();
-    let mut rows: Vec<(u8, String, bool)> = (0..MAX_CLIENTS)
+    let mut rows: Vec<(u8, String, bool)> = (0..sjk_protocol::player_slots())
         .filter(|&slot| {
-            game_state
-                .config_string(CS_PLAYERS + slot)
+            crate::player_info::player_info(game_state, slot)
                 .is_some_and(|bytes| LegacyClientInfo::new(bytes).bytes("skill").is_none())
         })
         .filter_map(|slot| {

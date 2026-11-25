@@ -10,7 +10,7 @@
 //! which is what the original JA+ captures of #307 showed. Other servers keep the fixed
 //! hull: the stock windows were rolled back in #307 and have no runtime evidence yet.
 
-use super::{MAX_CLIENTS, MovementCollision, PLAYER_CONTENT_MASK, PMF_DUCKED, Predictor};
+use super::{MovementCollision, PLAYER_CONTENT_MASK, PMF_DUCKED, Predictor, max_clients};
 
 const PMF_FIX_MINS: u16 = 128;
 const BOTH_JUMPATTACK6: u16 = 861;
@@ -29,7 +29,7 @@ impl Predictor {
     /// the hull keeps its -24 feet.
     pub(super) fn dual_jump_minimum(&mut self, collision: &impl MovementCollision) -> f32 {
         let ja_plus = self.config.ja_plus;
-        if !ja_plus.enabled || self.state.client_num >= MAX_CLIENTS {
+        if !ja_plus.enabled || self.state.client_num >= max_clients() {
             return MINS_Z;
         }
         if self.in_sail_over_window() && (ja_plus.old_collision || self.player_ahead(collision)) {
@@ -72,7 +72,7 @@ impl Predictor {
             end,
             PLAYER_CONTENT_MASK,
         );
-        hit.entity_number < MAX_CLIENTS && hit.entity_number != state.client_num
+        hit.entity_number < max_clients() && hit.entity_number != state.client_num
     }
 
     /// `PM_CheckFixMins`: put raised feet back down, moving up if the floor is in the way,
