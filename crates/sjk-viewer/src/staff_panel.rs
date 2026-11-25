@@ -2386,20 +2386,15 @@ mod tests {
     }
 
     #[test]
-    fn staff_never_give_to_themselves_nor_past_the_days_gifts() {
+    fn staff_give_to_themselves_too_but_never_past_the_days_gifts() {
         let other = profile("bbbbbbbbbbbbbbbb", "Fox");
         let (mut panel, _, _) = drawn(vec![other.clone()]);
         let me = helper();
-        // Their own player, by their id or a linked key: nothing to give.
+        // Their own player: they give to themselves like to anyone (Sol, 25/11/2026).
         let _ = panel.activate(REWARDS_TAB_TOKEN);
         redraw(&mut panel, &me, vec![other.clone()]);
-        assert_eq!(
-            panel.shown.gift_block,
-            Some("Staff cannot give to themselves")
-        );
-        assert!(!panel.order.iter().any(|token| gift(*token)));
-        assert_eq!(panel.activate(GIVE_BASE + 2), PanelAction::None);
-        assert_eq!(panel.activate(UNLOCK_BASE), PanelAction::None);
+        assert_eq!(panel.shown.gift_block, None);
+        assert!(panel.order.iter().any(|token| gift(*token)));
         // Another player, but no gift left today.
         let _ = panel.activate(PLAYER_BASE);
         let spent = StaffState {
