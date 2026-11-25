@@ -326,17 +326,11 @@ impl Panel {
         });
         self.shown.staff = target.as_ref().is_some_and(|profile| profile.staff);
         self.shown.creator = inputs.me.is_some_and(|me| me.creator);
-        // Staff give to anyone but themselves, a number a day; the creator always may.
+        // Staff give to anyone, themselves too (Sol, 25/11/2026), a number a day; the
+        // creator always may.
         self.shown.gifts_left = inputs.staff.gifts.as_ref().and_then(|log| log.left);
-        self.shown.gift_block = match (&target, inputs.me) {
+        self.shown.gift_block = match () {
             _ if self.shown.creator => None,
-            (Some(target), Some(me))
-                if target.key_id == me.key_id
-                    || target.has_key(&me.key_id)
-                    || me.has_key(&target.key_id) =>
-            {
-                Some("Staff cannot give to themselves")
-            }
             _ if self.shown.gifts_left == Some(0) => {
                 Some("No gifts left today: undo one on My gifts, or wait")
             }
