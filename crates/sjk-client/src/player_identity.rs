@@ -46,7 +46,7 @@ pub fn legacy_client_appearance_with_policy(
     policy: impl FnOnce(Appearance) -> Appearance,
 ) -> Option<Appearance> {
     let config = player_config(game_state, usize::from(client_num))?;
-    let mut appearance = appearance_from_config(config)?;
+    let mut appearance = appearance_or_default(config)?;
     if let Some(model) = forced {
         let (name, skin) = model.split_once('/').unwrap_or((model, "default"));
         appearance.model = format!("models/players/{name}");
@@ -181,6 +181,24 @@ fn saber_names_from_text(text: &str) -> [Option<&str>; 2] {
     [long[0].or(compact[0]), second]
 }
 
+/// A connected player's appearance: the one its configstring names, or Kyle's
+/// (`DEFAULT_MODEL`, skin `default`) when it names no usable model, as
+/// `CG_LoadClientInfo` falls back when `BG_IsValidCharacterModel` refuses an empty
+/// model or skin (`codemp/cgame/cg_players.c:490-494` at EternalJK). Without it such a
+/// player had no model of its own and was drawn with the shared stand-in, which no
+/// animation moves. `None` for an empty slot.
+fn appearance_or_default(config: &[u8]) -> Option<Appearance> {
+    if config.is_empty() {
+        return None;
+    }
+    appearance_from_config(config).or_else(|| {
+        Some(Appearance {
+            model: "models/players/kyle".to_owned(),
+            variant: "default".to_owned(),
+        })
+    })
+}
+
 fn appearance_from_config(config: &[u8]) -> Option<Appearance> {
     let info = crate::LegacyClientInfo::new(config);
     let model = info.text("model")?;
@@ -295,5 +313,28 @@ mod model_policy_tests {
                 .variant,
             "blue"
         );
+    }
+
+    #[test]
+    fn a_connected_player_without_a_usable_model_wears_kyle_and_an_empty_slot_nobody() {
+        let mut game = GameState::empty_local(0);
+        let kyle = Appearance {
+            model: "models/players/kyle".into(),
+            variant: "default".into(),
+        };
+        for info in [
+            &b"\\n\\Bot\\t\\0"[..],
+            b"\\n\\Bot\\t\\0\\model\\",
+            b"\\n\\Bot\\t\\0\\model\\/red",
+            b"\\n\\Bot\\t\\0\\model\\reborn/",
+        ] {
+            game.replace_config_string(sjk_protocol::CS_PLAYERS + 3, info.to_vec())
+                .unwrap();
+            assert_eq!(legacy_client_appearance(&game, 3), Some(kyle.clone()));
+        }
+        game.replace_config_string(sjk_protocol::CS_PLAYERS + 3, Vec::new())
+            .unwrap();
+        assert_eq!(legacy_client_appearance(&game, 3), None);
+        assert_eq!(legacy_client_appearance(&game, 4), None);
     }
 }

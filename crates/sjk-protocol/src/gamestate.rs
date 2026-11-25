@@ -7,7 +7,10 @@ use std::error::Error;
 use std::fmt;
 
 pub const MAX_CONFIGSTRINGS: usize = 1_700;
-pub const MAX_GAMESTATE_CHARS: usize = 16_000;
+/// Room for the configstring text of one gamestate. Stock JKA keeps 16000, which 64
+/// real players' configstrings on a `jof64` server can pass; the gamestate still has
+/// to fit one server message (`MAX_MSGLEN` 49152), so that is the useful ceiling.
+pub const MAX_GAMESTATE_CHARS: usize = 49_152;
 pub const MAX_BIG_INFO_STRING_BYTES: usize = 8_191;
 
 /// The state carried by JKA's initial `svc_gamestate` command.

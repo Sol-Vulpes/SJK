@@ -93,6 +93,7 @@ fn row(client: u8, name: &str, team: u8, score: i32) -> ScoreRow {
         },
         time: 4 + i32::from(client * 3 % 17),
         has_score: true,
+        in_game: true,
         bot,
         record: None,
         powerups: 0,

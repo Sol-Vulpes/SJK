@@ -328,9 +328,13 @@ pub(crate) fn load_actor_meshes(
             }
         }
     }
+    // Entity ids are entity numbers plus one; numbers below the server's slots are players.
+    let player = |id: EntityId| {
+        usize::try_from(id.get().saturating_sub(1)).is_ok_and(sjk_protocol::is_player_number)
+    };
     for entity in world.entities().filter(|entity| {
         entity.kind == EntityKind::Actor
-            && (entity.id.get() > 32 || built_now(entity.id.get().saturating_sub(1)))
+            && (!player(entity.id) || built_now(entity.id.get().saturating_sub(1)))
     }) {
         actors.entry(entity.id).or_insert_with(|| {
             eligible_appearance(
@@ -338,7 +342,7 @@ pub(crate) fn load_actor_meshes(
                     .appearance()
                     .cloned()
                     .unwrap_or_else(|| fallback.clone()),
-                entity.id.get() <= 32,
+                player(entity.id),
                 eligibility,
                 options,
             )

@@ -37,6 +37,41 @@ test: Mute and block a player in slot 32+ (Players page): chat and sounds stop.
 test: Any normal server: scoreboard, names and mutes exactly as before.
 note: Scores, ping and time show for 20 players at most until the server sends more.
 
+[event-64-fixes]
+area: Gameplay
+title: 64 slots: every score row, big gamestates, refusals said
+change: JoF 64-slot server: rows past the 20th come in scores64 and are shown.
+change: A gamestate can hold 49152 characters of configstrings (was 16000).
+change: A refusal sent after connectResponse shows its text, not a timeout.
+test: jka.dfox.app with 60 bots: open the scoreboard, every bot has a score row.
+test: Scores change: the rows past 20 update too, none twice.
+test: Wrong password on jka.dfox.app: the server's reason shows, quickly.
+test: Any normal server: scoreboard and join exactly as before.
+
+[player-slots-64-fixes]
+area: Gameplay
+title: Many players: no frozen poses, nobody joining forever
+change: A player whose model is empty or has no skin wears Kyle and animates (base game rule).
+change: Past the 20 score rows: you, bots and players seen playing show with no numbers.
+change: Only a player never seen in the game since connecting still says Joining.
+test: 64-slot server with 60 bots: every bot runs and swings; none slides in one pose.
+test: SJK scoreboard: no bot says Joining; your own row never says Joining once in.
+test: The left-out rows sit in their team, name shown, no score, ping or time.
+test: A friend connecting: Joining until they spawn, then a normal row.
+test: Any normal server with under 20 players: scoreboard exactly as before.
+note: If a bot still slides, run `configstrings` and send the bot's CS_PLAYERS line.
+
+[userinfo-updates-keys]
+area: Gameplay
+title: Userinfo updates keep the password and plugin keys (map change on a locked server)
+change: A test pins every userinfo update to the connect one: password, guid, jof64, cjp_client.
+change: The client already sent them; the drop at ammap on a slot 32+ seat is not explained yet.
+test: Locked 64-slot JA+ server, seat 32+: ammap at once, before any change: kept or dropped?
+test: Same, after a saber or model change, then ammap: kept or dropped?
+test: Same two on a seat under 32 (a build before jof64, 66af5d6): compare.
+test: Each join: does the server print "Your plugin version is undefined" at seat 32+ only?
+note: Dropped even with no change, or the plugin message at seat 32+ only: the server's side.
+
 [v1-leftovers]
 area: Menus & settings
 title: v1 leftovers: WHEEL OF DOOM toy, Log book, Support SJK gone; classic own look shelved
@@ -417,8 +452,6 @@ test: Get a card / tag / finisher: its hall tile shows a gold "1 new" pill at th
 test: Its page: "1 new" + Mark all seen (N) after the headline, a New sticker on the thing.
 test: Choose it 1 s: sticker gone; sweep across tiles: nothing seen. N or the chip: all seen.
 test: Finishers page: open 1 s sees the new finisher. Inventory: a New sticker on the row.
-test: Bottom bar: "1 new in your Collection" for that map; next map a gold dot; then gone.
-note: Settings > HUD "Bottom bar: new things" (cg_statusBarNew) hides that part.
 
 [empty-states]
 area: Menus & settings
@@ -4250,6 +4283,15 @@ test: ui_menuStyle classic: the main menu title reads SUN JK; credits heading SU
 test: Discord open: hovering the large image says Sun JK (the game name is the portal's).
 test: Hold Use at a box with no coin: No DOOM coin: the teddy bear in a Force box brings one.
 note: Rename the Discord application in its developer portal for the game name to follow.
+
+[status-bar-trim]
+area: HUD
+title: Status bar left side: credits and DOOM coins only, then Force and score
+change: Kyber shards, dormant kybers, the New nudge, the saber's kyber and effects pills: gone.
+change: Their five Bar: rows in Settings > HUD and their saved switches are gone too.
+test: A match: left of the bar reads credits, DOOM coins, then the Force icons and 2nd + score.
+test: Get a card: no "1 new in your Collection" on the bar; the hall's New pills still show.
+test: Settings > HUD > Status bar: no Bar: shards / to attune / new things / kyber / effects.
 
 [one-status-bar]
 area: HUD
@@ -10443,6 +10485,15 @@ test: staff <part of a name>: the page opens on that player when the search find
 test: Medals and shaders: type moon, then 42, then mythical: the list follows; Held only too.
 test: Give a rare holocron to a test player, then My gifts: listed; Undo twice: it goes again.
 note: Needs the hub's staff-gifts branch deployed; until then Here/Online/Team and My gifts fail.
+
+[staff-self-gifts]
+area: Menus & settings
+title: Staff give to themselves too (game Staff page and admin panel)
+change: Staff page: no more "Staff cannot give to themselves" on your own player.
+change: Hub: own_gift refusal gone; panel Give menu (medal, shader, holocron) for all staff.
+test: As a staff key (not the creator), staff, open yourself: Give a rare holocron: given.
+test: Panel as staff: your own page, Give > Give a holocron: given; credits still owner only.
+note: Hub side deployed 25/11 (b916d85). Still 20 gifts a day; Unique blades stay creator's.
 
 [rejoin-loop]
 area: Gameplay

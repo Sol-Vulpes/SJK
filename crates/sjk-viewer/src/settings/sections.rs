@@ -387,12 +387,7 @@ const HUD: &[Section] = &[
         &[
             "cg_statusBar",
             "cg_statusBarCredits",
-            "cg_statusBarShards",
-            "cg_statusBarCrystals",
             "cg_statusBarCoins",
-            "cg_statusBarNew",
-            "cg_statusBarSaber",
-            "cg_statusBarEffects",
             "cg_statusBarWeapons",
             "cg_statusBarToys",
             "cg_statusBarTime",

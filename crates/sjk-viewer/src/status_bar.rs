@@ -6,13 +6,11 @@
 //! contents in a left, a centre and a right group. From 16/11 to 21/11/2026 a second bar
 //! stood on the top edge (`cg_statusBarTop`, retired) with the match's parts.
 //!
-//! - **Left:** what the player has and wears, then their match: their credits, kyber
-//!   shards, dormant kybers and DOOM coins (the hub's numbers, each an icon and its
-//!   number), the Collection's New nudge ([`Nudge`]: "3 new in your Collection" for the
-//!   rest of the map they arrived on, then a gold dot), the kyber on their saber with its
-//!   tier's diamonds and what is on about them (the blade's extras, the finisher, Tactical
-//!   mode, Do not disturb, away, toon shading), the Force powers known (the selected one
-//!   lit, one in use dotted) and their place and score (the teams' scores in a team game).
+//! - **Left:** the player's credits and DOOM coins (the hub's numbers, each an icon and
+//!   its number), then their match: the Force powers known (the selected one lit, one in
+//!   use dotted) and their place and score (the teams' scores in a team game). Until
+//!   25/11/2026 the kyber shards, the dormant kybers, the Collection's New nudge, the
+//!   saber's kyber and what was on about the player stood there too (Sol: not needed).
 //!   The Force powers' levels are not shown: protocol 26 sends only Jump's and Sense's,
 //!   and the rest would be guesses.
 //! - **Centre:** the weapons they hold, by their selection icons, the one in hand lit with
@@ -28,8 +26,8 @@
 //! everything), so a player keeps only what they want. A part without a value (no hub, no
 //! time limit) is left out rather than shown empty; when the bar runs out of room, the
 //! parts that matter least go first ([`Part::keep`], the server's name, the toys and the
-//! feed before the clock and the time left, [`arrange`]). Tactical mode, which is there to fight, leaves the toys
-//! and the Collection's nudge out.
+//! feed before the clock and the time left, [`arrange`]). Tactical mode, which is there to
+//! fight, leaves the toys out.
 //!
 //! They show over play only, as the HUD's elements do: not under the menus or the
 //! console, not at an intermission, not over a demo (they tell the player's own things,
@@ -61,7 +59,7 @@ mod ping;
 mod read;
 mod times;
 
-pub(crate) use pieces::{Effect, TOY_COUNT, toys};
+pub(crate) use pieces::{TOY_COUNT, toys};
 #[cfg(test)]
 pub(crate) use times::{Clock, Date, Left};
 
@@ -94,13 +92,7 @@ pub(crate) enum Group {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Part {
     Credits,
-    Shards,
-    Crystals,
     Coins,
-    /// New things in the Collection ([`Nudge`]).
-    New,
-    Saber,
-    Effects,
     Weapons,
     Toys,
     Time,
@@ -120,14 +112,9 @@ pub(crate) enum Part {
 impl Part {
     /// Every part, in the bar's order (the left group's, the centre's, the right's) and
     /// the Settings rows'.
-    pub(crate) const ALL: [Self; 21] = [
+    pub(crate) const ALL: [Self; 16] = [
         Self::Credits,
-        Self::Shards,
-        Self::Crystals,
         Self::Coins,
-        Self::New,
-        Self::Saber,
-        Self::Effects,
         Self::Force,
         Self::Score,
         Self::Weapons,
@@ -166,12 +153,7 @@ impl Part {
     pub(crate) const fn cvar(self) -> &'static str {
         match self {
             Self::Credits => "cg_statusBarCredits",
-            Self::Shards => "cg_statusBarShards",
-            Self::Crystals => "cg_statusBarCrystals",
             Self::Coins => "cg_statusBarCoins",
-            Self::New => "cg_statusBarNew",
-            Self::Saber => "cg_statusBarSaber",
-            Self::Effects => "cg_statusBarEffects",
             Self::Weapons => "cg_statusBarWeapons",
             Self::Toys => "cg_statusBarToys",
             Self::Time => "cg_statusBarTime",
@@ -193,14 +175,7 @@ impl Part {
     const fn help(self) -> &'static str {
         match self {
             Self::Credits => "Status bar shows your credits",
-            Self::Shards => "Status bar shows your kyber shards",
-            Self::Crystals => "Status bar shows your dormant kybers still to attune",
             Self::Coins => "Status bar shows your DOOM coins",
-            Self::New => "Status bar says when your Collection holds new things",
-            Self::Saber => "Status bar shows the kyber on your saber",
-            Self::Effects => {
-                "Status bar shows what is on about you: blade extras, finisher, Tactical, Do not disturb, away"
-            }
             Self::Weapons => {
                 "Status bar shows the weapons you hold, the one in hand lit with its ammunition"
             }
@@ -223,46 +198,33 @@ impl Part {
     /// Where it stands on its bar.
     pub(crate) const fn group(self) -> Group {
         match self {
-            Self::Credits
-            | Self::Shards
-            | Self::Crystals
-            | Self::Coins
-            | Self::New
-            | Self::Saber
-            | Self::Effects
-            | Self::Force
-            | Self::Score => Group::Left,
+            Self::Credits | Self::Coins | Self::Force | Self::Score => Group::Left,
             Self::Weapons | Self::TimeLeft => Group::Centre,
             _ => Group::Right,
         }
     }
 
     /// How long it stays when the bar runs out of room: the lowest goes first. The
-    /// server's name, the game type, the date, the toys, the effects' pills and the feed
-    /// before the money, the match and the clock (21/11/2026, the two bars' ranks merged).
+    /// server's name, the game type, the date, the toys and the feed before the money,
+    /// the match and the clock (21/11/2026, the two bars' ranks merged).
     pub(crate) const fn keep(self) -> u8 {
         match self {
             Self::Server => 1,
             Self::Mode => 2,
             Self::Date => 3,
             Self::Toys => 4,
-            Self::Effects => 5,
-            Self::Feed => 6,
-            Self::Coins => 7,
-            Self::Crystals => 8,
-            Self::Shards => 9,
-            Self::Players => 10,
-            Self::New => 11,
-            Self::Score => 12,
-            Self::Force => 13,
-            Self::Map => 14,
-            Self::Ping => 15,
-            Self::Saber => 16,
-            Self::Credits => 17,
-            Self::Fps => 18,
-            Self::Weapons => 19,
-            Self::TimeLeft => 20,
-            Self::Time => 21,
+            Self::Feed => 5,
+            Self::Coins => 6,
+            Self::Players => 7,
+            Self::Score => 8,
+            Self::Force => 9,
+            Self::Map => 10,
+            Self::Ping => 11,
+            Self::Credits => 12,
+            Self::Fps => 13,
+            Self::Weapons => 14,
+            Self::TimeLeft => 15,
+            Self::Time => 16,
         }
     }
 
@@ -326,7 +288,7 @@ pub(crate) fn register(cvars: &mut CvarRegistry) -> Result<(), sjk_shell::CvarEr
         CVAR,
         true,
         CvarFlags::ARCHIVE,
-        "Status bar at the bottom with your credits, kyber, effects, Force, score, weapons, time left, toys, joins and leaves, map, players, ping, frame rate and time",
+        "Status bar at the bottom with your credits, DOOM coins, Force, score, weapons, time left, toys, joins and leaves, map, players, ping, frame rate and time",
     ))?;
     for part in Part::ALL {
         cvars.register(CvarDefinition::new(
@@ -414,84 +376,10 @@ impl<const N: usize> std::fmt::Debug for Line<N> {
     }
 }
 
-/// Most effects the bottom bar lists.
-pub(crate) const MAX_EFFECTS: usize = 10;
 /// Most weapons it lists (`LAST_USEABLE_WEAPON`).
 pub(crate) const MAX_WEAPONS: usize = 16;
 /// Most Force powers the top bar lists (the Force wheel's entries).
 pub(crate) const MAX_POWERS: usize = sjk_client::force_wheel::MAX_SLOTS;
-
-/// What the bar says of the Collection's New things (`crate::collection_seen`): "N new
-/// in your Collection" for the rest of the map they arrived on (or the first map played
-/// after they came between maps), then a gold dot alone until they are seen. More
-/// arriving says it again.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct Nudge {
-    /// How many were New at the last read.
-    count: usize,
-    say: Say,
-}
-
-/// Where the words stand ([`Nudge`]).
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-enum Say {
-    /// The dot alone (or nothing New).
-    #[default]
-    Quiet,
-    /// New things came outside a map: the words wait for the next.
-    Pending,
-    /// The words show on this map (its [`map_key`]).
-    During(u64),
-}
-
-impl Nudge {
-    /// `count` things New now, on the map of key `map` (`None` outside one): how many to
-    /// show and whether in words; `None` when nothing is New.
-    pub(crate) fn follow(&mut self, count: usize, map: Option<u64>) -> Option<(u32, bool)> {
-        if count == 0 {
-            *self = Self::default();
-            return None;
-        }
-        if count > self.count {
-            self.say = map.map_or(Say::Pending, Say::During);
-        }
-        self.count = count;
-        if let (Say::Pending, Some(map)) = (self.say, map) {
-            self.say = Say::During(map);
-        }
-        let words = match self.say {
-            Say::During(on) => map == Some(on),
-            Say::Pending => true,
-            Say::Quiet => false,
-        };
-        if !words {
-            self.say = Say::Quiet;
-        }
-        Some((u32::try_from(count).unwrap_or(u32::MAX), words))
-    }
-}
-
-/// A steady number for the map `path` played (`maps/<name>.bsp`), `None` for none.
-pub(crate) fn map_key(path: &str) -> Option<u64> {
-    use std::hash::{Hash, Hasher};
-    if path.is_empty() {
-        return None;
-    }
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    path.hash(&mut hasher);
-    Some(hasher.finish())
-}
-
-/// What Tactical mode's pill says at `level`, none while it is off.
-pub(crate) fn tactical_words(level: crate::tactical::Level) -> Option<&'static str> {
-    use crate::tactical::Level;
-    match level {
-        Level::Off => None,
-        Level::Minimal => Some("Tactical minimal"),
-        Level::Medium => Some("Tactical medium"),
-        Level::Max => Some("Tactical max"),
-    }
-}
 
 /// The weapons held, as the bottom bar shows them.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -508,22 +396,7 @@ pub(crate) struct Weapons {
 pub(crate) struct Inputs {
     /// The hub's numbers; `None` while unknown (no hub, or not read yet).
     pub(crate) credits: Option<u64>,
-    pub(crate) shards: Option<u64>,
-    pub(crate) crystals: Option<u32>,
-    /// The best tier among the dormant kybers held (`crate::kyber::TIERS`' index), whose
-    /// picture stands for them all.
-    pub(crate) crystal_tier: usize,
     pub(crate) coins: Option<u64>,
-    /// How many things are New in the Collection and whether the words show ([`Nudge`]);
-    /// `None` for none.
-    pub(crate) new: Option<(u32, bool)>,
-    /// The first saber's blade skin, a catalogue id; `None` for the stock blade.
-    pub(crate) saber: Option<&'static str>,
-    /// The second saber's own skin when it wears another than the first's (`Some(None)`:
-    /// the stock blade).
-    pub(crate) second: Option<Option<&'static str>>,
-    /// What is on about the player, the first ones first.
-    pub(crate) effects: [Option<Effect>; MAX_EFFECTS],
     /// Each toy's switch, in `pieces::TOYS`' order ([`toys`]).
     pub(crate) toys: [bool; TOY_COUNT],
     pub(crate) weapons: Weapons,
@@ -536,27 +409,11 @@ impl Default for Inputs {
     fn default() -> Self {
         Self {
             credits: None,
-            shards: None,
-            crystals: None,
-            crystal_tier: 0,
             coins: None,
-            new: None,
-            saber: None,
-            second: None,
-            effects: [None; MAX_EFFECTS],
             toys: [false; TOY_COUNT],
             weapons: Weapons::default(),
             clock: None,
             date: None,
-        }
-    }
-}
-
-impl Inputs {
-    /// Add `effect` after the others, when there is room.
-    pub(crate) fn push_effect(&mut self, effect: Effect) {
-        if let Some(slot) = self.effects.iter_mut().find(|slot| slot.is_none()) {
-            *slot = Some(effect);
         }
     }
 }
@@ -628,7 +485,7 @@ pub(crate) fn feed_for_shot(entries: &[(&str, bool, u8)]) -> [Option<feed::Shown
 
 /// Most pieces the bar holds: what was the bottom bar's and the top bar's.
 const MAX_PIECES: usize = 96;
-const BOTTOM_MOST: usize = 4 + 1 + 2 + MAX_EFFECTS + MAX_WEAPONS + 1 + TOY_COUNT + 2;
+const BOTTOM_MOST: usize = 2 + MAX_WEAPONS + 1 + TOY_COUNT + 2;
 const TOP_MOST: usize = MAX_POWERS + 1 + 1 + feed::SHOWN + 7;
 const _: () = assert!(BOTTOM_MOST + TOP_MOST <= MAX_PIECES);
 
@@ -654,28 +511,12 @@ fn bottom_pieces(inputs: &Inputs, parts: Parts, out: &mut [(Part, Piece); MAX_PI
     use pieces::Money;
     let amounts = [
         (Part::Credits, inputs.credits, Money::Credits),
-        (Part::Shards, inputs.shards, Money::Shards),
-        (
-            Part::Crystals,
-            inputs.crystals.map(u64::from),
-            Money::Dormant(inputs.crystal_tier.min(crate::kyber::COUNT - 1)),
-        ),
         (Part::Coins, inputs.coins, Money::Doom),
     ];
     for (part, value, money) in amounts {
         if let Some(value) = value {
             push(part, Piece::Amount { value, money });
         }
-    }
-    if let Some((count, words)) = inputs.new {
-        push(Part::New, Piece::New { count, words });
-    }
-    push(Part::Saber, pieces::saber_piece(inputs.saber));
-    if let Some(second) = inputs.second {
-        push(Part::Saber, pieces::saber_piece(second));
-    }
-    for effect in inputs.effects.iter().flatten() {
-        push(Part::Effects, Piece::Effect(*effect));
     }
     for (texture, current) in inputs.weapons.held.iter().flatten() {
         push(
@@ -919,8 +760,6 @@ struct Laid<I> {
     viewport: [f32; 2],
     /// The text size.
     k: f32,
-    /// Whether the dormant kybers' pictures were in the atlas.
-    pictures: bool,
 }
 
 /// One bar's laid-out storage.
@@ -953,8 +792,6 @@ pub(crate) struct State {
     top_inputs: TopInputs,
     read: Option<Instant>,
     clock_read: Option<Instant>,
-    /// What the New part says ([`Nudge`]).
-    nudge: Nudge,
     /// Who joins and leaves, and when the slots were last read.
     feed: feed::Feed,
     feed_read: Option<Instant>,
@@ -986,7 +823,6 @@ impl Default for State {
             top_inputs: TopInputs::default(),
             read: None,
             clock_read: None,
-            nudge: Nudge::default(),
             feed: feed::Feed::default(),
             feed_read: None,
             ping: ping::Ping::default(),
@@ -1223,9 +1059,9 @@ impl crate::GpuState {
                 read
             }
         };
-        // Tactical mode is there to fight: no toys (switched off anyway), no nudge.
+        // Tactical mode is there to fight: no toys (switched off anyway).
         if crate::tactical::level() != crate::tactical::Level::Off {
-            parts = parts.without(Part::Toys).without(Part::New);
+            parts = parts.without(Part::Toys);
         }
         // Over a demo it would tell the viewer's own things, not the recording's.
         let live = self.live_session.is_some() && play;
@@ -1287,9 +1123,6 @@ impl crate::GpuState {
     pub(crate) fn append_status_bars(&mut self, viewport: [f32; 2]) -> bool {
         let parts = self.status_bar.parts;
         let k = self.ui_font.style().scale.max(0.5);
-        let best = self.status_bar.inputs.crystal_tier;
-        let tier = best.min(crate::kyber::COUNT - 1);
-        let pictures = crate::holocrons::icons::is_loaded(crate::kyber::TIERS[tier].slot);
         let state = &mut self.status_bar;
         if !state.bar.shown {
             state.bar.drawn = false;
@@ -1314,7 +1147,6 @@ impl crate::GpuState {
             parts,
             viewport,
             k,
-            pictures,
         };
         let ok = match state.bar.laid {
             Some((kept, ok)) if kept == laid => ok,
@@ -1419,7 +1251,7 @@ mod tests {
     }
 
     /// The one bar holds the player's things and the match's in the bar's order: the
-    /// Force and the score after the effects, the time left after the weapons, the feed,
+    /// Force and the score after the money, the time left after the weapons, the feed,
     /// the map and the frame rate before the time.
     #[test]
     fn one_bar_holds_both_in_order() {
@@ -1497,7 +1329,7 @@ mod tests {
         };
         inputs.toys[toys::DRONE] = true;
         let mut out = [NO_PIECE; MAX_PIECES];
-        // Shards and crystals unknown, no weapon, no clock read yet: not shown.
+        // No weapon, no clock read yet: not shown.
         let count = bottom_pieces(&inputs, Parts::ALL, &mut out);
         assert_eq!(out[0], (Part::Credits, amount(1250)));
         assert_eq!(
@@ -1510,20 +1342,9 @@ mod tests {
                 }
             )
         );
-        assert!(matches!(
-            out[2],
-            (
-                Part::Saber,
-                Piece::Saber {
-                    name: "Stock blade",
-                    tier: None,
-                    ..
-                }
-            )
-        ));
-        assert_eq!(count, 3 + TOY_COUNT);
+        assert_eq!(count, 2 + TOY_COUNT);
         assert_eq!(
-            out[3 + toys::DRONE],
+            out[2 + toys::DRONE],
             (
                 Part::Toys,
                 Piece::Toy {
@@ -1533,8 +1354,8 @@ mod tests {
             )
         );
         let without = Parts::from_switches(|part| !matches!(part, Part::Toys | Part::Coins));
-        assert_eq!(bottom_pieces(&inputs, without, &mut out), 2);
-        assert_eq!(out[1].0, Part::Saber);
+        assert_eq!(bottom_pieces(&inputs, without, &mut out), 1);
+        assert_eq!(out[0].0, Part::Credits);
     }
 
     /// The weapons in hand and held, the ammunition's room after them, then the clock and
@@ -1642,7 +1463,7 @@ mod tests {
         let parts = [
             Part::Credits,
             Part::Credits,
-            Part::Saber,
+            Part::Coins,
             Part::Weapons,
             Part::Time,
         ];
@@ -1717,150 +1538,10 @@ mod tests {
     }
 
     #[test]
-    fn the_second_saber_and_effects_follow_the_first() {
-        let skin = crate::unlockables::blade_skins().next().unwrap();
-        let mut inputs = Inputs {
-            saber: Some(skin.id),
-            second: Some(None),
-            ..Inputs::default()
-        };
-        inputs.push_effect(Effect {
-            words: "Do not disturb",
-            colour: color::ember(),
-        });
-        let mut out = [NO_PIECE; MAX_PIECES];
-        let parts = Parts::from_switches(|part| matches!(part, Part::Saber | Part::Effects));
-        assert_eq!(bottom_pieces(&inputs, parts, &mut out), 3);
-        assert_eq!(
-            out[0].1,
-            Piece::Saber {
-                name: skin.name,
-                colour: skin.tier.colour(),
-                tier: Some(skin.tier)
-            }
-        );
-        assert!(matches!(
-            out[1].1,
-            Piece::Saber {
-                name: "Stock blade",
-                ..
-            }
-        ));
-        assert!(matches!(
-            out[2].1,
-            Piece::Effect(Effect {
-                words: "Do not disturb",
-                ..
-            })
-        ));
-    }
-
-    #[test]
-    fn effects_beyond_the_room_are_dropped() {
-        let mut inputs = Inputs::default();
-        for _ in 0..MAX_EFFECTS + 3 {
-            inputs.push_effect(Effect {
-                words: "Away",
-                colour: color::muted(),
-            });
-        }
-        assert!(inputs.effects.iter().all(Option::is_some));
-    }
-
-    /// New things say so in words for the rest of the map they came on, then as a dot
-    /// until seen; more coming says it again; ones that came between maps are said on the
-    /// next; none, nothing.
-    #[test]
-    fn new_things_are_said_for_a_map_then_dotted() {
-        let mut nudge = Nudge::default();
-        let (first, second) = (map_key("maps/mp/ffa3.bsp"), map_key("maps/mp/duel1.bsp"));
-        assert_eq!(map_key(""), None);
-        assert_ne!(first, second);
-        assert_eq!(nudge.follow(0, first), None);
-        assert_eq!(nudge.follow(2, first), Some((2, true)));
-        assert_eq!(nudge.follow(2, first), Some((2, true)), "the whole map");
-        assert_eq!(
-            nudge.follow(2, second),
-            Some((2, false)),
-            "the next map: the dot"
-        );
-        assert_eq!(
-            nudge.follow(2, first),
-            Some((2, false)),
-            "and it stays a dot"
-        );
-        assert_eq!(nudge.follow(1, first), Some((1, false)), "one seen");
-        assert_eq!(nudge.follow(3, first), Some((3, true)), "more came");
-        assert_eq!(nudge.follow(0, first), None, "all seen");
-        // Between maps: said on the next one.
-        assert_eq!(nudge.follow(1, None), Some((1, true)));
-        assert_eq!(nudge.follow(1, second), Some((1, true)));
-        assert_eq!(nudge.follow(1, first), Some((1, false)));
-        let mut out = [NO_PIECE; MAX_PIECES];
-        let inputs = Inputs {
-            new: Some((1, false)),
-            ..Inputs::default()
-        };
-        let parts = Parts::from_switches(|part| part == Part::New);
-        assert_eq!(bottom_pieces(&inputs, parts, &mut out), 1);
-        assert_eq!(
-            out[0],
-            (
-                Part::New,
-                Piece::New {
-                    count: 1,
-                    words: false
-                }
-            )
-        );
-        let off = Parts::from_switches(|part| part != Part::New);
-        let count = bottom_pieces(&inputs, off, &mut out);
-        assert!(out[..count].iter().all(|(part, _)| *part != Part::New));
-    }
-
-    #[test]
-    fn tactical_says_its_level_only_while_on() {
-        use crate::tactical::Level;
-        assert_eq!(tactical_words(Level::Off), None);
-        for level in [Level::Minimal, Level::Medium, Level::Max] {
-            let words = tactical_words(level).unwrap();
-            assert!(words.ends_with(level.name()), "{words}");
-        }
-    }
-
-    /// Dormant kybers show the best tier's picture, kept within the tiers.
-    #[test]
-    fn dormant_kybers_show_their_best_tier() {
-        let mut out = [NO_PIECE; MAX_PIECES];
-        let parts = Parts::from_switches(|part| part == Part::Crystals);
-        for (tier, shown) in [(0, 0), (2, 2), (99, crate::kyber::COUNT - 1)] {
-            let inputs = Inputs {
-                crystals: Some(2),
-                crystal_tier: tier,
-                ..Inputs::default()
-            };
-            assert_eq!(bottom_pieces(&inputs, parts, &mut out), 1);
-            assert_eq!(
-                out[0].1,
-                Piece::Amount {
-                    value: 2,
-                    money: Money::Dormant(shown)
-                }
-            );
-        }
-    }
-
-    #[test]
     fn full_bars_fit_their_storage() {
         let mut inputs = Inputs {
             credits: Some(u64::MAX),
-            shards: Some(1),
-            crystals: Some(3),
-            crystal_tier: 3,
             coins: Some(4),
-            new: Some((3, true)),
-            saber: None,
-            second: Some(None),
             clock: Some(times::Clock::default()),
             date: Some(times::Date::default()),
             ..Inputs::default()
@@ -1868,16 +1549,10 @@ mod tests {
         inputs.toys = [true; TOY_COUNT];
         inputs.weapons.held = [Some((TextureId(1), false)); MAX_WEAPONS];
         inputs.weapons.ammo = Some((Some(1), true));
-        for _ in 0..MAX_EFFECTS {
-            inputs.push_effect(Effect {
-                words: "Tactical medium",
-                colour: color::holo(),
-            });
-        }
         let mut out = [NO_PIECE; MAX_PIECES];
         assert_eq!(
             bottom_pieces(&inputs, Parts::ALL, &mut out),
-            4 + 1 + 2 + MAX_EFFECTS + MAX_WEAPONS + 1 + TOY_COUNT + 2
+            2 + MAX_WEAPONS + 1 + TOY_COUNT + 2
         );
         let top = TopInputs {
             powers: [Some((TextureId(1), false, true)); MAX_POWERS],

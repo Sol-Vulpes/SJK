@@ -1,3 +1,14 @@
+## Status bar: credits and DOOM coins only on the left (25/11/2026)
+
+Branch `personal/bar-trim-left`, based on `main` `f2ed4c89a` (Sol: "we don't need to
+display most of what's on the left side of it, we can keep credits and doom coins").
+The bar's kyber shards, dormant kybers, Collection New nudge, saber kyber and effects
+parts are removed with their code (`Nudge`, `Effect`, `saber_piece`, the shard and dormant
+icons, `collection_seen::total`), Settings rows and help; their five switches join the
+retired cvars dropped at load. The Force powers and the score stay on the left
+([client.md](client.md#status-bars)). Verified: fmt, clippy and the viewer's tests; not
+seen in game.
+
 ## Servers with more than 32 player slots (25/11/2026)
 
 Branch `personal/slots64`, based on `main` `66af5d61f`. Protocol 26 was built for 32

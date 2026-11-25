@@ -1139,7 +1139,7 @@ that mode for the visit and leaves the player's choice as it was.
   - Sections and pictures (since 21/11/2026, Sol's request). Advanced's long
     categories are cut into sections by subject
     ([sections.rs](../crates/sjk-viewer/src/settings/sections.rs)), each a heading
-    over at most 15 rows (the status bar's 22 parts aside): Sound is Volume, Game
+    over at most 15 rows (the status bar's 17 switches aside): Sound is Volume, Game
     sounds, 3D sound, Emotes, Toys, Notifications, Chat sounds; Gameplay is Players and
     models, Sabers, Force, Duels, Maps and remaps, Toys, Camera, Prediction, Away (the
     away settings came from Sound); Interface is Menus, Theme, Console; HUD is Layout,
@@ -2628,7 +2628,8 @@ carry New as kybers do. Holocrons and dormant kybers carry none: "to open" alrea
   finish); after the Cards, Tags and Finishers headlines, "N new" on a gold pill and Mark
   all seen (N), which sees every New thing of that kind; the hall's Kybers, Finishers,
   Tags and Cards tiles a gold "N new" pill at their top right (the Kybers tile's count lost
-  its "· 2 new" words for it); and the bottom status bar's New part ([client.md](client.md#status-bars)).
+  its "· 2 new" words for it). The bottom status bar's New part (`cg_statusBarNew`) said
+  so too until 25/11/2026 ([client.md](client.md#status-bars)).
 
 The marks are read again only when what they come from changes (the hub's marks, the
 own profile, the seen-list, the blades worn), never every frame. World shots:

@@ -185,7 +185,7 @@ impl crate::GpuState {
         watch.appended.clear();
         watch.reload.clone_from(&folders);
         let mut players = 0;
-        for client in 0..32u16 {
+        for client in 0..sjk_protocol::player_slots() as u16 {
             let entity = sjk_runtime::EntityId::new(u64::from(client) + 1);
             let wears = wearers.contains(&client)
                 || self.actor_meshes.iter().any(|mesh| {

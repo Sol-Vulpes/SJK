@@ -2020,7 +2020,7 @@ impl Painter<'_> {
             });
         }
         let (name_size, number_size) = text_sizes(self.header.compact, height);
-        let quiet = row.bot || !row.has_score || row.away.is_some();
+        let quiet = row.bot || !(row.has_score || row.in_game) || row.away.is_some();
         if let (Some(right), Some(place)) = (columns.place, place) {
             self.run(
                 TextFamily::Display,
@@ -2200,7 +2200,8 @@ impl Painter<'_> {
                 );
             }
         }
-        let status = if !row.has_score {
+        // In the game but past the server's 20 rows: a player, no numbers.
+        let status = if !row.has_score && !row.in_game {
             Some("Joining")
         } else if row.ping < 0 {
             Some("Connecting")
@@ -2399,6 +2400,7 @@ mod tests {
             ping: 20 + i32::from(client) * 9,
             time: 3 + i32::from(client),
             has_score: true,
+            in_game: true,
             bot: client % 5 == 4,
             record: Some((i32::from(client % 4), i32::from(client % 3))),
             powerups: 0,
@@ -2667,6 +2669,7 @@ mod tests {
             .collect();
         let mut joining = row(6, 0, 0);
         joining.has_score = false;
+        joining.in_game = false;
         rows.insert(2, joining);
         let mut ranked = header(0, 0);
         ranked.deaths_rank = true;
@@ -2693,6 +2696,32 @@ mod tests {
                 .any(|place| left_on_line(&runs, joining, place).is_some()),
             "the joining row has no number"
         );
+    }
+
+    /// A player past the 20 rows a server sends is in the game: listed with no numbers
+    /// and no "Joining"; one still joining keeps its "Joining".
+    #[test]
+    fn a_player_the_scores_leave_out_is_not_joining() {
+        let runs = |rows: &[ScoreRow]| {
+            placed_runs(&draw(rows, &header(0, 0), [1920.0, 1080.0]))
+                .into_iter()
+                .map(|(run, _)| run)
+                .collect::<Vec<_>>()
+        };
+        let mut left_out = row(40, 0, 0);
+        left_out.bot = false;
+        left_out.has_score = false;
+        let mut listed = row(2, 0, 8);
+        listed.bot = false;
+        let mut rows = vec![listed, left_out];
+        let shown = runs(&rows);
+        assert!(
+            shown.iter().any(|run| run.contains("Player40")),
+            "{shown:?}"
+        );
+        assert!(!shown.iter().any(|run| run == "Joining"), "{shown:?}");
+        rows[1].in_game = false;
+        assert!(runs(&rows).iter().any(|run| run == "Joining"));
     }
 
     /// 16:9 at 1080 lines and 4K, 5:4, 4:3, 21:9 and 32:9.

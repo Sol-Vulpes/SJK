@@ -546,11 +546,6 @@ pub(crate) fn news() -> News {
     lock().news.clone()
 }
 
-/// How many things are New now, of every kind.
-pub(crate) fn total() -> usize {
-    lock().news.total()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

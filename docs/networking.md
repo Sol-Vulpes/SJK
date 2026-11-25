@@ -57,6 +57,17 @@ and SJK draws its own blade in the colour EternalJK's `ClampSaberColor` gives) a
 appends a deaths field to each `scores` row (15 fields instead of 14). The signed
 field is retained on the parsed score entry and used by both scoreboard styles;
 it is not merely used to detect the wider row.
+
+A later `userinfo` update carries every key of the connect userinfo, in the same order,
+except the connection-only `protocol`, `qport` and `challenge`: the `password`, the
+connection's `ja_guid`, the profile's extension keys (`jof64` included) and the player's
+overrides, then the loaded mods' fields and `teamoverlay`
+(`userinfo_update::update_payload`, built by the same
+`legacy_userinfo_payload_with_extensions` as the connect packet). This matters because a
+server stores the last userinfo it took and, at every map change, connects each player
+again with it (`ClientConnect` with `firstTime` false): a key missing from an update would
+be missing from then on, the password first (a JA+ module drops the player with
+`@@@INVALID_ESCAPE_TO_MAIN`). A unit test pins the two payloads equal.
 The server sends at most 20 rows (`MAX_CLIENT_SCORE_SEND`) but announces every
 connected player, so the row width comes from the fields actually sent rather than
 the announced count: the width that divides them, and when both do, the one whose
@@ -357,8 +368,19 @@ are 10 bits).
   lives in its own test binary, as other tests in the same binary would see 64 too.
 - **Limits that are the protocol's.** `stats[STAT_CLIENTS_READY]` has one bit per client
   in 32 bits, so players above 31 show no READY. `heldByClient` is six bits holding the
-  holder plus one, so slot 63 cannot be named as a holder. `scores` carries what the
-  server chooses to send.
+  holder plus one, so slot 63 cannot be named as a holder.
+- **Scores.** One server command holds about 22 rows, so `scores` alone stops at 20
+  (`MAX_CLIENT_SCORE_SEND`). A 64-slot JoF JA+ server sends a `jof64` client the rows
+  that do not fit in `scores64 <first row> <rows> <row>...` commands after `scores`;
+  `append_score_rows` (`sjk-client/src/lib.rs`) adds them when they start where the
+  rows read so far end, and drops a part of an older board. A connected player without
+  a row is shown as joining only while nothing says it is in the game; the viewer, a
+  bot, or a player seen in a snapshot or with a pinged row since it connected is listed
+  without numbers instead (`sjk-viewer/src/scoreboard/in_game.rs`). That still happens
+  on a stock server with more than 20 players.
+- **Gamestate size.** 64 real players' configstrings can pass stock's 16000 characters
+  of gamestate text, so `MAX_GAMESTATE_CHARS` is 49152, the most one server message
+  (`MAX_MSGLEN`) can carry anyway.
 
 SJK's own server (`sjk-dedicated`, the server half of `sjk-game-jka`) stays at 32 slots.
 
