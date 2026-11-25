@@ -10486,6 +10486,15 @@ test: Medals and shaders: type moon, then 42, then mythical: the list follows; H
 test: Give a rare holocron to a test player, then My gifts: listed; Undo twice: it goes again.
 note: Needs the hub's staff-gifts branch deployed; until then Here/Online/Team and My gifts fail.
 
+[staff-self-gifts]
+area: Menus & settings
+title: Staff give to themselves too (game Staff page and admin panel)
+change: Staff page: no more "Staff cannot give to themselves" on your own player.
+change: Hub: own_gift refusal gone; panel Give menu (medal, shader, holocron) for all staff.
+test: As a staff key (not the creator), staff, open yourself: Give a rare holocron: given.
+test: Panel as staff: your own page, Give > Give a holocron: given; credits still owner only.
+note: Hub side deployed 25/11 (b916d85). Still 20 gifts a day; Unique blades stay creator's.
+
 [rejoin-loop]
 area: Gameplay
 title: No more joining the same server again and again (Too Many players with the same IP)
