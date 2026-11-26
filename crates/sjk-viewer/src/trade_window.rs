@@ -36,6 +36,10 @@ const OTHER_TOKEN: u16 = 2;
 const CANCEL_TOKEN: u16 = 3;
 /// The Favourites chip over the player's own items (29/10/2026).
 const FAVOURITES_TOKEN: u16 = 4;
+/// The scrollbar left of the player's own items and the list under the wheel
+/// (26/11/2026: every item lists, three rows at a time).
+const OWN_SCROLLBAR_TOKEN: u16 = 5;
+const OWN_WHEEL_TOKEN: u16 = 6;
 /// The player's offered items (a click takes one back), then their own items (a click
 /// offers one).
 const OFFERED_FIRST: u16 = 10;
@@ -55,7 +59,8 @@ const COLUMN_W: f32 = WIN_W * 0.5 - PAD - 20.0;
 const TILE: f32 = 78.0;
 const TILE_GAP: f32 = 10.0;
 const TILES_ROW: usize = 6;
-/// Rows of the player's own items shown.
+/// Rows of the player's own items shown at once; the wheel or the scrollbar shows the
+/// rest.
 const OWN_ROWS: usize = 3;
 /// The small card of a request or an ended trade.
 const SMALL_X: f32 = 560.0;
@@ -231,6 +236,8 @@ pub(crate) struct View {
     pub(crate) marks_kept: bool,
     /// Only the favourites among the player's own items show (the window sets it).
     pub(crate) favourites_only: bool,
+    /// The first row of the player's own items shown (the window sets it).
+    pub(crate) own_row: usize,
 }
 
 /// One kind's daily limits: (done, most) received and given.
@@ -321,6 +328,24 @@ const LOCK_WARNING: &str =
     "Holocrons received in a trade wait before they can be traded again: each shows how long.";
 
 impl View {
+    /// The player's own items listed, each with its position in [`View::own`]: the
+    /// Favourites chip shows the favourites alone.
+    fn listed_own(&self) -> impl Iterator<Item = (usize, &Item)> {
+        self.own
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| !self.favourites_only || item.favourite)
+    }
+
+    /// The last first row the player's own items may scroll to: the list never scrolls
+    /// past its end.
+    fn last_own_row(&self) -> usize {
+        self.listed_own()
+            .count()
+            .div_ceil(TILES_ROW)
+            .saturating_sub(OWN_ROWS)
+    }
+
     /// The player gives and gets nothing back.
     fn gives_gift(&self) -> bool {
         !self.mine.is_empty() && self.theirs.is_empty()
@@ -373,6 +398,8 @@ pub(crate) struct Window {
     size: Size,
     /// The Favourites chip is on: only the favourites among the player's items show.
     favourites_only: bool,
+    /// The first row of the player's own items shown; a new trade starts at the top.
+    own_row: usize,
 }
 
 /// The window's size, the player's choice (`cl_tradeWindowSize`): the card scales about
@@ -425,6 +452,7 @@ impl Default for Window {
             gift_asked: None,
             size: Size::default(),
             favourites_only: false,
+            own_row: 0,
         }
     }
 }
@@ -432,11 +460,18 @@ impl Default for Window {
 impl Window {
     /// What to show; `None` hides it.
     pub(crate) fn set_view(&mut self, view: Option<View>) {
+        let same_trade = self.view.as_ref().map(|shown| shown.trade.id)
+            == view.as_ref().map(|next| next.trade.id);
+        if !same_trade {
+            self.own_row = 0;
+        }
         self.view = view.map(|mut view| {
             view.confirming_gift = self.gift_asked == Some((view.trade.id, view.trade.rev))
                 && view.gives_gift()
                 && !view.trade.mine.ready;
             view.favourites_only = self.favourites_only && view.marks_kept;
+            self.own_row = self.own_row.min(view.last_own_row());
+            view.own_row = self.own_row;
             view
         });
         if !self.view.as_ref().is_some_and(|view| view.confirming_gift) {
@@ -497,10 +532,31 @@ impl Window {
 
     pub(crate) fn handle_pointer(&mut self, event: InputEvent) -> Option<Choice> {
         let event = self.ui.pointer(event)?;
+        // The scrollbar beside the player's own items, taken and dragged.
+        if let Some((_, row)) = self.ui.scrollbar_drag(&event) {
+            self.scroll_own_to(row);
+            return None;
+        }
+        if event.kind == UiEventKind::Wheel {
+            if matches!(event.token, Some(OWN_WHEEL_TOKEN | OWN_SCROLLBAR_TOKEN)) {
+                let rows = event.delta.map_or(0, |delta| -delta.y.signum() as isize);
+                self.scroll_own_to(self.own_row.saturating_add_signed(rows));
+            }
+            return None;
+        }
         if event.kind != UiEventKind::Activate {
             return None;
         }
         self.press(event.token?)
+    }
+
+    /// Show the player's own items from row `row`, kept within the list.
+    fn scroll_own_to(&mut self, row: usize) {
+        let Some(view) = self.view.as_mut() else {
+            return;
+        };
+        self.own_row = row.min(view.last_own_row());
+        view.own_row = self.own_row;
     }
 
     fn press(&mut self, token: u16) -> Option<Choice> {
@@ -521,8 +577,10 @@ impl Window {
             FAVOURITES_TOKEN if view.marks_kept => {
                 self.favourites_only = !view.favourites_only;
                 let on = self.favourites_only;
+                self.own_row = 0;
                 if let Some(view) = self.view.as_mut() {
                     view.favourites_only = on;
+                    view.own_row = 0;
                 }
                 None
             }
@@ -1046,15 +1104,27 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
     }
     let full = view.mine.len() >= view.items_max;
     // The Favourites chip shows the favourites alone; each tile keeps its own token.
-    let listed = || {
-        view.own
-            .iter()
-            .enumerate()
-            .filter(|(_, item)| !view.favourites_only || item.favourite)
-    };
+    let listed = || view.listed_own();
     let count = listed().count();
-    let shown = count.min(TILES_ROW * OWN_ROWS);
-    for (slot, (index, item)) in listed().take(shown).enumerate() {
+    // Every item lists, three rows at a time, most worth first: the wheel over the list
+    // or the scrollbar at its left shows the rest.
+    let rows_total = count.div_ceil(TILES_ROW);
+    let first_row = view.own_row.min(view.last_own_row());
+    let first = first_row * TILES_ROW;
+    let shown = count.saturating_sub(first).min(TILES_ROW * OWN_ROWS);
+    if rows_total > OWN_ROWS {
+        // Under the tiles, so a click still takes a tile and the wheel the list.
+        ui.scroll_region(
+            OWN_WHEEL_TOKEN,
+            frame.rect(
+                LEFT_X - 28.0,
+                tiles_y,
+                TILES_ROW as f32 * (TILE + TILE_GAP) + 28.0,
+                OWN_ROWS as f32 * (TILE + TILE_GAP) - TILE_GAP,
+            ),
+        );
+    }
+    for (slot, (index, item)) in listed().skip(first).take(shown).enumerate() {
         let (column, row) = (slot % TILES_ROW, slot / TILES_ROW);
         let x = LEFT_X + column as f32 * (TILE + TILE_GAP);
         let y = tiles_y + row as f32 * (TILE + TILE_GAP);
@@ -1079,23 +1149,23 @@ fn own_items(ui: &mut MenuCanvas, frame: &Frame, view: &View, own_y: f32) {
             color::quiet(),
         );
     }
+    if rows_total > OWN_ROWS {
+        // At the list's left, in the card's margin, away from the day's limits.
+        ui.sjk_scrollbar(
+            OWN_SCROLLBAR_TOKEN,
+            frame.rect(
+                LEFT_X - 20.0,
+                tiles_y,
+                4.0,
+                OWN_ROWS as f32 * (TILE + TILE_GAP) - TILE_GAP,
+            ),
+            first_row,
+            OWN_ROWS,
+            rows_total,
+        );
+    }
     let rows = shown.div_ceil(TILES_ROW).max(1) as f32;
     let mut under = tiles_y + rows * (TILE + TILE_GAP) + 2.0;
-    if count > shown {
-        line(
-            ui,
-            frame,
-            LEFT_X,
-            under,
-            COLUMN_W,
-            &format!(
-                "{} more not shown: the most worth come first",
-                count - shown
-            ),
-            color::quiet(),
-        );
-        under += 24.0;
-    }
     if listed().any(|(_, item)| item.locked) {
         line(
             ui,
@@ -2223,6 +2293,7 @@ pub(crate) mod tests {
             confirming_gift: false,
             marks_kept: true,
             favourites_only: false,
+            own_row: 0,
         }
     }
 
@@ -2388,6 +2459,83 @@ pub(crate) mod tests {
         let mut window = super::tests::window(view);
         let _ = drawn(&mut window);
         assert!(window.ui.rect_for(FAVOURITES_TOKEN).is_none());
+    }
+
+    /// The wheel over the player's own items, a notch down or up, and the frame after.
+    fn wheel(window: &mut Window, down: bool) {
+        let list = window
+            .ui
+            .rect_for(OWN_WHEEL_TOKEN)
+            .expect("a list to scroll");
+        let position = sjk_ui::Vec2::new(list.x + list.width * 0.5, list.y + list.height * 0.5);
+        let delta = sjk_ui::Vec2::new(0.0, if down { -40.0 } else { 40.0 });
+        assert_eq!(
+            window.handle_pointer(InputEvent::PointerWheel { position, delta }),
+            None
+        );
+        let _ = drawn(window);
+    }
+
+    /// Every item lists (26/11/2026): three rows at a time, most worth first, with no
+    /// "more not shown" line; the wheel over the list scrolls a row a notch and stops at
+    /// the end, the scrollbar sits at the list's left, away from the day's limits, and a
+    /// new trade starts at the top.
+    #[test]
+    fn every_own_item_lists_and_the_wheel_scrolls_them() {
+        let mut view = open_view();
+        view.own = (0..30)
+            .map(|index| Item::shader(&format!("saber_{index}"), None, 30 - index))
+            .collect();
+        let mut window = window(view.clone());
+        let texts = drawn(&mut window);
+        assert!(
+            !texts.iter().any(|text| text.contains("not shown")),
+            "{texts:?}"
+        );
+        assert!(window.ui.rect_for(OWN_FIRST + 17).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST + 18).is_none());
+        let bar = window
+            .ui
+            .rect_for(OWN_SCROLLBAR_TOKEN)
+            .expect("a scrollbar");
+        let first = window.ui.rect_for(OWN_FIRST).unwrap();
+        assert!(bar.x + bar.width <= first.x, "{bar:?} left of {first:?}");
+        // A notch down: the second row on top.
+        wheel(&mut window, true);
+        assert!(window.ui.rect_for(OWN_FIRST + 5).is_none());
+        assert!(window.ui.rect_for(OWN_FIRST + 6).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST + 23).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST + 24).is_none());
+        // Past the end it stops with the last row at the bottom.
+        for _ in 0..5 {
+            wheel(&mut window, true);
+        }
+        assert!(window.ui.rect_for(OWN_FIRST + 11).is_none());
+        assert!(window.ui.rect_for(OWN_FIRST + 12).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST + 29).is_some());
+        // A tile scrolled into view still goes in with a click.
+        assert!(window.press(OWN_FIRST + 29).is_some());
+        wheel(&mut window, false);
+        assert!(window.ui.rect_for(OWN_FIRST + 6).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST + 29).is_none());
+        // The same trade keeps the place; a new one starts at the top.
+        window.set_view(Some(view.clone()));
+        let _ = drawn(&mut window);
+        assert!(window.ui.rect_for(OWN_FIRST + 6).is_some());
+        assert!(window.ui.rect_for(OWN_FIRST).is_none());
+        view.trade.id += 1;
+        window.set_view(Some(view));
+        let _ = drawn(&mut window);
+        assert!(window.ui.rect_for(OWN_FIRST).is_some());
+    }
+
+    /// A list that fits shows no scrollbar.
+    #[test]
+    fn a_short_list_has_no_scrollbar() {
+        let mut window = window(open_view());
+        let _ = drawn(&mut window);
+        assert!(window.ui.rect_for(OWN_SCROLLBAR_TOKEN).is_none());
+        assert!(window.ui.rect_for(OWN_WHEEL_TOKEN).is_none());
     }
 
     #[test]
