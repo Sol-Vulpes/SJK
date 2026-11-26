@@ -2447,9 +2447,14 @@ and Runic (their medals), the Thousand Cranes, the Hearth and DOOM (Secret, give
 
 Duplicates show in the Collection's Kybers tab (14/10/2026): the rack's state line, the
 grid card's state and the big card's pill read "Yours x2" (or "Worn x2"), the card's
-owned line and the hover card say ", 2 held". The tab's headline still counts kybers
-owned out of the catalogue the player sees ("5 of 23 owned"; an unheld Secret kyber is
-not counted), a duplicate counting once. The tab has a filter
+owned line and the hover card say ", 2 held". The breadcrumb's count ("Kybers 5/23
+owned", in its small size; the Saber pill and the tier strip's All say it too) counts kybers
+owned out of the catalogue the player sees (an unheld Secret kyber is not counted), a
+duplicate counting once. Until 26/11/2026 the page's headline said it ("5 of 23 owned"):
+the headline went, its word "owned" moved to the breadcrumb, and the line after it moved
+left into its room, so the kinds' pills end before the stage's saber switch (with two
+sabers or a staff the Body pill ran under "1st saber"). The Finishers page's breadcrumb
+reads "Finishers 0/1 owned" the same way. The tab has a filter
 since 14/10/2026 for a catalogue near 200: chips for All and each tier (Secret's only for
 a player who holds one; T and Shift+T step through them), Owned (O), the edition (E,
 since 06/11/2026, [Alpha and Beta](#alpha-and-beta-the-collections)) and a search field

@@ -21,7 +21,7 @@
 //! shows one edition alone ([`crate::editions`]: Alpha, the blades before Creyon's round,
 //! and Beta, from it on), and the tiers' counts follow it.
 
-use super::view::{LEAD_Y, LEFT_X, RIGHT_X, SABER_AREA, label_width};
+use super::view::{LEAD_Y, LEFT_X, RIGHT_X, SABER_AREA, after_headline, label_width};
 use super::*;
 use crate::menu::sjk::{Frame, color, kit, text};
 use crate::menu_widgets::TextFamily;
@@ -56,9 +56,12 @@ const LIFT_SECONDS: f32 = 0.16;
 const CHOSEN_OUTLINE: sjk_ui::Color = sjk_ui::Color::new(1.0, 1.0, 1.0, 1.0);
 /// The chroma mark's side on a tile and a row.
 const MARK: f32 = 16.0;
-/// The view switches' side and where the first stands, left of the kinds.
+/// The view switches' side and where the first stands, left of the kinds: after the New
+/// sticker, its "?" and Mark all seen, which start the line (the page has no headline:
+/// its count is the tab's and the tier strip's; 26/11/2026, the kinds' pills ran under
+/// the stage's saber switch with two sabers or a staff).
 const SWITCH: f32 = 36.0;
-const SWITCH_X: f32 = LEFT_X + 466.0;
+pub(super) const SWITCH_X: f32 = LEFT_X + 250.0;
 /// The filters' line under the headline (the Owned and Chroma chips and the search field)
 /// and the tiers' strip under it.
 const TOOLBAR_Y: f32 = 292.0;
@@ -778,11 +781,6 @@ impl Panel {
             .count();
         // Out of the shaders this player sees: an unheld Secret one is not counted.
         let total = inputs.holdings.listed_count();
-        let headline = if inputs.holdings.reason().is_none() {
-            format!("{owned} of {total} owned")
-        } else {
-            "Kybers".to_owned()
-        };
         let shown_words;
         let line = match inputs.holdings {
             unlockables::Holdings::Known(_) if self.shader_filter.active() => {
@@ -808,8 +806,10 @@ impl Panel {
         };
         // The Saber Lab's folder and what it last gave, while the lab is on.
         let lab = crate::saber_lab::status();
-        self.lead(frame, &headline, lab.as_deref().unwrap_or(line));
-        self.new_count(frame, &headline);
+        // No headline: how many are owned is the tab's count and the tier strip's, and
+        // the line's room goes to the kinds' pills.
+        self.lead(frame, "", lab.as_deref().unwrap_or(line));
+        self.new_count(frame, "");
         let finishers_held = crate::finishers::CATALOGUE
             .iter()
             .filter(|f| inputs.holdings.debug() || inputs.holdings.unlock(f.id).is_some())
@@ -950,7 +950,8 @@ impl Panel {
         }
     }
 
-    /// After the headline (`headline`'s words): the New sticker and a "?" chip, gold while
+    /// After the headline (`headline`'s words; at the line's start when there is none): the
+    /// New sticker and a "?" chip, gold while
     /// a shader is New and quiet once none is; a click on "?" opens the note saying how
     /// many are New and what New means ([`Panel::new_note`], 10/11/2026: "21 new" was
     /// cut and the sticker ran into the headline). Mark all seen (N) beside them while
@@ -959,7 +960,7 @@ impl Panel {
         let count = self.marks.new_count();
         let lit = count > 0;
         let s = frame.s;
-        let x = LEFT_X + label_width(headline, 30.0, self.widen) + 14.0;
+        let x = after_headline(headline, self.widen);
         let y = LEAD_Y + 5.0;
         let sticker = marks_view::new_sticker_lit(&mut self.ui, frame, [x, y], 26.0, lit);
         // The "?" chip.

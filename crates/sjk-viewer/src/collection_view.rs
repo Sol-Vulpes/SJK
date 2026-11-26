@@ -34,6 +34,9 @@ pub(crate) const SABER_AREA: [f32; 4] = [1_000.0, 196.0, RIGHT_X - 1_000.0, 300.
 /// The tally's bar at the top right: as wide as its words, a stretch to a tab.
 const TALLY_WIDTH: f32 = 500.0;
 const TALLY_HEIGHT: f32 = 6.0;
+/// After the Kybers and Finishers pages' breadcrumb count, which stands for their old
+/// headline ("146 of 299 owned").
+const OWNED: &str = " owned";
 const GROUP_GAP: f32 = 10.0;
 
 /// How many of a tab's things the player holds, and how many there are; `None` while
@@ -625,6 +628,12 @@ impl Panel {
         if let Some(shards) = self.forge.data.shards.filter(|shards| *shards > 0) {
             labels[Tab::Forge.index()] = crate::cards::grouped(shards);
         }
+        // The Kybers page has no headline (26/11/2026): its breadcrumb's count says what it
+        // counts, as the headline did ("146/299 owned").
+        let kybers = &mut labels[Tab::Shaders.index()];
+        if !kybers.is_empty() {
+            kybers.push_str(OWNED);
+        }
         // The Loadouts card covers the page: text draws over every shape, so the page is
         // left out under it.
         if self.loadouts.is_open() {
@@ -657,7 +666,7 @@ impl Panel {
                 &frame,
                 (back, BACK_TOKEN),
                 "Finishers",
-                (&count.label(), self.widen),
+                (&format!("{}{OWNED}", count.label()), self.widen),
             );
             self.tally(&frame, &counts);
         } else if !asking {
@@ -841,19 +850,22 @@ impl Panel {
         }
     }
 
-    /// A tab's headline at the top left and the line under it.
+    /// A tab's headline at the top left (none when `headline` is empty) and the line
+    /// under it.
     pub(super) fn lead(&mut self, frame: &Frame, headline: &str, line: &str) {
         let s = frame.s;
-        text(
-            &mut self.ui,
-            TextFamily::Display,
-            format_args!("{headline}"),
-            frame.rect(LEFT_X, LEAD_Y, 900.0, 40.0),
-            30.0 * s,
-            color::text(),
-            FontWeight::Semibold,
-            TextAlign::Start,
-        );
+        if !headline.is_empty() {
+            text(
+                &mut self.ui,
+                TextFamily::Display,
+                format_args!("{headline}"),
+                frame.rect(LEFT_X, LEAD_Y, 900.0, 40.0),
+                30.0 * s,
+                color::text(),
+                FontWeight::Semibold,
+                TextAlign::Start,
+            );
+        }
         if !line.is_empty() {
             text(
                 &mut self.ui,
@@ -1252,6 +1264,16 @@ fn stage_scrims(canvas: &mut crate::menu_widgets::MenuCanvas, viewport: [f32; 2]
         space(0.0),
         space(0.86),
     );
+}
+
+/// Where what follows a page's headline (`headline`, drawn by [`Panel::lead`]) starts:
+/// past its words, or at the line's start for a page with none.
+pub(super) fn after_headline(headline: &str, widen: f32) -> f32 {
+    if headline.is_empty() {
+        LEFT_X
+    } else {
+        LEFT_X + label_width(headline, 30.0, widen) + 14.0
+    }
 }
 
 /// How wide `words` are drawn in the display family at `size` (frame pixels): the

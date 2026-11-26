@@ -3181,7 +3181,9 @@ mod tests {
             "the stock blade and the others"
         );
         let seen = runs(&panel);
-        assert!(seen.contains(&format!("1 of {total} owned")), "{seen:?}");
+        // No headline: the breadcrumb's count says "owned" in its place.
+        assert!(!seen.contains(&format!("1 of {total} owned")), "{seen:?}");
+        assert!(seen.contains(&format!("1/{total} owned")), "{seen:?}");
         assert!(seen.contains(&format!("1/{total}")), "{seen:?}");
         assert!(seen.iter().all(|run| !run.contains("Secret")), "{seen:?}");
         assert!(panel.ui.rect_for(FILTER_TIER_BASE + 6).is_none(), "no chip");
@@ -3210,10 +3212,6 @@ mod tests {
         assert_eq!(ids(&panel)[0], "saber_thousand_cranes", "the rarest first");
         assert_eq!(panel.shader_count, 2 + total, "and the one held");
         let seen = runs(&panel);
-        assert!(
-            seen.contains(&format!("2 of {} owned", total + 1)),
-            "{seen:?}"
-        );
         assert!(seen.contains(&format!("2/{}", total + 1)), "{seen:?}");
         let counts = view::counts(&holding);
         assert_eq!((counts[2].held, counts[2].total), (Some(2), total + 1));

@@ -2589,7 +2589,8 @@ kyber the Kybers tab, the Forge and the trade window list carries its marks:
   chosen a second (`shader_marks::Look`, `LOOK_MS`; Sol's decision, 29/10/2026). Resting the pointer never chooses a kyber (31/10/2026;
   hovering chose one before), so it never sees one either. Turning to another tab or closing the page
   sees the kyber chosen only if it had already stayed its second; Mark all seen (N) sees
-  them all. After the Kybers tab's headline (10/11/2026; "21 new" was cut and the
+  them all. At the start of the Kybers tab's first line (10/11/2026, after its headline
+  until that went on 26/11/2026; "21 new" was cut and the
   sticker ran into "owned", measured without the letter spacing): the New sticker and a
   round "?", gold while a kyber is New and quiet once none is, then Mark all seen ("All
   seen" when the full label would reach the view switches). A click on "?" opens the New
@@ -2625,7 +2626,8 @@ carry New as kybers do. Holocrons and dormant kybers carry none: "to open" alrea
   leaving the page sees the choice only if it had stayed its second.
 - **Where it shows:** a gold New sticker on each New card tile (at its foot), tag tile (top
   left), finisher card (after its name) and Inventory row (after its name; a card row in its
-  finish); after the Cards, Tags and Finishers headlines, "N new" on a gold pill and Mark
+  finish); after the Cards and Tags headlines and at the start of the Finishers page's
+  first line (it has no headline since 26/11/2026), "N new" on a gold pill and Mark
   all seen (N), which sees every New thing of that kind; the hall's Kybers, Finishers,
   Tags and Cards tiles a gold "N new" pill at their top right (the Kybers tile's count lost
   its "· 2 new" words for it). The bottom status bar's New part (`cg_statusBarNew`) said
