@@ -64,12 +64,21 @@ pub(super) fn visibility(age: u64, active: bool) -> f32 {
 
 /// Put chat beside the SJK scoreboard while preserving the player's full chat
 /// text scale. The column gets narrower than the normal feed, so larger text
-/// wraps sooner and its rows grow just as they do outside the scoreboard.
-fn place_beside_scoreboard(g: &mut Geometry, viewport: [f32; 2], font_scale: f32) {
+/// wraps sooner and its rows grow just as they do outside the scoreboard. A board
+/// that reaches into the column (a compact free for all in two halves, centred)
+/// narrows it to `end` (window pixels).
+fn place_beside_scoreboard(
+    g: &mut Geometry,
+    viewport: [f32; 2],
+    font_scale: f32,
+    end: Option<u32>,
+) {
     let layout = crate::scoreboard::layout::Layout::new(viewport);
     g.scale = layout.scale * font_scale;
     g.left = layout.chat_left;
-    g.width = layout.chat_width;
+    g.width = end.map_or(layout.chat_width, |end| {
+        (end as f32 - layout.chat_left).clamp(1.0, layout.chat_width)
+    });
     g.top = 150.0 * layout.scale;
     g.bottom = viewport[1] - 200.0 * g.scale;
     g.font = layout::FONT_1080 * g.scale;
@@ -107,8 +116,9 @@ impl ChatOverlay {
         self.visible_blades.fill(None);
         self.visible_bodies.fill(None);
         let mut g = self.options.geometry(viewport);
-        if self.scoreboard_layout == crate::scoreboard::behavior::ChatLayout::SideColumn {
-            place_beside_scoreboard(&mut g, viewport, self.options.font);
+        if let crate::scoreboard::behavior::ChatLayout::SideColumn { end } = self.scoreboard_layout
+        {
+            place_beside_scoreboard(&mut g, viewport, self.options.font, end);
         }
         if let crate::scoreboard::behavior::ChatLayout::Classic { .. } = self.scoreboard_layout {
             // CG_ChatBox_DrawStrings overrides only x/y; retain the player's
@@ -747,10 +757,26 @@ mod tests {
     fn scoreboard_chat_keeps_the_full_font_scale() {
         let viewport = [1920.0, 1080.0];
         let mut geometry = crate::chat::options::Options::default().geometry(viewport);
-        super::place_beside_scoreboard(&mut geometry, viewport, 3.0);
+        super::place_beside_scoreboard(&mut geometry, viewport, 3.0, None);
         assert_eq!(geometry.scale, 3.0);
         assert_eq!(geometry.font, 3.0 * crate::chat::layout::FONT_1080);
         assert_eq!(geometry.row, geometry.font * crate::chat::layout::ROW_PITCH);
+        assert_eq!(geometry.width, 600.0);
+    }
+
+    /// A board that reaches into the column (a compact free for all in two halves)
+    /// narrows it to end where the board says; an end past the column changes nothing.
+    #[test]
+    fn scoreboard_chat_narrows_to_the_boards_end() {
+        let viewport = [1920.0, 1080.0];
+        let options = crate::chat::options::Options::default();
+        let mut geometry = options.geometry(viewport);
+        super::place_beside_scoreboard(&mut geometry, viewport, 1.0, Some(348));
+        assert_eq!(geometry.left, 40.0);
+        assert_eq!(geometry.width, 308.0);
+        let mut geometry = options.geometry(viewport);
+        super::place_beside_scoreboard(&mut geometry, viewport, 1.0, Some(900));
+        assert_eq!(geometry.width, 600.0);
     }
 
     /// The texts and emoji rectangles drawn for `body` with `names` loaded.

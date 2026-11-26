@@ -78,7 +78,11 @@ impl Context {
 pub(crate) enum ChatLayout {
     #[default]
     Normal,
-    SideColumn,
+    /// Beside the SJK board; `end`: the column ends there (whole window pixels),
+    /// left of the board where it reaches into the column (`Scoreboard::chat_end`).
+    SideColumn {
+        end: Option<u32>,
+    },
     Classic {
         hide_feed: bool,
     },
@@ -162,7 +166,12 @@ pub(crate) fn chat_layout(gpu: &crate::GpuState, visible: bool) -> ChatLayout {
     if !visible {
         ChatLayout::Normal
     } else if ScoreboardStyle::from_console(gpu.console.as_ref()) == ScoreboardStyle::Sjk {
-        ChatLayout::SideColumn
+        ChatLayout::SideColumn {
+            end: gpu
+                .scoreboard
+                .chat_end()
+                .map(|end| end.max(0.0).round() as u32),
+        }
     } else {
         let context = context(gpu, false);
         ChatLayout::Classic {

@@ -115,6 +115,10 @@ pub(crate) struct Scoreboard {
     /// The hub roster revision the rows' `identity` tags were derived from;
     /// `u64::MAX` when the rows were rebuilt and need tagging again.
     identity_revision: u64,
+    /// Where the chat column beside the SJK board must end (window pixels), when the
+    /// board drawn last reaches into it (`sjk::build`); the chat, laid out before the
+    /// board each frame, follows a frame behind.
+    chat_end: Option<f32>,
     /// A made-up match the world shots show without a server.
     #[cfg(test)]
     shot: Option<shot::Shot>,
@@ -156,6 +160,7 @@ impl Scoreboard {
             context: behavior::Context::default(),
             requests: behavior::Requests::default(),
             identity_revision: u64::MAX,
+            chat_end: None,
             #[cfg(test)]
             shot: None,
         }
@@ -196,6 +201,12 @@ impl Scoreboard {
 
     pub(crate) fn draw_list(&self) -> &DrawList {
         self.ui.draw_list()
+    }
+
+    /// Where the chat column beside the board must end (window pixels), when the
+    /// SJK board reaches into it: a compact free for all split in two halves.
+    pub(crate) fn chat_end(&self) -> Option<f32> {
+        self.chat_end
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -292,7 +303,7 @@ impl Scoreboard {
                     body: Some(font),
                 },
             };
-            sjk::build(
+            self.chat_end = sjk::build(
                 &mut self.ui,
                 &self.rows,
                 &header,
@@ -314,6 +325,7 @@ impl Scoreboard {
             }
             return;
         }
+        self.chat_end = None;
         let header = classic::ClassicHeader {
             hostname: &self.hostname,
             max_clients: self.max_clients,

@@ -369,6 +369,37 @@ impl GpuState {
         ));
     }
 
+    /// Apply `client`'s clientinfo again once their model loaded on a worker is on
+    /// their slot. The load carries the sabers of the clientinfo that asked for it, and
+    /// a newer clientinfo with the same model is not asked again while it loads
+    /// (`player_loads::Loads::request`): a player who joins sends their clientinfo
+    /// before they spawn, and the sabers they spawn with (`ClientSpawn`) can come while
+    /// their model still loads, which left them with no blade until they changed sabers.
+    /// The mesh being on the slot now, a clientinfo that differs only in sabers or
+    /// cosmetics updates it in place; another model is asked for as usual. Only a
+    /// worker's load calls it (`player_loads::place_loaded`): a mesh placed directly
+    /// with [`Self::place_client_mesh`] (a world shot's rig model) stays as placed.
+    pub(crate) fn catch_up_clientinfo(&mut self, client: u16) {
+        let entity_id = EntityId::new(u64::from(client) + 1);
+        let sabers = |gpu: &Self| {
+            gpu.actor_meshes
+                .iter()
+                .find(|mesh| !mesh.corpse_pool && mesh.entity_id == Some(entity_id))
+                .map(|mesh| mesh.saber_names.clone())
+        };
+        let loaded = sabers(self);
+        if let Err(error) = self.apply_clientinfo(client) {
+            log::progress(format_args!("client {client}: {error}"));
+            return;
+        }
+        let now = sabers(self);
+        if now != loaded {
+            log::progress(format_args!(
+                "client {client}: sabers {loaded:?} -> {now:?}, changed while their model loaded"
+            ));
+        }
+    }
+
     /// [`Self::build_live_actor`], or `stand_in` (Kyle, or a retail model with
     /// `cg_defaultModelRandom`) for an appearance that cannot be loaded here.
     ///

@@ -1728,7 +1728,12 @@ and out as the classic board does, settling into place as it opens.
   or, where that would put it over the chat column, stands 40 right of the
   column (as near the middle as the chat allows); it never ends past 1824 or
   grows wider than the full board, the name column giving way (to 100 at the
-  least). Deaths share the score column rather than adding another column. A duel's
+  least). A free for all split in two halves (past 37 players) is the
+  exception: it stands centred on the screen even where that reaches into the
+  chat column (from 388 at the least, the full board's width), and the chat
+  column narrows while it shows, to end 40 left of the board (`sjk::build`
+  returns that end, `Scoreboard::chat_end`, `ChatLayout::SideColumn { end }`;
+  the chat, laid out before the board, follows a frame behind). Deaths share the score column rather than adding another column. A duel's
   cards keep their size about that middle, the players
   waiting centred under them. The dim behind the columns follows the board,
   fading out on both sides, and "Watching" starts at its left edge. In the UI's
@@ -1741,7 +1746,8 @@ and out as the classic board does, settling into place as it opens.
   apply and the board fills 680 to 1824 as before.
 - **Free for all** (and Holocron, Jedi Master): one list by place; once rows
   would be thinner than 34 pixels (past 22 players) two lists side by side, 16
-  each at 32. Compact keeps it one list (32 players at 23.6).
+  each at 32. Compact keeps it one list (32 players at 23.6) up to 37 players,
+  then splits in two halves centred on the screen, the chat narrowing beside them.
 - **Team games:** the two teams side by side, red left and blue right, each
   under its head: the team's score in Rajdhani 76 (muted while it trails), the
   team's name in its muted colour with how many play, and a thin rule in that
