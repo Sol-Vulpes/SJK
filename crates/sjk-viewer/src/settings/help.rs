@@ -764,7 +764,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::toy_sounds::Toy::Monitor.cvar(),
-        "Off: Monitor sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
+        "Off: Force Throw sounds are not played on this PC, yours or other players'. The toy still works and is still seen.",
     ),
     (
         crate::toy_sounds::Toy::MysteryBox.cvar(),
@@ -1237,7 +1237,7 @@ const HELP: &[(&str, &str)] = &[
     ),
     (
         crate::monitor::SHOW_CVAR,
-        "Off: no Monitor toy monitor is drawn, yours or other players', nor their sounds heard. You can still be hit while the toy is on.",
+        "Off: no Force-thrown junk is drawn, yours or other players', nor its sounds heard. You can still be hit while the toy is on.",
     ),
     (
         crate::tags::SHOW_CVAR,

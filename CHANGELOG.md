@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Force Throw no longer says Monitor anywhere: Settings calls its rows Force Throw sounds and Show thrown junk, the quick wheel Force Throw and Force throw, the status bar and `toy_help` Force Throw; its commands and saved settings are unchanged (hub #337) _(Sol)_
 - Chat: a typed backslash is sent again (`\o/`, `C:\games`); it was dropped from every message, whisper and team chat on the way out (hub #341) _(Sol)_
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
 - Settings > Chat: **Hide bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_

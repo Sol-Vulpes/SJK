@@ -1087,8 +1087,8 @@ and in the hub (same ids):
 | Well Met | `duel_partners_25` | 25 different players duelled | client |
 | Long Throw | `saber_throw_far` | a player defeated by a saber throw from 512 units or more | client |
 | Return to Sender | `thermal_return` | a player defeated with their own thermal detonator | client |
-| Payback (retired 20/11/2026) | `monitor_payback` | during the player's Screen Saver, the player whose monitor raised it struck with a monitor | client |
-| Power Surge (hidden) (retired 20/11/2026) | `monitor_surge` | 3 different players struck with monitors during one Screen Saver | client |
+| Rebound (Payback before 21/11/2026) | `monitor_payback` | during the player's Force Barrier, the player whose throw raised it struck with Force-thrown junk | client |
+| Force Surge (hidden; Power Surge before 21/11/2026) | `monitor_surge` | 3 different players struck with Force-thrown junk during one Force Barrier | client |
 | Blue, Yellow, Red, Dual, Staff Master | `style_blue_50`, `style_yellow_50`, `style_red_50`, `style_dual_50`, `style_staff_50` | 50 duels won with the saber in that style (`fd.saberAnimLevel` when the kill is made: 1 Fast, 2 Medium, 3 Strong, 6 two sabers, 7 staff; Desann's and Tavion's count towards none), in a private duel (saber only or full Force) or a duel game; kills out of a duel do not count | client |
 | Sneaking Mission, Legendary Soldier (retired 20/11/2026) | `box_minutes_30`, `box_minutes_60` | 30, 60 minutes hidden in the cardboard box with another player close by (Tactical Espionage's count) | client |
 | Surprise! (retired 20/11/2026) | `box_ambush` | the player who lifted the player's box defeated by the player within 3 seconds | client |
@@ -1100,13 +1100,13 @@ and in the hub (same ids):
 | Script Kiddie, Elite Hacker (retired 20/11/2026) | `hax_minutes_5`, `hax_minutes_15` | 5, 15 minutes steering players with the Hax | client |
 | It's a Trap! (retired 20/11/2026) | `hax_traps_5` | 5 hackers caught in the player's Hax trap | client |
 | Eye in the Sky | `drone_strike` | the player the Drone watched defeated by the player within 10 seconds of it landing (the peek ended) | client |
-| Special Delivery (retired 20/11/2026) | `drone_monitor` | the player the Drone watched struck with the player's monitor within 5 seconds of it landing | client |
+| Special Delivery | `drone_monitor` | the player the Drone watched struck with the player's Force-thrown junk within 5 seconds of it landing | client |
 | DJ | `boombox_minutes_30` | 30 minutes of the player's boombox playing with an SJK player within its range | client |
 | Block Party | `boombox_crowd` | 3 SJK players within the boombox's range at once | client |
 | Tough Crowd (hidden) | `boombox_tough_crowd` | a player within the boombox's range dead by their own hand or the world's while it plays | client |
-| Tech Support (retired 20/11/2026) | `monitor_victims_25` | 25 different players struck with the player's monitors | client |
-| Two for One, Strike! (hidden) (retired 20/11/2026) | `monitor_double`, `monitor_triple` | 2, 3 players struck with one monitor | client |
-| Long Distance Call (retired 20/11/2026) | `monitor_far` | a player struck with a monitor 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
+| Telekinetic (Tech Support before 21/11/2026) | `monitor_victims_25` | 25 different players struck with the player's Force-thrown junk | client |
+| Two for One, Strike! (hidden) | `monitor_double`, `monitor_triple` | 2, 3 players struck with one Force throw | client |
+| Reach of the Force (Long Distance Call before 21/11/2026) | `monitor_far` | a player struck with Force-thrown junk 1575 units (40 metres, as the world ping measures) or more from where it was thrown, measured where it met the body (`achievements::MONITOR_FAR`) | client |
 | Bounty Hunter, Big Game Hunter | `box_hunt_mark`, `box_hunt_marks_10` | 1, 10 box hunt marks killed (a free roll won or not) | hub |
 | Still Standing, Most Wanted | `box_hunt_survive`, `box_hunt_survive_5` | 1, 5 marks stayed to the end without a hunter's kill, still in the hunt | hub |
 | First Bite, Angler (retired 20/11/2026) | `fish_first`, `fish_50` | 1, 50 fish landed with the Fishing toy ([client.md](client.md#fishing-and-mining-removed)) | client |
@@ -1208,12 +1208,15 @@ live snapshot by `achievements_frame.rs`):
   provided that start is at most 250 ms old. A thermal detonator first seen later (it
   came into view after leaving the hand, or after a bounce) has no thrower and counts
   nothing;
-- Payback and Power Surge (29/10/2026, Sol's Screen Saver for the Monitor,
-  [client.md](client.md#monitor)) are counted by the toy, not the snapshots' tracker
+- Rebound and Force Surge (Payback and Power Surge before 21/11/2026; 29/10/2026, Sol's
+  Screen Saver for the Monitor, now Force Throw's Force Barrier,
+  [client.md](client.md#force-throw)) are counted by the toy, not the snapshots' tracker
   (`achievements::note`), from the hits the struck players' own clients tell (their
   `hit_` event, never a hit only foreseen) on a server not on this machine: during the
-  player's Screen Saver, a hit on the player whose monitor raised it counts Payback,
-  and the third different player hit counts Power Surge, each once a Screen Saver;
+  player's Force Barrier, a hit on the player whose throw raised it counts Rebound,
+  and the third different player hit counts Force Surge, each once a Barrier. The hub's
+  achievement table still names four of the seven by their Monitor names (Payback, Power
+  Surge, Tech Support, Long Distance Call) until it is updated (hub #337);
 - the toys' own (30/10/2026). The tracker weighs each obituary against what the toys
   tell it of the moment (`tracker::Toys`, `GpuState::toy_moments`): the player the Drone
   last watched and when it landed (the peek ended, or moved to another player), and the
@@ -1223,8 +1226,8 @@ live snapshot by `achievements_frame.rs`):
   played does, the most listeners at once is kept (Block Party), and a listener dead by their
   own hand or the world's counts Tough Crowd. The rest are counted by the toys
   (`achievements::note`, `note_best`, `note_name`): the player's monitor's hits as the struck players' clients tell them
-  (Tech Support by name, Two for One and Strike! by the players one monitor struck, Long
-  Distance Call by how far it flew from its throw, and Special Delivery, a hit on the
+  (Telekinetic by name, Two for One and Strike! by the players one throw struck, Reach
+  of the Force by how far it flew from its throw, and Special Delivery, a hit on the
   player the Drone watched within 5 seconds of its landing). The sets of players are
   kept by the name the server shows without colours (`sjk_identity::normal_form`), at
   most 512 each, in `achievements.json`'s `named`, and the toys' minutes' spare

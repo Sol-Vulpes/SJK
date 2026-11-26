@@ -13,7 +13,7 @@
 //!   [`COOLDOWN`] after the last.
 //! - **The throw:** from the eyes, the way the player looks, at [`THROW_SPEED`] plus
 //!   the thrower's own speed, tumbling end over end. Held (`+monitor_throw`, the key
-//!   bindings' Throw monitor), the throw charges while a ring fills round the crosshair
+//!   bindings' Force throw), the throw charges while a ring fills round the crosshair
 //!   and a tube's hum rises ([`CHARGE_SOUND`]), and goes on the release, up to
 //!   [`MAX_THROW_SPEED`] once held [`CHARGE_TIME`]; a charged throw is heard as one
 //!   ([`THROW_HARD_SOUND`]) by everyone, from its speed. The monitor is a solid of eight

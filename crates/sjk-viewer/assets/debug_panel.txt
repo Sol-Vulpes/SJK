@@ -3282,6 +3282,17 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 # ---- Menus & settings ----
 
+[force-throw-names]
+area: Menus & settings
+title: Force Throw: no Monitor name left (hub #337)
+change: Settings rows, quick wheel entries, status bar toy and toy_help say Force Throw.
+change: Commands, cvars, wheel ids and achievement ids keep the monitor names.
+test: Settings > Sound > Toys: Force Throw sounds; Settings search: Show thrown junk.
+test: Quick wheel > Add a choice > Toys: Force Throw and Force throw, crate picture.
+test: Status bar toys: Force Throw (FT); toy_help lists Force Throw.
+test: A wheel saved before still holds both entries.
+note: The hub still names 4 achievements Payback, Power Surge, Tech Support, Long Distance Call.
+
 [creator-hoth-gear]
 area: Menus & settings
 title: Character creation: whole part pictures and the Hoth gear (Kushina, PR #451)
