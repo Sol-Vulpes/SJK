@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- SJK chat: a click on a player's face (or row) in the who-is-online window pins their card, so Block, Whisper and Trade no longer vanish while the mouse moves to them; a click anywhere off the card lets it go _(Kushina)_
 - Force Throw no longer says Monitor anywhere: Settings calls its rows Force Throw sounds and Show thrown junk, the quick wheel Force Throw and Force throw, the status bar and `toy_help` Force Throw; its commands and saved settings are unchanged (hub #337) _(Sol)_
 - Chat: a typed backslash is sent again (`\o/`, `C:\games`); it was dropped from every message, whisper and team chat on the way out (hub #341) _(Sol)_
 - Session log: a chat line held behind other commands, or acknowledged by the server two seconds or more after it left, now says so, and the minute's server view line counts the packets sent a second; the intermission no longer logs false "clientthink freeze" lines (hub reports #335, #324, #336) _(Sol)_
