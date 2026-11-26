@@ -370,6 +370,7 @@ fn build(
         confirming_gift: false,
         marks_kept: marks.kept,
         favourites_only: false,
+        own_row: 0,
         problem: String::new(),
         trade: trade.clone(),
     }

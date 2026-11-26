@@ -3317,8 +3317,13 @@ every menu style, on the 16:9 frame:
   name, ringed in that colour) and its state (Choosing..., Ready, Confirmed), a gold swap
   badge between them. Under a hairline, "Your holocrons and duplicates" ("Your duplicates"
   while the hub trades no holocrons yet, `rules.holocrons` false: duplicates come first, and
-  the toast then says "Duplicate kybers."): up to 18 tiles,
-  those that may go in first, the favourites first among them, most worth first (a click
+  the toast then says "Duplicate kybers."): every item, three rows of six tiles at a
+  time (since 26/11/2026; before, 18 tiles and "N more not shown" under them, so the
+  rest could not go in). The wheel over the list scrolls it a row a notch and stops at its
+  end; a thin scrollbar at the list's left, in the card's margin away from the day's
+  limits, can be dragged (both only when there are more than three rows). A new trade and
+  the Favourites chip start it at the top; the same trade keeps the place as the offers
+  change. Those that may go in come first, the favourites first among them, most worth first (a click
   puts one in; a click on an offered one takes it out). Since 29/10/2026 a kyber's tile
   carries its marks ([Marks](#marks)), drawn from shapes and plain words as the window's
   font draws bytes: a star and a padlock at its top left, "Worn" at its top right, a New
