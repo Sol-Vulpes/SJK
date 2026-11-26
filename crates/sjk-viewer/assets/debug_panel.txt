@@ -24,6 +24,14 @@
 
 # ---- Console & chat ----
 
+[chat-backslash]
+area: Console & chat
+title: A backslash typed in chat is sent (hub #341)
+change: Chat commands are read back the server's way: a backslash is text, not an escape.
+test: Say \o/ and a\b in All, Team and a whisper: everyone reads them with the backslash.
+test: A message ending in \ is sent whole.
+test: With cl_colorString on and with %H% in the line: the backslash is kept.
+
 [player-slots-64]
 area: Gameplay
 title: Servers with more than 32 player slots: up to 64 players shown

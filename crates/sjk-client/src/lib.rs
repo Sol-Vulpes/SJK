@@ -179,9 +179,9 @@ pub use character_catalog::{
 };
 pub use chat::{
     CHAT_DRAFT_CHARS, CHAT_INPUT_BYTES, ChatDestination, ChatDraftTooLong, ChatRoster, ChatTarget,
-    MAX_CHAT_PIECES, SJK_COPY_TAG, chat_body, chat_command, chat_command_full, chat_commands,
-    chat_display_text, chat_input_fits, chat_name_key, chat_plain_text, chat_unescape, sjk_copy_id,
-    sjk_copy_marker,
+    MAX_CHAT_PIECES, SJK_COPY_TAG, chat_body, chat_command, chat_command_full, chat_command_tokens,
+    chat_commands, chat_display_text, chat_input_fits, chat_name_key, chat_plain_text,
+    chat_unescape, sjk_copy_id, sjk_copy_marker,
 };
 pub use client_commands::{CompatConsoleCommand, console_commands as compat_console_commands};
 pub use compat_profile::{CompatProfile, PLUGIN_DISABLE_DEFAULT, PLUGIN_IDENTITY_KEY};

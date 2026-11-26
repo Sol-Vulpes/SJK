@@ -8745,6 +8745,13 @@ or below 149 bytes; neither a Unicode character nor either escape is cut, and th
 active colour is repeated at the start of the next piece
 ([chat.rs](../crates/sjk-client/src/chat.rs) `chat_commands`, `chat_unescape`).
 
+A backslash needs no escape: the server splits a command with `Cmd_TokenizeString`,
+for which `\` is plain text, so `\o/` reaches everyone as typed. Every step that reads
+a built chat command back (the `%` substitutions, `cl_colorString`, the splitting into
+pieces, the whisper's recipient) splits it the server's way
+(`sjk_client::chat_command_tokens`), never with the console's escapes, which dropped
+a typed `\` before 26/11/2026 (hub #341).
+
 ### Chat emojis
 
 `cg_chatBoxEmojis 1` (default 0, also Settings > Chat > Chat emojis) shows JoF

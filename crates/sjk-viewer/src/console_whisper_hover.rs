@@ -66,7 +66,7 @@ impl State {
 }
 
 fn sent_whisper(command: &str, name: String) -> Option<Pending> {
-    let tokens = sjk_shell::tokenize(command).ok()?;
+    let tokens = sjk_client::chat_command_tokens(command);
     let [verb, slot, body @ ..] = tokens.as_slice() else {
         return None;
     };
