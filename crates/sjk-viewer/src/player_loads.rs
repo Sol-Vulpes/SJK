@@ -330,7 +330,7 @@ impl GpuState {
                 self.world_materials.install_pipelines(pipelines);
             }
             if let Some(mesh) = compiling.mesh {
-                self.place_client_mesh(compiling.client, mesh, &compiling.appearance);
+                self.place_loaded(compiling.client, mesh, &compiling.appearance);
             }
         }
         if uploading.is_none()
@@ -384,6 +384,13 @@ impl GpuState {
         });
     }
 
+    /// Put `mesh`, loaded on a worker, on `client`'s slot, then catch up with the
+    /// clientinfo that came while it loaded ([`Self::catch_up_clientinfo`]).
+    fn place_loaded(&mut self, client: u16, mesh: ActorMesh, appearance: &Appearance) {
+        self.place_client_mesh(client, mesh, appearance);
+        self.catch_up_clientinfo(client);
+    }
+
     /// Put a model whose textures are all up on its player: its materials and geometry
     /// now, its new pipelines on a worker first.
     fn install_player_model(&mut self, client: u16, appearance: Appearance, loaded: Loaded) {
@@ -411,7 +418,7 @@ impl GpuState {
             });
         }
         if jobs.is_empty() {
-            self.place_client_mesh(client, mesh, &appearance);
+            self.place_loaded(client, mesh, &appearance);
             return;
         }
         let pipelines = jobs.len();
@@ -424,7 +431,7 @@ impl GpuState {
         if let Err(error) = spawned {
             // The slots compile on the model's first draw instead.
             log::progress(format_args!("model pipeline compiler: {error}"));
-            self.place_client_mesh(client, mesh, &appearance);
+            self.place_loaded(client, mesh, &appearance);
             return;
         }
         log::progress(format_args!(

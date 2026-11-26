@@ -367,7 +367,6 @@ impl GpuState {
             "client {client} {wears} {}/{}",
             appearance.model, appearance.variant
         ));
-        self.catch_up_clientinfo(client);
     }
 
     /// Apply `client`'s clientinfo again once their model loaded on a worker is on
@@ -377,8 +376,10 @@ impl GpuState {
     /// before they spawn, and the sabers they spawn with (`ClientSpawn`) can come while
     /// their model still loads, which left them with no blade until they changed sabers.
     /// The mesh being on the slot now, a clientinfo that differs only in sabers or
-    /// cosmetics updates it in place; another model is asked for as usual.
-    fn catch_up_clientinfo(&mut self, client: u16) {
+    /// cosmetics updates it in place; another model is asked for as usual. Only a
+    /// worker's load calls it (`player_loads::place_loaded`): a mesh placed directly
+    /// with [`Self::place_client_mesh`] (a world shot's rig model) stays as placed.
+    pub(crate) fn catch_up_clientinfo(&mut self, client: u16) {
         let entity_id = EntityId::new(u64::from(client) + 1);
         let sabers = |gpu: &Self| {
             gpu.actor_meshes
