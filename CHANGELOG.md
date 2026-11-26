@@ -32,6 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
+- Scoreboard (compact): a free for all split in two halves (past 37 players) stands centred on the screen instead of pushed to the right; the chat beside it narrows while it shows _(Kushina, PR #459)_
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
 - Settings > Chat: **Hide bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_
 - Feats (`cg_feats`): each medal shows its picture again, left of its name, instead of an empty space that pushed the name right; the name's capitals sit in the middle of the plate, no longer low with their feet clipped _(Kushina, PR #455)_
