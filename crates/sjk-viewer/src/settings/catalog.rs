@@ -454,7 +454,7 @@ pub(super) const AUDIO: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Monitor sounds",
+        label: "Force Throw sounds",
         cvar: crate::toy_sounds::Toy::Monitor.cvar(),
         kind: ValueKind::Bool,
     },
@@ -1470,7 +1470,7 @@ pub(super) const GAME: &[Setting] = &[
         kind: ValueKind::Bool,
     },
     Setting {
-        label: "Show monitors",
+        label: "Show thrown junk",
         cvar: crate::monitor::SHOW_CVAR,
         kind: ValueKind::Bool,
     },

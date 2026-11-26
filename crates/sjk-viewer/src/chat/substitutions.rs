@@ -134,9 +134,7 @@ pub(super) fn expand<'a>(text: &'a str, values: Option<&Values>, time: LocalTime
 /// escaped percent signs; undo those display escapes before expanding, then use
 /// the normal safe serializer again. The send boundary divides the result.
 pub(super) fn command(command: &str, values: Option<&Values>, time: LocalTime) -> String {
-    let Ok(tokens) = sjk_shell::tokenize(command) else {
-        return command.to_owned();
-    };
+    let tokens = sjk_client::chat_command_tokens(command);
     let Some(name) = tokens.first() else {
         return command.to_owned();
     };
@@ -251,6 +249,15 @@ mod tests {
         assert_eq!(
             command("set name %H%", Some(&values()), time(0)),
             "set name %H%"
+        );
+    }
+
+    #[test]
+    fn a_backslash_stays_text() {
+        // #341: as the server reads it, never a console escape.
+        assert_eq!(
+            command(r#"say "\o/ %H% \""#, Some(&values()), time(0)),
+            r#"say "\o/ 73 \""#
         );
     }
 

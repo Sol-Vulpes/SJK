@@ -24,6 +24,14 @@
 
 # ---- Console & chat ----
 
+[chat-backslash]
+area: Console & chat
+title: A backslash typed in chat is sent (hub #341)
+change: Chat commands are read back the server's way: a backslash is text, not an escape.
+test: Say \o/ and a\b in All, Team and a whisper: everyone reads them with the backslash.
+test: A message ending in \ is sent whole.
+test: With cl_colorString on and with %H% in the line: the backslash is kept.
+
 [player-slots-64]
 area: Gameplay
 title: Servers with more than 32 player slots: up to 64 players shown
@@ -3273,6 +3281,17 @@ test: Hold +attack: it fires as before. Hold a chord bound to weapnext: it cycle
 
 
 # ---- Menus & settings ----
+
+[force-throw-names]
+area: Menus & settings
+title: Force Throw: no Monitor name left (hub #337)
+change: Settings rows, quick wheel entries, status bar toy and toy_help say Force Throw.
+change: Commands, cvars, wheel ids and achievement ids keep the monitor names.
+test: Settings > Sound > Toys: Force Throw sounds; Settings search: Show thrown junk.
+test: Quick wheel > Add a choice > Toys: Force Throw and Force throw, crate picture.
+test: Status bar toys: Force Throw (FT); toy_help lists Force Throw.
+test: A wheel saved before still holds both entries.
+note: The hub still names 4 achievements Payback, Power Surge, Tech Support, Long Distance Call.
 
 [creator-hoth-gear]
 area: Menus & settings

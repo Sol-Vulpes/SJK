@@ -262,7 +262,7 @@ fn shown_text(text: &str) -> String {
 
 /// The whisper's text: what follows `tell <slot>`, unquoted as the server reads it.
 fn whisper_text(command: &str) -> Option<(u16, String)> {
-    let tokens = server_tokens(command);
+    let tokens = sjk_client::chat_command_tokens(command);
     let [verb, slot, body @ ..] = tokens.as_slice() else {
         return None;
     };
@@ -270,31 +270,6 @@ fn whisper_text(command: &str) -> Option<(u16, String)> {
     (verb.eq_ignore_ascii_case("tell") && !text.trim().is_empty())
         .then(|| Some((slot.parse().ok()?, text)))
         .flatten()
-}
-
-/// `command`'s arguments as the game server splits them (`Cmd_TokenizeString`): a
-/// quote runs to the next quote or the end, and a backslash is plain text. The
-/// console's escapes would turn a whisper ending in `\` into an unclosed quote and
-/// send it unencrypted.
-fn server_tokens(command: &str) -> Vec<&str> {
-    let mut tokens = Vec::new();
-    let mut rest = command;
-    loop {
-        rest = rest.trim_start();
-        if rest.is_empty() {
-            return tokens;
-        }
-        let (token, after) = if let Some(quoted) = rest.strip_prefix('"') {
-            quoted.split_once('"').unwrap_or((quoted, ""))
-        } else {
-            let end = rest
-                .find(|c: char| c.is_whitespace() || c == '"')
-                .unwrap_or(rest.len());
-            rest.split_at(end)
-        };
-        tokens.push(token);
-        rest = after;
-    }
 }
 
 /// Whether encrypted whispers are on for `console`'s player here: `cl_e2eWhispers` and

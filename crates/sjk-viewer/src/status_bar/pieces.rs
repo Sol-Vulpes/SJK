@@ -72,7 +72,7 @@ pub(crate) const TOYS: [Toy; TOY_COUNT] = [
     toy("Ragdoll", Some("ragdoll"), "RG"),
     toy("Drone", Some("drone"), "DR"),
     toy("Boombox", Some("boombox"), "BB"),
-    toy("Monitor", Some("monitor"), "MO"),
+    toy("Force Throw", Some("monitor"), "FT"),
     toy("Box hunt", Some("box_hunt"), "BH"),
     toy("Quests", Some("quests"), "QU"),
 ];

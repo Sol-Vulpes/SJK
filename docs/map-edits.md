@@ -11,7 +11,7 @@ the hub copies in [sjk-identity's map_edits](../crates/sjk-identity/src/map_edit
 | Edit | Drawn | Not changed |
 | --- | --- | --- |
 | `hide_prop` | the map's `misc_model_static` prop no longer draws | its lamps, if it has any ([static lamps](rendering.md)) |
-| `hide_surface` | a BSP surface draws nothing, and picks and impact marks skip it | the bake around it |
+| `hide_surface` | a BSP surface draws nothing, and picks and impact marks skip it | the bake around it; real-time lighting's static triangles (see below) |
 | `place` | an MD3 from the game data at a position, turned and scaled | lighting: entity light only, as props get |
 | `remap` | a shader drawn instead of another wherever the map draws it | |
 | `show_face` | one caulk, nodraw or sky side of a world brush, drawn with a shader | collision, the bake |
@@ -22,6 +22,15 @@ the hub copies in [sjk-identity's map_edits](../crates/sjk-identity/src/map_edit
 No edit changes a map's baked light: the lightmaps, the light grid and the vertex light
 are the BSP's own, so a hidden lamp's glow stays baked on the walls round it (as a hidden
 prop's), and an added light only adds to them.
+
+A hidden surface still stops light in real-time lighting (known limitation, 26/11/2026,
+hub #342): the static triangles that the lamps' visibility, the bounced light and the
+dynamic lights' wall shadows ([rendering.md](rendering.md#dynamic-lights-and-walls)) trace
+are gathered from the whole world when the map loads (`gi_runtime.rs` `install_gi`),
+while `hide_surface` only empties the surface's triangles in the drawn index buffer
+(`map_edits/mod.rs` `show_surface`). So the ground under a hidden model (academy6's
+hidden X-wing and Z-95) gets no saber or shot glow where the model would have shaded it.
+`r_dynamicLightShadows 0` lets dynamic lights through for a check.
 
 Edits change what is drawn, never collision. The server keeps every brush and entity: a
 hidden prop or surface with clip brushes is an invisible wall, and a placed model can be

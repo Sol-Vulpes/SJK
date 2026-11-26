@@ -44,7 +44,7 @@ pub(crate) const TOYS: [(&str, &str, &str); 8] = [
         "carry a stereo playing your tracks to players close by, or stand it down with boombox_place; boombox lists them (verified players)",
     ),
     (
-        "Monitor",
+        "Force Throw",
         "toy_monitor",
         "hurl junk with your throw key, hold it to charge; thrown junk knocks you flying",
     ),

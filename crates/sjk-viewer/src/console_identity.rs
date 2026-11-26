@@ -235,13 +235,11 @@ pub(crate) fn color_chat(command: &str, mask: u16, randomness: u32) -> String {
     if mask == 0 {
         return command.to_owned();
     }
-    let Ok(tokens) = sjk_shell::tokenize(command) else {
-        return command.to_owned();
-    };
+    let tokens = sjk_client::chat_command_tokens(command);
     let (destination, message) = match tokens.as_slice() {
-        [name, message] if name == "say" => (sjk_client::ChatDestination::Global, message),
-        [name, message] if name == "say_team" => (sjk_client::ChatDestination::Team, message),
-        [name, slot, message] if name == "tell" => {
+        [name, message] if *name == "say" => (sjk_client::ChatDestination::Global, message),
+        [name, message] if *name == "say_team" => (sjk_client::ChatDestination::Team, message),
+        [name, slot, message] if *name == "tell" => {
             let Ok(slot) = slot.parse() else {
                 return command.to_owned();
             };
@@ -251,4 +249,16 @@ pub(crate) fn color_chat(command: &str, mask: u16, randomness: u32) -> String {
     };
     let text = randomized(message, mask, randomness);
     sjk_client::chat_command_full(destination, &text).unwrap_or_else(|| command.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn colouring_keeps_a_backslash() {
+        // #341: the console's escapes ate a typed `\`.
+        assert_eq!(super::color_chat(r#"say "a\b""#, 0, 1), r#"say "a\b""#);
+        let coloured = super::color_chat(r#"tell 3 "a\b \""#, 1, 1);
+        assert!(coloured.starts_with("tell 3 \""), "{coloured}");
+        assert_eq!(coloured.matches('\\').count(), 2, "{coloured}");
+    }
 }

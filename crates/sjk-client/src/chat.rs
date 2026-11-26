@@ -391,6 +391,32 @@ fn chat_piece(c: char, buffer: &mut [u8; 4]) -> &str {
     }
 }
 
+/// `command`'s arguments as the game server splits them (`Cmd_TokenizeString`): a
+/// quote runs to the next quote or the end, and a backslash is plain text. The
+/// console tokenizer's escapes would drop a typed `\` from a chat
+/// command built by [`chat_command_full`], or turn one ending in `\` into an
+/// unclosed quote.
+pub fn chat_command_tokens(command: &str) -> Vec<&str> {
+    let mut tokens = Vec::new();
+    let mut rest = command;
+    loop {
+        rest = rest.trim_start();
+        if rest.is_empty() {
+            return tokens;
+        }
+        let (token, after) = if let Some(quoted) = rest.strip_prefix('"') {
+            quoted.split_once('"').unwrap_or((quoted, ""))
+        } else {
+            let end = rest
+                .find(|c: char| c.is_whitespace() || c == '"')
+                .unwrap_or(rest.len());
+            rest.split_at(end)
+        };
+        tokens.push(token);
+        rest = after;
+    }
+}
+
 /// Bytes an escaped chat payload leaves with.
 fn sent_bytes(payload: &str) -> usize {
     sjk_protocol::encode_legacy_text(payload).len()

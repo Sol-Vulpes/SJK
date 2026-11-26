@@ -6597,8 +6597,10 @@ knocks them down as a [ragdoll](#ragdoll) and sends them flying, the way it stru
 Its commands, cvars, look id and code keep the Monitor's name (`toy_monitor`,
 `monitor_throw`, `+monitor_throw`, `cg_toyMonitorShow`, `s_toyMonitorSound`, the look's
 `monitor`, [monitor.rs](../crates/sjk-viewer/src/monitor.rs)), so binds and saved settings
-carry over; Settings still calls its rows "Monitor sounds" and "Show monitors", and the
-quick wheel its entries "Monitor" and "Throw monitor".
+carry over. Since 26/11/2026 (hub #337) nothing a player reads says Monitor any more:
+Settings calls its rows "Force Throw sounds" and "Show thrown junk", the quick wheel its
+entries "Force Throw" and "Force throw", the status bar's toy "Force Throw" (FT) and
+`toy_help` "Force Throw"; its picture is the hurled crate (`toy_monitor.png`).
 
 - **`toy_monitor`** (a bind, the quick wheel's Toys page, Collection > Toys, "Hit me")
   is the switch, both the right to throw and the consent to be hit (Sol's rule: always
@@ -6613,7 +6615,7 @@ quick wheel its entries "Monitor" and "Throw monitor".
   pieces (`models/chunks/crate/crate1_*.md3`), flung out and up, lying 2 seconds and
   fading over the last half second; it does not burst at a hit, as the throw flies on
   after one (for Two for One and Strike!).
-- **`monitor_throw`** (the quick wheel's Throw monitor, the console) throws from the
+- **`monitor_throw`** (the quick wheel's Force throw, the console) throws from the
   eyes, the way the player looks, at 1,100 units a second plus the player's own speed,
   tumbling end over end; one every 1.2 seconds at most, four of a player's out at once
   (the oldest goes). Without the toy on it says "Turn the Force Throw toy on to throw";
@@ -6711,7 +6713,7 @@ quick wheel its entries "Monitor" and "Throw monitor".
   second (at most every 120 ms a throw, louder the harder: from 0.55 to full at 600) and
   `cratebust1` when a crate bursts. A knock carries farther than the game's own sounds,
   at full volume to 768 units and silent past about 2,000 (`KNOCK_REACH`), so a throw
-  landing far from the listener is still heard. Settings > Sound > Toys, "Monitor
+  landing far from the listener is still heard. Settings > Sound > Toys, "Force Throw
   sounds" (`s_toyMonitorSound`), silences them.
 - **Achievements** ([identity.md](identity.md#achievements)), the Monitor's ids kept:
   Rebound (strike the player whose throw raised your Force Barrier, while it holds), the
@@ -7340,7 +7342,7 @@ is Illuminate, which runs `toy_illuminate` (the toggle the bind uses) with the
 Illuminate holocron's picture. Its gold dot marks a lit holocron (the client's own
 state; no cvar holds it). Since 23/10/2026 the default page also has the [Ragdoll](#ragdoll) (`toy_ragdoll`, marked
 while the player is limp), and since 26/10/2026 the Monitor, now [Force Throw](#force-throw) (`toy_monitor`,
-marked while it is on, then Throw monitor, `monitor_throw`); a wheel saved before keeps
+marked while it is on, then Force throw, `monitor_throw`); a wheel saved before keeps
 its Toys page as it was, and gains them from Add a choice, Toys. The page holds ten, so
 later toys are in the catalogue's Toys group only, to add from there: Box hunt
 (`toy_boxhunt`), [Quests](quests.md) (`toy_quests`, since 04/11/2026) and the Tag
@@ -8744,6 +8746,13 @@ draft counts its escaped legacy bytes (`%` takes three bytes, `"` two) and stays
 or below 149 bytes; neither a Unicode character nor either escape is cut, and the
 active colour is repeated at the start of the next piece
 ([chat.rs](../crates/sjk-client/src/chat.rs) `chat_commands`, `chat_unescape`).
+
+A backslash needs no escape: the server splits a command with `Cmd_TokenizeString`,
+for which `\` is plain text, so `\o/` reaches everyone as typed. Every step that reads
+a built chat command back (the `%` substitutions, `cl_colorString`, the splitting into
+pieces, the whisper's recipient) splits it the server's way
+(`sjk_client::chat_command_tokens`), never with the console's escapes, which dropped
+a typed `\` before 26/11/2026 (hub #341).
 
 ### Chat emojis
 

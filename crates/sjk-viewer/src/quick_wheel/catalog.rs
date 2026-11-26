@@ -642,10 +642,11 @@ pub(crate) const ACTIONS: &[Action] = &[
         State::BoomboxDown,
         Some("boombox"),
     ),
-    // Lets the player throw monitors, and be hit by them.
+    // Force Throw (the Monitor before 21/11/2026, its ids kept): lets the player throw
+    // junk, and be hit by it.
     action(
         "monitor",
-        "Monitor",
+        "Force Throw",
         crate::monitor::COMMAND,
         Toys,
         State::Monitor,
@@ -654,7 +655,7 @@ pub(crate) const ACTIONS: &[Action] = &[
     // Throws one, the way the player looks.
     action(
         "monitor_throw",
-        "Throw monitor",
+        "Force throw",
         crate::monitor::THROW_COMMAND,
         Toys,
         State::None,

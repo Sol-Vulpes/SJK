@@ -616,9 +616,8 @@ fn split_outgoing_chat(
     mod_chat: &[&str],
     addressed: &[&str],
 ) -> Result<Vec<String>, sjk_client::ChatDraftTooLong> {
-    let Ok(tokens) = sjk_shell::tokenize(command) else {
-        return Ok(vec![command.to_owned()]);
-    };
+    // As the server splits it: a typed `\` is text, not a console escape (#341).
+    let tokens = sjk_client::chat_command_tokens(command);
     let Some(verb) = tokens.first() else {
         return Ok(vec![command.to_owned()]);
     };
@@ -675,7 +674,7 @@ fn command_word(word: &str) -> String {
 }
 
 fn whisper_destination(command: &str) -> Option<u16> {
-    let tokens = sjk_shell::tokenize(command).ok()?;
+    let tokens = sjk_client::chat_command_tokens(command);
     let [verb, slot, body @ ..] = tokens.as_slice() else {
         return None;
     };
@@ -752,6 +751,33 @@ mod whisper_destination_tests {
         // An unaddressed mod chat is one quoted message, as before.
         let pieces = split_outgoing_chat("clansay -1 hi", &mods, &addressed).unwrap();
         assert_eq!(pieces, ["clansay \"-1 hi\""]);
+    }
+
+    #[test]
+    fn a_typed_backslash_reaches_the_server() {
+        // #341: the console's escapes ate it (`\o/` went out as `o/`).
+        for (destination, text, sent) in [
+            (
+                sjk_client::ChatDestination::Global,
+                r"\o/ a\b",
+                r#"say "\o/ a\b""#,
+            ),
+            (
+                sjk_client::ChatDestination::Team,
+                r"ends in \",
+                r#"say_team "ends in \""#,
+            ),
+            (
+                sjk_client::ChatDestination::Player(3),
+                r"C:\path",
+                r#"tell 3 "C:\path""#,
+            ),
+        ] {
+            let full = sjk_client::chat_command_full(destination, text).expect("chat");
+            assert_eq!(full, sent);
+            assert_eq!(split_outgoing_chat(&full, &[], &[]).unwrap(), [sent]);
+        }
+        assert_eq!(whisper_destination(r#"tell 3 "a\b""#), Some(3));
     }
 
     #[test]
