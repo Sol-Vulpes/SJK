@@ -702,7 +702,10 @@ codes aside) on their own colour, as their card and profile draw it
 - Resting the pointer on a face shows the player's sender card with Mute or Unmute, as a
   name in the chat does, and rings the face in gold; the card opens left of the window,
   so the window's other faces do not show through it. A click chooses that player's
-  newest message on show, if any. Muted players stay, their faces greyed. The player's
+  newest message on show, if any, and pins their card (26/11/2026; a face or a row of the
+  list): it stays wherever the pointer goes and other faces leave it alone, so its
+  buttons (Block, Whisper, Trade) are easy to reach, until a click anywhere off the card
+  lets it go. Muted players stay, their faces greyed. The player's
   own key is listed too.
 - The window is as tall as what it shows, so Chosen message sits right under it.
 - **A hub that does not list them** (the `people` below absent, as from the deployed hub

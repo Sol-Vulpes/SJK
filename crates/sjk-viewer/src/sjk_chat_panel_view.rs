@@ -1859,8 +1859,15 @@ impl Panel {
     }
 
     /// Show the sender card of the player whose name or face is under the pointer
-    /// (`hovered`), keep it while the pointer is on the card, else hide it.
+    /// (`hovered`), keep it while the pointer is on the card, else hide it. A card pinned
+    /// by a click on its face stays, whatever the pointer is over.
     fn follow_card(&mut self, hovered: Option<Shows>) {
+        if let Some(card) = &mut self.card
+            && self.pinned.as_ref() == Some(&card.source)
+        {
+            card.left = None;
+            return;
+        }
         match hovered {
             Some((source, person, anchor)) => match &mut self.card {
                 Some(card) if card.source == source => {
@@ -2860,6 +2867,58 @@ mod tests {
         panel.selected = None;
         let _ = panel.activate(PERSON_BASE + 1);
         assert_eq!(panel.selected, None);
+    }
+
+    /// A click on a face pins its card (26/11/2026: it vanished on the way to Block,
+    /// Whisper or Trade): it stays wherever the pointer goes, other faces under the
+    /// pointer leave it alone, a press on the card keeps it, and a press anywhere else
+    /// lets it go.
+    #[test]
+    fn a_clicked_face_pins_its_card_until_a_click_elsewhere() {
+        use sjk_ui::{InputEvent, PointerButton, Vec2};
+        let fonts = crate::text::load_modern(1.0, None).expect("Inter");
+        let state = crowd(5);
+        let mut panel = Panel::new();
+        panel.open(true);
+        let inputs = inputs(&state, &[], false);
+        panel.build_with(&inputs, &fonts.font, [1920.0, 1080.0]);
+        let shown = faces(&panel);
+        let centre = |rect: Rect| [rect.x + rect.width * 0.5, rect.y + rect.height * 0.5];
+        let click = |panel: &mut Panel, at: [f32; 2]| {
+            let position = Vec2::new(at[0], at[1]);
+            let button = PointerButton::Primary;
+            let _ = panel.handle_pointer(InputEvent::PointerPress { position, button });
+            panel.handle_pointer(InputEvent::PointerRelease { position, button })
+        };
+        let sol = CardSource::Person(format!("{:016x}", 2));
+        point_at(&mut panel, &inputs, &fonts.font, centre(shown[0]));
+        let _ = click(&mut panel, centre(shown[0]));
+        assert_eq!(panel.pinned.as_ref(), Some(&sol));
+        // Off the face and the card, past the grace: it stays.
+        let away = [shown[0].right() + 5.0, centre(shown[0])[1]];
+        point_at(&mut panel, &inputs, &fonts.font, away);
+        if let Some(card) = panel.card.as_mut() {
+            card.left = Some(std::time::Instant::now() - super::CARD_GRACE);
+        }
+        point_at(&mut panel, &inputs, &fonts.font, away);
+        assert_eq!(panel.card.as_ref().map(|card| &card.source), Some(&sol));
+        // Another face under the pointer leaves it alone.
+        point_at(&mut panel, &inputs, &fonts.font, centre(shown[1]));
+        assert_eq!(panel.card.as_ref().map(|card| &card.source), Some(&sol));
+        // A press on the card keeps it pinned.
+        let card = panel.ui.rect_for(CARD_TOKEN).expect("the card");
+        point_at(&mut panel, &inputs, &fonts.font, centre(card));
+        let _ = click(&mut panel, centre(card));
+        assert_eq!(panel.pinned.as_ref(), Some(&sol));
+        // A press elsewhere lets it go: it leaves once the pointer is off it.
+        point_at(&mut panel, &inputs, &fonts.font, away);
+        let _ = click(&mut panel, away);
+        assert_eq!(panel.pinned, None);
+        if let Some(card) = panel.card.as_mut() {
+            card.left = Some(std::time::Instant::now() - super::CARD_GRACE);
+        }
+        point_at(&mut panel, &inputs, &fonts.font, away);
+        assert!(panel.card.is_none());
     }
 
     /// A sender's card over the history leaves out the text it covers (text draws over

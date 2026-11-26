@@ -231,6 +231,10 @@ pub(crate) struct Panel {
     shown: Shown,
     /// The sender card on show.
     card: Option<Hovered>,
+    /// The player in the who-is-online window whose face (or row) was clicked: their card
+    /// stays wherever the pointer goes, so its Block, Whisper and Trade are easy to
+    /// reach, until a click anywhere off the card (26/11/2026).
+    pinned: Option<CardSource>,
     /// The pictures' versions found for faces without one (key, version; empty for
     /// none), newest last.
     pictures: Vec<(String, String)>,
@@ -319,6 +323,7 @@ impl Panel {
             staff_after: None,
             shown: Shown::default(),
             card: None,
+            pinned: None,
             pictures: Vec::new(),
             pointer: None,
             previous_people: Vec::with_capacity(PEOPLE_SHOWN),
@@ -348,6 +353,7 @@ impl Panel {
         self.scroll = 0;
         self.people_scroll = 0;
         self.gifs.close();
+        self.pinned = None;
     }
 
     /// Hide the page; returns whether it had opened the console.
@@ -866,8 +872,13 @@ impl Panel {
             .filter(|index| usize::from(*index) < PEOPLE_SHOWN)
         {
             // A click on a player in the window chooses their newest message on show
-            // (in the list it does nothing, so the list stays); the card shows under the
-            // pointer either way.
+            // (in the list it does nothing, so the list stays); either way their card
+            // stays put until a click off it.
+            self.pinned = self
+                .shown
+                .people
+                .get(usize::from(index))
+                .map(|key| CardSource::Person(key.clone()));
             if self.people_list {
                 return PanelAction::None;
             }
@@ -1161,7 +1172,20 @@ impl Panel {
             self.pointer = Some(at);
             self.hover.moved();
         }
-        let Some(event) = self.ui.pointer(event) else {
+        let press = matches!(
+            event,
+            InputEvent::PointerPress {
+                button: sjk_ui::PointerButton::Primary,
+                ..
+            }
+        );
+        let routed = self.ui.pointer(event);
+        // A press anywhere off the card lets a pinned card go; one on a face pins that
+        // player's card again when it is let go ([`Panel::activate`]).
+        if press && !self.on_card() {
+            self.pinned = None;
+        }
+        let Some(event) = routed else {
             return PanelAction::None;
         };
         if event.kind != UiEventKind::Activate {
@@ -1172,6 +1196,21 @@ impl Panel {
             Some(token) => self.activate(token),
             None => PanelAction::None,
         }
+    }
+}
+
+impl Panel {
+    /// Whether the pointer is on the sender card on show or one of its buttons.
+    fn on_card(&self) -> bool {
+        self.card.is_some()
+            && [
+                CARD_TOKEN,
+                CARD_MUTE_TOKEN,
+                CARD_BAN_TOKEN,
+                CARD_TRADE_TOKEN,
+            ]
+            .into_iter()
+            .any(|token| self.ui.token_hovered(token))
     }
 }
 
