@@ -959,7 +959,13 @@ read on a worker, at most three at once: its files, its mesh and its textures
 decoded there, then uploaded by the render thread, one model a frame
 ([player_loads.rs](../crates/sjk-viewer/src/player_loads.rs)); until then the player
 keeps the model they had, and a new player shows the stand-in actor. Loaded inside
-one frame before 10/10/2026, it was a stutter players felt on every join. Files are read as
+one frame before 10/10/2026, it was a stutter players felt on every join. Once a loaded
+model is on its player, their clientinfo is applied again (`catch_up_clientinfo`): a
+joiner's clientinfo comes before they spawn with no sabers, the sabers they spawn with
+come while a large model still loads, and a load already under way is not asked again
+for the same model, so until 26/11/2026 such a joiner had no blade for the players
+already there until they changed sabers. The log says `client N: sabers ... changed
+while their model loaded` when that catch-up changes them. Files are read as
 rd-vanilla and the retail cgame read them, so a model EternalJK draws and
 animates is not swapped for Kyle:
 
