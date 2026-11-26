@@ -241,7 +241,7 @@ impl Scoreboard {
             rank: player.persistent[PERS_RANK],
             score: player.persistent[PERS_SCORE] as i32,
             ready: player.stats[STAT_CLIENTS_READY],
-            intermission: player.movement_type() == PM_INTERMISSION,
+            intermission: player.movement_type() == sjk_client::PM_INTERMISSION,
             // The player's own slot, not a followed player's.
             quiet: if let Ok(own) = u16::try_from(session.game_state().client_num)
                 && usize::from(own) < sjk_protocol::PLAYER_CAPACITY
@@ -610,12 +610,11 @@ fn duelists(game: &GameState) -> sjk::Duelists {
     duel
 }
 
-/// `persistant[]` and `stats[]` indices (`bg_public.h`) and `PM_INTERMISSION`.
+/// `persistant[]` and `stats[]` indices (`bg_public.h`).
 const PERS_SCORE: usize = 0;
 const PERS_RANK: usize = 2;
 const PERS_TEAM: usize = 3;
 const STAT_CLIENTS_READY: usize = 7;
-const PM_INTERMISSION: u8 = 6;
 
 impl Scoreboard {
     /// Watch the players for the away marks ([`afk`]) and for who is in the game
