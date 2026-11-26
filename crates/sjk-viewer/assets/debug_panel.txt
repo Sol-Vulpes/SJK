@@ -32,6 +32,17 @@ test: Say \o/ and a\b in All, Team and a whisper: everyone reads them with the b
 test: A message ending in \ is sent whole.
 test: With cl_colorString on and with %H% in the line: the backslash is kept.
 
+[chat-delay-log]
+area: Console & chat
+title: Session log names late chat and false freezes stop at the intermission
+change: A chat line held behind 2+ other commands logs "chat waits behind N reliable commands".
+change: A chat line the server acknowledged 2 s+ after it left logs "chat acknowledged late".
+change: No "clientthink freeze" lines at a map's end; server view line counts packets a second.
+test: On a server, say a few lines: GameData/SJK/logs/session.log holds no "chat ..." line.
+test: Let a map end on its timelimit: no "clientthink freeze" lines after "Timelimit hit.".
+test: After a minute in game, the "server view, last 60 s" line ends with "move packets a second".
+note: Hub reports #335, #324, #336: ask the reporters for their session.log after a late chat.
+
 [player-slots-64]
 area: Gameplay
 title: Servers with more than 32 player slots: up to 64 players shown

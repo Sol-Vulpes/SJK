@@ -876,7 +876,21 @@ already sent, and every new gamestate logs its serverId change. These lines come
 [gamestate_probe.rs](../crates/sjk-client/src/gamestate_probe.rs)); until 24/11/2026
 they went to stderr only, which a release build lacks, so a player's logs never held
 them (hub report #324: "connection interrupted", stuck in place, chat not sent). They
-now reach the session log through `sjk_client::diagnostics`.
+now reach the session log through `sjk_client::diagnostics`. The intermission is left
+out (26/11/2026): there the server's `ClientThink_real` returns before `Pmove`, so
+`ps.commandTime` stops by design, and every map's end logged about 15 seconds of false
+freezes starting right after "Timelimit hit." (Sol's session log, 25/11/2026, the only
+freeze lines it held).
+
+The minute's `server view` line also counts the move packets sent a second
+(26/11/2026, hub report #336, "SJK increases ping"). JoF's server engine computes the
+scoreboard ping with `sv_pingFix 2` (JoF EJK `SV_UserMove`, `SV_SendMessageToClient`):
+the first packet to acknowledge each snapshot, on the millisecond clock, unless the
+client's packets advance its command time by more than 20 ms on average, under about
+50 packets a second, where it falls back to stock's older measure, the last packet to
+acknowledge a snapshot on the server's frame clock, which reads higher. On JoF SJK sends
+one command a frame (`Pacing::OnePerFrame`), so a frame rate under about 50 puts a
+player on that measure. Whether this is what the reporters saw is not established.
 
 Each snapshot gets stock's ping, `cl.snap.ping`
 ([snapshot_ping.rs](../crates/sjk-client/src/snapshot_ping.rs),
@@ -948,6 +962,18 @@ scoreboard), so chat no longer queues a second each behind them (27/10/2026, hub
 report 172). It stays behind the client's other commands, a `userinfo` after a model
 or saber change or a Force-profile `team` retry, so a `kill` bind respawns with the
 new model and a typed `/team s` is not undone by a retry sent after it.
+
+Typed chat leaves at once unless other commands wait ahead of it, and is then sent in
+every packet until the server acknowledges it. Hub reports #335 and #324 (2026.1123.2:
+every chat line 10 to 20 seconds late, also during "connection interrupted") showed no
+cause in this path: nothing in the client sends commands on its own often enough to
+queue a chat line seconds deep, and no step waits on the hub or a worker (the
+encrypted whispers and the translations go to the hub, never through here). So two
+session-log lines tell the halves apart (26/11/2026): `chat waits behind N reliable
+commands` when a chat line is queued behind two or more others, naming them, and `chat
+acknowledged late` when the server acknowledged one two seconds or more after it left,
+with the commands still unacknowledged and the snapshot ping. The first is this
+outbox; the second, packets lost on the way or a server that holds them.
 
 ### Remote entity interpolation
 

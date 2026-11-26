@@ -853,9 +853,13 @@ impl ClientSession {
 
     /// Release the next paced reliable command if its window has opened.
     pub fn pump_reliable_commands(&mut self, now: Instant) -> Result<(), ClientError> {
-        if let Some(command) = self.command_pacer.pop_due(now) {
+        if let Some((command, origin)) = self.command_pacer.pop_due_with_origin(now) {
             self.sent_commands.note(&command, now);
             self.queue_reliable_command(command)?;
+            if origin.is_chat() {
+                self.command_pacer
+                    .chat_released(self.client_reliable_sequence, now);
+            }
             self.send_pending_reliable_commands()?;
         }
         Ok(())
@@ -922,6 +926,21 @@ impl ClientSession {
             .is_some_and(|(sequence, _)| *sequence <= acknowledge)
         {
             self.pending_client_commands.pop_front();
+        }
+        // Typed chat the server took long to acknowledge (`reliable_pacing`, "Chat
+        // watch"): the wait was on the way or at the server, not in the outbox.
+        if let Some((sequence, took)) = self
+            .command_pacer
+            .chat_acknowledged(acknowledge, Instant::now())
+        {
+            diagnostics::line(format_args!(
+                "chat acknowledged late: reliable command {sequence} took {:.1} s from \
+                 leaving to the server's acknowledgement ({} still unacknowledged, \
+                 snapshot ping {} ms)",
+                took.as_secs_f64(),
+                self.pending_client_commands.len(),
+                self.snapshot_ping.unwrap_or(-1),
+            ));
         }
     }
 
@@ -1164,6 +1183,7 @@ impl ClientSession {
                         .sum(),
                     waiting: self.command_pacer.queued(),
                 },
+                freeze_probe::held(self.latest_snapshot.player.movement_type()),
             );
             if let Some(restart) = self.transitions.iter_mut().rev().find(|transition| {
                 matches!(

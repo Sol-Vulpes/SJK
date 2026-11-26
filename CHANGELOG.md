@@ -34,6 +34,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 
 - Force Throw no longer says Monitor anywhere: Settings calls its rows Force Throw sounds and Show thrown junk, the quick wheel Force Throw and Force throw, the status bar and `toy_help` Force Throw; its commands and saved settings are unchanged (hub #337) _(Sol)_
 - Chat: a typed backslash is sent again (`\o/`, `C:\games`); it was dropped from every message, whisper and team chat on the way out (hub #341) _(Sol)_
+- Session log: a chat line held behind other commands, or acknowledged by the server two seconds or more after it left, now says so, and the minute's server view line counts the packets sent a second; the intermission no longer logs false "clientthink freeze" lines (hub reports #335, #324, #336) _(Sol)_
 - Lagometer: `cg_lagometer 4` (Settings > HUD > Lagometer, **Bare graph**) draws the plain graph of mode 1 without its backdrop, with no numbers and no speed graph _(Kushina, PR #457)_
 - Settings > Chat: **Hide bubbles in freecam** (`cg_freecamHideBalloons`, off by default) hides every chat bubble, yours too, while your free camera (the drone) flies _(Kushina, PR #456)_
 - Feats (`cg_feats`): each medal shows its picture again, left of its name, instead of an empty space that pushed the name right; the name's capitals sit in the middle of the plate, no longer low with their feet clipped _(Kushina, PR #455)_

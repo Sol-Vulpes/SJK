@@ -33,6 +33,15 @@
 //! Commands sent while the server still considers the client `CS_PRIMED`
 //! (the connect and map-restart bootstrap packets) are exempt and are not
 //! routed through here.
+//!
+//! Chat watch (hub reports #335 and #324: typed chat reaching the server 10 to 20
+//! seconds late). The client holds a typed line only while other commands wait ahead
+//! of it here, one a window; past that it leaves at once and goes again in every
+//! packet until the server acknowledges it. Two session-log lines tell the halves
+//! apart: a chat line queued behind [`CHAT_WAIT_REPORTED`] or more other commands
+//! names them, and a chat line the server acknowledged [`CHAT_ACK_REPORTED`] or more
+//! after it left says so ([`ReliableCommandPacer::chat_acknowledged`]): that wait is
+//! the network or the server, not this outbox.
 
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
@@ -47,6 +56,13 @@ pub const DEFAULT_COMMAND_INTERVAL: Duration = Duration::from_millis(1_050);
 pub const INPUT_COMMAND_TTL: Duration = Duration::from_millis(1_500);
 /// Outbox bound; more than this means a runaway caller, not a slow server.
 const MAX_QUEUED: usize = 64;
+/// Other commands ahead of a chat line that earn a session-log line: two windows,
+/// a wait a player notices.
+const CHAT_WAIT_REPORTED: usize = 2;
+/// A chat line acknowledged this long after it left earns a session-log line.
+pub(crate) const CHAT_ACK_REPORTED: Duration = Duration::from_secs(2);
+/// Chat lines watched until acknowledged; past this the oldest is forgotten.
+const CHAT_WATCHED: usize = 8;
 
 /// Who asked for a reliable command, which decides how it waits.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -75,6 +91,13 @@ struct Queued {
     expires: Option<Instant>,
 }
 
+impl ReliableCommandOrigin {
+    /// Text the player typed, whole or one part of it.
+    pub(crate) fn is_chat(self) -> bool {
+        matches!(self, Self::Chat | Self::ChatPart)
+    }
+}
+
 impl Queued {
     /// The client's own scoreboard request, which a player's command may pass.
     fn is_score_request(&self) -> bool {
@@ -88,6 +111,9 @@ pub(crate) struct ReliableCommandPacer {
     interval: Duration,
     last_sent: Option<Instant>,
     outbox: VecDeque<Queued>,
+    /// Chat lines released and not yet acknowledged: their reliable sequence and
+    /// when they left (module docs, "Chat watch").
+    chat_in_flight: VecDeque<(i32, Instant)>,
 }
 
 impl ReliableCommandPacer {
@@ -96,6 +122,7 @@ impl ReliableCommandPacer {
             interval,
             last_sent: None,
             outbox: VecDeque::new(),
+            chat_in_flight: VecDeque::with_capacity(CHAT_WATCHED),
         }
     }
 
@@ -146,13 +173,63 @@ impl ReliableCommandPacer {
                 .iter()
                 .rposition(|queued| !queued.is_score_request())
                 .map_or(0, |index| index + 1);
+            if origin.is_chat() {
+                self.report_chat_wait(after);
+            }
             self.outbox.insert(after, queued);
         }
         true
     }
 
+    /// A chat line goes in after the first `ahead` commands: name the others it waits
+    /// behind when they are enough to notice (module docs, "Chat watch").
+    fn report_chat_wait(&self, ahead: usize) {
+        let others = || {
+            self.outbox
+                .iter()
+                .take(ahead)
+                .filter(|queued| !queued.origin.is_chat())
+        };
+        let count = others().count();
+        if count < CHAT_WAIT_REPORTED {
+            return;
+        }
+        let mut names = String::new();
+        for queued in others().take(8) {
+            let name = queued
+                .command
+                .split(|&byte| byte == b' ')
+                .next()
+                .unwrap_or_default();
+            if !names.is_empty() {
+                names.push_str(", ");
+            }
+            names.push_str(&String::from_utf8_lossy(&name[..name.len().min(24)]));
+            names.push_str(match queued.origin {
+                ReliableCommandOrigin::System => " (client)",
+                _ => " (player)",
+            });
+        }
+        crate::diagnostics::line(format_args!(
+            "chat waits behind {count} reliable commands in the outbox (one leaves every \
+             {} ms, {} waiting in all): {names}",
+            self.interval.as_millis(),
+            self.outbox.len(),
+        ));
+    }
+
     /// The next command whose release time has come, marking it sent.
+    #[cfg(test)]
     pub(crate) fn pop_due(&mut self, now: Instant) -> Option<Vec<u8>> {
+        self.pop_due_with_origin(now).map(|(command, _)| command)
+    }
+
+    /// The next command whose release time has come and who asked for it, marking it
+    /// sent.
+    pub(crate) fn pop_due_with_origin(
+        &mut self,
+        now: Instant,
+    ) -> Option<(Vec<u8>, ReliableCommandOrigin)> {
         self.drop_expired(now);
         if self.outbox.is_empty() {
             return None;
@@ -163,7 +240,40 @@ impl ReliableCommandPacer {
             return None;
         }
         self.last_sent = Some(now);
-        self.outbox.pop_front().map(|queued| queued.command)
+        self.outbox
+            .pop_front()
+            .map(|queued| (queued.command, queued.origin))
+    }
+
+    /// A chat line left as reliable command `sequence` at `now`: watch for its
+    /// acknowledgement.
+    pub(crate) fn chat_released(&mut self, sequence: i32, now: Instant) {
+        if self.chat_in_flight.len() == CHAT_WATCHED {
+            self.chat_in_flight.pop_front();
+        }
+        self.chat_in_flight.push_back((sequence, now));
+    }
+
+    /// The server acknowledged every reliable command up to `acknowledge` at `now`:
+    /// the watched chat line among them that took longest since it left, with its
+    /// sequence, when that reaches [`CHAT_ACK_REPORTED`].
+    pub(crate) fn chat_acknowledged(
+        &mut self,
+        acknowledge: i32,
+        now: Instant,
+    ) -> Option<(i32, Duration)> {
+        let mut slowest: Option<(i32, Duration)> = None;
+        while let Some(&(sequence, released)) = self.chat_in_flight.front() {
+            if sequence > acknowledge {
+                break;
+            }
+            self.chat_in_flight.pop_front();
+            let took = now.saturating_duration_since(released);
+            if slowest.is_none_or(|(_, longest)| took > longest) {
+                slowest = Some((sequence, took));
+            }
+        }
+        slowest.filter(|(_, took)| *took >= CHAT_ACK_REPORTED)
     }
 
     /// Commands still waiting for their release time.
@@ -175,6 +285,7 @@ impl ReliableCommandPacer {
     pub(crate) fn clear(&mut self) {
         self.outbox.clear();
         self.last_sent = None;
+        self.chat_in_flight.clear();
     }
 
     /// Drop input commands that waited past their deadline.
@@ -418,6 +529,32 @@ mod tests {
         pacer.push(b"score".to_vec(), ReliableCommandOrigin::System, start);
         pacer.push(b"score".to_vec(), ReliableCommandOrigin::Input, start);
         assert_eq!(pacer.queued(), 3);
+    }
+
+    #[test]
+    fn a_chat_line_acknowledged_late_is_reported_once() {
+        let start = Instant::now();
+        let mut pacer = pacer();
+        pacer.chat_released(7, start);
+        pacer.chat_released(9, start + ms(500));
+        // 7 came back at once; 8 is not chat.
+        assert_eq!(pacer.chat_acknowledged(8, start + ms(300)), None);
+        assert_eq!(
+            pacer.chat_acknowledged(9, start + ms(12_500)),
+            Some((9, ms(12_000)))
+        );
+        assert_eq!(pacer.chat_acknowledged(20, start + ms(20_000)), None);
+    }
+
+    #[test]
+    fn the_origin_leaves_with_the_command() {
+        let start = Instant::now();
+        let mut pacer = pacer();
+        pacer.push(b"say hi".to_vec(), ReliableCommandOrigin::Chat, start);
+        assert_eq!(
+            pacer.pop_due_with_origin(start),
+            Some((b"say hi".to_vec(), ReliableCommandOrigin::Chat))
+        );
     }
 
     #[test]
