@@ -32,7 +32,7 @@ Add each release's notes here when it is tagged (docs/sjk.md "Releases").
 -->
 ## Unreleased
 
-- Kill feed (`cg_killfeed`): with the classic HUD font (`cg_classicHudFont`) the names' last row of pixels is no longer cut off _(Kushina)_
+- Kill feed (`cg_killfeed`): with the classic HUD font (`cg_classicHudFont`) the names' last row of pixels is no longer cut off _(Kushina, PR #464)_
 - Force Throw no longer says Monitor anywhere: Settings calls its rows Force Throw sounds and Show thrown junk, the quick wheel Force Throw and Force throw, the status bar and `toy_help` Force Throw; its commands and saved settings are unchanged (hub #337) _(Sol)_
 - Chat: a typed backslash is sent again (`\o/`, `C:\games`); it was dropped from every message, whisper and team chat on the way out (hub #341) _(Sol)_
 - Session log: a chat line held behind other commands, or acknowledged by the server two seconds or more after it left, now says so, and the minute's server view line counts the packets sent a second; the intermission no longer logs false "clientthink freeze" lines (hub reports #335, #324, #336) _(Sol)_
