@@ -75,7 +75,7 @@ const PAD_Y: f32 = 4.0;
 const SPACE: f32 = 8.0;
 /// Longest a name may draw before it ends in an ellipsis.
 const NAME_MAX: f32 = 240.0;
-/// Name line box.
+/// Name size.
 const TEXT: f32 = 22.0;
 const RADIUS: f32 = 4.0;
 /// `cg_killfeedIconSize` is in the 480-line virtual screen.
@@ -544,12 +544,18 @@ impl Feed {
                 });
             }
             let text_y = y + (row - size) * 0.5;
+            // A name's box runs from the top of its line down to the plate's bottom edge:
+            // the text stays where it was, and the room under the baseline keeps its
+            // last row of pixels and its descenders, which SJK HUD (`cg_classicHudFont`)
+            // sets on the very bottom of its line (26/11/2026: a box of the size alone
+            // cut them off).
+            let text_h = y + row - text_y;
             let mut x = plate.x + PAD_X * k;
             let name = |list: &mut DrawList, part: u32, x: f32, width: f32| {
                 let _ = list.push(DrawCommand::Text {
                     // A pixel of slack: the renderer measures the same run and must
                     // not find it wider than its box.
-                    rect: Rect::new(x, text_y, width + 1.0, size),
+                    rect: Rect::new(x, text_y, width + 1.0, text_h),
                     text: TextId(TEXT_FIRST + 3 * slot as u32 + part),
                     size,
                     color: Color::new(1.0, 1.0, 1.0, theme.foreground.a * alpha),
@@ -586,7 +592,7 @@ impl Feed {
                             x,
                             y + (row - word_size) * 0.5,
                             mark_width + 1.0,
-                            word_size,
+                            (row + word_size) * 0.5,
                         ),
                         text: TextId(TEXT_FIRST + 3 * slot as u32 + 2),
                         size: word_size,
@@ -1114,6 +1120,57 @@ mod tests {
             // Five plates and three skulls of seven shapes.
             assert_eq!(skull_shapes, 5 + 3 * 7);
         }
+    }
+
+    /// A name's box runs down to its plate's bottom edge, well past its size: SJK HUD
+    /// (`cg_classicHudFont`) sets its baseline on the bottom of its line, so a box of
+    /// the size alone cut the last row of pixels off every name (26/11/2026). The text
+    /// itself stays where it was, its box's top centring its size on the plate.
+    #[test]
+    fn names_keep_room_under_the_baseline() {
+        let font = crate::text::test_font();
+        let game = game();
+        let mut tracker = ObituaryTracker::new();
+        let mut feed = Feed::default();
+        observe(&mut feed, &mut tracker, &game, &[(3, 1, 3)], 100);
+        let icons = Icons::with_means(&[(3, TextureId(1))]);
+        let holocrons = [None; 8];
+        let viewport = [1920.0, 1080.0];
+        let scale = crate::ui_scale::height_scale(viewport[1]) * 0.7;
+        let area = Area::below(viewport, scale, scale, 0.0, options_on());
+        let mut list = DrawList::new(CAPACITY * ENTRY_COMMANDS);
+        feed.emit(
+            &mut list,
+            area,
+            Art {
+                icons: &icons,
+                holocrons: &holocrons,
+            },
+            &font,
+            Theme::default(),
+        );
+        let plate = list
+            .commands()
+            .iter()
+            .find_map(|command| match *command {
+                DrawCommand::RoundedRect { rect, .. } => Some(rect),
+                _ => None,
+            })
+            .expect("a plate");
+        let mut names = 0;
+        for command in list.commands() {
+            if let DrawCommand::Text { rect, size, .. } = *command {
+                names += 1;
+                assert!(
+                    (rect.bottom() - plate.bottom()).abs() < 0.01,
+                    "{rect:?} {plate:?}"
+                );
+                assert!(rect.height >= size * 1.25, "{rect:?} for {size}");
+                let top = plate.y + (plate.height - size) * 0.5;
+                assert!((rect.y - top).abs() < 0.01, "{rect:?} moved from {top}");
+            }
+        }
+        assert_eq!(names, 2, "the killer and the victim");
     }
 
     fn options_on() -> Options {
