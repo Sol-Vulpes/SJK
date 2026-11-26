@@ -80,6 +80,7 @@ impl GamestateProbe {
         sequence: i32,
         highest: i32,
         outbox: crate::freeze_probe::Outbox,
+        held: bool,
     ) {
         self.freeze.snapshot(
             now,
@@ -93,6 +94,7 @@ impl GamestateProbe {
                 command_stamp: 0,
             },
             outbox,
+            held,
         );
     }
     /// Report a gamestate and start sampling the move packets that follow.

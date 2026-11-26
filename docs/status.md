@@ -1,3 +1,18 @@
+## Late chat, freezes and ping: what the session log says (26/11/2026)
+
+Branch `personal/chat-delay`, based on `main` `339126303`. Hub reports #335 (2026.1123.2:
+every chat line 10 to 20 s late), #324 ("connection interrupted", stuck, chat not sent)
+and #336 ("SJK increases ping"). The path from the chat box to the reliable command
+was traced (`chat/interaction.rs` to `ClientSession::send_reliable_command_from`, the
+pacer, the netchan) and holds no wait on the hub or a worker; nothing found sends
+commands often enough to queue a chat line seconds deep. Not proven, so diagnostics
+instead ([networking.md](networking.md#reliable-command-pacing)): `chat waits behind`
+and `chat acknowledged late` lines, the packets a second in the minute's server view
+line (JoF's `sv_pingFix 2` falls back to a higher-reading ping under about 50), and the
+freeze probe skips the intermission, whose false lines were the only ones in Sol's own
+log of 25/11/2026. Verified: fmt, clippy, the client's and viewer's tests; not run in
+the client.
+
 ## Status bar: credits and DOOM coins only on the left (25/11/2026)
 
 Branch `personal/bar-trim-left`, based on `main` `f2ed4c89a` (Sol: "we don't need to

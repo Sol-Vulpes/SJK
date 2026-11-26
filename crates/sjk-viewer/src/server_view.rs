@@ -127,6 +127,11 @@ struct Period {
     late: u32,
     packet_gap_max: u32,
     frame_max: u32,
+    /// Move packets sent. Below 50 a second JoF's server (`sv_pingFix 2`, JoF EJK
+    /// `SV_UserMove`) falls back to stock's older scoreboard ping, the last packet to
+    /// acknowledge a snapshot timed on the server's frame clock, which reads higher
+    /// (hub report #336).
+    packets: u32,
 }
 
 impl Period {
@@ -262,6 +267,7 @@ impl ServerView {
 
     /// A move packet left at `now`, carrying every command queued since the last.
     pub(crate) fn packet_sent(&mut self, now: Instant) {
+        self.period.packets = self.period.packets.saturating_add(1);
         if let Some(last) = self.last_packet.replace(now) {
             let ms =
                 u32::try_from(now.saturating_duration_since(last).as_millis()).unwrap_or(u32::MAX);
@@ -518,8 +524,10 @@ fn summary_line(period: &Period) -> String {
     }
     let _ = write!(
         line,
-        ", longest gap between packets {} ms, longest frame {} ms",
-        period.packet_gap_max, period.frame_max
+        ", longest gap between packets {} ms, longest frame {} ms, {} move packets a second",
+        period.packet_gap_max,
+        period.frame_max,
+        u64::from(period.packets) / SUMMARY_EVERY.as_secs().max(1),
     );
     line
 }

@@ -6,6 +6,13 @@ use std::time::{Duration, Instant};
 
 const STALLED_SNAPSHOTS: u32 = 40;
 
+/// Whether the server holds the player still for this `pm_type`: `PM_INTERMISSION` and
+/// `PM_SPINTERMISSION` (`bg_public.h`), whose `ClientThink_real` returns before `Pmove`
+/// (`g_active.c`), so `commandTime` does not advance and no freeze is reported.
+pub(crate) fn held(movement_type: u8) -> bool {
+    matches!(movement_type, crate::PM_INTERMISSION | 8)
+}
+
 /// The client's reliable commands at a snapshot: those sent and not yet acknowledged
 /// (every packet carries them all again, `CL_WritePacket`), their bytes, and those still
 /// waiting in the pacer. A backlog that grows while the freeze lasts means no packet
@@ -85,7 +92,24 @@ impl FreezeProbe {
     }
 
     /// Report sustained command starvation at most once per second.
-    pub(super) fn snapshot(&mut self, now: Instant, head: MovePacketHead, outbox: Outbox) {
+    ///
+    /// `held`: the server holds the player at the intermission, where
+    /// `ClientThink_real` returns before `Pmove` (`g_active.c`), so `commandTime`
+    /// stops by design. Before this every map's end logged 15 s of false freezes,
+    /// starting right after "Timelimit hit." (Sol's session log, 25/11/2026).
+    pub(super) fn snapshot(
+        &mut self,
+        now: Instant,
+        head: MovePacketHead,
+        outbox: Outbox,
+        held: bool,
+    ) {
+        if held {
+            self.previous = None;
+            self.stalled = 0;
+            self.next_report = None;
+            return;
+        }
         if !self.observe(now, head.snapshot_time, head.command_time) {
             return;
         }
@@ -147,5 +171,37 @@ impl fmt::Display for Escaped<'_> {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn head(snapshot_time: i32) -> MovePacketHead {
+        MovePacketHead {
+            server_id: 1,
+            message_acknowledge: 0,
+            server_command_sequence: 0,
+            command_stamp: 0,
+            snapshot_time,
+            command_time: 1_801_000,
+            highest_server_command: 0,
+        }
+    }
+
+    #[test]
+    fn the_intermission_is_not_a_freeze() {
+        let now = Instant::now();
+        let mut probe = FreezeProbe::default();
+        for frame in 0..60 {
+            probe.snapshot(now, head(1_802_000 + frame * 33), Outbox::default(), true);
+        }
+        assert_eq!(probe.stalled, 0);
+        for frame in 60..120 {
+            probe.snapshot(now, head(1_802_000 + frame * 33), Outbox::default(), false);
+        }
+        assert_eq!(probe.stalled, 59);
+        assert!(held(crate::PM_INTERMISSION) && held(8) && !held(6) && !held(0));
     }
 }
