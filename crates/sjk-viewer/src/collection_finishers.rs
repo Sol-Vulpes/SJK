@@ -124,7 +124,8 @@ impl Panel {
                 &mut self.ui,
                 TextFamily::Body,
                 format_args!("{count}"),
-                frame.rect(left + width - 64.0, y + 7.0, 50.0, 22.0),
+                // Right-aligned 14 from the pill's end, room for "146/299".
+                frame.rect(left + width - 84.0, y + 7.0, 70.0, 22.0),
                 14.0 * s,
                 if lit { color::gold() } else { color::quiet() },
                 FontWeight::Regular,
