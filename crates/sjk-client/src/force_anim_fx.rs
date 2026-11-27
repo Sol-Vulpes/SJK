@@ -65,7 +65,7 @@ pub struct LegacyForceAnimFxTimers {
 impl Default for LegacyForceAnimFxTimers {
     fn default() -> Self {
         Self {
-            slots: vec![None; 1024].into_boxed_slice(),
+            slots: vec![None; sjk_protocol::ENTITY_CAPACITY].into_boxed_slice(),
         }
     }
 }
@@ -148,7 +148,9 @@ mod tests {
         assert!(timers.due(1, effect, 900));
         assert!(!timers.due(1, None, 901));
         assert!(timers.due(1, effect, 902));
-        assert!(!timers.due(1024, effect, 902));
+        // Entity numbers reach 2047 on a `jofents` connection; past them there is no slot.
+        assert!(timers.due(1_500, effect, 902));
+        assert!(!timers.due(2_048, effect, 902));
     }
 
     #[test]

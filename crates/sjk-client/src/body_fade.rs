@@ -22,7 +22,8 @@
 
 use sjk_protocol::Snapshot;
 
-const ENTITY_LIMIT: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const ENTITY_LIMIT: usize = sjk_protocol::ENTITY_CAPACITY;
 /// `ET_BODY` and `ET_EVENTS` (`bg_public.h`).
 const ET_BODY: u8 = 15;
 const ET_EVENTS: u8 = 18;

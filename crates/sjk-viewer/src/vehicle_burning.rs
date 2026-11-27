@@ -24,7 +24,7 @@ pub(crate) fn burns(kind: VehicleKind, e_flags: u32) -> bool {
 }
 
 /// `MAX_GENTITIES`: one debounce per entity number.
-const ENTITIES: usize = 1024;
+const ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 
 /// Every vehicle's debounce (`m_iLastFXTime`), by entity number.
 pub(crate) struct Flames {

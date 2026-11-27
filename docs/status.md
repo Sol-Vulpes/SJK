@@ -1,3 +1,20 @@
+## Entity numbers past 1023: `jofents` (27/11/2026)
+
+Branch `feat/jofents`, based on `main` `94a6189c9`, kept local until Milamber has tested
+it. Heimdall (branch `fix/vanilla-64slots`, `0c8de30e`) and its JA+ can have up to 2047
+entities and send them to a client that asks; SJK asks where `getinfo` offers
+`jofents\2048` and reads the gamestate, snapshots and demos 11 bits wide when the
+connection's serverinfo says it was given them
+([networking.md](networking.md#entity-numbers-past-1023-jofents)). Per-entity client
+tables hold 2048; the two prediction checks that took 1022 and above for the world now
+take only 1022 and 1023.
+
+Verified: fmt, clippy, the workspace build and tests; new protocol tests read a gamestate
+with baselines past 1023, write it back as a demo gamestate, and read a snapshot with
+11-bit entities and entity-number fields, and a classic gamestate is read the same whether
+or not the key was asked for. Not yet run against a Heimdall build with
+`sv_extendedEntities 1`, nor checked in game against a classic 32-slot server.
+
 ## Late chat, freezes and ping: what the session log says (26/11/2026)
 
 Branch `personal/chat-delay`, based on `main` `339126303`. Hub reports #335 (2026.1123.2:

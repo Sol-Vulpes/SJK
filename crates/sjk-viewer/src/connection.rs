@@ -354,12 +354,15 @@ fn join_with_storage(
     map_known: impl FnOnce(String),
 ) -> Result<JoinedSession, Box<dyn Error>> {
     let server = resolve_server(address)?;
-    let profile = match server_info(server) {
+    let (profile, wide_entities) = match server_info(server) {
         Some(info) => {
             if let Some(map) = info.get("mapname") {
                 map_known(map.to_owned());
             }
-            CompatProfile::from_server_info(&info)
+            (
+                CompatProfile::from_server_info(&info),
+                sjk_protocol::EntityWire::offered_by(&info),
+            )
         }
         None => {
             let known = server_profiles::known(server);
@@ -367,8 +370,18 @@ fn join_with_storage(
                 "connect: {server} did not answer getinfo; connecting as {}",
                 known.as_ref().map_or("base JKA", CompatProfile::id)
             ));
-            known.unwrap_or(CompatProfile::BaseJka)
+            // Entity numbers past 1023 are asked for only where `getinfo` offers them.
+            (known.unwrap_or(CompatProfile::BaseJka), false)
         }
+    };
+    if wide_entities {
+        log::progress(format_args!(
+            "connect: {server} offers entity numbers past 1023 (jofents); asking for them"
+        ));
+    }
+    let userinfo = &LegacyUserInfo {
+        wide_entities,
+        ..userinfo.clone()
     };
     let joined = join_socket(
         server,

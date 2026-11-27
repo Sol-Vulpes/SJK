@@ -95,8 +95,12 @@ pub(crate) fn run(
     storage: &mut dyn DownloadStorage,
     sequence: &mut i32,
     pending: &mut VecDeque<(i32, Vec<u8>)>,
+    wide_entities_offered: bool,
 ) -> Result<ServerMessage, ClientError> {
-    let initial = sjk_protocol::decode_initial_gamestate(&message.payload)?;
+    let decode = |payload: &[u8]| {
+        sjk_protocol::decode_initial_gamestate_offering(payload, wide_entities_offered)
+    };
+    let initial = decode(&message.payload)?;
     let requests = storage
         .missing(&initial.game_state)
         .map_err(ClientError::Download)?;
@@ -146,7 +150,7 @@ pub(crate) fn run(
             let Some(message) = exchange.receive()? else {
                 continue;
             };
-            if let Ok(initial) = sjk_protocol::decode_initial_gamestate(&message.payload) {
+            if let Ok(initial) = decode(&message.payload) {
                 let attempted = |missing: &PakRequest| {
                     requests
                         .iter()

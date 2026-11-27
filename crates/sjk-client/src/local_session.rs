@@ -86,6 +86,8 @@ impl ClientSession {
             base_command_events: VecDeque::with_capacity(64),
             unknown_command_names: Vec::new(),
             compat_profile,
+            // A local game is SJK's own server, which numbers entities as protocol 26.
+            wide_entities_offered: false,
             cosmetic_unlocks: Default::default(),
             userinfo_updates: userinfo_update::UserinfoUpdateTracker::new(
                 String::new(),

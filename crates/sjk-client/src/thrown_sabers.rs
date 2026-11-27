@@ -35,7 +35,7 @@ pub struct LegacyThrownSaber<'a> {
 }
 
 /// `MAX_GENTITIES`: an owner is any entity number, NPCs included.
-const MAX_GENTITIES: u32 = 1_024;
+const MAX_GENTITIES: u32 = sjk_protocol::ENTITY_CAPACITY as u32;
 
 /// Owner entity number of an `ET_GENERAL`/`WP_SABER` entity.
 ///
@@ -53,7 +53,7 @@ pub fn legacy_thrown_saber_owner(state: &EntityState) -> Option<u16> {
 
 /// One stack-allocated entity table; every thrown-saber/owner lookup is O(1).
 pub struct LegacyThrownSabers<'a> {
-    states: [Option<&'a EntityState>; 1_024],
+    states: [Option<&'a EntityState>; sjk_protocol::ENTITY_CAPACITY],
     snapshot: &'a Snapshot,
     game: &'a GameState,
 }
@@ -61,7 +61,7 @@ pub struct LegacyThrownSabers<'a> {
 impl<'a> LegacyThrownSabers<'a> {
     /// Index one presented snapshot without allocating or cloning entities.
     pub fn new(snapshot: &'a Snapshot, game: &'a GameState) -> Self {
-        let mut states = [None; 1_024];
+        let mut states = [None; sjk_protocol::ENTITY_CAPACITY];
         for state in &snapshot.entities {
             if let Some(slot) = states.get_mut(usize::from(state.number())) {
                 *slot = Some(state);

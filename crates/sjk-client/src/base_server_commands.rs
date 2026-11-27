@@ -9,7 +9,9 @@ use crate::team_info::{argument, legacy_atoi};
 
 pub(crate) fn killed_entity(value: &[u8]) -> Option<u16> {
     let number = legacy_atoi(value);
-    (32..1024).contains(&number).then_some(number as u16)
+    (32..sjk_protocol::ENTITY_CAPACITY as i32)
+        .contains(&number)
+        .then_some(number as u16)
 }
 
 /// Values stored by cgame when a server sends `nfr`.
@@ -99,7 +101,7 @@ impl BodyIdentity {
         let copy = restore.immediate_body?;
         let entity_num = u16::try_from(copy.body_entity)
             .ok()
-            .filter(|n| (32..1024).contains(n))?;
+            .filter(|n| (32..sjk_protocol::ENTITY_CAPACITY as u16).contains(n))?;
         Some(Self {
             client_num: restore.client_num,
             entity_num,

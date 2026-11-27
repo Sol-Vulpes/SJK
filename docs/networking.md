@@ -384,6 +384,58 @@ are 10 bits).
 
 SJK's own server (`sjk-dedicated`, the server half of `sjk-game-jka`) stays at 32 slots.
 
+## Entity numbers past 1023 (`jofents`)
+
+Protocol 26 sends an entity number in 10 bits (`GENTITYNUM_BITS`): 0 to 1021 are
+entities, 1022 is the world (`ENTITYNUM_WORLD`) and 1023 "none" (`ENTITYNUM_NONE`), which
+also ends a snapshot's entity list. Heimdall, JoF's server, and its JA+ can have up to 2047
+entities, and send them to a client that asks, per connection. Without the
+negotiation nothing changes, bit for bit.
+
+- **Asking.** A server that has them says `jofents\2048` in its `getinfo` answer. SJK
+  then adds `jofents\2048` to its connect userinfo (`LegacyUserInfo::wide_entities`, set in
+  `connection.rs` and `ClientSession::join_with_pure_userinfo` from
+  `EntityWire::offered_by`) and repeats it in every `userinfo` update, as it does `jof64`:
+  a server reconnects the player with the stored userinfo at each map change. A server
+  that does not answer `getinfo`, or does not offer the key, is not asked.
+- **The answer.** The server takes the key at connect for the whole connection, and writes
+  `jofents\2048` into *that connection's* serverinfo (configstring 0) only; every other
+  connection's serverinfo goes without it. So `sjk_protocol::EntityWire::negotiated`
+  reads a gamestate wide only when SJK asked *and* the gamestate's serverinfo has the key:
+  a server that turned the feature off between `getinfo` and `connect` is still read as it
+  sends. The serverinfo comes before any baseline in a gamestate, so the format is settled
+  at the first baseline (`decode_initial_gamestate_offering`). Snapshots take it from their
+  gamestate (`GameState::entity_wire`).
+- **The format.** On a wide connection, the server's gamestate and snapshot messages
+  carry every entity number (a baseline's, a packet entity's) in 11 bits, end the entity
+  list with 2047, and send every netfield the source declares `GENTITYNUM_BITS` in 11
+  bits. Those fields are marked, not found by width: `EntityFieldEncoding::EntityNumber` in
+  the entity schema (`groundEntityNum`, `clientNum`, `saberEntityNum`, `otherEntityNum2`,
+  `owner`, `lookTarget`, `otherEntityNum`, `bolt2`, `m_iVehicleNum`, `ragAttach`) and `E` in
+  the player-state tables (`snapshot.rs`: the ordinary, pilot and vehicle tables, each with
+  its own active entries; `vehTurnaroundIndex` only in the vehicle's, `duelIndex` not in
+  it). Fields 10 bits wide that name no entity (`event`, `health`, `maxhealth`,
+  `iModelScale`, `eFlags2`, the player's `events`, `externalEvent`, `standheight`,
+  `crouchheight`) keep 10 bits, as Heimdall's `ENTITYNUM_FIELD_BITS` marking does. 1022
+  and 1023 keep their meaning; no real entity is numbered 1022, 1023 or 2047. What the
+  client sends (user commands) is unchanged.
+- **Tables.** Every per-entity table in the client is sized `sjk_protocol::ENTITY_CAPACITY`
+  (2048) whatever the connection, as a classic server simply leaves the upper half
+  unused. A test for the world or "none" is `== 1022` / `== 1023` (or the range 1022 to
+  1023), never `>= 1022`, which would take entities from 1024 up for the world.
+- **`genericenemyindex`.** A thrown saber's owner (`owner + 1024`), a missile's or a
+  trap's owner, and the seeker drone's time-versus-entity split are offset by the
+  *protocol's* 1024 on every connection, not by the table size: Heimdall leaves the field
+  alone and its game keeps the 1024.
+- **Demos.** A demo recorded on a wide connection holds the wide format: its synthetic
+  gamestate (`write_initial_gamestate`) writes its baselines wide, and the serverinfo it
+  copies has the key. Demo playback reads the key alone (a demo has no connect). A stock
+  client cannot play such a demo.
+
+SJK's own server, and a local game, number entities as protocol 26 does: the writers
+(`write_delta_entity`, the snapshot and player-state writers) are classic, and only the
+demo gamestate writer follows its gamestate's format.
+
 ## JA+ grapple hook
 
 On JA+ servers the client predicts the grapple hook (`+button12`) with the rules

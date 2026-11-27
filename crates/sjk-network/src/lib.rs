@@ -158,6 +158,10 @@ pub struct LegacyUserInfo {
     /// each replacing the adapter's value where the adapter sends that key, and
     /// sent nowhere else; an invalid value leaves the adapter's.
     pub extension_overrides: Vec<(String, String)>,
+    /// Ask for entity numbers past 1023 (`jofents` 2048, see
+    /// `sjk_protocol::EntityWire`). Set only for a server whose `getinfo` answer
+    /// offers them: a server takes the key at connect for the whole connection.
+    pub wide_entities: bool,
 }
 
 impl LegacyUserInfo {
@@ -183,6 +187,7 @@ impl LegacyUserInfo {
             password: None,
             guid: None,
             extension_overrides: Vec::new(),
+            wide_entities: false,
         }
     }
 }
@@ -778,6 +783,12 @@ pub fn legacy_userinfo_payload_with_extensions(
         result.push_str(key);
         result.push('\\');
         result.push_str(value);
+    }
+    if user.wide_entities {
+        result.push('\\');
+        result.push_str(sjk_protocol::WIDE_ENTITIES_KEY);
+        result.push('\\');
+        result.push_str(sjk_protocol::WIDE_ENTITIES_VALUE);
     }
     if let Some(guid) = &user.guid {
         result.push_str("\\ja_guid\\");

@@ -3,7 +3,7 @@
 //! schema for a rider hidden inside its vehicle, and the vehicle's own schema.
 use super::super::{
     FLOAT_INT_BIAS, FLOAT_INT_BITS, MAX_WEAPONS, PILOT_FIELD_SPECS, PLAYER_FIELD_WIDTHS,
-    PlayerState, STAT_WEAPONS, Slot, VEHICLE_FIELD_SPECS,
+    PlayerState, STAT_WEAPONS, Slot, VEHICLE_FIELD_SPECS, wire_width,
 };
 use crate::{MessageError, MessageWriter};
 
@@ -60,6 +60,8 @@ fn write_fields(
     message.write_u8(last as u8)?;
     for i in 0..last {
         let (slot, width) = field(i);
+        // SJK's server numbers entities as protocol 26 does.
+        let width = wire_width(width, crate::EntityWire::Classic);
         if !changed(i) {
             message.write_bits(0, 1)?;
             continue;

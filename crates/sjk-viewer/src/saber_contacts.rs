@@ -30,7 +30,7 @@ pub(crate) struct Runtime {
 impl Default for Runtime {
     fn default() -> Self {
         Self {
-            states: vec![Contact::default(); 1024 * 24].into_boxed_slice(),
+            states: vec![Contact::default(); sjk_protocol::ENTITY_CAPACITY * 24].into_boxed_slice(),
             frame: 0,
             last_time: None,
             materials: MATERIALS.map(Arc::from),

@@ -18,7 +18,12 @@ pub fn player_state_as_received(state: &PlayerState) -> Option<PlayerState> {
     let mut message = MessageWriter::new(16_384);
     player::write(&mut message, None, state).ok()?;
     let bytes = message.finish().ok()?;
-    super::read_player_state(&mut crate::MessageReader::new(&bytes), &PlayerState::zero()).ok()
+    super::read_player_state(
+        &mut crate::MessageReader::new(&bytes),
+        &PlayerState::zero(),
+        crate::EntityWire::Classic,
+    )
+    .ok()
 }
 
 /// Reusable snapshot serializer; keeps an empty baseline outside the send loop.

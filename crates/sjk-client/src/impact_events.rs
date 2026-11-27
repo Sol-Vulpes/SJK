@@ -9,7 +9,8 @@
 use sjk_protocol::Snapshot;
 
 const ET_EVENTS: u8 = 18; // codemp/game/bg_public.h:1265
-const MAX_GENTITIES: usize = 1_024; // codemp/game/bg_public.h:1196
+/// `MAX_GENTITIES` (`codemp/game/bg_public.h:1196`), 2048 on a `jofents` connection.
+const MAX_GENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const EVENT_VALUE_MASK: u16 = 0xff; // codemp/game/bg_public.h:783-790
 const EF_ALT_FIRING: u32 = 1 << 10; // codemp/game/bg_public.h:649
 /// `EF_JETPACK_ACTIVE`: on a missile, "we're a vehicle weapon shot" (`cg_weapons.c`

@@ -1,4 +1,4 @@
-use crate::{MessageError, MessageReader};
+use crate::{EntityWire, MessageError, MessageReader};
 use std::error::Error;
 use std::fmt;
 
@@ -11,7 +11,13 @@ const FLOAT_INT_BIAS: i32 = 1 << (FLOAT_INT_BITS - 1);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EntityFieldEncoding {
     Float,
-    Integer { width: u8, signed: bool },
+    Integer {
+        width: u8,
+        signed: bool,
+    },
+    /// A field the source declares `GENTITYNUM_BITS` wide: an unsigned entity number
+    /// in the connection's [`EntityWire::number_bits`] (10, or 11 with `jofents`).
+    EntityNumber,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -25,6 +31,14 @@ impl EntityField {
         Self {
             name,
             encoding: EntityFieldEncoding::Float,
+        }
+    }
+
+    /// A `GENTITYNUM_BITS` field: see [`EntityFieldEncoding::EntityNumber`].
+    pub const fn entity_number(name: &'static str) -> Self {
+        Self {
+            name,
+            encoding: EntityFieldEncoding::EntityNumber,
         }
     }
 
@@ -59,7 +73,7 @@ pub const LEGACY_ENTITY_FIELDS: [EntityField; 132] = [
     EntityField::integer("eFlags", 32, false),
     EntityField::integer("pos.trDuration", 32, false),
     EntityField::integer("teamowner", 8, false),
-    EntityField::integer("groundEntityNum", 10, false),
+    EntityField::entity_number("groundEntityNum"),
     EntityField::integer("pos.trType", 8, false),
     EntityField::float("angles[2]"),
     EntityField::float("angles[0]"),
@@ -69,15 +83,15 @@ pub const LEGACY_ENTITY_FIELDS: [EntityField; 132] = [
     EntityField::integer("customRGBA[3]", 8, false),
     EntityField::integer("customRGBA[0]", 8, false),
     EntityField::float("speed"),
-    EntityField::integer("clientNum", 10, false),
+    EntityField::entity_number("clientNum"),
     EntityField::float("apos.trBase[2]"),
     EntityField::integer("apos.trTime", 32, false),
     EntityField::integer("customRGBA[1]", 8, false),
     EntityField::integer("customRGBA[2]", 8, false),
-    EntityField::integer("saberEntityNum", 10, false),
+    EntityField::entity_number("saberEntityNum"),
     EntityField::integer("g2radius", 8, false),
-    EntityField::integer("otherEntityNum2", 10, false),
-    EntityField::integer("owner", 10, false),
+    EntityField::entity_number("otherEntityNum2"),
+    EntityField::entity_number("owner"),
     EntityField::integer("modelindex2", 8, false),
     EntityField::integer("eventParm", 8, false),
     EntityField::integer("saberMove", 8, false),
@@ -89,18 +103,18 @@ pub const LEGACY_ENTITY_FIELDS: [EntityField; 132] = [
     EntityField::float("apos.trDelta[2]"),
     EntityField::integer("torsoFlip", 1, false),
     EntityField::float("angles2[1]"),
-    EntityField::integer("lookTarget", 10, false),
+    EntityField::entity_number("lookTarget"),
     EntityField::float("origin2[2]"),
     EntityField::integer("modelGhoul2", 8, false),
     EntityField::integer("loopSound", 8, false),
     EntityField::float("origin2[0]"),
     EntityField::integer("shouldtarget", 1, false),
     EntityField::integer("trickedentindex", 16, false),
-    EntityField::integer("otherEntityNum", 10, false),
+    EntityField::entity_number("otherEntityNum"),
     EntityField::float("origin2[1]"),
     EntityField::integer("time2", 32, false),
     EntityField::integer("legsFlip", 1, false),
-    EntityField::integer("bolt2", 10, false),
+    EntityField::entity_number("bolt2"),
     EntityField::integer("constantLight", 32, false),
     EntityField::integer("time", 32, false),
     EntityField::integer("hasLookTarget", 1, false),
@@ -130,14 +144,14 @@ pub const LEGACY_ENTITY_FIELDS: [EntityField; 132] = [
     EntityField::integer("boneOrient", 9, false),
     EntityField::integer("bolt1", 8, false),
     EntityField::integer("trickedentindex3", 16, false),
-    EntityField::integer("m_iVehicleNum", 10, false),
+    EntityField::entity_number("m_iVehicleNum"),
     EntityField::integer("trickedentindex4", 16, false),
     EntityField::integer("surfacesOff", 32, false),
     EntityField::integer("eFlags2", 10, false),
     EntityField::integer("isJediMaster", 1, false),
     EntityField::integer("isPortalEnt", 1, false),
     EntityField::integer("heldByClient", 6, false),
-    EntityField::integer("ragAttach", 10, false),
+    EntityField::entity_number("ragAttach"),
     EntityField::integer("boltToPlayer", 6, false),
     EntityField::integer("npcSaber2", 9, false),
     EntityField::integer("csSounds_Combat", 8, false),
@@ -669,7 +683,18 @@ pub fn read_delta_entity(
     number: u16,
     schema: &[EntityField],
 ) -> Result<EntityState, EntityDeltaError> {
-    if usize::from(number) >= MAX_LEGACY_ENTITIES {
+    read_delta_entity_on(message, from, number, schema, EntityWire::Classic)
+}
+
+/// [`read_delta_entity`] for a connection whose entity numbers are `wire` wide.
+pub fn read_delta_entity_on(
+    message: &mut MessageReader<'_>,
+    from: &EntityState,
+    number: u16,
+    schema: &[EntityField],
+    wire: EntityWire,
+) -> Result<EntityState, EntityDeltaError> {
+    if usize::from(number) >= wire.capacity() {
         return Err(EntityDeltaError::InvalidEntityNumber(number));
     }
     if from.fields.len() != schema.len() {
@@ -711,6 +736,13 @@ pub fn read_delta_entity(
                     message.read_signed_bits(width)? as u32
                 } else {
                     message.read_bits(width)?
+                }
+            }
+            EntityFieldEncoding::EntityNumber => {
+                if message.read_bits(1)? == 0 {
+                    0
+                } else {
+                    message.read_bits(wire.number_bits())?
                 }
             }
         };

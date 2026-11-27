@@ -1,7 +1,7 @@
 use crate::{
-    EntityDeltaError, EntityField, EntityState, LEGACY_ENTITY_FIELDS, LEGACY_ENTITY_NUMBER_BITS,
+    ENTITY_CAPACITY, EntityDeltaError, EntityField, EntityState, EntityWire, LEGACY_ENTITY_FIELDS,
     MAX_LEGACY_ENTITIES, MessageError, MessageReader, ReliableServerCommand, ServiceCommand,
-    read_delta_entity,
+    read_delta_entity_on,
 };
 use std::error::Error;
 use std::fmt;
@@ -22,6 +22,8 @@ pub struct GameState {
     pub server_command_sequence: i32,
     config_strings: Vec<Option<Vec<u8>>>,
     baselines: Vec<Option<EntityState>>,
+    /// How this connection's server messages number entities ([`EntityWire`]).
+    entity_wire: EntityWire,
     pub client_num: i32,
     pub checksum_feed: i32,
     pub rmg_marker: i16,
@@ -35,10 +37,16 @@ impl GameState {
             server_command_sequence: 0,
             config_strings: vec![None; MAX_CONFIGSTRINGS],
             baselines: vec![None; MAX_LEGACY_ENTITIES],
+            entity_wire: EntityWire::Classic,
             client_num,
             checksum_feed: 0,
             rmg_marker: 0,
         }
+    }
+
+    /// How the server numbers entities in this gamestate and the snapshots after it.
+    pub fn entity_wire(&self) -> EntityWire {
+        self.entity_wire
     }
 
     pub fn config_string(&self, index: usize) -> Option<&[u8]> {
@@ -134,13 +142,32 @@ pub struct InitialGameStateMessage {
     pub server_commands: Vec<ReliableServerCommand>,
 }
 
+/// A gamestate on a connection that did not ask for wide entity numbers: protocol 26.
 pub fn decode_initial_gamestate(payload: &[u8]) -> Result<InitialGameStateMessage, GameStateError> {
     decode_initial_gamestate_with_schema(payload, &LEGACY_ENTITY_FIELDS)
+}
+
+/// A gamestate on a connection that asked for wide entity numbers (`jofents`) when
+/// `offered`: it is read wide when its own serverinfo says the server gives them
+/// ([`EntityWire::negotiated`]), as stock otherwise.
+pub fn decode_initial_gamestate_offering(
+    payload: &[u8],
+    offered: bool,
+) -> Result<InitialGameStateMessage, GameStateError> {
+    decode_initial_gamestate_inner(payload, &LEGACY_ENTITY_FIELDS, offered)
 }
 
 pub fn decode_initial_gamestate_with_schema(
     payload: &[u8],
     entity_schema: &[EntityField],
+) -> Result<InitialGameStateMessage, GameStateError> {
+    decode_initial_gamestate_inner(payload, entity_schema, false)
+}
+
+fn decode_initial_gamestate_inner(
+    payload: &[u8],
+    entity_schema: &[EntityField],
+    offered: bool,
 ) -> Result<InitialGameStateMessage, GameStateError> {
     let mut message = MessageReader::new(payload);
     let reliable_acknowledge = message.read_i32()?;
@@ -162,7 +189,7 @@ pub fn decode_initial_gamestate_with_schema(
             }
         }
     }
-    let game_state = decode_gamestate_command(&mut message, entity_schema)?;
+    let game_state = decode_gamestate_command(&mut message, entity_schema, offered)?;
     expect_command(&mut message, ServiceCommand::End)?;
 
     Ok(InitialGameStateMessage {
@@ -176,10 +203,17 @@ pub fn decode_initial_gamestate_with_schema(
 fn decode_gamestate_command(
     message: &mut MessageReader<'_>,
     entity_schema: &[EntityField],
+    offered: bool,
 ) -> Result<GameState, GameStateError> {
     let server_command_sequence = message.read_i32()?;
-    let mut config_strings = vec![None; MAX_CONFIGSTRINGS];
+    let mut config_strings: Vec<Option<Vec<u8>>> = vec![None; MAX_CONFIGSTRINGS];
     let mut baselines = vec![None; MAX_LEGACY_ENTITIES];
+    // Settled by the serverinfo, which a server sends before any baseline
+    // (`SV_CreateClientGameStateMessage`: every configstring, then the baselines).
+    let mut entity_wire = None;
+    let negotiated = |config_strings: &[Option<Vec<u8>>]| {
+        EntityWire::negotiated(offered, config_strings[0].as_deref())
+    };
     // The legacy string table reserves byte zero for the empty string.
     let mut string_storage_bytes = 1_usize;
 
@@ -208,9 +242,13 @@ fn decode_gamestate_command(
                 config_strings[index] = Some(value);
             }
             ServiceCommand::Baseline => {
-                let number = message.read_bits(LEGACY_ENTITY_NUMBER_BITS)? as u16;
+                let wire = *entity_wire.get_or_insert_with(|| negotiated(&config_strings));
+                if baselines.len() < wire.capacity() {
+                    baselines.resize(wire.capacity(), None);
+                }
+                let number = message.read_bits(wire.number_bits())? as u16;
                 let zero = EntityState::zero(number, entity_schema);
-                let baseline = read_delta_entity(message, &zero, number, entity_schema)?;
+                let baseline = read_delta_entity_on(message, &zero, number, entity_schema, wire)?;
                 baselines[usize::from(number)] = Some(baseline);
             }
             ServiceCommand::End => break,
@@ -220,10 +258,16 @@ fn decode_gamestate_command(
         }
     }
 
+    let entity_wire = entity_wire.unwrap_or_else(|| negotiated(&config_strings));
+    if baselines.len() < entity_wire.capacity() {
+        baselines.resize(entity_wire.capacity(), None);
+    }
+    debug_assert!(baselines.len() <= ENTITY_CAPACITY);
     Ok(GameState {
         server_command_sequence,
         config_strings,
         baselines,
+        entity_wire,
         client_num: message.read_i32()?,
         checksum_feed: message.read_i32()?,
         rmg_marker: message.read_i16()?,

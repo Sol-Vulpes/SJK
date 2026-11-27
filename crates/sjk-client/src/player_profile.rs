@@ -212,6 +212,8 @@ impl PlayerProfile {
             password,
             // Stamped per server when the connection is made.
             guid: None,
+            // Asked for per server when the connection is made.
+            wide_entities: false,
         }
     }
 }

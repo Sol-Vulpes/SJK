@@ -5,7 +5,7 @@
 //! time (`cg_weapons.c:1831-1848`), while `CG_AddPlayerWeapon` replays the
 //! selected EFX graph every rendered frame (`cg_weapons.c:688-762`).
 
-use sjk_protocol::{MAX_LEGACY_ENTITIES, PLAYER_CAPACITY, Snapshot, is_player_number};
+use sjk_protocol::{ENTITY_CAPACITY, PLAYER_CAPACITY, Snapshot, is_player_number};
 
 const WP_DEMP2: u8 = 9; // codemp/game/bg_weapons.h:41
 const WP_NUM_WEAPONS: usize = 19; // codemp/game/bg_weapons.h:30-60
@@ -126,8 +126,8 @@ struct ClientState {
 /// event never overrides the authoritative `EF_ALT_FIRING` selection.
 pub struct LegacyMuzzleEffects {
     events: [EventState; PLAYER_CAPACITY],
-    previous_entity_event: [u16; MAX_LEGACY_ENTITIES],
-    seen_entity_epoch: [u32; MAX_LEGACY_ENTITIES],
+    previous_entity_event: [u16; ENTITY_CAPACITY],
+    seen_entity_epoch: [u32; ENTITY_CAPACITY],
     entity_epoch: u32,
     player_event_sequence: i32,
     /// The last local fire event prediction flashed (its playerstate event sequence):
@@ -148,8 +148,8 @@ impl LegacyMuzzleEffects {
     pub const fn new() -> Self {
         Self {
             events: [EventState::EMPTY; PLAYER_CAPACITY],
-            previous_entity_event: [0; MAX_LEGACY_ENTITIES],
-            seen_entity_epoch: [0; MAX_LEGACY_ENTITIES],
+            previous_entity_event: [0; ENTITY_CAPACITY],
+            seen_entity_epoch: [0; ENTITY_CAPACITY],
             entity_epoch: 0,
             player_event_sequence: 0,
             predicted_through: None,
@@ -192,7 +192,7 @@ impl LegacyMuzzleEffects {
         self.entity_epoch = self.entity_epoch.wrapping_add(1).max(1);
         for entity in &snapshot.entities {
             let entity_number = usize::from(entity.number());
-            if entity_number >= MAX_LEGACY_ENTITIES {
+            if entity_number >= ENTITY_CAPACITY {
                 continue;
             }
             self.seen_entity_epoch[entity_number] = self.entity_epoch;
@@ -224,7 +224,7 @@ impl LegacyMuzzleEffects {
                 observed += 1;
             }
         }
-        for entity_number in 0..MAX_LEGACY_ENTITIES {
+        for entity_number in 0..ENTITY_CAPACITY {
             if self.seen_entity_epoch[entity_number] != self.entity_epoch {
                 self.previous_entity_event[entity_number] = 0;
             }

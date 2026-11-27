@@ -44,7 +44,7 @@ const CHEST_BOLT: &str = "*chestg";
 /// The pack's jet bolts, in `G2API_AddBolt` order.
 const JET_BOLTS: [&str; 2] = ["torso_ljet", "torso_rjet"];
 /// `MAX_GENTITIES`.
-const MAX_ENTITIES: usize = 1_024;
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 
 /// The pack's mesh and its jet bolts in pack space, read once per world.
 #[derive(Clone, Copy, Debug, Default)]

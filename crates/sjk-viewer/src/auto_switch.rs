@@ -6,7 +6,7 @@ pub(crate) struct Tracker {
     sequence: Option<i32>,
     time: i32,
     external: u16,
-    items: [u16; 1024],
+    items: [u16; sjk_protocol::ENTITY_CAPACITY],
     predicted: [Option<u16>; 2],
 }
 
@@ -16,7 +16,7 @@ impl Default for Tracker {
             sequence: None,
             time: 0,
             external: 0,
-            items: [0; 1024],
+            items: [0; sjk_protocol::ENTITY_CAPACITY],
             predicted: [None; 2],
         }
     }

@@ -38,7 +38,8 @@ pub use saber_switch::LegacySaberView;
 
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:132
 const MAX_SOUNDS: usize = 256;
-const MAX_ENTITIES: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const ET_EVENTS: u8 = 18; // codemp/game/bg_public.h:1270
 const SOLID_BMODEL: u32 = 0x00ff_ffff; // codemp/qcommon/q_shared.h
 

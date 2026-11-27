@@ -15,7 +15,7 @@ struct Plum {
 /// One snapshot latch, fixed plum slots, and a reusable centre-message buffer.
 pub(super) struct Combat {
     snapshot: Option<(i32, i32)>,
-    signatures: [u16; 1024],
+    signatures: [u16; sjk_protocol::ENTITY_CAPACITY],
     obituaries: u64,
     plums: [Plum; 16],
     next: usize,
@@ -34,7 +34,7 @@ impl Default for Combat {
     fn default() -> Self {
         Self {
             snapshot: None,
-            signatures: [0; 1024],
+            signatures: [0; sjk_protocol::ENTITY_CAPACITY],
             obituaries: 0,
             plums: std::array::from_fn(|_| Plum {
                 text: String::with_capacity(16),
@@ -108,7 +108,7 @@ impl ChatOverlay {
             }
         }
         self.combat.obituaries = tracker.decoded();
-        let mut seen = [false; 1024];
+        let mut seen = [false; sjk_protocol::ENTITY_CAPACITY];
         for entity in &snapshot.entities {
             let slot = usize::from(entity.number());
             if slot >= seen.len() {

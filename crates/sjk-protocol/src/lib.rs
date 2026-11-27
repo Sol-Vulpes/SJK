@@ -10,6 +10,7 @@ mod config_string_dirty;
 mod demo;
 mod dialect;
 mod entity;
+mod entity_wire;
 mod entity_write;
 pub use config_string_dirty::ConfigStringDirty;
 mod gamestate;
@@ -38,12 +39,14 @@ pub use dialect::{
 pub use entity::{
     ENTITY_NUMBER_NONE, EntityDeltaError, EntityField, EntityFieldEncoding, EntityState,
     LEGACY_ENTITY_FIELDS, LEGACY_ENTITY_NUMBER_BITS, MAX_LEGACY_ENTITIES, read_delta_entity,
+    read_delta_entity_on,
 };
-pub use entity_write::{EntityWriteError, write_delta_entity};
+pub use entity_wire::{ENTITY_CAPACITY, EntityWire, WIDE_ENTITIES_KEY, WIDE_ENTITIES_VALUE};
+pub use entity_write::{EntityWriteError, write_delta_entity, write_delta_entity_on};
 pub use gamestate::{
     GameState, GameStateError, InitialGameStateMessage, MAX_BIG_INFO_STRING_BYTES,
     MAX_CONFIGSTRINGS, MAX_GAMESTATE_CHARS, decode_initial_gamestate,
-    decode_initial_gamestate_with_schema,
+    decode_initial_gamestate_offering, decode_initial_gamestate_with_schema,
 };
 pub use gamestate_write::{GameStateWriteError, write_gamestate_block, write_initial_gamestate};
 pub use info_bytes::{info_pairs, info_remove_key, info_set_value, info_value};

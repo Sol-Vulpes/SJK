@@ -36,7 +36,8 @@ impl ClipActor {
     }
 
     pub(crate) fn collides(self, other: Self) -> bool {
-        if other.number >= 1022
+        // The world (1022) and "none" (1023); entities past them are real with `jofents`.
+        if (1_022..=1_023).contains(&other.number)
             || !self.actor()
             || self.vehicle == 0
             || !other.actor()
