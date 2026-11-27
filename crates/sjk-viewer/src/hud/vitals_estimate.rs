@@ -61,7 +61,7 @@ use sjk_protocol::{EntityState, GameState, Snapshot};
 
 /// The size of a table by client slot; the masks by client are 64 bits.
 const CLIENTS: usize = sjk_protocol::PLAYER_CAPACITY;
-const ENTITIES: usize = 1_024;
+const ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const ET_PLAYER: u8 = 1;
 const ET_ITEM: u8 = 2;
 const ET_EVENTS: u8 = 18;

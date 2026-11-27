@@ -4,7 +4,7 @@ use crate::saber::Extension;
 use crate::saber_rgb::BladeColor;
 use bytemuck::{Pod, Zeroable};
 
-const MAX_ENTITIES: usize = 1_024;
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const SABERS_PER_ENTITY: usize = 2;
 const BLADES_PER_SABER: usize = 8;
 pub(crate) const MAX_SEGMENTS: usize = 4_096;

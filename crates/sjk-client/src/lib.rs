@@ -351,7 +351,7 @@ use sjk_network::{
 };
 use sjk_protocol::{
     GameState, GameStateError, InfoString, InfoStringError, MessageError, MessageReader,
-    ServiceCommand, Snapshot, SnapshotError, UserCommand, decode_initial_gamestate,
+    ServiceCommand, Snapshot, SnapshotError, UserCommand, decode_initial_gamestate_offering,
     decode_snapshot,
 };
 use std::collections::VecDeque;
@@ -442,6 +442,11 @@ pub struct ClientSession {
     base_command_events: VecDeque<BaseServerCommandEvent>,
     unknown_command_names: Vec<Vec<u8>>,
     compat_profile: CompatProfile,
+    /// Whether this connection asked for entity numbers past 1023 (`jofents`) at
+    /// connect: every gamestate it is sent is read with it
+    /// ([`sjk_protocol::decode_initial_gamestate_offering`]), and every `userinfo`
+    /// update repeats the key.
+    wide_entities_offered: bool,
     cosmetic_unlocks: CosmeticUnlockTable,
     userinfo_updates: userinfo_update::UserinfoUpdateTracker,
     command_pacer: reliable_pacing::ReliableCommandPacer,
@@ -495,9 +500,16 @@ impl ClientSession {
         timeout: Duration,
         build_pure_command: impl Fn(&GameState) -> Option<Vec<u8>> + Send + 'static,
     ) -> Result<Self, ClientError> {
-        let profile = query_server_info(server, timeout.min(Duration::from_millis(650)))
-            .map(|info| CompatProfile::from_server_info(&info))
-            .unwrap_or(CompatProfile::BaseJka);
+        let info = query_server_info(server, timeout.min(Duration::from_millis(650))).ok();
+        let profile = info
+            .as_ref()
+            .map_or(CompatProfile::BaseJka, CompatProfile::from_server_info);
+        let userinfo = &LegacyUserInfo {
+            wide_entities: info
+                .as_ref()
+                .is_some_and(sjk_protocol::EntityWire::offered_by),
+            ..userinfo.clone()
+        };
         Self::join_with_pure_userinfo_profile(
             server,
             userinfo,
@@ -1007,7 +1019,10 @@ impl ClientSession {
                     if is_replacement_gamestate(command) =>
                 {
                     self.demo_recorder.stop()?;
-                    let initial = decode_initial_gamestate(&message.payload)?;
+                    let initial = sjk_protocol::decode_initial_gamestate_offering(
+                        &message.payload,
+                        self.wide_entities_offered,
+                    )?;
                     sjk_protocol::set_player_slots_for(&initial.game_state);
                     if let Some(storage) = &self.download_storage
                         && !storage

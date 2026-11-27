@@ -76,7 +76,7 @@ pub struct LegacyTrickFades {
 impl Default for LegacyTrickFades {
     fn default() -> Self {
         Self {
-            entities: vec![Fade::default(); sjk_protocol::MAX_LEGACY_ENTITIES].into_boxed_slice(),
+            entities: vec![Fade::default(); sjk_protocol::ENTITY_CAPACITY].into_boxed_slice(),
         }
     }
 }

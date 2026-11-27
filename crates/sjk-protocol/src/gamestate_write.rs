@@ -1,8 +1,8 @@
 //! Synthesized gamestate messages used to begin legacy demo files.
 
 use crate::{
-    EntityState, EntityWriteError, GameState, LEGACY_ENTITY_FIELDS, MAX_LEGACY_MESSAGE_BYTES,
-    MessageError, MessageWriter, ServiceCommand, write_delta_entity,
+    EntityState, EntityWire, EntityWriteError, GameState, LEGACY_ENTITY_FIELDS,
+    MAX_LEGACY_MESSAGE_BYTES, MessageError, MessageWriter, ServiceCommand, write_delta_entity_on,
 };
 use std::error::Error;
 use std::fmt;
@@ -21,13 +21,16 @@ pub fn write_initial_gamestate(
     message.write_i32(reliable_sequence)?;
     // `CL_Record_f` synthesizes the obsolete RMG filler as zero rather than
     // copying any value from the source gamestate (`cl_main.cpp:382-383`).
-    write_gamestate_block(
+    // A `jofents` connection's snapshots follow with 11-bit entity numbers, so its
+    // baselines are written the same way (the serverinfo copied here says so).
+    write_gamestate_block_on(
         &mut message,
         state.server_command_sequence,
         state.config_strings(),
         state.baselines(),
         state.client_num,
         state.checksum_feed,
+        state.entity_wire(),
     )?;
     message.write_u8(ServiceCommand::End as u8)?;
     Ok(message.finish()?)
@@ -49,6 +52,26 @@ pub fn write_gamestate_block<'a>(
     client_num: i32,
     checksum_feed: i32,
 ) -> Result<(), GameStateWriteError> {
+    write_gamestate_block_on(
+        message,
+        server_command_sequence,
+        config_strings,
+        baselines,
+        client_num,
+        checksum_feed,
+        EntityWire::Classic,
+    )
+}
+
+pub(crate) fn write_gamestate_block_on<'a>(
+    message: &mut MessageWriter,
+    server_command_sequence: i32,
+    config_strings: impl IntoIterator<Item = (usize, &'a [u8])>,
+    baselines: impl IntoIterator<Item = &'a EntityState>,
+    client_num: i32,
+    checksum_feed: i32,
+    wire: EntityWire,
+) -> Result<(), GameStateWriteError> {
     message.write_u8(ServiceCommand::GameState as u8)?;
     message.write_i32(server_command_sequence)?;
     for (index, value) in config_strings {
@@ -59,7 +82,14 @@ pub fn write_gamestate_block<'a>(
     let zero = EntityState::zero(0, &LEGACY_ENTITY_FIELDS);
     for baseline in baselines {
         message.write_u8(ServiceCommand::Baseline as u8)?;
-        write_delta_entity(message, &zero, Some(baseline), true, &LEGACY_ENTITY_FIELDS)?;
+        write_delta_entity_on(
+            message,
+            &zero,
+            Some(baseline),
+            true,
+            &LEGACY_ENTITY_FIELDS,
+            wire,
+        )?;
     }
     message.write_u8(ServiceCommand::End as u8)?;
     message.write_i32(client_num)?;

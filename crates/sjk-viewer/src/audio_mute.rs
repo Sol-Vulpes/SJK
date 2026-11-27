@@ -9,8 +9,8 @@
 use sjk_audio::SourceId;
 use sjk_protocol::EntityState;
 
-/// Entity numbers the legacy protocol uses.
-const ENTITIES: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 /// Game slots the muted mask holds, one bit each.
 const CLIENTS: usize = u64::BITS as usize;
 

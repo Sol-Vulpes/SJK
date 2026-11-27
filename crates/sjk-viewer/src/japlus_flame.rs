@@ -223,7 +223,7 @@ pub(crate) struct Hits {
 impl Default for Hits {
     fn default() -> Self {
         Self {
-            timers: vec![Timer::default(); 1024].into_boxed_slice(),
+            timers: vec![Timer::default(); sjk_protocol::ENTITY_CAPACITY].into_boxed_slice(),
             enabled: false,
         }
     }

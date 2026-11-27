@@ -61,8 +61,13 @@ fn an_npc_owns_its_thrown_saber() {
         legacy_thrown_saber_owner(&thrown_saber(300, 1_023, true)),
         Some(1_023)
     );
+    // The offset is the protocol's 1024 on every connection; a `jofents` server's
+    // owners go on past 1023.
+    let mut wide = thrown_saber(300, 0, true);
+    wide.set_raw_field(18, 1_024 + 1_500);
+    assert_eq!(legacy_thrown_saber_owner(&wide), Some(1_500));
     let mut beyond = thrown_saber(300, 0, true);
-    beyond.set_raw_field(18, 1_024 + 1_024);
+    beyond.set_raw_field(18, 1_024 + 2_048);
     assert_eq!(legacy_thrown_saber_owner(&beyond), None);
 }
 

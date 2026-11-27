@@ -46,8 +46,7 @@ pub(crate) struct Trails {
 impl Default for Trails {
     fn default() -> Self {
         Self {
-            entities: vec![History::default(); sjk_protocol::MAX_LEGACY_ENTITIES]
-                .into_boxed_slice(),
+            entities: vec![History::default(); sjk_protocol::ENTITY_CAPACITY].into_boxed_slice(),
         }
     }
 }

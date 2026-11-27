@@ -2,7 +2,7 @@
 
 use sjk_protocol::{
     DemoReader, GameState, MessageError, MessageReader, ServiceCommand, Snapshot, SnapshotError,
-    decode_initial_gamestate, decode_snapshot,
+    decode_initial_gamestate_offering, decode_snapshot,
 };
 use std::collections::VecDeque;
 use std::error::Error;
@@ -51,7 +51,10 @@ impl<R: Read> DemoPlayback<R> {
     pub fn new(input: R) -> Result<Self, DemoPlaybackError> {
         let mut reader = DemoReader::new(input);
         let first = reader.next_record()?.ok_or(DemoPlaybackError::Empty)?;
-        let initial = decode_initial_gamestate(&first.payload)?;
+        // A demo has no connect: its serverinfo alone says whether its recorder was
+        // sent entity numbers past 1023, as a server writes `jofents` only into the
+        // serverinfo of a connection that has them.
+        let initial = decode_initial_gamestate_offering(&first.payload, true)?;
         // A demo holds what its recorder was sent: one made by a client shown more
         // than 32 players says so in its serverinfo.
         sjk_protocol::set_player_slots_for(&initial.game_state);
@@ -95,7 +98,7 @@ impl<R: Read> DemoPlayback<R> {
             ) {
                 Ok(snapshot) => snapshot,
                 Err(SnapshotError::UnexpectedCommand(ServiceCommand::GameState)) => {
-                    let initial = decode_initial_gamestate(&record.payload)?;
+                    let initial = decode_initial_gamestate_offering(&record.payload, true)?;
                     sjk_protocol::set_player_slots_for(&initial.game_state);
                     let sequence = initial.game_state.server_command_sequence;
                     self.shader_remaps.reset(&initial.game_state);

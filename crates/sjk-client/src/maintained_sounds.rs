@@ -13,7 +13,8 @@ use sjk_protocol::{EntityState, Snapshot};
 
 use crate::sound_events::normal_attenuation;
 
-const MAX_ENTITIES: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const MAX_LOOPS_PER_ENTITY: usize = 8; // codemp/cgame/cg_local.h:319
 const MAX_FRAME_LOOPS: usize = 32; // codemp/client/snd_dma.cpp:213
 

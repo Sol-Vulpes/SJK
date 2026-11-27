@@ -7,7 +7,7 @@
 //! the state constants are from `codemp/game/bg_public.h:1387-1392`.
 
 use crate::legacy_evaluate_trajectory;
-use sjk_protocol::{GameState, MAX_LEGACY_ENTITIES, Snapshot};
+use sjk_protocol::{ENTITY_CAPACITY, GameState, Snapshot};
 
 const ET_FX: u8 = 17; // codemp/game/bg_public.h:1262
 const FX_STATE_OFF: u8 = 0; // codemp/game/bg_public.h:1389
@@ -68,8 +68,8 @@ impl LegacyMapEffects {
     pub fn empty() -> Self {
         Self {
             effects: std::array::from_fn(|_| None),
-            entities: vec![EntitySideState::default(); MAX_LEGACY_ENTITIES].into_boxed_slice(),
-            requests: Vec::with_capacity(MAX_LEGACY_ENTITIES),
+            entities: vec![EntitySideState::default(); ENTITY_CAPACITY].into_boxed_slice(),
+            requests: Vec::with_capacity(ENTITY_CAPACITY),
         }
     }
 

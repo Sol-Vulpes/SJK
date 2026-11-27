@@ -18,7 +18,7 @@
 //! `cg_main.c:998-1004,1148-1154`.
 
 use crate::legacy_evaluate_trajectory;
-use sjk_protocol::{GameState, MAX_LEGACY_ENTITIES, Snapshot};
+use sjk_protocol::{ENTITY_CAPACITY, GameState, Snapshot};
 
 const ET_MISSILE: u8 = 3; // codemp/game/bg_public.h:1248
 const EF_NODRAW: u32 = 1 << 8; // codemp/game/bg_public.h:647
@@ -190,7 +190,7 @@ impl LegacyMissileEffects {
         Self {
             config_effects: std::array::from_fn(|_| None),
             vehicles: None,
-            requests: Vec::with_capacity(MAX_LEGACY_ENTITIES),
+            requests: Vec::with_capacity(ENTITY_CAPACITY),
         }
     }
 

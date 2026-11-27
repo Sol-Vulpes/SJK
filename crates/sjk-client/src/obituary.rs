@@ -4,7 +4,8 @@ use sjk_protocol::{EntityState, GameState, Snapshot};
 
 const ET_EVENTS: u8 = 18;
 const EVENT_MASK: u16 = 0xff;
-const MAX_ENTITIES: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const MAX_CLIENTS: u16 = 64;
 
 /// `EV_OBITUARY` in `codemp/game/bg_public.h:927`.

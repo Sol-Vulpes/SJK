@@ -31,7 +31,8 @@ use sjk_vfs::VirtualFileSystem;
 const CS_SOUNDS: usize = 811; // codemp/game/bg_public.h:135 after expanded limits
 const CS_AMBIENT_SET: usize = 37; // codemp/game/bg_public.h:125
 const MAX_SOUNDS: usize = 256;
-const MAX_ENTITIES: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const MAX_ENTITIES: usize = sjk_protocol::ENTITY_CAPACITY;
 const MAX_CG_LOOPSOUNDS: u8 = 8; // codemp/cgame/cg_local.h:319
 /// `playerState_t::loopSound` (protocol 26 netfield 75).
 const PS_LOOP_SOUND: usize = 75;

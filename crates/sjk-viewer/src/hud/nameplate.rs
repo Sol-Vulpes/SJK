@@ -189,8 +189,8 @@ const TEAM_SPECTATOR: i32 = 3;
 const MAX_PLAYER_TAGS: usize = sjk_protocol::PLAYER_CAPACITY;
 const MAX_NPC_TAGS: usize = 16;
 const MAX_TAGS: usize = MAX_PLAYER_TAGS + MAX_NPC_TAGS;
-/// Entity numbers are ten bits on the wire.
-const ENTITY_SLOTS: usize = 1024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const ENTITY_SLOTS: usize = sjk_protocol::ENTITY_CAPACITY;
 /// A plate unseen this long fades in again instead of resuming.
 const STALE_MILLIS: i64 = 250;
 /// Opacity of a plate behind a wall when `cg_nameplateWalls` is on.

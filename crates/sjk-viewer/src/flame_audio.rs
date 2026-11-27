@@ -47,7 +47,7 @@ impl Default for State {
         Self {
             detected: None,
             override_value: -1,
-            voices: vec![Voice::default(); 1024].into_boxed_slice(),
+            voices: vec![Voice::default(); sjk_protocol::ENTITY_CAPACITY].into_boxed_slice(),
             any_playing: false,
         }
     }

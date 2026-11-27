@@ -124,6 +124,7 @@ fn update_payload(
     profile: &crate::CompatProfile,
     tracker: &UserinfoUpdateTracker,
     userinfo: &LegacyUserInfo,
+    wide_entities: bool,
     team_overlay: Option<bool>,
     mod_fields: &[(&str, &str)],
 ) -> Result<String, NetworkError> {
@@ -132,7 +133,11 @@ fn update_payload(
     if let Some(enabled) = team_overlay {
         extensions.push(("teamoverlay", if enabled { "1" } else { "0" }));
     }
-    tracker.payload(&profile.userinfo_for(userinfo), &extensions)
+    let mut userinfo = profile.userinfo_for(userinfo);
+    // The connect userinfo's `jofents`, kept as `jof64` is: a server connects the
+    // player again with the stored userinfo at every map change.
+    userinfo.wide_entities = wide_entities;
+    tracker.payload(&userinfo, &extensions)
 }
 
 /// Console transport diagnostics are read without changing the wire codec.
@@ -160,6 +165,7 @@ impl crate::ClientSession {
             &self.compat_profile,
             &self.userinfo_updates,
             userinfo,
+            self.wide_entities_offered,
             team_overlay,
             mod_fields,
         )?;
@@ -279,7 +285,7 @@ mod tests {
             .unwrap();
             let tracker =
                 UserinfoUpdateTracker::new(String::new(), connected.guid.clone(), Instant::now());
-            let update = update_payload(&profile, &tracker, &user, None, &[]).unwrap();
+            let update = update_payload(&profile, &tracker, &user, false, None, &[]).unwrap();
             assert_eq!(
                 format!("{update}\\protocol\\26\\qport\\1234\\challenge\\7"),
                 connect,
@@ -296,8 +302,15 @@ mod tests {
                 assert!(keys.get(key).is_some(), "{profile} update lacks {key}");
             }
             // The mods' fields and the team overlay come on top, not instead.
-            let more =
-                update_payload(&profile, &tracker, &user, Some(true), &[("x_mod", "1")]).unwrap();
+            let more = update_payload(
+                &profile,
+                &tracker,
+                &user,
+                false,
+                Some(true),
+                &[("x_mod", "1")],
+            )
+            .unwrap();
             assert!(more.starts_with(&update[..update.find("\\ja_guid").unwrap()]));
             let more = sjk_protocol::InfoString::parse(&more).unwrap();
             assert_eq!(more.get("password"), Some("temple"));
@@ -310,11 +323,24 @@ mod tests {
             &ja_plus,
             &tracker,
             &LegacyUserInfo::with_name("Sol"),
+            false,
             None,
             &[],
         )
         .unwrap();
         let keys = sjk_protocol::InfoString::parse(&update).unwrap();
+        assert_eq!(keys.get("jofents"), None, "asked for only where offered");
+        let wide = update_payload(
+            &ja_plus,
+            &tracker,
+            &LegacyUserInfo::with_name("Sol"),
+            true,
+            None,
+            &[],
+        )
+        .unwrap();
+        let wide = sjk_protocol::InfoString::parse(&wide).unwrap();
+        assert_eq!(wide.get("jofents"), Some("2048"));
         for key in ["cjp_client", "cp_clanPwd", "cp_pluginDisable", "jof64"] {
             assert!(keys.get(key).is_some(), "a JA+ update lacks {key}");
         }

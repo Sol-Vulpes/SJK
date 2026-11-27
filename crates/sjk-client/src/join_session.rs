@@ -65,7 +65,7 @@ impl ClientSession {
                 }
                 result => result?,
             };
-            match decode_initial_gamestate(&message.payload) {
+            match decode_initial_gamestate_offering(&message.payload, userinfo.wide_entities) {
                 Ok(_) => {
                     let message = if let Some(storage) = &mut download_storage {
                         download::run(
@@ -74,13 +74,17 @@ impl ClientSession {
                             storage.as_mut(),
                             &mut client_reliable_sequence,
                             &mut pending_client_commands,
+                            userinfo.wide_entities,
                         )?
                     } else {
                         message
                     };
                     break (
                         message.sequence,
-                        decode_initial_gamestate(&message.payload)?,
+                        decode_initial_gamestate_offering(
+                            &message.payload,
+                            userinfo.wide_entities,
+                        )?,
                     );
                 }
                 Err(GameStateError::ExpectedCommand { .. }) => {
@@ -165,6 +169,7 @@ impl ClientSession {
             base_command_events: VecDeque::with_capacity(64),
             unknown_command_names: Vec::new(),
             compat_profile,
+            wide_entities_offered: userinfo.wide_entities,
             cosmetic_unlocks: CosmeticUnlockTable::default(),
             userinfo_updates: userinfo_update::UserinfoUpdateTracker::new(
                 initial_userinfo,

@@ -8,7 +8,8 @@ use sjk_protocol::{ENTITY_NUMBER_NONE, EntityState, Snapshot};
 mod vehicle_clip;
 pub(crate) use vehicle_clip::ClipActor;
 
-const ENTITY_SLOTS: usize = ENTITY_NUMBER_NONE as usize + 1;
+/// Every entity number a connection can use (2048 with `jofents`).
+const ENTITY_SLOTS: usize = sjk_protocol::ENTITY_CAPACITY;
 const SOLID_BMODEL: u32 = 0x00ff_ffff;
 const ET_MOVER: u8 = 6;
 const ET_NPC: u8 = 13;
@@ -525,7 +526,8 @@ impl Movers {
     }
 
     fn mover(&self, ground: u16) -> Option<&Collider> {
-        if ground == 0 || ground >= 1_022 {
+        // The world (1022) and "none" (1023); entities past them are real with `jofents`.
+        if ground == 0 || (1_022..=1_023).contains(&ground) {
             return None;
         }
         let index = self.by_entity.get(usize::from(ground)).copied().flatten()?;

@@ -1,8 +1,8 @@
 //! Protocol-26 entity delta encoding.
 
 use crate::{
-    ENTITY_NUMBER_NONE, EntityField, EntityFieldEncoding, EntityState, LEGACY_ENTITY_NUMBER_BITS,
-    MAX_LEGACY_ENTITIES, MessageError, MessageWriter,
+    ENTITY_NUMBER_NONE, EntityField, EntityFieldEncoding, EntityState, EntityWire, MessageError,
+    MessageWriter,
 };
 use std::error::Error;
 use std::fmt;
@@ -23,24 +23,37 @@ pub fn write_delta_entity(
     force: bool,
     schema: &[EntityField],
 ) -> Result<bool, EntityWriteError> {
+    write_delta_entity_on(message, from, to, force, schema, EntityWire::Classic)
+}
+
+/// [`write_delta_entity`] for a stream whose entity numbers are `wire` wide: a demo
+/// recorded on a `jofents` connection writes its gamestate's baselines this way.
+pub fn write_delta_entity_on(
+    message: &mut MessageWriter,
+    from: &EntityState,
+    to: Option<&EntityState>,
+    force: bool,
+    schema: &[EntityField],
+    wire: EntityWire,
+) -> Result<bool, EntityWriteError> {
     validate_state(from, schema)?;
     let Some(to) = to else {
         if from.number() == ENTITY_NUMBER_NONE {
             return Ok(false);
         }
-        validate_number(from.number())?;
-        message.write_bits(u32::from(from.number()), LEGACY_ENTITY_NUMBER_BITS)?;
+        validate_number(from.number(), wire)?;
+        message.write_bits(u32::from(from.number()), wire.number_bits())?;
         message.write_bits(1, 1)?;
         return Ok(true);
     };
     validate_state(to, schema)?;
-    validate_number(to.number())?;
+    validate_number(to.number(), wire)?;
 
     let changed = last_changed_field(from, to, schema);
     if changed == 0 && !force {
         return Ok(false);
     }
-    message.write_bits(u32::from(to.number()), LEGACY_ENTITY_NUMBER_BITS)?;
+    message.write_bits(u32::from(to.number()), wire.number_bits())?;
     message.write_bits(0, 1)?;
     if changed == 0 {
         message.write_bits(0, 1)?;
@@ -56,7 +69,7 @@ pub fn write_delta_entity(
             continue;
         }
         message.write_bits(1, 1)?;
-        write_field(message, field, after)?;
+        write_field(message, field, after, wire)?;
     }
     Ok(true)
 }
@@ -71,8 +84,8 @@ fn validate_state(state: &EntityState, schema: &[EntityField]) -> Result<(), Ent
     Ok(())
 }
 
-fn validate_number(number: u16) -> Result<(), EntityWriteError> {
-    if usize::from(number) >= MAX_LEGACY_ENTITIES {
+fn validate_number(number: u16, wire: EntityWire) -> Result<(), EntityWriteError> {
+    if usize::from(number) >= wire.capacity() {
         return Err(EntityWriteError::InvalidEntityNumber(number));
     }
     Ok(())
@@ -92,17 +105,18 @@ fn write_field(
     message: &mut MessageWriter,
     field: &EntityField,
     value: u32,
+    wire: EntityWire,
 ) -> Result<(), MessageError> {
-    match field.encoding {
-        EntityFieldEncoding::Float => write_float(message, value),
-        EntityFieldEncoding::Integer { width, .. } => {
-            if value == 0 {
-                message.write_bits(0, 1)
-            } else {
-                message.write_bits(1, 1)?;
-                message.write_bits(value, width)
-            }
-        }
+    let width = match field.encoding {
+        EntityFieldEncoding::Float => return write_float(message, value),
+        EntityFieldEncoding::Integer { width, .. } => width,
+        EntityFieldEncoding::EntityNumber => wire.number_bits(),
+    };
+    if value == 0 {
+        message.write_bits(0, 1)
+    } else {
+        message.write_bits(1, 1)?;
+        message.write_bits(value, width)
     }
 }
 

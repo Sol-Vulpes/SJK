@@ -615,7 +615,7 @@ impl Instance {
         enabled: bool,
         no_light: bool,
     ) -> Self {
-        if entity > 0 && entity <= 1024 && lane < 3 && blade < 8 {
+        if entity > 0 && entity <= sjk_protocol::ENTITY_CAPACITY as u64 && lane < 3 && blade < 8 {
             self.contact = ((entity - 1) as usize * 24 + lane * 8 + blade + 1) as u32;
             self.no_light = u32::from(no_light) | (u32::from(!enabled) << 1);
         }

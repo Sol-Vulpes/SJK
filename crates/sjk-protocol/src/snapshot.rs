@@ -1,6 +1,6 @@
 use crate::{
-    ENTITY_NUMBER_NONE, EntityDeltaError, EntityState, GameState, LEGACY_ENTITY_FIELDS,
-    LEGACY_ENTITY_NUMBER_BITS, MessageError, MessageReader, ServiceCommand, read_delta_entity,
+    ENTITY_NUMBER_NONE, EntityDeltaError, EntityState, EntityWire, GameState, LEGACY_ENTITY_FIELDS,
+    MessageError, MessageReader, ServiceCommand, read_delta_entity_on,
 };
 use std::error::Error;
 use std::fmt;
@@ -15,12 +15,27 @@ use vehicle_fields::{
     TURNAROUND_INDEX, TURNAROUND_TIME, VEHICLE_ONLY_FIELDS, WEAPONS_LINKED,
 };
 
+/// A width that marks a `GENTITYNUM_BITS` field in the tables below: an entity
+/// number, 10 bits on a classic connection and 11 on a `jofents` one
+/// ([`EntityWire`]). Fields that are 10 bits wide without naming an entity (the
+/// events, `standheight`, `eFlags2`, `iModelScale`...) are written `10`.
+const E: i8 = i8::MAX;
+
+/// A table width as it is on the wire of a `wire` connection.
+const fn wire_width(width: i8, wire: EntityWire) -> i8 {
+    if width == E {
+        wire.number_bits() as i8
+    } else {
+        width
+    }
+}
+
 const PLAYER_FIELD_WIDTHS: [i8; 137] = [
-    32, 0, 0, 0, 0, 0, 0, 0, 0, 8, -16, 16, 0, 16, 16, 16, 10, 32, 8, 16, 16, 16, -8, 4, 10, 4, 32,
-    10, 10, 8, 4, 10, 8, 4, 32, 10, 10, -16, 16, 8, 8, -16, 8, 10, 10, 8, 16, 8, 16, 1, 0, 32, 2,
-    32, 8, 1, 10, 8, 8, 1, 8, 2, 4, 8, 8, -16, 10, 32, 32, 1, 8, 32, 6, 32, 0, 16, 1, 8, 2, 32, 8,
-    2, 32, 8, 10, 8, 10, 1, 1, 16, 2, 32, 32, 8, 1, 0, 32, 32, 16, 16, 0, 16, 0, 10, 16, 0, 1, 32,
-    16, 2, 10, 1, 10, 32, 1, 1, 1, 1, 32, 1, 1, 6, 10, 10, 16, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    32, 0, 0, 0, 0, 0, 0, 0, 0, 8, -16, 16, 0, 16, 16, 16, E, 32, 8, 16, 16, 16, -8, 4, E, 4, 32,
+    10, 10, 8, 4, E, 8, 4, 32, 10, 10, -16, 16, 8, 8, -16, 8, E, E, 8, 16, 8, 16, 1, 0, 32, 2, 32,
+    8, 1, 10, 8, 8, 1, 8, 2, 4, 8, 8, -16, E, 32, 32, 1, 8, 32, 6, 32, 0, 16, 1, 8, 2, 32, 8, 2,
+    32, 8, E, 8, E, 1, 1, 16, 2, 32, 32, 8, 1, 0, 32, 32, 16, 16, 0, 16, 0, 10, 16, 0, 1, 32, 16,
+    2, E, 1, E, 32, 1, 1, 1, 1, 32, 1, 1, 6, E, 10, 16, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
 const MAX_ARRAY_VALUES: usize = 16;
 const STAT_WEAPONS: usize = 4;
@@ -40,13 +55,13 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(14), 16),                // delta_angles[0]
     (Field(17), 32),                // eFlags
     (Field(19), 16),                // eventSequence
-    (Field(24), 10),                // rocketLockIndex
+    (Field(24), E),                 // rocketLockIndex
     (Field(27), 10),                // events[0]
     (Field(28), 10),                // events[1]
     (Field(33), 4),                 // weaponstate
     (Field(38), 16),                // pm_flags
     (Field(41), -16),               // pm_time
-    (Field(43), 10),                // clientNum
+    (Field(43), E),                 // clientNum
     (Field(47), 8),                 // weapon
     (Field(48), 16),                // delta_angles[2]
     (Field(50), 0),                 // viewangles[2]
@@ -60,7 +75,7 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(71), 32),                // rocketTargetTime
     (Field(74), 0),                 // fd.forceJumpZStart
     (Field(79), 32),                // rocketLockTime
-    (Field(84), 10),                // m_iVehicleNum
+    (Field(84), E),                 // m_iVehicleNum
     (Field(85), 8),                 // generic1
     (Field(103), 10),               // eFlags2
     (Field(13), 16),                // legsAnim
@@ -90,21 +105,21 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(8), 0),                  // velocity[2]
     (Field(9), 8),                  // bobCycle
     (Field(12), 0),                 // speed
-    (Field(16), 10),                // groundEntityNum
+    (Field(16), E),                 // groundEntityNum
     (Field(22), -8),                // viewheight
     (Field(23), 4),                 // fd.saberAnimLevel
     (Field(25), 4),                 // fd.saberDrawAnimLevel
     (Field(26), 32),                // genericEnemyIndex
     (Field(29), 8),                 // customRGBA[0]
     (Field(30), 4),                 // movementDir
-    (Field(31), 10),                // saberEntityNum
+    (Field(31), E),                 // saberEntityNum
     (Field(32), 8),                 // customRGBA[3]
     (Field(34), 32),                // saberMove
     (Field(35), 10),                // standheight
     (Field(36), 10),                // crouchheight
     (Field(37), -16),               // basespeed
     (Field(42), 8),                 // customRGBA[1]
-    (Field(44), 10),                // duelIndex
+    (Field(44), E),                 // duelIndex
     (Field(45), 8),                 // customRGBA[2]
     (Field(46), 16),                // gravity
     (Field(51), 32),                // fd.forcePowersKnown
@@ -115,7 +130,7 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(59), 1),                 // inAirAnim
     (Field(61), 2),                 // fd.forceSide
     (Field(62), 4),                 // saberAttackChainCount
-    (Field(66), 10),                // lookTarget
+    (Field(66), E),                 // lookTarget
     (VehicleOnly(MOVE_DIR + 1), 0), // moveDir[1]
     (VehicleOnly(MOVE_DIR), 0),     // moveDir[0]
     (Field(70), 8),                 // damageEvent
@@ -129,7 +144,7 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(80), 8),                 // forceHandExtend
     (Field(81), 2),                 // saberHolstered
     (Field(83), 8),                 // damagePitch
-    (Field(86), 10),                // jumppad_ent
+    (Field(86), E),                 // jumppad_ent
     (Field(89), 16),                // forceDodgeAnim
     (Field(90), 2),                 // zoomMode
     (Field(91), 32),                // hackingTime
@@ -143,9 +158,9 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(105), 0),                // lastHitLoc[1]
     (Field(107), 32),               // saberLockTime
     (Field(108), 16),               // saberLockFrame
-    (Field(110), 10),               // saberLockEnemy
+    (Field(110), E),                // saberLockEnemy
     (Field(111), 1),                // fd.forceGripCripple
-    (Field(112), 10),               // emplacedIndex
+    (Field(112), E),                // emplacedIndex
     (Field(114), 1),                // isJediMaster
     (Field(115), 1),                // forceRestricted
     (Field(116), 1),                // trueJedi
@@ -154,7 +169,7 @@ const PILOT_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(119), 1),                // duelInProgress
     (Field(120), 1),                // saberLockAdvance
     (Field(121), 6),                // heldByClient
-    (Field(122), 10),               // ragAttach
+    (Field(122), E),                // ragAttach
     (Field(123), 10),               // iModelScale
     (Field(124), 16),               // hackingBaseTime
     (Field(125), 1),                // userInt1
@@ -185,17 +200,17 @@ const VEHICLE_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(12), 0),                          // speed
     (Field(13), 16),                         // legsAnim
     (Field(14), 16),                         // delta_angles[0]
-    (Field(16), 10),                         // groundEntityNum
+    (Field(16), E),                          // groundEntityNum
     (Field(17), 32),                         // eFlags
     (Field(19), 16),                         // eventSequence
     (Field(21), 16),                         // legsTimer
-    (Field(24), 10),                         // rocketLockIndex
+    (Field(24), E),                          // rocketLockIndex
     (Field(27), 10),                         // events[0]
     (Field(28), 10),                         // events[1]
     (Field(33), 4),                          // weaponstate
     (Field(38), 16),                         // pm_flags
     (Field(41), -16),                        // pm_time
-    (Field(43), 10),                         // clientNum
+    (Field(43), E),                          // clientNum
     (Field(46), 16),                         // gravity
     (Field(47), 8),                          // weapon
     (Field(48), 16),                         // delta_angles[2]
@@ -215,7 +230,7 @@ const VEHICLE_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(73), 32),                         // electrifyTime
     (Field(75), 16),                         // loopSound
     (Field(79), 32),                         // rocketLockTime
-    (Field(84), 10),                         // m_iVehicleNum
+    (Field(84), E),                          // m_iVehicleNum
     (VehicleOnly(TURNAROUND_TIME), 32),      // vehTurnaroundTime
     (Field(91), 32),                         // hackingTime
     (Field(93), 8),                          // brokenLimbs
@@ -224,7 +239,7 @@ const VEHICLE_FIELD_SPECS: &[(Slot, i8)] = &[
     (Field(103), 10),                        // eFlags2
     (VehicleOnly(HYPERSPACE_ANGLES + 1), 0), // hyperSpaceAngles[1]
     (VehicleOnly(BOARDING), 1),              // vehBoarding
-    (VehicleOnly(TURNAROUND_INDEX), 10),     // vehTurnaroundIndex
+    (VehicleOnly(TURNAROUND_INDEX), E),      // vehTurnaroundIndex
     (VehicleOnly(SURFACES), 16),             // vehSurfaces
     (VehicleOnly(HYPERSPACE_ANGLES), 0),     // hyperSpaceAngles[0]
     (VehicleOnly(HYPERSPACE_ANGLES + 2), 0), // hyperSpaceAngles[2]
@@ -889,10 +904,12 @@ pub fn decode_snapshot(
     for _ in 0..area_length {
         area_mask.push(reader.read_u8()?);
     }
+    let wire = gamestate.entity_wire();
     let zero_player = PlayerState::zero();
     let player = read_player_state(
         &mut reader,
         previous.map_or(&zero_player, |snapshot| &snapshot.player),
+        wire,
     )?;
     let vehicle_player = if player.vehicle_entity_num() != 0 {
         let zero_vehicle = PlayerState::zero();
@@ -901,6 +918,7 @@ pub fn decode_snapshot(
             previous
                 .and_then(|snapshot| snapshot.vehicle_player.as_ref())
                 .unwrap_or(&zero_vehicle),
+            wire,
         )?)
     } else {
         None
@@ -910,8 +928,8 @@ pub fn decode_snapshot(
     let old_entities = previous.map_or(&[][..], |snapshot| snapshot.entities.as_slice());
     let mut old_index = 0;
     loop {
-        let number = reader.read_bits(LEGACY_ENTITY_NUMBER_BITS)? as u16;
-        if number == ENTITY_NUMBER_NONE {
+        let number = reader.read_bits(wire.number_bits())? as u16;
+        if number == wire.end_of_entities() {
             break;
         }
         while old_entities
@@ -934,7 +952,9 @@ pub fn decode_snapshot(
                 .cloned()
                 .unwrap_or_else(|| EntityState::zero(number, &LEGACY_ENTITY_FIELDS))
         };
-        let entity = read_delta_entity(&mut reader, &from, number, &LEGACY_ENTITY_FIELDS)?;
+        let entity = read_delta_entity_on(&mut reader, &from, number, &LEGACY_ENTITY_FIELDS, wire)?;
+        // A removed entity comes back numbered `ENTITY_NUMBER_NONE`, which no real
+        // entity has on either format.
         if entity.number() != ENTITY_NUMBER_NONE {
             entities.push(entity);
         }
@@ -959,22 +979,30 @@ pub fn decode_snapshot(
 fn read_player_state(
     reader: &mut MessageReader<'_>,
     previous: &PlayerState,
+    wire: EntityWire,
 ) -> Result<PlayerState, SnapshotError> {
     let is_pilot = reader.read_bits(1)? != 0;
-    read_player_state_fields(reader, previous, is_pilot.then_some(PILOT_FIELD_SPECS))
+    read_player_state_fields(
+        reader,
+        previous,
+        is_pilot.then_some(PILOT_FIELD_SPECS),
+        wire,
+    )
 }
 
 fn read_vehicle_player_state(
     reader: &mut MessageReader<'_>,
     previous: &PlayerState,
+    wire: EntityWire,
 ) -> Result<PlayerState, SnapshotError> {
-    read_player_state_fields(reader, previous, Some(VEHICLE_FIELD_SPECS))
+    read_player_state_fields(reader, previous, Some(VEHICLE_FIELD_SPECS), wire)
 }
 
 fn read_player_state_fields(
     reader: &mut MessageReader<'_>,
     previous: &PlayerState,
     mapped_fields: Option<&[(Slot, i8)]>,
+    wire: EntityWire,
 ) -> Result<PlayerState, SnapshotError> {
     let changed_count = usize::from(reader.read_u8()?);
     let field_count = mapped_fields.map_or(PLAYER_FIELD_WIDTHS.len(), <[_]>::len);
@@ -990,6 +1018,7 @@ fn read_player_state_fields(
             || (Field(field_index), PLAYER_FIELD_WIDTHS[field_index]),
             |fields| fields[field_index],
         );
+        let width = wire_width(width, wire);
         let value = if width == 0 {
             if reader.read_bits(1)? == 0 {
                 let integer = reader.read_bits(FLOAT_INT_BITS)? as i32 - FLOAT_INT_BIAS;

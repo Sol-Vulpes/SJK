@@ -29,6 +29,7 @@ impl ClientSession {
             storage.as_mut(),
             &mut self.client_reliable_sequence,
             &mut self.pending_client_commands,
+            self.wide_entities_offered,
         )?);
         self.receive_snapshot(Duration::from_secs(5))?;
         Ok(())

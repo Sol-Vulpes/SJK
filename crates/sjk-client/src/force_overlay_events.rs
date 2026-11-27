@@ -7,7 +7,8 @@ use sjk_protocol::{EntityState, Snapshot};
 mod shield_hit;
 pub use shield_hit::LegacyShieldHit;
 
-const ENTITY_LIMIT: usize = 1_024;
+/// Every entity number a connection can use (2048 with `jofents`).
+const ENTITY_LIMIT: usize = sjk_protocol::ENTITY_CAPACITY;
 const CLIENT_LIMIT: u16 = 64;
 const ET_EVENTS: u8 = 18;
 const EVENT_MASK: u16 = 0xff;
